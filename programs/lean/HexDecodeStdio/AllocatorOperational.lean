@@ -110,7 +110,7 @@ theorem allocator_first_overflow_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -169,7 +169,7 @@ theorem allocator_size_overflow_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -251,7 +251,7 @@ theorem allocator_signed_limit_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -354,7 +354,7 @@ theorem allocator_grow_failure_traps
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
   apply TrapsWith.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply TrapsWith.prepend (Step.localTee rfl)
   apply TrapsWith.prepend Step.const
@@ -475,7 +475,7 @@ theorem allocator_no_grow_steps
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -531,11 +531,11 @@ theorem allocator_no_grow_steps
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend
-    (Step.store32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [setMemory_eq, allocatorBumpStore]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.returnFromCallFallthrough rfl)
-  simp [allocatorBumpStore]
+  simp []
   exact ⟨[], .refl _⟩
 
 /-- Successful `memory.grow` followed by the allocator's ordinary return. -/
@@ -591,7 +591,7 @@ theorem allocator_grow_success_steps
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.load32 (address := 0) (offset := 1053960) (by simpa using hbound))
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -656,12 +656,12 @@ theorem allocator_grow_success_steps
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend
-    (Step.store32 (address := 0) (offset := 1053960)
+    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960)
       (by simpa using hboundGrown))
   simp only [setMemory_eq, allocatorBumpStore]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.returnFromCallFallthrough rfl)
-  simp [allocatorBumpStore, allocatorGrownStore]
+  simp []
   exact ⟨[], .refl _⟩
 
 /-- Complete one-call allocator case split.  The two successful alternatives

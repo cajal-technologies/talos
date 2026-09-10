@@ -32,7 +32,7 @@ theorem Mem.readBytes_writeBytes_append (m : Mem) (off oldLen : Nat)
       rw [List.getElem_append_left hprefix']
       have holdAt := congrArg (fun xs => xs[i]?) hold
       simp only [Mem.readBytes, List.getElem?_map, List.getElem?_range,
-        hprefix, ↓reduceDIte, Option.map_some] at holdAt
+        hprefix,  Option.map_some] at holdAt
       rw [List.getElem?_eq_getElem hprefix'] at holdAt
       simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
         Mem.writeBytes]
@@ -192,7 +192,7 @@ theorem ByteGrowSuccess.realloc_preserves_byte
           rcases hbumpDisjoint with hbefore | hafter
           · omega
           · omega)]
-        simp [holdNoWrap, Mem.read8]
+        simp [holdNoWrap]
       · rw [hnewNoWrap]
         omega
   | reallocGrow hnonzero memory previousPages hgrow =>
@@ -213,7 +213,7 @@ theorem ByteGrowSuccess.realloc_preserves_byte
           · omega
           · omega)]
         rw [Mem.grow_success_bytes_eq store.wasm.mem memory _ _ _ hgrow]
-        simp [holdNoWrap, Mem.read8]
+        simp [holdNoWrap]
       · rw [hnewNoWrap]
         omega
 

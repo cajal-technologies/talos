@@ -30,10 +30,7 @@ private theorem func1_index :
     Project.GcdStdio.module.funcs[1]? = some Project.GcdStdio.func1Def := by
   rfl
 
-private theorem oddPart_toNat (v : UInt64) :
-    (v >>> (UInt64.ofNat (ctz64 64 v) % 64)).toNat =
-      v.toNat >>> (ctz64 64 v % 64) :=
-  Project.NumIntegerOpt3.Spec.oddPart_toNat v
+local notation "oddPart_toNat" => UInt64.shr_ctz_mod_toNat
 
 private theorem twp_eqzI64
     [WasmSmallStepGS hlc Universal.State]

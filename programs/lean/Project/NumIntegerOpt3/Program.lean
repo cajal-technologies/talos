@@ -10,6 +10,8 @@ namespace Project.NumIntegerOpt3
 
 open Wasm
 
+-- WAT SHA-256: 0699c0b15e43ad867796e2b30ddd4a531604c8ca2e4818990f8915c6dcba3def
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/num_integer_opt3/program.wat" 0
 
 def func0Def : Wasm.Function :=

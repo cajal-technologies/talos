@@ -106,13 +106,8 @@ private theorem simpleLoop_zero_steps (y : UInt32) :
     .administrative .exitControl,
     .instruction (.localGet 1),
     .administrative .finish], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .brIfZero
-  apply Steps.cons (.br rfl)
-  apply Steps.cons (.exitControl rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [.block, .block, (.localGet rfl), .brIfZero, (.br rfl), (.exitControl rfl),
+    (.localGet rfl)]
   exact Steps.single .finish
 
 private theorem simpleLoop_iteration_steps (x y : UInt32)
@@ -134,21 +129,11 @@ private theorem simpleLoop_iteration_steps (x y : UInt32)
     .instruction .sub,
     .instruction (.localSet 0),
     .instruction (.br 1)], ?_⟩
-  apply Steps.cons .block
-  apply Steps.cons .block
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.brIf hx (by rfl))
+  wasm_steps [.block, .block, (.localGet rfl), (.brIf hx (by rfl))]
   simp only [List.take_zero, List.drop_zero, List.nil_append]
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .add
-  apply Steps.cons (.localSet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons .const
-  apply Steps.cons .sub
-  apply Steps.cons (.localSet rfl)
-  simp
-  exact Steps.single (.br rfl)
+  wasm_steps [(.localGet rfl), .const, .add, (.localSet rfl), (.localGet rfl), .const, .sub,
+    (.localSet rfl)]
+  simp; exact Steps.single (.br rfl)
 
 private theorem simpleLoopHead_steps (x y : UInt32) :
     ∃ trace,

@@ -104,7 +104,7 @@ private theorem entryBytes_values :
     entryStackBytes = List.replicate 16 0 ∧
       entryCursorBytes = [0, 0, 0, 0] ∧
       entryAllocatedBytes = List.replicate 16 0 := by
-  native_decide
+  decide +kernel
 
 private theorem empty_below_stack :
     HeapBelow (∅ : WasmHeapMap (Option UInt8)) entryStackLow.toNat := by

@@ -52,8 +52,7 @@ def State.draw (state : State) (count : Nat) : List UInt8 :=
 
 @[simp]
 theorem State.draw_length (state : State) (count : Nat) :
-    (state.draw count).length = count := by
-  simp [State.draw]
+    (state.draw count).length = count := by simp [State.draw]
 
 /-- Advance past `count` bytes without changing the oracle realization. -/
 def State.advance (state : State) (count : Nat) : State :=
@@ -108,8 +107,7 @@ theorem env_satisfies (module : Module) (himports : module.imports = imports) :
     env.Satisfies module spec := by
   intro index hindex
   rw [himports] at hindex
-  have hzero : index = 0 := by
-    simpa [imports] using hindex
+  have hzero : index = 0 := by simpa [imports] using hindex
   subst index
   refine ⟨getHost, getContract, rfl, rfl, ?_⟩
   intro store args

@@ -37,7 +37,7 @@ theorem read_to_end_after_read_recursive
         (ReadToEndSuccess input)) :
     ReachesOrOOM
       (readToEndAfterReadSuccessConfig readStore [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
         capacity data length filled target count)
       (ReadToEndSuccess input) := by
   have hfilledOriginal : filled.toNat ≤
@@ -95,7 +95,7 @@ theorem read_to_end_after_read_recursive
       simpa [hremainingNil] using hinv.split
     have hcountZero : count = 0 := by simp [hcount, hempty]
     have hreturn := read_to_end_after_read_eof readStore [] encodeLocals []
-      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
       capacity data length filled target count hcountZero hlengthBound
     apply ReachesOrOOM.prependReaches hreturn
     apply read_to_end_return_success input readStore chunk capacity data length
@@ -141,7 +141,7 @@ theorem read_to_end_after_read_recursive
         (by simpa [htarget] using hcNat) hnextLength
     by_cases hspareLt : capacity - length < chunk
     · have hreach := read_to_end_after_read_spare_lt readStore [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
         capacity data length filled target count hcountNe hspareLt hlengthBound
       apply ReachesOrOOM.prependReaches hreach
       have hsuffix := hrecurse (consumed ++ bytes) (remaining.drop bytes.length) updated
@@ -151,7 +151,7 @@ theorem read_to_end_after_read_recursive
       simpa only [encodeReadContinuedConfig, hupdated] using hsuffix
     · by_cases hpartial : target ≠ count
       · have hreach := read_to_end_after_read_partial readStore [] encodeLocals []
-          (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+          (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
           capacity data length filled target count hcountNe hspareLt hpartial
           hlengthBound
         apply ReachesOrOOM.prependReaches hreach
@@ -163,7 +163,7 @@ theorem read_to_end_after_read_recursive
       · have hfull : target = count := not_ne_iff.mp hpartial
         by_cases hnegative : chunk.toInt32 < (0 : UInt32).toInt32
         · have hreach := read_to_end_after_read_full_saturate readStore []
-            encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+            encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
             readToEndStack chunk capacity data length filled target count
             hcountNe hspareLt hfull hnegative hlengthBound
           apply ReachesOrOOM.prependReaches hreach
@@ -177,7 +177,7 @@ theorem read_to_end_after_read_recursive
             (by decide) (by simp)
           simpa only [encodeReadContinuedConfig, hupdated, hfilledZero] using hsuffix
         · have hreach := read_to_end_after_read_full_double readStore []
-            encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+            encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
             readToEndStack chunk capacity data length filled target count
             hcountNe hspareLt hfull hnegative hlengthBound
           apply ReachesOrOOM.prependReaches hreach
@@ -218,7 +218,7 @@ theorem read_to_end_continued_direct_outcome
         (ReadToEndSuccess input)) :
     ReachesOrOOM
       (readToEndContinuedDirectConfig store [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack
         chunk capacity data length filled previousTarget previousBase previousSpare)
       (ReadToEndSuccess input) := by
   let target := readToEndTarget chunk capacity length
@@ -260,13 +260,13 @@ theorem read_to_end_continued_direct_outcome
   · let readStore := readAdapterResultStore store (readToEndStack + 16)
       (length + data) bytes
     have hdirect := read_to_end_continued_direct_read_no_fill store []
-      encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+      encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
       readToEndStack chunk capacity data length filled target previousTarget
       previousBase previousSpare bytes rfl (by simpa [remainCount] using
         hremainZero) hinv.runtime_module hinv.runtime_host
       (by simp [bytes, hinv.input_eq]) hbounds.2.1 hbounds.2.2
     have hafterAdapter := read_to_end_continued_after_adapter_success readStore
-      [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+      [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
       readToEndStack chunk capacity data length filled target 0 count
       (readAdapterResultStore_read_tag store (readToEndStack + 16)
         (length + data) bytes (by decide))
@@ -289,13 +289,13 @@ theorem read_to_end_continued_direct_outcome
     let readStore := readAdapterResultStore filledStore (readToEndStack + 16)
       (length + data) bytes
     have hdirect := read_to_end_continued_direct_read store [] encodeLocals []
-      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
       capacity data length filled target remainCount previousTarget previousBase
       previousSpare bytes rfl rfl hremainZero hinv.runtime_module
       hinv.runtime_host (by simp [bytes, hinv.input_eq]) hbounds.1 hbounds.2.1
       hbounds.2.2
     have hafterAdapter := read_to_end_continued_after_adapter_success readStore
-      [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+      [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
       readToEndStack chunk capacity data length filled target remainCount count
       (readAdapterResultStore_read_tag filledStore (readToEndStack + 16)
         (length + data) bytes (by decide))
@@ -336,7 +336,7 @@ theorem read_to_end_grown_direct_outcome
         (ReadToEndSuccess input)) :
     ReachesOrOOM
       (readToEndGrownDirectConfig store [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack
         chunk capacity data length 0 previousTarget previousBase scratch9 status)
       (ReadToEndSuccess input) := by
   let target := readToEndTarget chunk capacity length
@@ -368,7 +368,7 @@ theorem read_to_end_grown_direct_outcome
     rw [show count.toNat = bytes.length from UInt32.toNat_ofNat_of_lt' hc]
     exact List.length_take_le target.toNat remaining
   have hdirect := read_to_end_grown_direct_read store [] encodeLocals []
-    (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+    (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
     capacity data length 0 target target previousTarget previousBase scratch9
     status bytes rfl (by simp) htargetNe hinv.runtime_module hinv.runtime_host
     (by simp [bytes, hinv.input_eq]) (by simpa [filledStore] using hbounds.1)
@@ -388,7 +388,7 @@ theorem read_to_end_grown_direct_outcome
     change 1048536 ≤ readStore.wasm.mem.pages * 65536
     omega
   have hafterAdapter := read_to_end_grown_after_adapter_success readStore []
-    encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+    encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
     readToEndStack chunk capacity data length 0 target target count previousBase
     scratch9 status hstatus
     (readAdapterResultStore_read_tag filledStore (readToEndStack + 16)
@@ -440,7 +440,7 @@ theorem read_to_end_continued_outcome
           simpa using Nat.eq_zero_of_le_zero hf
         subst filled
         have hprefix := read_to_end_continued_loop_to_grow store []
-          encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+          encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
           readToEndStack chunk capacity data length 0 previousCount
           previousTarget previousBase previousSpare hlengthNe hfull hinv.data_eq
           hdataBound
@@ -450,12 +450,12 @@ theorem read_to_end_continued_outcome
               (0 : UInt32).toInt32
         · exact Or.inr (read_to_end_grow_signed_oom input consumed remaining
             store [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] []
-            1048564 readToEndStack chunk capacity data length 0
+            1048552 readToEndStack chunk capacity data length 0
             previousSpare 4 bump hinv hfinishNegative)
         · have hfinishSmall :=
             UInt32.toNat_lt_signed_limit_of_not_negative _ hfinishNegative
           have hgrow := read_to_end_grow_call_outcome store [] encodeLocals []
-            (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+            (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack
             chunk capacity data length 0 previousSpare 4 bump
             hinv.runtime_module hinv.runtime_host hinv.bump_eq
             (by have hp := hinv.pages_lower; omega)
@@ -476,7 +476,7 @@ theorem read_to_end_continued_outcome
             change 17 ≤ allocStore.wasm.mem.pages
             exact le_trans hinv.pages_lower halloc.pages_mono
           have hafterGrow := read_to_end_after_grow_success okStore []
-            encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+            encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
             readToEndStack chunk capacity data length 0 previousSpare 4 bump
             (by simpa [okStore] using (growResultOkStore_read_tag allocStore
               (readToEndStack + 16) (allocatorPtr bump 1)
@@ -512,7 +512,7 @@ theorem read_to_end_continued_outcome
               hchunk' hfilled' rfl)
           simpa [readToEndGrownStore, okStore, hinv.allocator_ptr] using hsuffix
       · have hprefix := read_to_end_continued_loop_skip_growth store []
-          encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+          encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
           readToEndStack chunk capacity data length filled previousCount
           previousTarget previousBase previousSpare hlengthNe hfull hinv.data_eq
           hdataBound
@@ -537,7 +537,7 @@ theorem read_to_end_initial_direct_outcome
     (hchunk : 0 < chunk.toNat) (hspare : length ≠ capacity) :
     ReachesOrOOM
       (readToEndDirectConfig store [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack
         chunk capacity data length 0)
       (ReadToEndSuccess input) := by
   let target := readToEndTarget chunk capacity length
@@ -569,7 +569,7 @@ theorem read_to_end_initial_direct_outcome
     rw [show count.toNat = bytes.length from UInt32.toNat_ofNat_of_lt' hc]
     exact List.length_take_le target.toNat remaining
   have hdirect := read_to_end_direct_read store [] encodeLocals []
-    (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+    (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
     capacity data length 0 target target bytes rfl (by simp) htargetNe
     hinv.runtime_module hinv.runtime_host (by simp [bytes, hinv.input_eq])
     (by simpa [filledStore] using hbounds.1) hbounds.2.1 hbounds.2.2
@@ -588,7 +588,7 @@ theorem read_to_end_initial_direct_outcome
     change 1048536 ≤ readStore.wasm.mem.pages * 65536
     omega
   have hafterAdapter := read_to_end_after_adapter_success readStore []
-    encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+    encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
     readToEndStack chunk capacity data length 0 target target count
     (readAdapterResultStore_read_tag filledStore (readToEndStack + 16)
       (length + data) bytes (by decide))
@@ -597,10 +597,10 @@ theorem read_to_end_initial_direct_outcome
     hcountLe htagBound hcountBound
   have hdirect' : Reaches
       (readToEndDirectConfig store [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack
         chunk capacity data length 0)
       (readToEndAfterAdapterConfig readStore [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack
         chunk capacity data length 0 target target) := by
     simpa [readStore, filledStore] using hdirect
   apply ReachesOrOOM.prependReaches (hdirect'.trans hafterAdapter)
@@ -632,19 +632,19 @@ theorem read_to_end_loop_outcome
     omega
   by_cases hfull : length = capacity
   · have hprefix := read_to_end_loop_to_grow store [] encodeLocals []
-      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
       capacity data length 0 hlengthNe hfull hinv.data_eq hdataBound
     apply ReachesOrOOM.prependReaches hprefix
     by_cases hnegative :
         (allocatorFinish (readToEndNewCapacity capacity) 1 bump).toInt32 <
           (0 : UInt32).toInt32
     · exact Or.inr (read_to_end_grow_signed_oom input consumed remaining store
-        [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+        [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
         readToEndStack chunk capacity data length 0 0 0 bump hinv hnegative)
     · have hfinishSmall :=
         UInt32.toNat_lt_signed_limit_of_not_negative _ hnegative
       have hgrow := read_to_end_grow_call_outcome store [] encodeLocals []
-        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+        (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
         capacity data length 0 0 0 bump hinv.runtime_module hinv.runtime_host
         hinv.bump_eq
         (by have hp := hinv.pages_lower; omega)
@@ -670,7 +670,7 @@ theorem read_to_end_loop_outcome
         have hafterGrow := read_to_end_after_grow_success
           (growResultOkStore allocStore (readToEndStack + 16)
             (allocatorPtr bump 1) (readToEndNewCapacity capacity))
-          [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564
+          [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552
           readToEndStack chunk capacity data length 0 0 0
           (allocatorPtr bump 1) htag hptr
           (by change 1048532 ≤ allocStore.wasm.mem.pages * 65536; omega)
@@ -703,7 +703,7 @@ theorem read_to_end_loop_outcome
           htargetZero] using htail
       · exact Or.inr htrap
   · have hprefix := read_to_end_loop_skip_growth store [] encodeLocals []
-      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048564 readToEndStack chunk
+      (Project.HexStdio.func10.drop 9) 0 [] [] [] 1048552 readToEndStack chunk
       capacity data length 0 hlengthNe hfull hinv.data_eq hdataBound
     apply ReachesOrOOM.prependReaches hprefix
     exact read_to_end_initial_direct_outcome input consumed remaining store

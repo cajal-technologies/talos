@@ -1,5 +1,7 @@
 import CodeLib.SepLogic.SmallStepAdequacy
-import Interpreter.Wasm.Decoder.Wat
+import Interpreter.Wasm.Decoder.ProofEval
+
+kernel_decoder
 
 /-!
 # Concrete examples for the Wasm small-step adequacy bridge
@@ -25,11 +27,8 @@ private theorem sep_pair_pure_rotate
     (P Q : IProp (WasmHeapGF α)) (φ : Prop) :
     (P ∗ Q) ∗ ⌜φ⌝ ⊢ ⌜φ⌝ ∗ P ∗ Q := by
   iintro ⟨⟨HP, HQ⟩, %hφ⟩
-  isplitl []
-  · ipureintro
-    exact hφ
-  · isplitl [HP]
-    · iexact HP
+  isplitl_pureexact hφ
+  · isplitl_exact HP
     · iexact HQ
 
 private def globalGetAdequacyConfig : Config Unit :=
@@ -48,25 +47,7 @@ private def global0Heap : WasmGlobalMap Value :=
 
 private theorem global0Heap_agrees :
     globalHeapAgrees global0Heap
-      globalGetAdequacyConfig.store.wasm.globals := by
-  intro index value hget
-  simp only [global0Heap] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg GlobalKey.index h).symm),
-        get?_empty] at hget
-    contradiction
-
-private theorem global0Heap_pointsTo [WasmGlobalGS α] :
-    ([∗map] index ↦ value ∈ global0Heap,
-      globalPointsTo index value) ⊢
-      globalPointsTo ⟨0, 0⟩ (.i32 42) := by
-  unfold global0Heap
-  rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
-    BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
+      globalGetAdequacyConfig.store.wasm.globals := globalHeapAgrees_singleton rfl
 
 /-- A concrete adequacy witness for authoritative globals: the WP may derive
 the result of `global.get 0` only from ownership allocated for the matching
@@ -80,13 +61,11 @@ theorem globalGet_adequate :
     (globalσ := global0Heap)
     (φ := fun values => values = [.i32 42])
   · intro address value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · intro address hne
     exact absurd (get?_empty address) hne
   · exact global0Heap_agrees
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     unfold global0Heap
     rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
@@ -94,14 +73,8 @@ theorem globalGet_adequate :
     iintro Hglobal
     simp only [globalGetAdequacyConfig]
     simp only [← globalPointsToAt_eq]
-    iapply wp_globalGet $$ Hglobal
-    inext
-    iintro Hglobal
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    wasm_wp_next_rebind wp_globalGet with Hglobal
+    wasm_wp_finish_value_rfl
 
 def noopCallModule : Module :=
   { funcs := [{ body := [.ret] }] }
@@ -122,24 +95,16 @@ theorem noopCall_adequate :
       (fun values _ => values = []) := by
   apply wasm_smallStep_runtime_instance_adequacy (α := Unit)
     (φ := fun values => values = [])
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [noopCallConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, _HruntimeInstances⟩
     iclear _HruntimeInstances
-    iapply wp_call noopCallModule 0 ({ body := [.ret] } : Function)
-        (by simp [noopCallModule]) rfl ⟨0⟩ $$ Hruntime
-    inext
-    iintro Hruntime
+    wasm_wp_next_rebind wp_call noopCallModule 0 ({ body := [.ret] } : Function)
+        (by simp [noopCallModule]) rfl ⟨0⟩ with Hruntime
     simp only [noopCallModule, Function.toLocals, Function.numParams,
       List.take_nil, List.reverse_nil, List.drop_nil, List.length_nil]
-    iapply wp_returnFromCallExplicit $$ Hruntime
-    inext
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
+    wasm_wp_return_value_rfl
 
 private def word16Heap (word : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -177,8 +142,7 @@ private theorem word16Heap_pointsTo (word : UInt32) [WasmHeapGS α] :
   rw [BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   unfold pointsTo_u32
   simp only [UInt32.reduceAdd]
-  iintro ⟨H19, H18, H17, H16⟩
-  iframe
+  iintro ⟨H19, H18, H17, H16⟩; iframe
 
 private theorem emptyHeap_agrees (resolve : Nat → Option Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8)) resolve :=
@@ -223,13 +187,11 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
     (σ := word16Heap oldWord)
     (φ := fun values => values = [.i32 0x12345678])
   · unfold word16Heap
-    apply store32_sound0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    apply_store32_sound0
     exact emptyHeap_agrees _
   · unfold word16Heap
-    apply store32_inBounds0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    · native_decide
+    apply_store32_inBounds0
+    · decide +kernel
     · exact emptyHeap_inBounds _
   · intro gs
     iintro Hbytes
@@ -241,11 +203,9 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
         (iprop% ⌜values = [.i32 0x12345678]⌝) := by
       intro values
       iintro ⟨%hvalues, _Hword⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
-    iapply wp_wordRoundtrip
-    iexact Hword
+    iapply_exact wp_wordRoundtrip with Hword
 
 /-- State-sensitive adequacy exposes the physical effect of the manual
 roundtrip, not only its returned value. -/
@@ -259,17 +219,14 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
     (σ := word16Heap oldWord)
     (globalσ := (∅ : WasmGlobalMap Value))
   · unfold word16Heap
-    apply store32_sound0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    apply_store32_sound0
     exact emptyHeap_agrees _
   · unfold word16Heap
-    apply store32_inBounds0 (mem := wordRoundtripAdequacyModule.initialStore.mem)
-      (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    · native_decide
+    apply_store32_inBounds0
+    · decide +kernel
     · exact emptyHeap_inBounds _
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · simp only [wordRoundtripAdequacyConfig]; decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -290,11 +247,9 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
         store 0 [] 0 16 0x12345678
         (by decide) (by decide) (by decide) $$
           [$Hstate $Hword] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
-    iapply wp_wordRoundtrip
-    iexact Hword
+    iapply_exact wp_wordRoundtrip with Hword
 
 /-- Authoritative footprint for the two cells used by `wp_swapWords`. -/
 private def swapWordsHeap : WasmHeapMap (Option UInt8) :=
@@ -304,8 +259,8 @@ private theorem swapWordsHeap_agrees (mem : Mem) :
     heapAgreesWithMem swapWordsHeap
       (fun id => if id = 0 then some ((mem.write32 0 11).write32 4 22) else none) := by
   unfold swapWordsHeap
-  apply store32_sound0 (mem := mem.write32 0 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := mem) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem swapWordsHeap_inBounds (memory : Mem)
@@ -313,18 +268,16 @@ private theorem swapWordsHeap_inBounds (memory : Mem)
     heapAddressesInBounds swapWordsHeap
       (fun id => if id = 0 then some ((memory.write32 0 11).write32 4 22) else none) := by
   unfold swapWordsHeap
-  apply store32_inBounds0 (mem := memory.write32 0 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
+  · apply_store32_inBounds0
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
-      simp only [UInt32.toNat_zero, Nat.zero_add]
-      omega
+      simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
 private theorem swapWordsHeap_pointsTo [WasmHeapGS α] :
@@ -333,19 +286,18 @@ private theorem swapWordsHeap_pointsTo [WasmHeapGS α] :
         address (DFrac.own 1) value) ⊢
       pointsTo_u32 0 0 11 ∗ pointsTo_u32 0 4 22 := by
   unfold swapWordsHeap store32Heap
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
-  rw [(BI.BigSepM.bigSepM_insert (by native_decide)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
+  rw [(BI.BigSepM.bigSepM_insert (by decide +kernel)).to_eq]
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : MemoryKey))).to_eq]
   rw [BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   unfold pointsTo_u32
   simp only [UInt32.reduceAdd]
-  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0⟩
-  iframe
+  iintro ⟨H7, H6, H5, H4, H3, H2, H1, H0⟩; iframe
 
 def swapWordsAdequacyModule : Module :=
   { funcs :=
@@ -390,7 +342,7 @@ theorem swapWords_adequate :
     (φ := fun values => values = [.i32 11, .i32 22])
   · apply swapWordsHeap_agrees
   · apply swapWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro gs
     iintro Hbytes
     ihave Hwords := swapWordsHeap_pointsTo $$ Hbytes
@@ -401,11 +353,9 @@ theorem swapWords_adequate :
         (iprop% ⌜values = [.i32 11, .i32 22]⌝) := by
       intro values
       iintro ⟨%hvalues, _H0, _H4⟩
-      ipureintro
-      exact hvalues
+      ipureexact hvalues
     iapply wp_mono hpost
-    iapply wp_swapWords
-    iexact Hwords
+    iapply_exact wp_swapWords with Hwords
 
 /-- State-sensitive Iris adequacy for the two-word swap.  In addition to the
 returned stack, this exposes both exchanged words in the reached physical
@@ -422,12 +372,10 @@ theorem swapWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply swapWordsHeap_agrees
   · apply swapWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
-  · decide
-  · intro gs
+    rw [get?_empty] at hget; contradiction
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := swapWordsHeap_pointsTo $$ Hbytes
@@ -451,11 +399,9 @@ theorem swapWords_store_partiallyMeets :
         store 0 [] 0 4 11
         (by decide) (by decide) (by decide) $$
           [$Hstate $H4] with %Hfacts4
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1⟩
     iapply wp_mono hpost
-    iapply wp_swapWords
-    iexact Hwords
+    iapply_exact wp_swapWords with Hwords
 
 /-! ### Three-word reverse with a framed middle cell -/
 
@@ -466,7 +412,7 @@ private theorem reverseThreeWordsHeap_agrees (mem : Mem) :
     heapAgreesWithMem reverseThreeWordsHeap
       (fun id => if id = 0 then some (((mem.write32 0 11).write32 4 22).write32 8 33) else none) := by
   unfold reverseThreeWordsHeap
-  apply store32_sound0 (mem := (mem.write32 0 11).write32 4 22) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
   exact swapWordsHeap_agrees mem
 
 private theorem reverseThreeWordsHeap_inBounds (memory : Mem)
@@ -474,13 +420,11 @@ private theorem reverseThreeWordsHeap_inBounds (memory : Mem)
     heapAddressesInBounds reverseThreeWordsHeap
       (fun id => if id = 0 then some (((memory.write32 0 11).write32 4 22).write32 8 33) else none) := by
   unfold reverseThreeWordsHeap
-  apply store32_inBounds0 (mem := (memory.write32 0 11).write32 4 22)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
   · exact swapWordsHeap_inBounds memory hpages
 
 private theorem reverseThreeWordsHeap_pointsTo [WasmHeapGS α] :
@@ -491,13 +435,11 @@ private theorem reverseThreeWordsHeap_pointsTo [WasmHeapGS α] :
         pointsTo_u32 0 8 33 := by
   unfold reverseThreeWordsHeap
   iintro Hheap
-  ihave H8 := store32Heap_pointsTo swapWordsHeap 0 8 33
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+  ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo swapWordsHeap 0 8 33
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave Hwords := swapWordsHeap_pointsTo $$ Hheap
-  icases Hwords with ⟨H0, H4⟩
+  ihave ⟨H0, H4⟩ := swapWordsHeap_pointsTo $$ Hheap
   iframe
 
 def reverseThreeWordsAdequacyModule : Module :=
@@ -547,12 +489,10 @@ theorem reverseThreeWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply reverseThreeWordsHeap_agrees
   · apply reverseThreeWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
-  · decide
-  · intro gs
+    rw [get?_empty] at hget; contradiction
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := reverseThreeWordsHeap_pointsTo $$ Hbytes
@@ -584,11 +524,9 @@ theorem reverseThreeWords_store_partiallyMeets :
         store 0 [] 0 8 11
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1⟩
     iapply wp_mono hpost
-    iapply wp_reverseThreeWords
-    iexact Hwords
+    iapply_exact wp_reverseThreeWords with Hwords
 
 /-! ### Three-word partition with a pivot in its final position -/
 
@@ -599,9 +537,9 @@ private theorem partitionThreeWordsHeap_agrees (memory : Mem) :
     heapAgreesWithMem partitionThreeWordsHeap
       (fun id => if id = 0 then some (((memory.write32 0 33).write32 4 11).write32 8 22) else none) := by
   unfold partitionThreeWordsHeap
-  apply store32_sound0 (mem := (memory.write32 0 33).write32 4 11) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory.write32 0 33) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem partitionThreeWordsHeap_inBounds (memory : Mem)
@@ -612,16 +550,12 @@ private theorem partitionThreeWordsHeap_inBounds (memory : Mem)
   have hcapacity :
       65536 ≤ memory.pages * 65536 :=
     Nat.mul_le_mul_right 65536 hpages
-  apply store32_inBounds0 (mem := (memory.write32 0 33).write32 4 11)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  · simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
-  · apply store32_inBounds0 (mem := memory.write32 0 33) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    · simp only [UInt32.toNat_ofNat, Mem.write32]
-      omega
-    · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-      · simp only [UInt32.toNat_ofNat]
-        omega
+  apply_store32_inBounds0
+  · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
+  · apply_store32_inBounds0
+    · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
+    · apply_store32_inBounds0
+      · simp only [UInt32.toNat_ofNat]; omega
       · exact emptyHeap_inBounds _
 
 private theorem partitionThreeWordsHeap_pointsTo [WasmHeapGS α] :
@@ -632,22 +566,19 @@ private theorem partitionThreeWordsHeap_pointsTo [WasmHeapGS α] :
         pointsTo_u32 0 8 22 := by
   unfold partitionThreeWordsHeap
   iintro Hheap
-  ihave H8 := store32Heap_pointsTo
+  ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo
     (store32Heap (store32Heap ∅ 0 0 33) 0 4 11) 0 8 22
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave H4 := store32Heap_pointsTo (store32Heap ∅ 0 0 33) 0 4 11
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+  ihave ⟨H4, Hheap⟩ := store32Heap_pointsTo (store32Heap ∅ 0 0 33) 0 4 11
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H4 with ⟨H4, Hheap⟩
-  ihave H0 := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 33
+  ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 33
     (get?_empty (⟨0, 0⟩ : MemoryKey)) (get?_empty (⟨0, 1⟩ : MemoryKey))
     (get?_empty (⟨0, 2⟩ : MemoryKey)) (get?_empty (⟨0, 3⟩ : MemoryKey))
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _Hempty⟩
   iframe
 
 def partitionThreeWordsAdequacyModule : Module :=
@@ -697,12 +628,10 @@ theorem partitionThreeWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply partitionThreeWordsHeap_agrees
   · apply partitionThreeWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
-  · decide
-  · intro gs
+    rw [get?_empty] at hget; contradiction
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := partitionThreeWordsHeap_pointsTo $$ Hbytes
@@ -736,13 +665,11 @@ theorem partitionThreeWords_store_partiallyMeets :
         store 0 [] 0 8 33
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1,
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1, Hfacts8.1,
         by rw [Hfacts0.1, Hfacts4.1]; decide,
         by rw [Hfacts4.1, Hfacts8.1]; decide⟩
     iapply wp_mono hpost
-    iapply wp_partitionThreeWords
-    iexact Hwords
+    iapply_exact wp_partitionThreeWords with Hwords
 
 /-! ### Merge of two singleton sorted runs -/
 
@@ -753,8 +680,8 @@ private theorem mergeTwoWordsHeap_agrees (memory : Mem) :
     heapAgreesWithMem mergeTwoWordsHeap
       (fun id => if id = 0 then some ((memory.write32 0 9).write32 4 4) else none) := by
   unfold mergeTwoWordsHeap
-  apply store32_sound0 (mem := memory.write32 0 9) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem mergeTwoWordsHeap_inBounds (memory : Mem)
@@ -765,12 +692,10 @@ private theorem mergeTwoWordsHeap_inBounds (memory : Mem)
   have hcapacity :
       65536 ≤ memory.pages * 65536 :=
     Nat.mul_le_mul_right 65536 hpages
-  apply store32_inBounds0 (mem := memory.write32 0 9) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  · simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-    · simp only [UInt32.toNat_zero, Nat.zero_add]
-      omega
+  apply_store32_inBounds0
+  · simp only [UInt32.toNat_ofNat, Mem.write32]; omega
+  · apply_store32_inBounds0
+    · simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
 private theorem mergeTwoWordsHeap_pointsTo [WasmHeapGS α] :
@@ -780,16 +705,14 @@ private theorem mergeTwoWordsHeap_pointsTo [WasmHeapGS α] :
       pointsTo_u32 0 0 9 ∗ pointsTo_u32 0 4 4 := by
   unfold mergeTwoWordsHeap
   iintro Hheap
-  ihave H4 := store32Heap_pointsTo (store32Heap ∅ 0 0 9) 0 4 4
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+  ihave ⟨H4, Hheap⟩ := store32Heap_pointsTo (store32Heap ∅ 0 0 9) 0 4 4
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H4 with ⟨H4, Hheap⟩
-  ihave H0 := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 9
+  ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo (∅ : WasmHeapMap (Option UInt8)) 0 0 9
     (get?_empty (⟨0, 0⟩ : MemoryKey)) (get?_empty (⟨0, 1⟩ : MemoryKey))
     (get?_empty (⟨0, 2⟩ : MemoryKey)) (get?_empty (⟨0, 3⟩ : MemoryKey))
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _Hempty⟩
   iframe
 
 def mergeTwoWordsAdequacyModule : Module :=
@@ -840,12 +763,10 @@ theorem mergeTwoWords_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply mergeTwoWordsHeap_agrees
   · apply mergeTwoWordsHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
-  · decide
-  · intro gs
+    rw [get?_empty] at hget; contradiction
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := mergeTwoWordsHeap_pointsTo $$ Hbytes
@@ -871,12 +792,10 @@ theorem mergeTwoWords_store_partiallyMeets :
         store 0 [] 0 4 9
         (by decide) (by decide) (by decide) $$
           [$Hstate $H4] with %Hfacts4
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts4.1,
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts4.1,
         by rw [Hfacts0.1, Hfacts4.1]; decide⟩
     iapply wp_mono hpost
-    iapply wp_mergeTwoWords
-    iexact Hwords
+    iapply_exact wp_mergeTwoWords with Hwords
 
 /-! ### Bulk-memory examples -/
 
@@ -889,8 +808,8 @@ private theorem fillFourBytesHeap_agrees (memory : Mem)
     heapAgreesWithMem (fillFourBytesHeap oldWord)
       (fun id => if id = 0 then some ((memory.write32 16 oldWord).write32 32 0x12345678) else none) := by
   unfold fillFourBytesHeap
-  apply store32_sound0 (mem := memory.write32 16 oldWord) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem fillFourBytesHeap_inBounds (memory : Mem)
@@ -898,18 +817,16 @@ private theorem fillFourBytesHeap_inBounds (memory : Mem)
     heapAddressesInBounds (fillFourBytesHeap oldWord)
       (fun id => if id = 0 then some ((memory.write32 16 oldWord).write32 32 0x12345678) else none) := by
   unfold fillFourBytesHeap
-  apply store32_inBounds0 (mem := memory.write32 16 oldWord) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
+  · apply_store32_inBounds0
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
-      simp only [UInt32.toNat_ofNat]
-      omega
+      simp only [UInt32.toNat_ofNat]; omega
     · exact emptyHeap_inBounds _
 
 private theorem fillFourBytesHeap_pointsTo (oldWord : UInt32)
@@ -930,20 +847,18 @@ private theorem fillFourBytesHeap_pointsTo (oldWord : UInt32)
     rw [get?_insert_ne (mk_ne _ _ h3), get?_insert_ne (mk_ne _ _ h2),
       get?_insert_ne (mk_ne _ _ h1), get?_insert_ne (mk_ne _ _ h0),
       get?_empty]
-  ihave H32 := store32Heap_pointsTo
+  ihave ⟨H32, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 16 oldWord) 0 32 0x12345678
     (hnone 32 (by decide) (by decide) (by decide) (by decide))
     (hnone (32 + 1) (by decide) (by decide) (by decide) (by decide))
     (hnone (32 + 2) (by decide) (by decide) (by decide) (by decide))
     (hnone (32 + 3) (by decide) (by decide) (by decide) (by decide))
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H32 with ⟨H32, Hheap⟩
-  ihave H16 := store32Heap_pointsTo
+  ihave ⟨H16, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 16 oldWord
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H16 with ⟨H16, _Hempty⟩
   iframe
 
 def fillFourBytesAdequacyModule : Module :=
@@ -984,10 +899,9 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply fillFourBytesHeap_agrees
   · apply fillFourBytesHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · simp only [fillFourBytesAdequacyConfig]; decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -1015,11 +929,9 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
         store 0 [] 0 32 0x12345678
         (by decide) (by decide) (by decide) $$
           [$Hstate $H32] with %Hfacts32
-      ipureintro
-      exact ⟨hvalues, Hfacts16.1, Hfacts32.1⟩
+      ipureexact ⟨hvalues, Hfacts16.1, Hfacts32.1⟩
     iapply wp_mono hpost
-    iapply wp_fillFourBytes oldWord
-    iexact Hwords
+    iapply_exact wp_fillFourBytes oldWord with Hwords
 
 private def copyWordHeap (oldDestination : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -1030,8 +942,8 @@ private theorem copyWordHeap_agrees (memory : Mem)
     heapAgreesWithMem (copyWordHeap oldDestination)
       (fun id => if id = 0 then some ((memory.write32 0 0x04030201).write32 8 oldDestination) else none) := by
   unfold copyWordHeap
-  apply store32_sound0 (mem := memory.write32 0 0x04030201) (h1 := rfl) (h2 := rfl) (h3 := rfl)
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem copyWordHeap_inBounds (memory : Mem)
@@ -1039,18 +951,16 @@ private theorem copyWordHeap_inBounds (memory : Mem)
     heapAddressesInBounds (copyWordHeap oldDestination)
       (fun id => if id = 0 then some ((memory.write32 0 0x04030201).write32 8 oldDestination) else none) := by
   unfold copyWordHeap
-  apply store32_inBounds0 (mem := memory.write32 0 0x04030201) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat, Mem.write32]
-    omega
-  · apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+    simp only [UInt32.toNat_ofNat, Mem.write32]; omega
+  · apply_store32_inBounds0
     · have hcapacity :
           65536 ≤ memory.pages * 65536 :=
         Nat.mul_le_mul_right 65536 hpages
-      simp only [UInt32.toNat_zero, Nat.zero_add]
-      omega
+      simp only [UInt32.toNat_zero, Nat.zero_add]; omega
     · exact emptyHeap_inBounds _
 
 private theorem copyWordHeap_pointsTo (oldDestination : UInt32)
@@ -1061,18 +971,16 @@ private theorem copyWordHeap_pointsTo (oldDestination : UInt32)
       pointsTo_u32 0 0 0x04030201 ∗ pointsTo_u32 0 8 oldDestination := by
   unfold copyWordHeap
   iintro Hheap
-  ihave H8 := store32Heap_pointsTo
+  ihave ⟨H8, Hheap⟩ := store32Heap_pointsTo
     (store32Heap ∅ 0 0 0x04030201) 0 8 oldDestination
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H8 with ⟨H8, Hheap⟩
-  ihave H0 := store32Heap_pointsTo
+  ihave ⟨H0, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0x04030201
-    (by native_decide) (by native_decide)
-    (by native_decide) (by native_decide)
+    (by decide +kernel) (by decide +kernel)
+    (by decide +kernel) (by decide +kernel)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _Hempty⟩
   iframe
 
 def copyWordAdequacyModule : Module :=
@@ -1111,10 +1019,9 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply copyWordHeap_agrees
   · apply copyWordHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · simp only [copyWordAdequacyConfig]; decide
   · intro gs
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
@@ -1142,11 +1049,9 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
         store 0 [] 0 8 0x04030201
         (by decide) (by decide) (by decide) $$
           [$Hstate $H8] with %Hfacts8
-      ipureintro
-      exact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
+      ipureexact ⟨hvalues, Hfacts0.1, Hfacts8.1⟩
     iapply wp_mono hpost
-    iapply wp_copyWord oldDestination
-    iexact Hwords
+    iapply_exact wp_copyWord oldDestination with Hwords
 
 private def copyOverlapWordHeap : WasmHeapMap (Option UInt8) :=
   store64Heap ∅ 0 0 0x8877665544332211
@@ -1155,8 +1060,7 @@ private theorem copyOverlapWordHeap_agrees (memory : Mem) :
     heapAgreesWithMem copyOverlapWordHeap
       (fun id => if id = 0 then some (memory.write64 0 0x8877665544332211) else none) := by
   unfold copyOverlapWordHeap
-  apply store64_sound0 (mem := memory)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl) (h4 := rfl) (h5 := rfl) (h6 := rfl) (h7 := rfl)
+  apply_store64_sound0
   exact emptyHeap_agrees _
 
 private theorem copyOverlapWordHeap_inBounds (memory : Mem)
@@ -1164,13 +1068,11 @@ private theorem copyOverlapWordHeap_inBounds (memory : Mem)
     heapAddressesInBounds copyOverlapWordHeap
       (fun id => if id = 0 then some (memory.write64 0 0x8877665544332211) else none) := by
   unfold copyOverlapWordHeap
-  apply store64_inBounds0 (mem := memory)
-    (h1 := rfl) (h2 := rfl) (h3 := rfl) (h4 := rfl) (h5 := rfl) (h6 := rfl) (h7 := rfl)
+  apply_store64_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_zero, Nat.zero_add]
-    omega
+    simp only [UInt32.toNat_zero, Nat.zero_add]; omega
   · exact emptyHeap_inBounds _
 
 private theorem copyOverlapWordHeap_pointsTo [WasmHeapGS α] :
@@ -1180,11 +1082,10 @@ private theorem copyOverlapWordHeap_pointsTo [WasmHeapGS α] :
       pointsTo_u64 0 0 0x8877665544332211 := by
   unfold copyOverlapWordHeap
   iintro Hheap
-  ihave Hword := store64Heap_pointsTo
+  ihave ⟨Hword, _Hempty⟩ := store64Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0x8877665544332211
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) (by decide) $$ Hheap
-  icases Hword with ⟨Hword, _Hempty⟩
   iexact Hword
 
 def copyOverlapWordAdequacyModule : Module :=
@@ -1222,12 +1123,10 @@ theorem copyOverlapWord_store_partiallyMeets :
     (globalσ := (∅ : WasmGlobalMap Value))
   · apply copyOverlapWordHeap_agrees
   · apply copyOverlapWordHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
-  · decide
-  · intro gs
+    rw [get?_empty] at hget; contradiction
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hword := copyOverlapWordHeap_pointsTo $$ Hbytes
@@ -1249,11 +1148,9 @@ theorem copyOverlapWord_store_partiallyMeets :
         (by decide) (by decide) (by decide) (by decide)
         (by decide) (by decide) (by decide) $$
           [$Hstate $Hword] with %Hfacts
-      ipureintro
-      exact ⟨hvalues, Hfacts.1⟩
+      ipureexact ⟨hvalues, Hfacts.1⟩
     iapply wp_mono hpost
-    iapply wp_copyOverlapWord
-    iexact Hword
+    iapply_exact wp_copyOverlapWord with Hword
 
 private def memoryInitDropHeap : WasmHeapMap (Option UInt8) :=
   store32Heap ∅ 0 16 0
@@ -1262,7 +1159,7 @@ private theorem memoryInitDropHeap_agrees (memory : Mem) :
     heapAgreesWithMem memoryInitDropHeap
       (fun id => if id = 0 then some (memory.write32 16 0) else none) := by
   unfold memoryInitDropHeap
-  apply store32_sound0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_sound0
   exact emptyHeap_agrees _
 
 private theorem memoryInitDropHeap_inBounds (memory : Mem)
@@ -1270,12 +1167,11 @@ private theorem memoryInitDropHeap_inBounds (memory : Mem)
     heapAddressesInBounds memoryInitDropHeap
       (fun id => if id = 0 then some (memory.write32 16 0) else none) := by
   unfold memoryInitDropHeap
-  apply store32_inBounds0 (mem := memory) (h1 := rfl) (h2 := rfl) (h3 := rfl)
+  apply_store32_inBounds0
   · have hcapacity :
         65536 ≤ memory.pages * 65536 :=
       Nat.mul_le_mul_right 65536 hpages
-    simp only [UInt32.toNat_ofNat]
-    omega
+    simp only [UInt32.toNat_ofNat]; omega
   · exact emptyHeap_inBounds _
 
 private theorem memoryInitDropHeap_pointsTo [WasmHeapGS α] :
@@ -1285,11 +1181,10 @@ private theorem memoryInitDropHeap_pointsTo [WasmHeapGS α] :
       pointsTo_u32 0 16 0 := by
   unfold memoryInitDropHeap
   iintro Hheap
-  ihave Hword := store32Heap_pointsTo
+  ihave ⟨Hword, _Hempty⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 16 0
     (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) (by decide) $$ Hheap
-  icases Hword with ⟨Hword, _Hempty⟩
   iexact Hword
 
 private def memoryInitDropSegments :
@@ -1298,16 +1193,7 @@ private def memoryInitDropSegments :
 
 private theorem memoryInitDropSegments_agree :
     dataSegmentHeapAgrees memoryInitDropSegments
-      [some [1, 2, 3, 4]] := by
-  intro index value hget
-  unfold memoryInitDropSegments at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst value
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg DataSegmentKey.index h).symm), get?_empty] at hget
-    contradiction
+      [some [1, 2, 3, 4]] := instanceIndexHeapAgrees_singleton rfl
 
 private theorem memoryInitDropSegments_pointsTo [WasmDataSegmentGS α] :
     ([∗map] index ↦ value ∈ memoryInitDropSegments,
@@ -1355,13 +1241,11 @@ theorem memoryInitDrop_store_partiallyMeets :
       (dataSegmentσ := memoryInitDropSegments)
   · apply memoryInitDropHeap_agrees
   · apply memoryInitDropHeap_inBounds
-    native_decide
+    decide +kernel
   · intro index value hget
-    rw [get?_empty] at hget
-    contradiction
+    rw [get?_empty] at hget; contradiction
   · exact memoryInitDropSegments_agree
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, Hsegments, _Hruntime⟩
     ihave Hword := memoryInitDropHeap_pointsTo $$ Hbytes
@@ -1387,33 +1271,19 @@ theorem memoryInitDrop_store_partiallyMeets :
           [$Hstate $Hword] with
         ⟨Hstate, Hword, %HwordFacts⟩
       simp only [← dataSegmentPointsToAt_eq]
-      imod stateInterp_dataSegment_facts_frame
-        store 0 [] 0 0 none $$ [$Hstate $Hsegment] with
-        ⟨Hstate, Hsegment, %HsegmentFact⟩
+      ihave_pure HsegmentFact :
+          ⌜store.wasm.dataSegments[0]? = some none⌝ using
+        stateInterp_dataSegment_facts store 0 [] 0 0 none $$ [Hstate Hsegment]
       ipureintro
-      constructor
-      · exact hvalues
-      constructor
-      · exact HwordFacts.1
-      · exact HsegmentFact
+      exact ⟨hvalues, HwordFacts.1, HsegmentFact⟩
     iapply wp_mono hpost
-    iapply wp_memoryInitDrop 0
-    iframe
+    iapply_frame wp_memoryInitDrop 0
 
 private def tableSetGetMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey) [.funcref none]
 
 private theorem tableSetGetMap_agrees :
-    tableHeapAgrees tableSetGetMap [[.funcref none]] := by
-  intro index table hget
-  unfold tableSetGetMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+    tableHeapAgrees tableSetGetMap [[.funcref none]] := tableHeapAgrees_singleton rfl
 
 private theorem tableSetGetMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableSetGetMap,
@@ -1466,8 +1336,7 @@ theorem tableSetGet_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     simp only [runtimeModuleOwn]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
@@ -1494,34 +1363,19 @@ theorem tableSetGet_store_partiallyMeets :
             (.funcref (some 1))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
     iapply wp_mono hpost
-    iapply wp_const
-    inext
-    iapply wp_pureStep _ _ _ (fun _ => Step.refFunc)
-    inext
+    wasm_wp_pures [wp_const]
+    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableSet rfl (by decide) $$ Htable
-    inext
-    iintro Htable
-    iapply wp_const
-    inext
-    iapply wp_tableGet (value := .funcref (some 1))
-      rfl (by simp [listSetAt]) $$ Htable
-    inext
-    iintro Htable
+    wasm_wp_next_rebind wp_tableSet rfl (by decide) with Htable
+    wasm_wp_pures [wp_const]
+    wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
+      rfl (by simp [listSetAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
-    iapply wp_refIsNull rfl
-    inext
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    iapply_splitl_exact wp_frame_l with Htable
+    wasm_wp_next wp_refIsNull rfl
+    wasm_wp_finish_value_rfl
 
 def tableGrowFillAdequacyModule : Module :=
   { funcs :=
@@ -1569,8 +1423,7 @@ theorem tableGrowFill_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableGrowFillAdequacyConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn⟩
@@ -1605,51 +1458,34 @@ theorem tableGrowFill_store_partiallyMeets :
               (.funcref (some 1)))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by
+      ipureexact ⟨hvalues, by
         simpa [listWriteAt] using Hphysical⟩
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableGrow32 tableGrowFillAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableGrow32 tableGrowFillAdequacyModule ⟨0⟩
       (tableIndex := 0) (table := [.funcref none])
       (delta := 2) (initial := .funcref (some 1)) (by decide) $$
         [$Htable $HruntimeOwn]
-    inext
     iintro Htable _HruntimeOwn
     simp only [tableGrowFillAdequacyModule]
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
-    iapply wp_const
-    inext
-    iapply wp_pureStep _ _ _ (fun _ => Step.refFunc)
-    inext
-    iapply wp_const
-    inext
-    iapply wp_tableFill
+    wasm_wp_pures [wp_const]
+    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
+    wasm_wp_pures [wp_const]
+    wasm_wp_next_bind wp_tableFill
       (tableIndex := 0) (destination := .i32 0) (length := .i32 3)
       (value := .funcref (some 1))
       (table :=
         [.funcref none] ++
           List.replicate (UInt32.toNat 2) (.funcref (some 1)))
-      rfl rfl (by decide) $$ Htable
-    inext
-    iintro Htable
-    iapply wp_const
-    inext
-    iapply wp_tableGet (value := .funcref (some 1))
-      rfl (by simp [listWriteAt]) $$ Htable
-    inext
-    iintro Htable
+      rfl rfl (by decide) with Htable => Htable
+    wasm_wp_pures [wp_const]
+    wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
+      rfl (by simp [listWriteAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
-    iapply wp_refIsNull rfl
-    inext
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    iapply_splitl_exact wp_frame_l with Htable
+    wasm_wp_next wp_refIsNull rfl
+    wasm_wp_finish_value_rfl
 
 def tableGrow64FailureAdequacyModule : Module :=
   { funcs :=
@@ -1695,8 +1531,7 @@ theorem tableGrow64Failure_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableGrow64FailureAdequacyConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn⟩
@@ -1725,37 +1560,27 @@ theorem tableGrow64Failure_store_partiallyMeets :
             List.replicate (UInt64.toNat 2) (.funcref (some 0))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by simpa using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa using Hphysical⟩
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableGrow64 tableGrow64FailureAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableGrow64 tableGrow64FailureAdequacyModule ⟨0⟩
       (tableIndex := 0) (table := [.funcref none])
       (delta := 2) (initial := .funcref (some 0)) (by decide) $$
         [$Htable $HruntimeOwn]
-    inext
     iintro Htable HruntimeOwn
-    iapply wp_pureStep _ _ _ (fun _ => Step.drop)
-    inext
-    iapply wp_tableGrow64Failure tableGrow64FailureAdequacyModule ⟨0⟩
+    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.drop)
+    wasm_wp_next wp_tableGrow64Failure tableGrow64FailureAdequacyModule ⟨0⟩
       (tableIndex := 0)
       (table :=
         [.funcref none] ++
           List.replicate (UInt64.toNat 2) (.funcref (some 0)))
       (delta := 1) (initial := .funcref none) (by decide) $$
         [$Htable $HruntimeOwn]
-    inext
     iintro Htable _HruntimeOwn
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    iapply_splitl_exact wp_frame_l with Htable
+    wasm_wp_finish_value_rfl
 
 private def tableCopyOverlapMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey)
@@ -1765,16 +1590,7 @@ private def tableCopyOverlapMap : WasmTableMap TableInst :=
 private theorem tableCopyOverlapMap_agrees :
     tableHeapAgrees tableCopyOverlapMap
       [[.funcref none, .funcref (some 0), .funcref (some 1),
-        .funcref (some 2)]] := by
-  intro index table hget
-  unfold tableCopyOverlapMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+        .funcref (some 2)]] := tableHeapAgrees_singleton rfl
 
 private theorem tableCopyOverlapMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyOverlapMap,
@@ -1827,8 +1643,7 @@ theorem tableCopyOverlap_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableCopyOverlapMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableCopyOverlapAdequacyConfig]
     simp only [runtimeModuleOwn]
@@ -1866,28 +1681,19 @@ theorem tableCopyOverlap_store_partiallyMeets :
                   (UInt32.toNat 0)).take (UInt32.toNat 3))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureintro
-      exact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
-    iapply wp_tableCopySame
+    wasm_wp_next_bind wp_tableCopySame
       (tableIndex := 0)
       (table :=
         [.funcref none, .funcref (some 0), .funcref (some 1),
           .funcref (some 2)])
       (destination := .i32 1) (source := .i32 0) (length := .i32 3)
-      rfl rfl rfl (by decide) (by decide) $$ Htable
-    inext
-    iintro Htable
+      rfl rfl rfl (by decide) (by decide) with Htable => Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
-    iapply wp_frame_l
-    isplitl [Htable]
-    · iexact Htable
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    iapply_splitl_exact wp_frame_l with Htable
+    wasm_wp_finish_value_rfl
 
 private def tableCopyDistinctMap : WasmTableMap TableInst :=
   insert (insert ∅ (⟨0, 0⟩ : TableKey) [.funcref none, .funcref none, .funcref none])
@@ -1896,24 +1702,9 @@ private def tableCopyDistinctMap : WasmTableMap TableInst :=
 private theorem tableCopyDistinctMap_agrees :
     tableHeapAgrees tableCopyDistinctMap
       [[.funcref none, .funcref none, .funcref none],
-       [.funcref (some 0), .funcref (some 1), .funcref (some 2)]] := by
-  intro index table hget
-  unfold tableCopyDistinctMap at hget
-  by_cases hindex0 : index = 0
-  · subst index
-    simp only [get?_insert_ne (show (⟨0, 1⟩ : TableKey) ≠ ⟨0, 0⟩ by decide),
-      get?_insert_eq rfl,
-      Option.some.injEq] at hget
-    subst table
-    rfl
-  by_cases hindex1 : index = 1
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  rw [get?_insert_ne (fun h => hindex1 (congrArg TableKey.index h).symm),
-    get?_insert_ne (fun h => hindex0 (congrArg TableKey.index h).symm), get?_empty] at hget
-  contradiction
+       [.funcref (some 0), .funcref (some 1), .funcref (some 2)]] := instanceIndexHeapAgrees_insert
+    (instanceIndexHeapAgrees_insert
+      (instanceIndexHeapAgrees_empty _) rfl) rfl
 
 private theorem tableCopyDistinctMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyDistinctMap,
@@ -1934,8 +1725,7 @@ private theorem tableCopyDistinctMap_pointsTo [WasmTableGS α] :
     (BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : TableKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
   iintro ⟨Hsource, Hdestination⟩
-  isplitl [Hdestination]
-  · iexact Hdestination
+  isplitl_exact Hdestination
   · iexact Hsource
 
 def tableCopyDistinctAdequacyModule : Module :=
@@ -1984,14 +1774,12 @@ theorem tableCopyDistinct_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableCopyDistinctMap_agrees
   · exact elementSegmentHeapAgrees_empty _
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableCopyDistinctAdequacyConfig]
     simp only [runtimeModuleOwn]
     iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
-    ihave HtablePair := tableCopyDistinctMap_pointsTo $$ Htables
-    icases HtablePair with ⟨Hdestination, Hsource⟩
+    ihave ⟨Hdestination, Hsource⟩ := tableCopyDistinctMap_pointsTo $$ Htables
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
           tablePointsTo ⟨0, 0⟩
@@ -2033,8 +1821,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
           [.funcref (some 0), .funcref (some 1),
             .funcref (some 2)] $$ [$Hstate $Hsource] with
         ⟨Hstate, Hsource, %HsourcePhysical⟩
-      ipureintro
-      exact ⟨hvalues,
+      ipureexact ⟨hvalues,
         by simpa [listWriteAt] using HdestinationPhysical,
         HsourcePhysical⟩
     have hframe : ∀ values : List Value,
@@ -2063,16 +1850,13 @@ theorem tableCopyDistinct_store_partiallyMeets :
                 .funcref (some 2)])) := by
       intro values
       iintro ⟨⟨Hdestination, Hsource⟩, %hvalues⟩
-      isplitl []
-      · ipureintro
-        exact hvalues
-      · isplitl [Hdestination]
-        · iexact Hdestination
+      isplitl_pureexact hvalues
+      · isplitl_exact Hdestination
         · iexact Hsource
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
     icombine Hdestination Hsource as HtablePair
-    iapply wp_tableCopyDistinct
+    wasm_wp_next wp_tableCopyDistinct
       (destinationTableIndex := 0) (sourceTableIndex := 1)
       (destinationTable :=
         [.funcref none, .funcref none, .funcref none])
@@ -2080,20 +1864,14 @@ theorem tableCopyDistinct_store_partiallyMeets :
         [.funcref (some 0), .funcref (some 1), .funcref (some 2)])
       (destination := .i32 0) (source := .i32 1) (length := .i32 2)
       rfl rfl rfl (by decide) (by decide) $$ HtablePair
-    inext
     iintro Hdestination Hsource
     simp only [tablePointsToAt_eq]
     iapply wp_mono hframe
     iapply wp_frame_l
     isplitl [Hdestination Hsource]
-    · isplitl [Hdestination]
-      · iexact Hdestination
+    · isplitl_exact Hdestination
       · iexact Hsource
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    wasm_wp_finish_value_rfl
 
 private def tableInitDropTableMap : WasmTableMap TableInst :=
   insert ∅ (⟨0, 0⟩ : TableKey)
@@ -2106,29 +1884,11 @@ private def tableInitDropElementMap :
 private theorem tableInitDropTableMap_agrees :
     tableHeapAgrees tableInitDropTableMap
       [[.funcref none, .funcref none, .funcref none,
-        .funcref none]] := by
-  intro index table hget
-  unfold tableInitDropTableMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst table
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg TableKey.index h).symm), get?_empty] at hget
-    contradiction
+        .funcref none]] := tableHeapAgrees_singleton rfl
 
 private theorem tableInitDropElementMap_agrees :
     elementSegmentHeapAgrees tableInitDropElementMap
-      [some [some 0, none, some 0]] := by
-  intro index value hget
-  unfold tableInitDropElementMap at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl, Option.some.injEq] at hget
-    subst value
-    rfl
-  · rw [get?_insert_ne (fun h => hindex (congrArg ElementSegmentKey.index h).symm), get?_empty] at hget
-    contradiction
+      [some [some 0, none, some 0]] := instanceIndexHeapAgrees_singleton rfl
 
 private theorem tableInitDropTableMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableInitDropTableMap,
@@ -2187,8 +1947,7 @@ theorem tableInitDrop_store_partiallyMeets :
   · exact dataSegmentHeapAgrees_empty _
   · exact tableInitDropTableMap_agrees
   · exact tableInitDropElementMap_agrees
-  · decide
-  · intro gs
+  wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableInitDropAdequacyConfig, RuntimeEnv.currentModule_mk1]
     simp only [runtimeModuleOwn]
@@ -2234,11 +1993,10 @@ theorem tableInitDrop_store_partiallyMeets :
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %HtablePhysical⟩
       simp only [← elementSegmentPointsToAt_eq]
-      imod stateInterp_elementSegment_facts_frame
-        store 0 [] 0 0 none $$ [$Hstate $Helement] with
-        ⟨Hstate, Helement, %HelementPhysical⟩
-      ipureintro
-      exact ⟨hvalues,
+      ihave_pure HelementPhysical :
+          ⌜store.wasm.elementSegments[0]? = some none⌝ using
+        stateInterp_elementSegment_facts store 0 [] 0 0 none $$ [Hstate Helement]
+      ipureexact ⟨hvalues,
         by simpa [tableInitDropAdequacyModule,
             ElementSegment.values, ElementSegment.plainValues, listWriteAt]
           using HtablePhysical,
@@ -2252,37 +2010,27 @@ theorem tableInitDrop_store_partiallyMeets :
           elementSegmentPointsToAt 0 0 (some [some 0, none, some 0]) ∗
           runtimeModuleOwn ⟨0⟩ tableInitDropAdequacyModule $$
         [Htable Helement Hruntime HinstFrag]
-    · isplitl [Htable]
-      · iexact Htable
-      · isplitl [Helement]
-        · iexact Helement
+    · isplitl_exact Htable
+      · isplitl_exact Helement
         · unfold runtimeModuleOwn
           isplitl [Hruntime]
           · unfold runtimeModuleElem; iexact Hruntime
           · unfold currentInstanceOwnN; iexact HinstFrag
-    iapply wp_tableInitLive tableInitDropAdequacyModule ⟨0⟩
+    wasm_wp_next wp_tableInitLive tableInitDropAdequacyModule ⟨0⟩
       (tableIndex := 0) (elementIndex := 0)
       (table :=
         [.funcref none, .funcref none, .funcref none, .funcref none])
       (entries := [some 0, none, some 0])
       (destination := .i32 1) (source := 0) (length := 3)
       rfl (by decide) (by decide) $$ Hresources
-    inext
     iintro Htable Helement Hruntime
-    iapply wp_elemDrop $$ Helement
-    inext
-    iintro Helement
+    wasm_wp_next_rebind wp_elemDrop with Helement
     iapply wp_mono (fun _ => sep_pair_pure_rotate _ _ _)
     iapply wp_frame_l
     isplitl [Htable Helement]
-    · isplitl [Htable]
-      · iexact Htable
+    · isplitl_exact Htable
       · iexact Helement
-    iapply wp_finish
-    inext
-    iapply wp_value'
-    ipureintro
-    rfl
+    wasm_wp_finish_value_rfl
 
 /-! ## Parametric total-correctness examples
 
@@ -2317,24 +2065,17 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
     show signedBranchModule.funcs[0]!.body =
         [.block 0 0 [.localGet 0, .localGet 1, .geS, .br_if 0, .const 0, .ret],
           .const 1, .ret] from rfl]
-  iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block twp_localGet twp_localGet]
   by_cases h : a.toInt32 ≥ b.toInt32
   · iapply twp_geS (result := 1) (by simp [h])
     iapply twp_brIf (condition := 1) (by decide) rfl
-    iapply twp_const
-    iapply twp_returnFromFunction
-    iapply twp.value rfl
-    ipureintro
-    simp [h]
+    wasm_twp_pures [twp_const]
+    wasm_twp_terminal_value twp_returnFromFunction
+    ipureexact (by simp [h])
   · iapply twp_geS (result := 0) (by simp [h])
-    iapply twp_brIfZero
-    iapply twp_const
-    iapply twp_returnFromFunction
-    iapply twp.value rfl
-    ipureintro
-    simp [h]
+    wasm_twp_pures [twp_brIfZero twp_const]
+    wasm_twp_terminal_value twp_returnFromFunction
+    ipureexact (by simp [h])
 
 /-- Splat conversion for the fill-then-read example: after `memory.fill`
 writes `b` into four bytes at address 0, the byte range is the little-endian
@@ -2345,16 +2086,16 @@ private theorem splat_bytes_as_u32 [WasmHeapGS Unit] (b : UInt8) :
         (b.toUInt32 ||| (b.toUInt32 <<< 8) ||| (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) := by
   have hb0 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 0 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte0 b b b b
   have hb1 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 1 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte1 b b b b
   have hb2 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 2 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte2 b b b b
   have hb3 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
       (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 3 = b := by
-    simp only [u32Byte]; bv_decide
+    simpa only [u32Byte] using UInt32.packBytes_byte3 b b b b
   have hl : List.replicate 4 b =
       [u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
           (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 0,
@@ -2364,10 +2105,8 @@ private theorem splat_bytes_as_u32 [WasmHeapGS Unit] (b : UInt8) :
           (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 2,
        u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||
           (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) 3] := by
-    rw [hb0, hb1, hb2, hb3]
-    rfl
-  rw [hl]
-  exact (pointsTo_u32_as_bytes 0 0 _).mpr
+    rw [hb0, hb1, hb2, hb3]; rfl
+  rw [hl]; exact (pointsTo_u32_as_bytes 0 0 _).mpr
 
 def fillThenReadModule : Module :=
   { funcs := [{ params := [.i32],
@@ -2409,8 +2148,7 @@ private theorem fillThenReadBase_resolve_zero :
 private theorem fillThenReadInitialHeap_agrees (val : UInt32) :
     heapAgreesWithMem fillThenReadInitialHeap
       (storeResolve (fillThenReadConfig val).store) := by
-  rw [fillThenRead_resolve val]
-  exact store32_sound ∅ (storeResolve fillThenReadBaseStore) 0
+  rw [fillThenRead_resolve val]; exact store32_sound ∅ (storeResolve fillThenReadBaseStore) 0
     (fillThenReadModule.initialStore : Store Unit).mem 0 0 fillThenReadBase_resolve_zero
     rfl rfl rfl (heapAgreesWithMem_empty _)
 
@@ -2434,12 +2172,11 @@ private theorem fillThenReadInitialHeap_pointsTo [WasmHeapGS Unit] :
       pointsTo_u32 0 0 0 := by
   unfold fillThenReadInitialHeap
   iintro Hheap
-  ihave H0 := store32Heap_pointsTo
+  ihave ⟨H0, _⟩ := store32Heap_pointsTo
     (∅ : WasmHeapMap (Option UInt8)) 0 0 0
     (by simp [get?_empty]) (by simp [get?_empty])
     (by simp [get?_empty]) (by simp [get?_empty])
     (by decide) (by decide) (by decide) $$ Hheap
-  icases H0 with ⟨H0, _⟩
   iexact H0
 
 /-- `memory.fill` of four bytes with the low byte of the parameter, then
@@ -2457,7 +2194,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
                       (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
   · apply fillThenReadInitialHeap_agrees
   · apply fillThenReadInitialHeap_inBounds
-    native_decide
+    decide +kernel
   · simp [fillThenReadConfig]
   · intro hlc gs
     simp only [fillThenReadConfig,
@@ -2466,25 +2203,19 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
     iintro Hbytes
     ihave H0 := fillThenReadInitialHeap_pointsTo $$ Hbytes
     ihave Hb := (pointsTo_u32_as_bytes 0 0 0).mp $$ H0
-    iapply twp_const
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_memoryFill32
+    wasm_twp_pures [twp_const twp_localGet twp_const]
+    wasm_twp_bind twp_memoryFill32
         [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3]
-        rfl (by decide) (by decide) $$ Hb
-    iintro Hb
+        rfl (by decide) (by decide) with Hb => Hb
     ihave H0 := splat_bytes_as_u32 val.toUInt8 $$ Hb
-    iapply twp_const
-    iapply twp_load32_addr _ rfl rfl rfl $$ H0
-    iintro H0
+    wasm_twp_pures [twp_const]
+    wasm_twp_rebind twp_load32_addr _ rfl rfl rfl with H0
     iapply twp_finish
         (locals := { params := [.i32 val], locals := [], values := [] })
         (values := [.i32 (val.toUInt8.toUInt32 ||| (val.toUInt8.toUInt32 <<< 8) |||
                           (val.toUInt8.toUInt32 <<< 16) ||| (val.toUInt8.toUInt32 <<< 24))])
         (arity := 1) (remainder := [])
-    iapply twp.value rfl
-    ipureintro
-    rfl
+    iapply_pure twp.value rfl => rfl
 
 def exceptionLifecycleModule : Module :=
   { tags := [{ params := [.i32] }]
@@ -2522,7 +2253,7 @@ theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
         [.tryTable 0 1 [.catch 0 0] [.localGet 0, .throwI 0], .const 99] from rfl]
   iintro ⟨Hruntime, Htags⟩
   iapply twp_tryTable
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   iapply (twp_throwI exceptionLifecycleModule ⟨0⟩ 0
     (tagType := { params := [.i32] }) (htag := rfl)
     (tagIds := (exceptionLifecycleModule.initialStore : Store Unit).tagIds)
@@ -2534,10 +2265,8 @@ theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
     (targetValues := [.i32 arg])
     (hclause := Or.inl ⟨0, 0, rfl⟩)
     (htarget := fun _ => rfl) (hthrow := rfl) (hmatch := by decide)
-  iapply twp_finish
-  iapply twp.value rfl
-  ipureintro
-  rfl
+  wasm_twp_terminal_value twp_finish
+  ipureexact rfl
 
 /-! ### Decoder agreement
 
@@ -2557,6 +2286,8 @@ private def runSignedBranch (fuel : Nat) (m : Module) (a b : UInt32) : Option (L
   | .error _ => none
   | .ok config => (runSteps fuel config).result.values?
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 /-- Exercises both branch outcomes across varied inputs. -/
 theorem signedBranch_decoded_agrees :
     runSignedBranch 10 signedBranchModule 5 3 = runSignedBranch 10 signedBranchModuleDecoded 5 3 ∧
@@ -2567,7 +2298,11 @@ theorem signedBranch_decoded_agrees :
       runSignedBranch 50 signedBranchModuleDecoded 4294967295 0 ∧
     runSignedBranch 100 signedBranchModule 42 43 =
       runSignedBranch 100 signedBranchModuleDecoded 42 43 := by
-  native_decide
+  unfold runSignedBranch
+  generalize hdecoded : signedBranchModuleDecoded = decoded
+  conv at hdecoded => lhs; cbv
+  subst decoded
+  decide +kernel
 
 private def fillThenReadWat : String := include_str "fill_then_read.wat"
 
@@ -2582,6 +2317,8 @@ private def runFillThenRead (fuel : Nat) (m : Module) (val : UInt32) : Option (L
   | .error _ => none
   | .ok config => (runSteps fuel config).result.values?
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 theorem fillThenRead_decoded_agrees :
     runFillThenRead 10 fillThenReadModule 0 = runFillThenRead 10 fillThenReadModuleDecoded 0 ∧
     runFillThenRead 15 fillThenReadModule 5 = runFillThenRead 15 fillThenReadModuleDecoded 5 ∧
@@ -2589,7 +2326,11 @@ theorem fillThenRead_decoded_agrees :
     runFillThenRead 50 fillThenReadModule 171 = runFillThenRead 50 fillThenReadModuleDecoded 171 ∧
     runFillThenRead 100 fillThenReadModule 1000 =
       runFillThenRead 100 fillThenReadModuleDecoded 1000 := by
-  native_decide
+  unfold runFillThenRead
+  generalize hdecoded : fillThenReadModuleDecoded = decoded
+  conv at hdecoded => lhs; cbv
+  subst decoded
+  decide +kernel
 
 private def exceptionLifecycleWat : String := include_str "exception_lifecycle.wat"
 
@@ -2605,6 +2346,8 @@ private def runExceptionLifecycle (fuel : Nat) (m : Module) (arg : UInt32) :
   | .error _ => none
   | .ok config => (runSteps fuel config).result.values?
 
+set_option maxRecDepth 100000 in
+set_option maxHeartbeats 4000000 in
 theorem exceptionLifecycle_decoded_agrees :
     runExceptionLifecycle 10 exceptionLifecycleModule 0 =
       runExceptionLifecycle 10 exceptionLifecycleModuleDecoded 0 ∧
@@ -2616,6 +2359,10 @@ theorem exceptionLifecycle_decoded_agrees :
       runExceptionLifecycle 50 exceptionLifecycleModuleDecoded 255 ∧
     runExceptionLifecycle 100 exceptionLifecycleModule 1000 =
       runExceptionLifecycle 100 exceptionLifecycleModuleDecoded 1000 := by
-  native_decide
+  unfold runExceptionLifecycle
+  generalize hdecoded : exceptionLifecycleModuleDecoded = decoded
+  conv at hdecoded => lhs; cbv
+  subst decoded
+  decide +kernel
 
 end Wasm.SmallStep

@@ -10,14 +10,14 @@ open Wasm.SmallStep
 abbrev decodePostReadLocals (data : UInt32) : List Value :=
   [.i32 decodeStack, .i32 data, .i32 0, .i32 0, .i32 0, .i32 0]
 
-@[simp] abbrev decodeResultOut : UInt32 := decodeStack + 24
+@[simp] abbrev decodeResultOut : UInt32 := decodeStack + 36
 
 def decodeAfterCore : Program := decodeAfterRead.drop 9
 
 theorem decodeAfterRead_core_split :
     decodeAfterRead =
-      [.localGet 0, .const 24, .add, .localGet 0, .load32 40,
-        .localTee 1, .localGet 0, .load32 44, .call 8] ++
+      [.localGet 0, .const 36, .add, .localGet 0, .load32 28,
+        .localTee 1, .localGet 0, .load32 32, .call 8] ++
       decodeAfterCore := by
   rfl
 
@@ -41,8 +41,8 @@ def decodeOddStore (store : MachineStore Universal.State) :
 
 theorem decode_after_read_to_core_call
     (store : MachineStore Universal.State) (data len : UInt32)
-    (hdata : store.wasm.mem.read32 (decodeStack + 40) = data)
-    (hlen : store.wasm.mem.read32 (decodeStack + 44) = len)
+    (hdata : store.wasm.mem.read32 (decodeStack + 28) = data)
+    (hlen : store.wasm.mem.read32 (decodeStack + 32) = len)
     (hbound : decodeStack.toNat + 48 ≤ store.wasm.mem.pages * 65536) :
     Reaches (decodeAfterReadConfig store) (decodeCoreCallConfig store data len) := by
   simp only [decodeAfterReadConfig]
@@ -51,15 +51,15 @@ theorem decode_after_read_to_core_call
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
-    change decodeStack.toNat + 40 + 4 ≤ _
+  apply Reaches.prepend (Step.load32 rfl (by
+    change decodeStack.toNat + 28 + 4 ≤ _
     omega))
   rw [hdata]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
-    change decodeStack.toNat + 44 + 4 ≤ _
-    exact hbound))
+  apply Reaches.prepend (Step.load32 rfl (by
+    change decodeStack.toNat + 32 + 4 ≤ _
+    omega))
   rw [hlen]
   simp [decodeAfterReadConfig, decodeCoreCallConfig, decodePostReadLocals]
   exact ⟨[], .refl _⟩
@@ -102,7 +102,7 @@ theorem decode_core_odd_reaches
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.constI64
   apply Reaches.prepend (Step.store64 rfl (by
-    change 1048560 ≤ store.wasm.mem.pages * 65536
+    change 1048572 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   dsimp only
@@ -213,7 +213,7 @@ theorem decode_core_even_to_first_pair
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -225,13 +225,13 @@ theorem decode_core_even_to_first_pair
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048480 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048476 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -239,7 +239,7 @@ theorem decode_core_even_to_first_pair
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048492 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -308,7 +308,7 @@ theorem decode_core_invalid_suffix
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048457 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 24 = corePairOut by decide, htag]
@@ -316,7 +316,7 @@ theorem decode_core_invalid_suffix
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 32 = coreError by decide, hmarker]
@@ -326,24 +326,24 @@ theorem decode_core_invalid_suffix
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048472 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 36 = coreError + 4 by decide, hindex]
-  apply Reaches.prepend (Step.store32 (by
-    change 1048564 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048576 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048560 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048572 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
-    change 1048556 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048568 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
@@ -749,26 +749,26 @@ theorem decode_after_first_valid_to_alloc
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048457 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 24 = corePairOut by decide, htag]
   apply Reaches.prepend (Step.eqz (result := 0) rfl)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048458 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 25 = corePairOut + 1 by decide, hpayload]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048492 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 56 = coreIterator + 16 by decide]
   rw [herrorPtr]
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   simp only [UInt32.add_zero]
@@ -777,7 +777,7 @@ theorem decode_after_first_valid_to_alloc
   apply Reaches.prepend (Step.ne (result := 0) rfl)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048480 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 44 = coreIterator + 4 by decide, hremaining]
@@ -801,7 +801,7 @@ theorem decode_after_first_valid_to_alloc
   · apply Reaches.prepend (Step.eqz (result := 0) (by simp [hz]))
     apply Reaches.prepend Step.brIfZero
     apply Reaches.prepend (Step.localGet rfl)
-    apply Reaches.prepend (Step.load32 (by
+    apply Reaches.prepend (Step.load32 rfl (by
       change 1048484 ≤ store.wasm.mem.pages * 65536
       omega))
     rw [show coreFrame + 48 = coreIterator + 8 by decide, hchunk]
@@ -1117,33 +1117,33 @@ theorem decode_after_initial_alloc_to_second_pair
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store8 (address := ptr) (offset := 0)
+  apply Reaches.prepend (Step.store8 rfl (address := .i32 (ptr)) (offset := 0)
     (value := byte.toUInt32) (by simpa using hptrBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048504 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048500 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048496 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048492 ≤ store.wasm.mem.pages * 65536
     omega))
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048524 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -1189,7 +1189,7 @@ theorem decode_core_empty_reaches
   have hlen : (decodeEvenPreparedStore store data 0).wasm.mem.read32
       (coreIterator + 4) = 0 := by
     simp [decodeEvenPreparedStore, Mem.read32, Mem.write32, Mem.write64] <;>
-      bv_decide
+      bv_normalize (config := { enums := false })
   have hmarker : (decodePairEmptyStore
       (decodeEvenPreparedStore store data 0)).wasm.mem.read32 coreError =
       1114114 := by
@@ -1206,7 +1206,7 @@ theorem decode_core_empty_reaches
     rw [Mem.read32_write64_disjoint _ coreError (coreFrame + 48) _
       (by decide)]
     simp [Mem.read32, Mem.write32]
-    bv_decide
+    bv_normalize (config := { enums := false })
   have hmarker32 : (decodePairEmptyStore
       (decodeEvenPreparedStore store data 0)).wasm.mem.read32
       (coreFrame + 32) = 1114114 := by simpa using hmarker
@@ -1236,7 +1236,7 @@ theorem decode_core_empty_reaches
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048457 ≤ store.wasm.mem.pages * 65536
     omega))
   simp [decodePairEmptyStore]
@@ -1244,7 +1244,7 @@ theorem decode_core_empty_reaches
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048468 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show (1048432 : UInt32) + 32 = 1048464 by decide, hmarker32]
@@ -1254,20 +1254,20 @@ theorem decode_core_empty_reaches
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048564 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048576 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048560 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048572 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
-    change 1048556 ≤ store.wasm.mem.pages * 65536
+  apply Reaches.prepend (Step.store32 rfl (by
+    change 1048568 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.br rfl)

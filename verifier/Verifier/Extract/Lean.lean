@@ -198,7 +198,9 @@ private def classifyRustExportedTarget
 
 private def kindOfString : String → Option RefKind
   | "rust-exported" => some .rustExported
+  | "rust-exported-partial" => some .rustExportedPartial
   | "rust-internal" => some .rustInternal
+  | "rust-internal-partial" => some .rustInternalPartial
   | "lean"          => some .leanSym
   | _               => none
 
@@ -366,17 +368,19 @@ def scanFile
             | some kind =>
               let (sameCrate, resolved) :=
                 match kind with
-                | .rustExported =>
+                | .rustExported | .rustExportedPartial =>
                   classifyRustExportedTarget target thisCrate exportNames
                 | _ => (false, false)
               refs := refs.push { kind, target, resolved }
-              if (match kind with | .rustExported => true | _ => false) then
+              if (match kind with
+                  | .rustExported | .rustExportedPartial => true
+                  | _ => false) then
                 if ¬ sameCrate then
                   diags := diags.push {
                     severity := .info, kind := "cross_crate_reference",
                     location := mkLoc i i line.length,
                     message  :=
-                      s!"`@[spec_of rust-exported \"{target}\"]` on `{qname}` names a different crate's export"
+                      s!"`@[spec_of {kind.toString} \"{target}\"]` on `{qname}` names a different crate's export"
                   }
                 else if ¬ resolved then
                   diags := diags.push {

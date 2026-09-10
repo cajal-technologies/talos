@@ -19,8 +19,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func9_index :
     Project.Mergesort.module.funcs[9]? =
-      some Project.Mergesort.func9Def := by
-  rfl
+      some Project.Mergesort.func9Def := by rfl
 
 private abbrev func9ZeroBody : Program :=
   [.localGet 1, .eqz, .br_if 0,
@@ -45,7 +44,7 @@ private abbrev func9GrowthBody : Program :=
 
 private abbrev func9PostArithmetic : Program :=
   [.block 0 0 func9GrowthBody,
-    .const 0, .localGet 2, .store32 1049492,
+    .const 0, .localGet 2, .store32 allocatorCursor,
     .block 0 0 func9ZeroBody, .localGet 1, .ret]
 
 private abbrev func9Locals
@@ -54,24 +53,6 @@ private abbrev func9Locals
   { params := [.i32 size, .i32 base]
     locals := [.i32 finish, .i32 requiredPages, .i32 currentPages]
     values := values }
-
-private theorem twp_ltS
-    [WasmSmallStepGS hlc Universal.State]
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} {s : Stuckness} {E : CoPset}
-    {Φ : ObservableOutcome → HeapIProp}
-    (hresult : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr Universal.State)
-        @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .ltS :: code, arity, remainder, controls, calls⟩ :
-          Expr Universal.State) @ s; E [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.ltS hresult)
 
 /-- Once the cursor commit has produced a fresh block, the remaining generated
 code zeroes exactly that block and returns its non-null base pointer. -/
@@ -112,68 +93,49 @@ private theorem twp_func9_zero_and_return
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hbump, Hblock, Hstreams, Hcont⟩
   have hsize : size.toNat = layout.size := hmatches.1
-  have hpositive : 0 < size.toNat := by
-    rw [hsize]
-    exact hvalid.1
+  have hpositive : 0 < size.toNat := by simpa only [hsize] using hvalid.1
   have hsizeNonzero : size ≠ 0 := by
     intro hzero
-    have := congrArg UInt32.toNat hzero
-    simp only [UInt32.toNat_zero] at this
+    have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
     omega
   isimp only [LiveBlock] at Hblock
   icases Hblock with ⟨Htoken, Hslice, %hblockFacts⟩
   isimp only [Project.Mergesort.Representations.ByteSlice] at Hslice
   icases Hslice with ⟨%hnowrap, Hbytes⟩
   have hbaseNonzero : base ≠ 0 := hblockFacts.2.1
-  iapply twp_block
-  simp only [func9ZeroBody, func9Locals]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block] using [func9ZeroBody, func9Locals]
+  wasm_twp_pures [twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hbaseNonzero])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_brIfZero twp_localGet]
   iapply twp_eqz (result := 0) (by simp [hsizeNonzero])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_localGet rfl
-  iapply twp_memoryFill32 bytes
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet]
+  wasm_twp_bind twp_memoryFill32 bytes
       (by rw [hblockFacts.1, ← hsize])
       hpositive
       (by rw [hsize, ← hblockFacts.1];
-          simpa only [UInt32.size] using hnowrap) $$ Hbytes
-  iintro Hbytes
+          simpa only [UInt32.size] using hnowrap) with Hbytes => Hbytes
   ihave Hslice : Project.Mergesort.Representations.ByteSlice base
       (List.replicate layout.size 0) $$ [Hbytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureintro
+    isplitl_pureexact (by
       simpa [List.length_replicate] using
         (show base.toNat + layout.size < UInt32.size by
-          rw [← hblockFacts.1]
-          exact hnowrap)
-    · rw [← hblockFacts.1]
-      rw [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide]
-      iexact Hbytes
+          rw [← hblockFacts.1]; exact hnowrap))
+    rw [← hblockFacts.1]
+    irw_exact [← show (0 : UInt32).toUInt8 = (0 : UInt8) by decide] with Hbytes
   ihave Hblock : LiveBlock heapId allocationId base layout
       (List.replicate layout.size 0) $$ [Htoken Hslice]
   · unfold LiveBlock
-    iframe
-    ipureintro
-    exact ⟨by simp, hblockFacts.2⟩
-  iapply twp_exitControl rfl
-  simp only [List.take_zero, List.nil_append]
-  iapply twp_localGet rfl
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
-  iapply twp_returnFromCallExplicit $$ Hmodule
-  iintro Hmodule
-  simp only [List.take_succ_cons, List.take_zero, List.cons_append,
+    iframe_pureexact ⟨by simp, hblockFacts.2⟩
+  wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
+  wasm_twp_pures [twp_localGet]
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
+  wasm_twp_return_from_call Hmodule [List.take_succ_cons, List.take_zero, List.cons_append,
     List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.cons_append,
     List.nil_append] at Hcont
   iapply Hcont $$ [Hmodule Henv] Hbump Hblock Hstreams
-  · isplitl [Hmodule]
-    · iexact Hmodule
+  · isplitl_exact Hmodule
     · iexact Henv
 
 /-- Once physical capacity has been established and the fresh range has been
@@ -214,7 +176,7 @@ private theorem twp_func9_commit_zero_and_return
           calls s E Φ)) ⊢
       WP (.running
         ⟨func9Locals size base finish requiredPages currentPages [.i32 0],
-          [.localGet 2, .store32 1049492,
+          [.localGet 2, .store32 allocatorCursor,
             .block 0 0 func9ZeroBody, .localGet 1, .ret],
           1, [], functionControls,
           { locals := { callerLocals with values := stack }
@@ -226,23 +188,18 @@ private theorem twp_func9_commit_zero_and_return
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hbytes,
     Hstreams, Hcont⟩
-  iapply twp_localGet rfl
-  ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
+  wasm_twp_pures [twp_localGet]
+  ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + allocatorCursor)
       storedCursor $$ [Hcursor]
-  · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
-  iapply twp_store32 (address := 0) (offset := 1049492) (value := finish)
-      storedCursor (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-  iintro Hcursor
-  ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
-  · rw [← show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
-  have halignment : layout.alignment = 4 := by
-    simpa using hmatches.2.symm
+  · irw_exact [UInt32.zero_add] with Hcursor
+  wasm_twp_bind twp_store32 (address := 0) (offset := allocatorCursor) (value := finish)
+      storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
+  isimp only [UInt32.zero_add] at Hcursor
+  have halignment : layout.alignment = 4 := by simpa using hmatches.2.symm
   imod BumpHeap_commit heapId frontier history base finish layout bytes
       ownedPages
       hfrontierLow hwf hvalid (Or.inr halignment) hclassify hbytesLength
-      hphysical $$ [Hcursor' Hfrontier Hauth Hretired Hpages Hbytes] with
+      hphysical $$ [Hcursor Hfrontier Hauth Hretired Hpages Hbytes] with
       ⟨Hbump, Hblock⟩
   · iframe
   iapply twp_func9_zero_and_return size base finish requiredPages currentPages
@@ -289,7 +246,7 @@ private theorem twp_func9_claim_commit_zero_and_return
           calls s E Φ)) ⊢
       WP (.running
         ⟨func9Locals size base finish requiredPages currentPages,
-          [.const 0, .localGet 2, .store32 1049492,
+          [.const 0, .localGet 2, .store32 allocatorCursor,
             .block 0 0 func9ZeroBody, .localGet 1, .ret],
           1, [], functionControls,
           { locals := { callerLocals with values := stack }
@@ -302,8 +259,7 @@ private theorem twp_func9_claim_commit_zero_and_return
   iintro ⟨Hruntime, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hstreams,
     Hcont⟩
   have hphysicalBase : base.toNat + layout.size ≤ ownedPages * 65536 := by
-    rw [← hfinishExact]
-    exact hphysical
+    simpa only [← hfinishExact] using hphysical
   ihave HclaimFrame : iprop(
       RuntimeContext ∗ pointsTo_u32 0 allocatorCursor storedCursor ∗
       AllocMetaAuth heapId history ∗ RetiredBytes heapId history ∗
@@ -323,8 +279,7 @@ private theorem twp_func9_claim_commit_zero_and_return
   icases HclaimFrame with
     ⟨Hruntime, Hcursor, Hauth, Hretired, Hstreams, Hcont⟩
   ihave Hfrontier' : heapFrontierOwn finish.toNat $$ [Hfrontier]
-  · rw [hfinishExact]
-    iexact Hfrontier
+  · irw_exact [hfinishExact] with Hfrontier
   iapply twp_func9_commit_zero_and_return size base finish requiredPages
       currentPages storedCursor layout heapId bytes frontier ownedPages history
       input output raised callerLocals stack code arity remainder functionControls
@@ -379,12 +334,8 @@ private theorem twp_func9_oom
       (s := s) (E := E) (Φ := Φ)
   unfold Func6Spec CallContract callExpr at Hoom
   simp only [List.nil_append] at Hoom ⊢
-  iapply Hoom
-  isplitl [Hruntime]
-  · iexact Hruntime
-  isplitl [Hstreams]
-  · iexact Hstreams
-  iintro Hstreams
+  iapply_splitl_exact Hoom with Hruntime
+  iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hstreams
 
 /-- Generated `__rust_alloc_zeroed` satisfies its frozen contract. -/
@@ -394,19 +345,16 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
   intro size alignment layout heapId storedCursor frontier history input output
     raised callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hbump, Hstreams, %hlayout, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 12
-      Project.Mergesort.func9Def (by decide) func9_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 12
+      Project.Mergesort.func9Def (by decide) func9_index with Hmodule
   simp [Project.Mergesort.func9Def, Project.Mergesort.func9,
     Function.toLocals, Function.numParams]
   have halignmentNat : alignment.toNat = 4 := by
     rw [hlayout.1.2, hlayout.2.2]
-  have halignment : alignment = 4 := by
-    apply UInt32.toNat_inj.mp
-    simpa using halignmentNat
+  have halignment : alignment = 4 :=
+    UInt32.toNat_inj.mp (by simpa using halignmentNat)
   subst alignment
   isimp only [BumpHeap] at Hbump
   icases Hbump with
@@ -423,19 +371,16 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       apply UInt32.toNat_inj.mp
       rw [hcursorNat hnonzero,
         UInt32.toNat_ofNat_of_lt' (by
-          norm_num [UInt32.size] at hfrontierSigned ⊢
-          omega)]
+          norm_num [UInt32.size] at hfrontierSigned ⊢; omega)]
     · rename_i hzero
       simp only [ne_eq, Decidable.not_not] at hzero
       have hfrontierEq := (hcursorZero.mp hzero).2
       apply UInt32.toNat_inj.mp
       rw [UInt32.toNat_ofNat_of_lt' (by
-        norm_num [UInt32.size] at hfrontierSigned ⊢
-        omega)]
+        norm_num [UInt32.size] at hfrontierSigned ⊢; omega)]
       exact hfrontierEq.symm
   have hsumBound : frontier + 3 < UInt32.size := by
-    norm_num [UInt32.size] at hfrontierSigned ⊢
-    omega
+    norm_num [UInt32.size] at hfrontierSigned ⊢; omega
   have hsumWord : UInt32.ofNat frontier + 3 =
       UInt32.ofNat (frontier + 3) := by
     apply UInt32.toNat_inj.mp
@@ -444,25 +389,17 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       show (3 : UInt32).toNat = 3 by decide,
       UInt32.toNat_ofNat_of_lt' hsumBound]
     omega
-  iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
+  wasm_twp_pures [twp_block twp_localGet twp_const twp_add]
   norm_num
-  iapply twp_localTee rfl
-  simp only [List.length]
-  iapply twp_const
+  wasm_twp_localTee [List.length]
+  wasm_twp_pures [twp_const]
   ihave HcursorAt : pointsTo_u32 0 ((0 : UInt32) + 1049492)
       storedCursor $$ [Hcursor]
-  · rw [show (0 : UInt32) + 1049492 = allocatorCursor by decide]
-    iexact Hcursor
-  iapply twp_load32 (address := 0) (offset := 1049492) storedCursor
-      (by decide) (by decide) (by decide) (by decide) $$ HcursorAt
-  iintro Hcursor
-  iapply twp_localTee rfl
-  simp only [List.length]
-  iapply twp_const
-  iapply twp_localGet rfl
+  · irw_exact [show (0 : UInt32) + 1049492 = allocatorCursor by decide] with Hcursor
+  wasm_twp_bind twp_load32 (address := 0) (offset := 1049492) storedCursor
+      (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
+  wasm_twp_localTee [List.length]
+  wasm_twp_pures [twp_const twp_localGet]
   iapply twp_select
       (selected := .i32 (UInt32.ofNat frontier)) (by
         split
@@ -474,35 +411,30 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
           rw [if_neg hzero] at hfrontierWord
           simpa only [if_neg hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
-  iapply twp_add
-  rw [show (4294967295 : UInt32) + 4 = 3 by decide, hsumWord]
-  iapply twp_localTee rfl
-  simp only [List.length]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_add] rewriting [show (4294967295 : UInt32) + 4 = 3 by decide, hsumWord]
+  wasm_twp_localTee [List.length]
+  wasm_twp_pures [twp_localGet]
   have hsumNotLt : ¬ UInt32.ofNat (frontier + 3) < (3 : UInt32) := by
     rw [UInt32.not_lt, UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hsumBound]
     change 3 ≤ frontier + 3
     omega
   have hsumRawNotLt : ¬ UInt32.ofNat frontier + 3 < (3 : UInt32) := by
-    rw [hsumWord]
-    exact hsumNotLt
+    simpa only [hsumWord] using hsumNotLt
   iapply twp_ltU (result := 0) (by rw [if_neg hsumNotLt])
-  iapply twp_brIfZero
+  wasm_twp_pures [twp_brIfZero]
   let base : UInt32 :=
     UInt32.ofNat (frontier + 3) &&& (0 - (4 : UInt32))
   let finishNat := base.toNat + layout.size
   let finish : UInt32 := UInt32.ofNat finishNat
   have hbaseBound : base.toNat ≤ frontier + 3 := by
     dsimp only [base]
-    rw [UInt32.toNat_and, UInt32.toNat_ofNat_of_lt' hsumBound]
-    exact Nat.and_le_left
+    simpa only [UInt32.toNat_and, UInt32.toNat_ofNat_of_lt' hsumBound] using Nat.and_le_left
   have hsizeBound : layout.size ≤ 2147483644 := by
     simpa only [hlayout.2.2] using hlayout.2.1.2.2.2.2.1
   have hfinishWordBound : finishNat < UInt32.size := by
     dsimp only [finishNat]
-    norm_num [UInt32.size] at hfrontierSigned hsizeBound ⊢
-    omega
+    norm_num [UInt32.size] at hfrontierSigned hsizeBound ⊢; omega
   have hsizeNat : size.toNat = layout.size := hlayout.1.1
   have hfinishWord : base + size = finish := by
     apply UInt32.toNat_inj.mp
@@ -516,40 +448,28 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
     exact (UInt32.toNat_ofNat_of_lt' hfinishWordBound).symm
   have hfinishRaw :
       size + (UInt32.ofNat (frontier + 3) &&& (-(4 : UInt32))) = finish := by
-    rw [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide]
-    exact hfinishWord'
+    simpa only [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide] using hfinishWord'
   have hbaseLeFinish : base ≤ finish := by
     rw [UInt32.le_iff_toNat_le_toNat,
       UInt32.toNat_ofNat_of_lt' hfinishWordBound]
-    dsimp only [finishNat]
-    omega
+    dsimp only [finishNat]; omega
   have hbaseLeFinishRaw :
       UInt32.ofNat (frontier + 3) &&& (-(4 : UInt32)) ≤ finish := by
-    rw [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide]
-    exact hbaseLeFinish
+    simpa only [← show (0 : UInt32) - 4 = -(4 : UInt32) by decide] using hbaseLeFinish
   have hfinishNatEq : finish.toNat = finishNat :=
     UInt32.toNat_ofNat_of_lt' hfinishWordBound
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_localGet rfl
-  iapply twp_sub
+  wasm_twp_pures [twp_localGet twp_const twp_localGet twp_sub]
   norm_num
   iapply twp_and (lhs := UInt32.ofNat frontier + (3 : UInt32))
       (rhs := -(4 : UInt32))
   rw [hsumWord]
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_localGet rfl
-  iapply twp_add
-  rw [hfinishRaw]
-  iapply twp_localTee rfl
-  simp only [List.length]
-  iapply twp_localGet rfl
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_localGet twp_add] rewriting [hfinishRaw]
+  wasm_twp_localTee [List.length]
+  wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
     rw [if_neg (UInt32.not_lt.mpr hbaseLeFinishRaw)])
-  iapply twp_brIfZero
-  iapply twp_localGet rfl
-  iapply twp_const
+  wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
   by_cases hfinishFails : ¬ finishNat < 2147483648
   · have hfinishHigh : 2147483648 ≤ finishNat := by omega
     have hfinishNegative : finish.toInt32 < (0 : UInt32).toInt32 := by
@@ -558,7 +478,6 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [BitVec.toInt, Nat.reducePow]
       change (if 2 * finish.toNat < 4294967296 then
         (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
-      rw [hfinishNatEq]
       omega
     iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
     iapply twp_brIf (by decide) (by rfl)
@@ -576,13 +495,11 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         [Hcursor Hfrontier Hauth Hretired]
     · unfold BumpHeap
       ihave Hcursor' : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
-      · rw [allocatorCursor]
-        iexact Hcursor
+      · irw_exact [allocatorCursor] with Hcursor
       iframe Hcursor' Hfrontier Hauth Hretired
       iexists ownedPages
       iframe Hpages
-      ipureintro
-      exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
+      ipureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
         hfrontierPhysical⟩
     iapply twp_func9_oom size
         ((UInt32.ofNat frontier + 3) &&& (-(4 : UInt32))) finish
@@ -599,34 +516,26 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [BitVec.toInt, Nat.reducePow]
       change ¬ (if 2 * finish.toNat < 4294967296 then
         (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
-      rw [hfinishNatEq]
       omega
     iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
-    iapply twp_brIfZero
+    wasm_twp_pures [twp_brIfZero]
     have hclassify :
         classifyBump frontier layout = .success base finish := by
       unfold classifyBump
       simp only [hlayout.2.2, Nat.reduceSubDiff]
       rw [dif_pos hsumBound]
-      rw [if_pos ⟨hfinishWordBound, hfinishSigned⟩]
-      rfl
+      rw [if_pos ⟨hfinishWordBound, hfinishSigned⟩]; rfl
     isimp only [ZeroAllocContinuation, hclassify] at Hcont
-    iapply twp_block
+    wasm_twp_pures [twp_block]
     simp [ValueType.zero]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_add
+    wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (65535 : UInt32) finish]
-    iapply twp_const
-    iapply twp_shrU
-    rw [show (16 : UInt32) % 32 = 16 by decide]
+    wasm_twp_pures [twp_const twp_shrU] rewriting [show (16 : UInt32) % 32 = 16 by decide]
     rw [show (finish + 65535) >>> (16 : UInt32) =
       allocatorRequiredPages finish by rfl]
-    iapply twp_localTee rfl
-    simp only [List.length, List.set]
+    wasm_twp_localTee [List.length, List.set]
     have hfinishSignedWord : finish.toNat < 2147483648 := by
-      rw [hfinishNatEq]
-      exact hfinishSigned
+      simpa only [hfinishNatEq] using hfinishSigned
     have hrequiredCovers :=
       allocatorRequiredPages_covers finish hfinishSignedWord
     rcases classifyBump_success_reachable frontier layout base finish
@@ -635,12 +544,10 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         hfinishExact, hmeta⟩
     have hbaseRaw :
         (UInt32.ofNat frontier + 3) &&& (-(4 : UInt32)) = base := by
-      rw [hsumWord]
-      rfl
+      rw [hsumWord]; rfl
     rw [hbaseRaw]
     ihave HcursorAlloc : pointsTo_u32 0 allocatorCursor storedCursor $$ [Hcursor]
-    · rw [allocatorCursor]
-      iexact Hcursor
+    · irw_exact [allocatorCursor] with Hcursor
     ihave HsizeFrame : iprop(
         hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
         pointsTo_u32 0 allocatorCursor storedCursor ∗
@@ -668,7 +575,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, Hpages, Hstreams, Hcont⟩
     simp only [show Project.Mergesort.module.memIs64 = false by rfl,
       sizeValue, Bool.false_eq_true, ↓reduceIte]
-    iapply twp_localTee rfl
+    wasm_twp_pures [twp_localTee]
     simp
     by_cases hfits : allocatorRequiredPages finish ≤ pages.toUInt32
     · iapply twp_leU (result := 1) (by rw [if_pos hfits])
@@ -676,16 +583,13 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [List.take_zero, List.nil_append]
       have hpagesWord : pages.toUInt32.toNat ≤ pages := by
         unfold Nat.toUInt32 UInt32.toNat UInt32.ofNat
-        simp only [BitVec.toNat_ofNat]
-        exact Nat.mod_le _ _
+        simp only [BitVec.toNat_ofNat]; exact Nat.mod_le _ _
       have hphysical : finish.toNat ≤ pages * 65536 :=
         _root_.le_trans hrequiredCovers (Nat.mul_le_mul_right 65536
           (_root_.le_trans
             (UInt32.le_iff_toNat_le_toNat.mp hfits) hpagesWord))
       ihave Hnormal := BI.and_elim_l $$ Hcont
-      ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-      · unfold RuntimeContext
-        iframe Hmodule Henv
+      iclose_runtime Hruntime with Hmodule Henv
       have Hclaim := twp_func9_claim_commit_zero_and_return size base finish
           (allocatorRequiredPages finish) pages.toUInt32 storedCursor layout
           heapId frontier pages history input output raised
@@ -703,16 +607,11 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         Nat.toUInt32, List.cons_append, List.nil_append] at Hclaim
       ihave HcursorRaw : pointsTo_u32 0 (1049492 : UInt32) storedCursor $$
           [Hcursor]
-      · rw [show (1049492 : UInt32) = allocatorCursor by decide]
-        iexact Hcursor
-      iapply Hclaim
-      iframe Hruntime HcursorRaw Hfrontier Hauth Hretired Hmeasured Hstreams
-        Hnormal
+      · irw_exact [show (1049492 : UInt32) = allocatorCursor by decide] with Hcursor
+      iapply_frame Hclaim using [
+        Hruntime HcursorRaw Hfrontier Hauth Hretired Hmeasured Hstreams Hnormal]
     · iapply twp_leU (result := 0) (by rw [if_neg hfits])
-      iapply twp_brIfZero
-      iapply twp_localGet rfl
-      iapply twp_localGet rfl
-      iapply twp_sub
+      wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
       let delta := allocatorRequiredPages finish - pages.toUInt32
       ihave HgrowFrame : iprop(
           hostEnvOwn 0 (Universal.envFor Project.Mergesort.module) ∗
@@ -739,20 +638,16 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
             icases HgrowFrame with
               ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, HoldPages,
                 Hstreams, Hcont⟩
-            iapply twp_const
+            wasm_twp_pures [twp_const]
             iapply twp_eq (result := 1) (by simp)
             iapply twp_brIf (by decide) (by rfl)
             simp only [List.take_zero, List.nil_append]
             ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                 [Hcursor Hfrontier Hauth Hretired HoldPages]
             · unfold BumpHeap
-              iframe
-              ipureintro
-              exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+              iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                 hwf, hfrontierPhysical⟩
-            ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-            · unfold RuntimeContext
-              iframe Hmodule Henv
+            iclose_runtime Hruntime with Hmodule Henv
             ihave Hoom := BI.and_elim_r $$ Hcont
             iapply twp_func9_oom size base finish
                 (allocatorRequiredPages finish) pages.toUInt32 heapId
@@ -764,7 +659,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
             icases HgrowFrame with
               ⟨Henv, Hcursor, Hfrontier, Hauth, Hretired, HoldPages,
                 Hstreams, Hcont⟩
-            iapply twp_const
+            wasm_twp_pures [twp_const]
             by_cases hsentinel : previousPages.toUInt32 =
                 (0xFFFFFFFF : UInt32)
             · iapply twp_eq (result := 1) (by simp [hsentinel])
@@ -773,13 +668,9 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
               ihave Hbump : BumpHeap heapId storedCursor frontier history $$
                   [Hcursor Hfrontier Hauth Hretired HoldPages]
               · unfold BumpHeap
-                iframe
-                ipureintro
-                exact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
+                iframe_pureexact ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat,
                   hwf, hfrontierPhysical⟩
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               ihave Hoom := BI.and_elim_r $$ Hcont
               iapply twp_func9_oom size base finish
                   (allocatorRequiredPages finish) pages.toUInt32 heapId
@@ -787,9 +678,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                   stack code arity remainder controls calls s E Φ
               iframe Hruntime Hbump Hstreams Hoom
             · iapply twp_eq (result := 0) (by simp [hsentinel])
-              iapply twp_brIfZero
-              iapply twp_exitControl rfl
-              simp only [List.take_zero, List.nil_append]
+              wasm_twp_pures [twp_brIfZero twp_exitControl] using [List.take_zero, List.nil_append]
               have hphysical : finish.toNat ≤ newPages * 65536 := by
                 by_cases hpagesLow : pages < UInt32.size
                 · have hpagesWord : pages.toUInt32.toNat = pages := by
@@ -797,31 +686,25 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                     exact UInt32.toNat_ofNat_of_lt' hpagesLow
                   have hpagesLtRequired :
                       pages < (allocatorRequiredPages finish).toNat := by
-                    rw [← hpagesWord]
-                    exact UInt32.lt_iff_toNat_lt.mp (UInt32.not_le.mp hfits)
+                    rw [← hpagesWord]; exact UInt32.lt_iff_toNat_lt.mp (UInt32.not_le.mp hfits)
                   have hdeltaNat : delta.toNat =
                       (allocatorRequiredPages finish).toNat - pages := by
                     dsimp only [delta]
                     rw [UInt32.toNat_sub_of_le]
                     · rw [hpagesWord]
-                    · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]
-                      omega
+                    · rw [UInt32.le_iff_toNat_le_toNat, hpagesWord]; omega
                   have hrequiredLeNew :
                       (allocatorRequiredPages finish).toNat ≤ newPages := by
-                    rw [hfacts.2, hdeltaNat]
-                    omega
+                    rw [hfacts.2, hdeltaNat]; omega
                   exact hrequiredCovers.trans
                     (Nat.mul_le_mul_right 65536 hrequiredLeNew)
                 · have hpagesHigh : UInt32.size ≤ pages := by omega
                   have hfinishLeNew : finish.toNat ≤ newPages := by
                     rw [hfacts.2]
-                    norm_num [UInt32.size] at hpagesHigh
-                    omega
+                    norm_num [UInt32.size] at hpagesHigh; omega
                   exact hfinishLeNew.trans (by omega)
               ihave Hnormal := BI.and_elim_l $$ Hcont
-              ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-              · unfold RuntimeContext
-                iframe Hmodule Henv
+              iclose_runtime Hruntime with Hmodule Henv
               have Hclaim := twp_func9_claim_commit_zero_and_return size base
                   finish
                   (allocatorRequiredPages finish) pages.toUInt32 storedCursor
@@ -840,10 +723,8 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
                 heapBase, Nat.toUInt32, List.cons_append, List.nil_append] at Hclaim
               ihave HcursorRaw : pointsTo_u32 0 (1049492 : UInt32)
                   storedCursor $$ [Hcursor]
-              · rw [show (1049492 : UInt32) = allocatorCursor by decide]
-                iexact Hcursor
-              iapply Hclaim
-              iframe Hruntime HcursorRaw Hfrontier Hauth Hretired HnewPages
-                Hstreams Hnormal)
+              · irw_exact [show (1049492 : UInt32) = allocatorCursor by decide] with Hcursor
+              iapply_frame Hclaim using [
+                Hruntime HcursorRaw Hfrontier Hauth Hretired HnewPages Hstreams Hnormal])
           $$ HgrowFrame Hmodule Hmeasured
 end Project.Mergesort.Func9Proof

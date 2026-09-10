@@ -70,8 +70,7 @@ theorem TerminatesWith.of_wp_entry_for {env : HostEnv α}
     rw [hexec] at hQ
     exact ⟨s'.values.take f.results.length ++ args.drop f.numParams, st', rfl, hQ⟩
   | Return st' vs =>
-    rw [hexec] at hQ
-    exact ⟨vs.take f.results.length ++ args.drop f.numParams, st', rfl, hQ⟩
+    rw [hexec] at hQ; exact ⟨vs.take f.results.length ++ args.drop f.numParams, st', rfl, hQ⟩
   | Break n st' s' => rw [hexec] at hQ; exact hQ.elim
   | Trap msg => rw [hexec] at hQ; exact hQ.elim
   | Invalid msg => rw [hexec] at hQ; exact hQ.elim
@@ -123,7 +122,6 @@ theorem TerminatesWith.of_returns_wp {α} {env : HostEnv α} {m : Module} {id : 
   refine wp.conseq ?_ hwp
   rintro c ⟨st', rfl, hP⟩
   have htake : rs.take f.results.length = rs := by rw [← hres]; simp
-  simp only [htake]
-  exact ⟨trivial, hP⟩
+  simp only [htake]; exact ⟨trivial, hP⟩
 
 end Wasm

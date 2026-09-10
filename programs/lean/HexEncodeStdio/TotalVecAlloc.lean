@@ -100,6 +100,7 @@ private theorem func12_alloc_outcome_explicit {hlc : HasLC}
     host owned ⟨params, localValues, []⟩ stack code arity remainder controls
     calls
 
+set_option maxRecDepth 100000 in
 /-- Fresh-allocation leg of generated vector allocation wrapper `func4`
 (Wasm index 7).  A successful return publishes the allocated pointer and the
 requested capacity in the caller's three-word result record.  Allocator
@@ -176,14 +177,18 @@ theorem func4_alloc_fresh {hlc : HasLC}
   iapply twp_localGet rfl
   iapply twp_const
   isimp only [← Project.HexEncodeStdio.TotalAllocator.allocPtr_align_one] at Harena
-  iapply func12_alloc_outcome_explicit newSize 1 oldBump host arena
+  have halloc := func12_alloc_outcome_explicit (hlc := hlc) (E := E) (Φ := Φ)
+      newSize 1 oldBump host arena
       [.i32 result, .i32 0, .i32 ignored, .i32 newSize] [] [] [.localSet 1]
       0 [] (func4AllocControls result 0 ignored newSize)
       ({ locals := { callerLocals with values := stack },
          continuation := code, resultArity := arity,
          callerRemainder := remainder, control := controls,
-         returningInstance := ⟨0⟩ } :: calls) $$
-      [$Hruntime $Henv $Hhost $Hbump $Harena]
+         returningInstance := ⟨0⟩ } :: calls)
+  simp only [List.append_nil, List.singleton_append, func4AllocControls,
+    func4AllocChoice, func4ReallocChoice, func4SuccessTail, func4SuccessCheck,
+    func4MainBody, func4NegativeTail, List.cons_append, List.nil_append] at halloc
+  iapply halloc $$ [$Hruntime $Henv $Hhost $Hbump $Harena]
   iintro ⟨Hruntime, Henv, Hhost, Hbump, Harena⟩
   simp [allocLocals]
   iapply twp_localSet rfl
@@ -201,13 +206,15 @@ theorem func4_alloc_fresh {hlc : HasLC}
   iintro H4
   iapply twp_localGet rfl
   iapply twp_const
-  iapply twp_store32 old0 r0 r1 r2 r3 $$ H0
+  ihave H0' : pointsTo_u32 0 (result + 0) old0 $$ [H0]
+  · simp only [UInt32.add_zero]
+    iexact H0
+  iapply twp_store32 old0 r0 r1 r2 r3 $$ H0'
   iintro H0
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime
   iintro Hruntime
   simp
-  isimp only [← ptr] at Harena Hbump
   iapply Hnext
   iframe
 

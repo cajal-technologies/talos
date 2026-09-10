@@ -173,7 +173,7 @@ theorem write_all_nonempty_reaches
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change frame.toNat + 1 ≤ written.wasm.mem.pages * 65536
     rw [hwrittenPages]
     change (sp - 16).toNat + 1 ≤ store.wasm.mem.pages * 65536
@@ -194,7 +194,7 @@ theorem write_all_nonempty_reaches
   simp
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change frame.toNat + 4 + 4 ≤ written.wasm.mem.pages * 65536
     rw [hwrittenPages]
     change (sp - 16).toNat + 4 + 4 ≤ store.wasm.mem.pages * 65536

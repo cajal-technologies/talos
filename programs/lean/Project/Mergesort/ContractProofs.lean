@@ -68,17 +68,14 @@ theorem twp_const_alloc_freshRange_owned
   ihave Hslice : Project.Mergesort.Representations.ByteSlice base bytes $$
       [Hbytes]
   · unfold Project.Mergesort.Representations.ByteSlice
-    iframe Hbytes
-    ipureintro
-    simpa [bytes] using hnowrap
+    iframe_pureexact using [Hbytes] => (by simpa [bytes] using hnowrap)
   ihave Hnext := Hwp bytes
   ispecialize Hnext $$ %(by simp [bytes]) Hfrontier Hpages Hslice HP
   iapply fupd_mask_intro Std.LawfulSet.empty_subset
   iintro Hclose
-  isplitr
-  · ipureintro
+  isplitr_pureexact (by
     cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨_, store, [], ⟨rfl, _, rfl, Step.const⟩⟩
+    exact ⟨_, store, [], ⟨rfl, _, rfl, Step.const⟩⟩)
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -93,14 +90,9 @@ theorem twp_const_alloc_freshRange_owned
   subst store₂
   imod Hclose
   imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
+  isplitl_pureexact rfl
+  isplitl_pureexact rfl
+  isplitl_exact Hσ
   · iexact Hnext
 
 private abbrev readImport : ImportDecl :=
@@ -112,12 +104,10 @@ private abbrev writeImport : ImportDecl :=
     params := [.i32, .i32], results := [] }
 
 private theorem readImport_index :
-    Project.Mergesort.module.imports[0] = readImport := by
-  rfl
+    Project.Mergesort.module.imports[0] = readImport := by rfl
 
 private theorem writeImport_index :
-    Project.Mergesort.module.imports[1] = writeImport := by
-  rfl
+    Project.Mergesort.module.imports[1] = writeImport := by rfl
 
 /-- The authoritative `stdio.read` import contract. -/
 theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
@@ -136,8 +126,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
     ResumeWP [.i32 (UInt32.ofNat count)] callerLocals stack code arity
       remainder controls calls s E Φ)
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   isimp only [Streams] at Hstreams
   icases Hstreams with ⟨%random, Hhost⟩
@@ -187,8 +176,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
           List.reverse_nil, List.cons_append, List.nil_append] at hinvoke
         iintro ⟨⟨Hhost, ⟨Hbytes, _Hcont⟩⟩, Hstate⟩
         ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-        · iapply stateInterp_host_agree store ns obs nt host
-          iframe Hstate Hhost
+        · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
         ihave %hmem :
             ⌜∀ i b, buffer[i]? = some b →
               store.wasm.mem.read8 (ptr + UInt32.ofNat i) = b ∧
@@ -196,8 +184,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr buffer
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbufferBound : ptr.toNat + buffer.length ≤
             store.wasm.mem.pages * 65536 :=
           pointsToBytes_facts_bound hmem (by omega) hnowrap
@@ -211,16 +198,14 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
         have hreturn :=
           Project.Mergesort.WrapperProof.readHost_invoke_of_bound
             store.wasm requested ptr hincomingBound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (fun store ns obs nt _hmodule postWasm tag xs hinvoke => by
         simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
           List.take_succ_cons, List.take_zero, List.reverse_cons,
           List.reverse_nil, List.cons_append, List.nil_append] at hinvoke
         iintro ⟨⟨Hhost, ⟨Hbytes, _Hcont⟩⟩, Hstate⟩
         ihave %hhostEq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
-        · iapply stateInterp_host_agree store ns obs nt host
-          iframe Hstate Hhost
+        · iapply_frame stateInterp_host_agree store ns obs nt host using [Hstate Hhost]
         ihave %hmem :
             ⌜∀ i b, buffer[i]? = some b →
               store.wasm.mem.read8 (ptr + UInt32.ofNat i) = b ∧
@@ -228,8 +213,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr buffer
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbufferBound : ptr.toNat + buffer.length ≤
             store.wasm.mem.pages * 65536 :=
           pointsToBytes_facts_bound hmem (by omega) hnowrap
@@ -243,8 +227,7 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
         have hreturn :=
           Project.Mergesort.WrapperProof.readHost_invoke_of_bound
             store.wasm requested ptr hincomingBound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (params := callerLocals.params) (localValues := callerLocals.locals)
       (values := .i32 ptr :: .i32 requested :: stack)
       (code := code) (arity := arity) (remainder := remainder)
@@ -274,21 +257,16 @@ theorem import0_correct [WasmSmallStepGS hlc Universal.State] :
     ihave Hslice : ByteSlice ptr
         (input.take count ++ buffer.drop count) $$ [Hbytes]
     · unfold Project.Mergesort.Representations.ByteSlice
-      isplitl []
-      · ipureintro
-        rw [hnewLength]
-        exact hnowrap
-      · rw [← htake, ← hcount]
-        isimp only [host] at Hbytes
-        iexact Hbytes
+      isplitl_pureexact (by simpa only [hnewLength] using hnowrap)
+      rw [← htake, ← hcount]
+      isimp only [host] at Hbytes
+      iexact Hbytes
     isimp only [Cont, RuntimeContext, ResumeWP, resumeExpr, List.nil_append]
       at Hcont
     iapply Hcont $$ [Hmodule Henv] Hstreams Hslice
-    · isplitl [Hmodule]
-      · iexact Hmodule
+    · isplitl_exact Hmodule
       · iexact Henv
-    · ipureintro
-      exact Nat.min_le_left _ _
+    · ipureexact Nat.min_le_left _ _
   · iintro %preWasm %postWasm %msg %hinvoke Hfalse
     iexfalso
     iexact Hfalse
@@ -309,8 +287,7 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
     ByteSlice ptr bytes -∗
     ResumeWP [] callerLocals stack code arity remainder controls calls s E Φ)
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   isimp only [Streams] at Hstreams
   icases Hstreams with ⟨%random, Hhost⟩
@@ -361,17 +338,14 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr bytes
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbound : ptr.toNat + requested.toNat ≤
             store.wasm.mem.pages * 65536 := by
-          rw [hfacts.1]
-          exact pointsToBytes_facts_bound hmem (by omega) hnowrap
+          rw [hfacts.1]; exact pointsToBytes_facts_bound hmem (by omega) hnowrap
         have hreturn :=
           Project.Mergesort.WrapperProof.writeHost_invoke_of_bound
             store.wasm requested ptr hbound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (fun store ns obs nt _hmodule postWasm tag xs hinvoke => by
         simp only [List.length_cons, List.length_nil, Nat.reduceAdd,
           List.take_succ_cons, List.take_zero, List.reverse_cons,
@@ -384,17 +358,14 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
                 store.wasm.mem.pages * 65536⌝ $$ [Hstate Hbytes]
         · imod stateInterp_pointsToBytes_agree store ns obs nt ptr bytes
               $$ [$Hstate $Hbytes] with %hmem
-          ipureintro
-          exact hmem
+          ipureexact hmem
         have hbound : ptr.toNat + requested.toNat ≤
             store.wasm.mem.pages * 65536 := by
-          rw [hfacts.1]
-          exact pointsToBytes_facts_bound hmem (by omega) hnowrap
+          rw [hfacts.1]; exact pointsToBytes_facts_bound hmem (by omega) hnowrap
         have hreturn :=
           Project.Mergesort.WrapperProof.writeHost_invoke_of_bound
             store.wasm requested ptr hbound
-        rw [hreturn] at hinvoke
-        contradiction)
+        rw [hreturn] at hinvoke; contradiction)
       (params := callerLocals.params) (localValues := callerLocals.locals)
       (values := .i32 ptr :: .i32 requested :: stack)
       (code := code) (arity := arity) (remainder := remainder)
@@ -413,15 +384,12 @@ theorem import1_correct [WasmSmallStepGS hlc Universal.State] :
       iexact Hhost
     ihave Hslice : ByteSlice ptr bytes $$ [Hbytes]
     · unfold Project.Mergesort.Representations.ByteSlice
-      isplitl []
-      · ipureintro
-        exact hnowrap
+      isplitl_pureexact hnowrap
       · iexact Hbytes
     isimp only [Cont, RuntimeContext, ResumeWP, resumeExpr, List.nil_append]
       at Hcont
     iapply Hcont $$ [Hmodule Henv] Hstreams Hslice
-    · isplitl [Hmodule]
-      · iexact Hmodule
+    · isplitl_exact Hmodule
       · iexact Henv
   · iintro %preWasm %postWasm %msg %hinvoke Hfalse
     iexfalso
@@ -439,19 +407,13 @@ theorem import2_correct [WasmSmallStepGS hlc Universal.State] :
   intro input output raised callerLocals stack code arity remainder controls
     calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, Hterminal⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   isimp only [Streams] at Hstreams
   icases Hstreams with ⟨%random, Hhost⟩
   iapply Project.Mergesort.OutcomeInfrastructure.twp_oom_import
       ({ stdio := { input := input, output := output },
          random := random, oom := { raised := raised } } : Universal.State)
-  isplitl [Hhost]
-  · iexact Hhost
-  isplitl [Hmodule]
-  · iexact Hmodule
-  isplitl [Henv]
-  · iexact Henv
+  isplitl_exacts [Hhost Hmodule Henv]
   iintro Hhost
   iapply Hterminal
   unfold Streams
@@ -467,12 +429,10 @@ theorem func6_correct [WasmSmallStepGS hlc Universal.State] :
   intro input output raised callerLocals stack code arity remainder controls
     calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, Hterminal⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 9
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 9
       Project.Mergesort.func6Def (by decide)
-      Project.Mergesort.WrapperProof.func6_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func6_index with Hmodule => Hmodule
   simp [Project.Mergesort.func6Def, Project.Mergesort.func6,
     Function.toLocals, Function.numParams]
   have Hoom := import2_correct (hlc := hlc)
@@ -500,20 +460,15 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
   unfold Func4Spec CallContract callExpr
   intro callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 7
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 7
       Project.Mergesort.func4Def (by decide)
-      Project.Mergesort.WrapperProof.func4_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func4_index with Hmodule => Hmodule
   simp [Project.Mergesort.func4Def, Project.Mergesort.func4,
     Function.toLocals, Function.numParams]
-  iapply Wasm.SmallStep.twp_returnFromCallExplicit $$ Hmodule
-  iintro Hmodule
-  simp only [List.take_zero, List.nil_append]
+  wasm_twp_return_from_call Hmodule [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule Henv]
-  · iframe
+  iapply_frame Hcont $$ [Hmodule Henv]
 
 /-- The generated physical deallocator is a Wasm no-op; its authoritative
 logical effect transfers the complete live block into retired allocator
@@ -525,23 +480,19 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
     frontier history callerLocals stack code arity remainder controls calls s
     E Φ
   iintro ⟨Hruntime, ⟨Hbump, ⟨Hblock, ⟨%_hlayout, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   imod BumpHeap_retire heapId storedCursor frontier history allocationId ptr
       layout bytes $$ [Hbump Hblock] with Hbump
   · iframe
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 10
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 10
       Project.Mergesort.func7Def (by decide)
-      Project.Mergesort.WrapperProof.func7_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func7_index with Hmodule => Hmodule
   simp [Project.Mergesort.func7Def, Project.Mergesort.func7,
     Function.toLocals, Function.numParams]
-  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule Henv] Hbump
-  · iframe
+  iapply_frame Hcont $$ [Hmodule Henv] Hbump
 
 /-- The generated read shim changes only the machine-stack operand order and
 delegates to the authoritative import-0 contract. -/
@@ -553,18 +504,15 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
     remainder controls calls s E Φ
   dsimp only
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 13
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 13
       Project.Mergesort.func10Def (by decide)
-      Project.Mergesort.WrapperProof.func10_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func10_index with Hmodule => Hmodule
   simp [Project.Mergesort.func10Def, Project.Mergesort.func10,
     Function.toLocals, Function.numParams]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   let shimLocals : Locals := ⟨[.i32 ptr, .i32 requested], [], []⟩
   let callerFrame : CallFrame :=
     { locals := { callerLocals with values := stack }
@@ -584,27 +532,18 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
   iapply Hread
   isplitl [Hmodule]
   · unfold RuntimeContext
-    isplitl [Hmodule]
-    · iexact Hmodule
+    isplitl_exact Hmodule
     · iexact Henv
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hslice]
-  · iexact Hslice
-  isplitl []
-  · ipureintro
-    exact hfacts
+  isplitl_exacts [Hstreams Hslice]
+  isplitl_pureexact hfacts
   iintro Hruntime Hstreams Hslice %hcount
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, HenvInner⟩
+  iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
-  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.append_nil, List.take_succ_cons, List.take_zero,
     List.cons_append, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule HenvInner] Hstreams Hslice
-  · iframe
+  iapply_frame Hcont $$ [Hmodule HenvInner] Hstreams Hslice
   · itrivial
 
 /-- The generated write shim changes only the machine-stack operand order and
@@ -616,18 +555,15 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   intro ptr requested bytes input output raised callerLocals stack code arity
     remainder controls calls s E Φ
   iintro ⟨Hruntime, ⟨Hstreams, ⟨Hslice, ⟨%hfacts, Hcont⟩⟩⟩⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   iintuitionistic Henv
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 14
+  wasm_twp_bind Wasm.SmallStep.twp_call Project.Mergesort.module 14
       Project.Mergesort.func11Def (by decide)
-      Project.Mergesort.WrapperProof.func11_index $$ Hmodule
-  iintro Hmodule
+      Project.Mergesort.WrapperProof.func11_index with Hmodule => Hmodule
   simp [Project.Mergesort.func11Def, Project.Mergesort.func11,
     Function.toLocals, Function.numParams]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_localGet]
   let shimLocals : Locals := ⟨[.i32 ptr, .i32 requested], [], []⟩
   let callerFrame : CallFrame :=
     { locals := { callerLocals with values := stack }
@@ -647,26 +583,17 @@ theorem func11_correct [WasmSmallStepGS hlc Universal.State] :
   iapply Hwrite
   isplitl [Hmodule]
   · unfold RuntimeContext
-    isplitl [Hmodule]
-    · iexact Hmodule
+    isplitl_exact Hmodule
     · iexact Henv
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl [Hslice]
-  · iexact Hslice
-  isplitl []
-  · ipureintro
-    exact hfacts
+  isplitl_exacts [Hstreams Hslice]
+  isplitl_pureexact hfacts
   iintro Hruntime Hstreams Hslice
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, HenvInner⟩
+  iopen_runtime Hruntime with ⟨Hmodule, HenvInner⟩
   unfold ResumeWP resumeExpr
-  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough with Hmodule
   simp only [List.take_zero, List.nil_append]
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule HenvInner] Hstreams Hslice
-  · iframe
+  iapply_frame Hcont $$ [Hmodule HenvInner] Hstreams Hslice
 
 /-- The generated recursive sorter satisfies the authoritative exact buffer
 contract.  The adapter exposes the canonical word slices as the `arrayAt`
@@ -678,8 +605,7 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   intro source n scratch scratchN input scratchInput callerLocals stack code
     arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hbuffers, %hlengths, Hcont⟩
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   isimp only [SortBuffers] at Hbuffers
   icases Hbuffers with ⟨HsourceWords, HscratchWords, %hbufferFacts⟩
   isimp only [WordSlice, Project.Mergesort.Representations.ByteSlice]
@@ -698,15 +624,12 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   have hdisjoint := hbufferFacts.2
   unfold MemRegion.Disjoint at hdisjoint
   ihave Hsource : arrayAt 0 source input $$ [HsourceBytes]
-  · iapply (arrayAt_eq_wordCells source input).mpr
-    iexact HsourceBytes
+  · iapply_exact (arrayAt_eq_wordCells source input).mpr with HsourceBytes
   ihave Hscratch : arrayAt 0 scratch scratchInput $$ [HscratchBytes]
-  · iapply (arrayAt_eq_wordCells scratch scratchInput).mpr
-    iexact HscratchBytes
+  · iapply_exact (arrayAt_eq_wordCells scratch scratchInput).mpr with HscratchBytes
   have hscratchStrictInput :
       scratch.toNat + 4 * input.length < UInt32.size := by
-    rw [hbufferFacts.1]
-    exact hscratchStrictWords
+    simpa only [hbufferFacts.1] using hscratchStrictWords
   have hlayout :
       Wasm.Examples.MergeSort.ValidLayout source scratch input.length := by
     unfold Wasm.Examples.MergeSort.ValidLayout
@@ -728,41 +651,25 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
   simp only [List.cons_append, List.nil_append]
   iapply Project.Mergesort.SortProof.twp_sort source scratch input scratchInput
       hbufferFacts.1.symm hlayout hsourceStrictWords hscratchStrictInput
-  isplitl [Hmodule]
-  · iexact Hmodule
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hscratch]
-  · iexact Hscratch
+  isplitl_exacts [Hmodule Hsource Hscratch]
   iintro %sorted %scratchResult %hsorted %hscratchLength
     %hscratchExact Hmodule Hsource Hscratch
   have hsortedLength : sorted.length = input.length :=
     hsorted.2.length_eq.symm
   ihave HsourceBytes : WordCells source sorted $$ [Hsource]
-  · iapply (arrayAt_eq_wordCells source sorted).mp
-    iexact Hsource
+  · iapply_exact (arrayAt_eq_wordCells source sorted).mp with Hsource
   ihave HscratchBytes : WordCells scratch scratchResult $$ [Hscratch]
-  · iapply (arrayAt_eq_wordCells scratch scratchResult).mp
-    iexact Hscratch
+  · iapply_exact (arrayAt_eq_wordCells scratch scratchResult).mp with Hscratch
   ihave HsourceWords : WordSlice source sorted $$ [HsourceBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureintro
-      exact hsourceAlign
-    isplitl []
-    · ipureintro
-      simpa only [serialize_length, hsortedLength] using hsourceStrict
+    isplitl_pureexact hsourceAlign
+    isplitl_pureexact (by simpa only [serialize_length, hsortedLength] using hsourceStrict)
     · iexact HsourceBytes
   ihave HscratchWords : WordSlice scratch scratchResult $$ [HscratchBytes]
   · unfold WordSlice Project.Mergesort.Representations.ByteSlice
-    isplitl []
-    · ipureintro
-      exact hscratchAlign
-    isplitl []
-    · ipureintro
-      simpa only [serialize_length, hscratchLength] using
-        hscratchStrictInput
-    · iexact HscratchBytes
+    isplitl_pureexact hscratchAlign
+    isplitl_pureexact (by simpa only [serialize_length, hscratchLength] using hscratchStrictInput)
+    iexact HscratchBytes
   have hresultDisjoint : MemRegion.Disjoint
       ⟨source, 4 * sorted.length⟩
       ⟨scratch, 4 * scratchResult.length⟩ := by
@@ -773,20 +680,15 @@ theorem func2_correct [WasmSmallStepGS hlc Universal.State] :
       SortBuffers source scratch sorted scratchResult $$
         [HsourceWords HscratchWords]
   · unfold SortBuffers
-    iframe HsourceWords HscratchWords
-    ipureintro
-    exact ⟨by omega, hresultDisjoint⟩
+    iframe_pureexact using [HsourceWords HscratchWords] => ⟨by omega, hresultDisjoint⟩
   ihave HsortResult :
       SortResultBuffers source scratch input scratchInput sorted $$
         [HresultBuffers]
   · unfold SortResultBuffers
     rw [← hscratchExact]
-    isplitl [HresultBuffers]
-    · iexact HresultBuffers
-    · ipureintro
-      exact hsorted
+    isplitl_exact HresultBuffers
+    · ipureexact hsorted
   isimp only [RuntimeContext, ResumeWP, resumeExpr, List.nil_append] at Hcont
-  iapply Hcont $$ [Hmodule Henv] HsortResult
-  · iframe
+  iapply_frame Hcont $$ [Hmodule Henv] HsortResult
 
 end Project.Mergesort.ContractProofs

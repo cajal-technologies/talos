@@ -10,6 +10,8 @@ namespace Project.TotalVariation
 
 open Wasm
 
+-- WAT SHA-256: 702f26328cae66ccbbdf2aceb06a52bbec5437b01257666e65c419981fed0c7b
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/total_variation/program.wat" 0
 
 def func0Def : Wasm.Function :=

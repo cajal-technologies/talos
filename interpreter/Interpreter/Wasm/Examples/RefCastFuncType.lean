@@ -1,5 +1,10 @@
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: `ref.test`/`ref.cast` against concrete (function) types
 
     Issue #96: `ref.test`/`ref.cast` against a *concrete* function type
@@ -28,7 +33,7 @@ import Interpreter.Wasm.Examples.Harness
       `Function.typeIdx` and tags multi-member `(rec …)` groups so the
       equivalence can see recursion-group boundaries.
 
-    The theorems below pin all of it down with `native_decide`, both on
+    The theorems below pin all of it down with `decide +kernel`, both on
     hand-built modules and end-to-end through the decoder on the issue's
     exact WAT. -/
 
@@ -92,40 +97,39 @@ def m : Module :=
                 { body := TestNullNot, results := [.i32] }] } -- 9
 
 /-- The twin declarations of `$ft` are one defined type. -/
-theorem twin_equiv : m.gcTypeEquiv 0 1 = true := by native_decide
+theorem twin_equiv : m.gcTypeEquiv 0 1 = true := by decide +kernel
 
 /-- Equivalence sees through the `sub` chain too: `$sub <: twin-of-$ft`. -/
-theorem sub_subtype_twin : m.gcTypeSubtype 2 1 = true := by native_decide
+theorem sub_subtype_twin : m.gcTypeSubtype 2 1 = true := by decide +kernel
 
 /-- …but a supertype is still not a subtype of its subtype. -/
-theorem super_not_subtype_sub : m.gcTypeSubtype 0 2 = false := by native_decide
+theorem super_not_subtype_sub : m.gcTypeSubtype 0 2 = false := by decide +kernel
 
 /-- `ref.test (ref $ft) (ref.func $impl)` is `1` (the issue's first
 module; previously `0`). -/
 theorem test_same :
-    runValues 20 m 2 (m.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+    runValues 20 m 2 (m.initialStore (α := Unit)) [] = [.i32 1] := by decide +kernel
 
 /-- The structurally identical twin target also tests `1`. -/
 theorem test_twin :
-    runValues 20 m 3 (m.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+    runValues 20 m 3 (m.initialStore (α := Unit)) [] = [.i32 1] := by decide +kernel
 
 /-- A funcref of type `$sub` tests `1` against the supertype `$ft`. -/
 theorem test_sub :
-    runValues 20 m 4 (m.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+    runValues 20 m 4 (m.initialStore (α := Unit)) [] = [.i32 1] := by decide +kernel
 
 /-- A funcref of type `$ft` tests `0` against the subtype `$sub`. -/
 theorem test_super :
-    runValues 20 m 5 (m.initialStore (α := Unit)) [] = [.i32 0] := by native_decide
+    runValues 20 m 5 (m.initialStore (α := Unit)) [] = [.i32 0] := by decide +kernel
 
 /-- The issue's second module: cast-then-`call_ref` returns `5 + 1 = 6`
 (previously trapped with a cast failure). -/
 theorem cast_call :
-    runValues 20 m 6 (m.initialStore (α := Unit)) [] = [.i32 6] := by native_decide
+    runValues 20 m 6 (m.initialStore (α := Unit)) [] = [.i32 6] := by decide +kernel
 
 /-- Casting a `$ft` funcref *down* to `$sub` still traps. -/
 theorem cast_super_traps :
-    runTrapMsg 20 m 7 (m.initialStore (α := Unit)) [] = some "cast failure" := by
-  native_decide
+    runTrapMsg 20 m 7 (m.initialStore (α := Unit)) [] = some "cast failure" := by decide +kernel
 
 def castSuperConfig : Config Unit :=
   { expr := .running
@@ -139,17 +143,16 @@ def castSuperConfig : Config Unit :=
 
 theorem cast_super_trapsWith :
     TrapsWith castSuperConfig .castFailure
-      (fun _ => True) := by
-  apply runSteps_trapReason_trapsWith (fuel := 320)
-  native_decide
+      (fun _ => True) :=
+  runSteps_trapReason_trapsWith (fuel := 320) (by decide +kernel)
 
 /-- The null funcref inhabits the nullable concrete type `(ref null $ft)`… -/
 theorem test_null_nullable :
-    runValues 20 m 8 (m.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+    runValues 20 m 8 (m.initialStore (α := Unit)) [] = [.i32 1] := by decide +kernel
 
 /-- …but not the non-nullable `(ref $ft)`. -/
 theorem test_null_nonnullable :
-    runValues 20 m 9 (m.initialStore (α := Unit)) [] = [.i32 0] := by native_decide
+    runValues 20 m 9 (m.initialStore (α := Unit)) [] = [.i32 0] := by decide +kernel
 
 /-! ### Hand-built module: struct twins and recursion groups -/
 
@@ -175,24 +178,22 @@ def structM : Module :=
 
 /-- The comment's struct-twin case: a `$a` value tests `1` against `$b`. -/
 theorem struct_twin :
-    runValues 20 structM 0 (structM.initialStore (α := Unit)) [] = [.i32 1] := by
-  native_decide
+    runValues 20 structM 0 (structM.initialStore (α := Unit)) [] = [.i32 1] := by decide +kernel
 
 /-- A structurally *different* struct type still tests `0`. -/
 theorem struct_other :
-    runValues 20 structM 1 (structM.initialStore (α := Unit)) [] = [.i32 0] := by
-  native_decide
+    runValues 20 structM 1 (structM.initialStore (α := Unit)) [] = [.i32 0] := by decide +kernel
 
 /-- Iso-recursive equivalence respects recursion-group boundaries: a
 member of a two-member `(rec …)` group is *not* equivalent to the same
 shape declared as a singleton group. -/
-theorem rec_group_not_equiv : structM.gcTypeEquiv 0 3 = false := by native_decide
+theorem rec_group_not_equiv : structM.gcTypeEquiv 0 3 = false := by decide +kernel
 
 /-- Distinct members of one recursion group stay distinct types even when
 they share a shape, while separately declared singleton groups of the same
 shape are one type. -/
 theorem rec_group_members_distinct : structM.gcTypeEquiv 3 4 = false ∧
-    structM.gcTypeEquiv 0 1 = true := by native_decide
+    structM.gcTypeEquiv 0 1 = true := by decide +kernel
 
 /-! ### End-to-end through the decoder, on the issue's exact WAT -/
 
@@ -224,23 +225,22 @@ private def castCallM   : Module := decodeOrDefault castCallWat
 private def structTwinM : Module := decodeOrDefault structTwinWat
 
 /-- The decoder records `$impl`'s declared `(type $ft)`. -/
-theorem decoded_typeIdx : refTestM.funcs.map (·.typeIdx) = [some 0, none] := by
-  native_decide
+theorem decoded_typeIdx : refTestM.funcs.map (·.typeIdx) = [some 0, none] := by cbv
 
 /-- wasmtime/V8 return `1`; Talos previously returned `0`. -/
 theorem decoded_ref_test :
     runValues 20 refTestM ((refTestM.findExport "f").getD 99)
-      (refTestM.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+      (refTestM.initialStore (α := Unit)) [] = [.i32 1] := by cbv
 
 /-- wasmtime/V8 return `6`; Talos previously trapped on the cast. -/
 theorem decoded_cast_call :
     runValues 20 castCallM ((castCallM.findExport "f").getD 99)
-      (castCallM.initialStore (α := Unit)) [] = [.i32 6] := by native_decide
+      (castCallM.initialStore (α := Unit)) [] = [.i32 6] := by cbv
 
 /-- The comment's struct-twin module returns `1` end-to-end. -/
 theorem decoded_struct_twin :
     runValues 20 structTwinM ((structTwinM.findExport "f").getD 99)
-      (structTwinM.initialStore (α := Unit)) [] = [.i32 1] := by native_decide
+      (structTwinM.initialStore (α := Unit)) [] = [.i32 1] := by cbv
 
 end RefCastFuncType
 end Wasm

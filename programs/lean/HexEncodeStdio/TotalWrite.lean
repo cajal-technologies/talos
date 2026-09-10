@@ -269,8 +269,7 @@ theorem twp_call_func17 {hlc : HasLC}
   iapply Wasm.SmallStep.twp_call Project.HexStdio.«module» 20
     Project.HexStdio.func17Def (by decide) (by rfl) ⟨0⟩ $$ Hruntime
   iintro Hruntime
-  simp [Project.HexStdio.func17Def, Function.toLocals, Function.numParams,
-    ValueType.zero]
+  simp [Project.HexStdio.func17Def, Function.toLocals, Function.numParams]
   iapply func17_body result ignored ptr length bytes host oldTag oldLength
     hlen hpos hptr hresult (controls := [])
     (calls :=
@@ -535,7 +534,7 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
       globalPointsToAt 0 0 (.i32 (stackPtr + 16)) $$ [Hglobal]
   · rw [UInt32.add_comm stackPtr 16]
     iexact Hglobal
-  simp [func8Locals, List.set, UInt32.add_comm ptr length]
+  simp [UInt32.add_comm ptr length]
   iapply Hnext $$ Hruntime Henv Hhost Hglobal' Hbytes Htag Hlength
 
 /-- Caller-side total contract for generated WAT function 11 on a nonempty
@@ -584,11 +583,11 @@ theorem twp_call_func8_nonempty {hlc : HasLC}
   iintro Hglobal
   iapply twp_const
   iapply twp_sub
-  rw [show stackPtr + 16 - 16 = stackPtr by bv_decide]
+  rw [show stackPtr + 16 - 16 = stackPtr by bv_normalize (config := { enums := false })]
   iapply twp_localTee rfl
   iapply twp_globalSet $$ Hglobal
   iintro Hglobal
-  simp [func8Locals, List.set]
+  simp []
   iapply func8_after_prologue_nonempty ptr length stackPtr bytes host oldTag
     oldLength 0 0 0 0 hlen hpos hptr hstack (controls := [])
     (calls :=

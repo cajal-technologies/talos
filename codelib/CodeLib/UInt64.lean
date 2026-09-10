@@ -27,6 +27,11 @@ Internal layering:
 
 namespace Wasm
 
+/-- The reverse `UInt64` inequality follows when strict comparison fails. -/
+theorem UInt64.le_of_not_lt {a b : UInt64} (h : ¬a < b) : b ≤ a := by
+  change ¬a.toNat < b.toNat at h
+  exact Nat.le_of_not_lt h
+
 /-! ## Small `UInt64 ↔ Nat` helpers (bitwise) -/
 
 private theorem _aux_toNat_and_one (a : UInt64) : (a &&& 1).toNat = a.toNat % 2 := by
@@ -190,8 +195,7 @@ theorem UInt64.ctz64_two_pow_dvd (a : UInt64) : 2 ^ ctz64 64 a ∣ a.toNat := by
   · rw [ctz64_eq_ntz]
     obtain ⟨m, _, heq, _, _⟩ :=
       ntz_decompose 64 a.toNat (by omega) (_aux_toNat_pos a ha) a.toNat_lt
-    simp at heq
-    exact ⟨m, heq⟩
+    simp at heq; exact ⟨m, heq⟩
 
 /-- The "odd part" of a nonzero `UInt64`: dividing out `2 ^ ctz64` leaves
 an odd `Nat`. -/
@@ -216,8 +220,7 @@ private theorem ntz_64_testBit_spec (n : Nat) (hpos : 0 < n) (hbnd : n < 2^64) :
   refine ⟨?_, ?_⟩
   · rw [heq, show (2:Nat)^c * m = m <<< c by rw [Nat.shiftLeft_eq]; ring,
         Nat.testBit_shiftLeft]
-    simp
-    exact hmod1
+    simp; exact hmod1
   · intro i hi
     rw [heq, show (2:Nat)^c * m = m <<< c by rw [Nat.shiftLeft_eq]; ring,
         Nat.testBit_shiftLeft]
@@ -282,6 +285,14 @@ theorem UInt64.ctz64_or_min (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0) :
 
 /-! ## `UInt64 → Nat` for the shift / shift-mask compositions used by Stein -/
 
+/-- The `Nat` view of the masked `ctz64` shift, including the zero case. -/
+theorem UInt64.shr_ctz_mod_toNat (a : UInt64) :
+    (a >>> (UInt64.ofNat (ctz64 64 a) % 64)).toNat
+      = a.toNat >>> (ctz64 64 a % 64) := by
+  simp only [UInt64.toNat_shiftRight, UInt64.toNat_mod, UInt64.toNat_ofNat',
+    show UInt64.toNat 64 = 64 from rfl,
+    Nat.mod_mod_of_dvd _ (by norm_num : (64 : Nat) ∣ 2 ^ 64), Nat.mod_mod]
+
 /-- The `% 64` mask on `UInt64.ofNat (ctz64 64 a)` is inert for nonzero
 `a` because `ctz64 < 64`. -/
 theorem UInt64.toNat_ofNat_ctz_mod (a : UInt64) (ha : a ≠ 0) :
@@ -297,10 +308,8 @@ in `Nat`. -/
 theorem UInt64.shr_ctz_toNat (a : UInt64) (ha : a ≠ 0) :
     (a >>> (UInt64.ofNat (ctz64 64 a) % 64)).toNat
       = a.toNat / 2 ^ ctz64 64 a := by
-  rw [UInt64.toNat_shiftRight]
-  rw [UInt64.toNat_ofNat_ctz_mod a ha]
-  have hlt : ctz64 64 a < 64 := UInt64.ctz64_lt a ha
-  rw [Nat.mod_eq_of_lt hlt, Nat.shiftRight_eq_div_pow]
+  rw [UInt64.shr_ctz_mod_toNat, Nat.mod_eq_of_lt (UInt64.ctz64_lt a ha),
+    Nat.shiftRight_eq_div_pow]
 
 /-- Shifting a nonzero `UInt64` right by its own `ctz64` keeps it nonzero. -/
 theorem UInt64.shr_ctz_ne_zero (a : UInt64) (ha : a ≠ 0) :
@@ -318,8 +327,7 @@ theorem UInt64.shr_ctz_ne_zero (a : UInt64) (ha : a ≠ 0) :
 /-- And its `toNat` is odd. -/
 theorem UInt64.shr_ctz_toNat_odd (a : UInt64) (ha : a ≠ 0) :
     (a >>> (UInt64.ofNat (ctz64 64 a) % 64)).toNat % 2 = 1 := by
-  rw [UInt64.shr_ctz_toNat a ha]
-  exact UInt64.ctz64_shr_odd a ha
+  rw [UInt64.shr_ctz_toNat a ha]; exact UInt64.ctz64_shr_odd a ha
 
 /-! ## Nat-level Stein identity -/
 
@@ -427,10 +435,8 @@ theorem UInt64.recombine_eq (a b : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
   -- From hEq: a >>> ... = b >>> ..., so a_odd.toNat = b_odd.toNat.
   have h_eq_nat : a.toNat / 2 ^ ctz64 64 a = b.toNat / 2 ^ ctz64 64 b := by
     have h := congrArg UInt64.toNat hEq
-    rw [UInt64.shr_ctz_toNat a ha, UInt64.shr_ctz_toNat b hb] at h
-    exact h
-  rw [← h_eq_nat]
-  exact (Nat.gcd_self _).symm
+    rw [UInt64.shr_ctz_toNat a ha, UInt64.shr_ctz_toNat b hb] at h; exact h
+  rw [← h_eq_nat]; exact (Nat.gcd_self _).symm
 
 /-- Recombine after the main loop. -/
 theorem UInt64.recombine_loop (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
@@ -443,8 +449,7 @@ theorem UInt64.recombine_loop (a b o : UInt64) (ha : a ≠ 0) (hb : b ≠ 0)
   have h_ctz_b_lt : ctz64 64 b < 64 := UInt64.ctz64_lt b hb
   rw [Nat.mod_eq_of_lt h_ctz_a_lt, Nat.mod_eq_of_lt h_ctz_b_lt] at h
   rw [Nat.shiftRight_eq_div_pow, Nat.shiftRight_eq_div_pow] at h
-  rw [Nat.gcd_self] at h
-  exact h
+  rw [Nat.gcd_self] at h; exact h
 
 /-! ## Loop-step invariants (one iteration of Stein's subtract-and-halve) -/
 
@@ -489,10 +494,8 @@ theorem UInt64.stein_step_x (x y : UInt64) (_hxne : x ≠ 0) (hyne : y ≠ 0)
     rw [Nat.mod_eq_of_lt h_ctz_lt, Nat.shiftRight_eq_div_pow]
   -- assemble.
   refine ⟨h_shr_ne, ?_, ?_, ?_⟩
-  · rw [h_shr_toNat', ← h_shr_toNat]
-    exact UInt64.shr_ctz_toNat_odd (x - y) h_sub_ne
-  · rw [h_shr_toNat', h_sub_toNat]
-    exact _aux_gcd_sub_div_pow2 x.toNat y.toNat _ hxle_nat hyodd
+  · rw [h_shr_toNat', ← h_shr_toNat]; exact UInt64.shr_ctz_toNat_odd (x - y) h_sub_ne
+  · rw [h_shr_toNat', h_sub_toNat]; exact _aux_gcd_sub_div_pow2 x.toNat y.toNat _ hxle_nat hyodd
       (by rw [← h_sub_toNat]; exact UInt64.ctz64_two_pow_dvd (x - y))
   · rw [h_shr_toNat', h_sub_toNat]
     calc (x.toNat - y.toNat) / 2 ^ ctz64 64 (x - y)
@@ -531,8 +534,7 @@ theorem UInt64.stein_step_y (x y : UInt64) (hxne : x ≠ 0) (_hyne : y ≠ 0)
       = (y - x).toNat / 2 ^ ctz64 64 (y - x) := by
     rw [Nat.mod_eq_of_lt h_ctz_lt, Nat.shiftRight_eq_div_pow]
   refine ⟨h_shr_ne, ?_, ?_, ?_⟩
-  · rw [h_shr_toNat', ← h_shr_toNat]
-    exact UInt64.shr_ctz_toNat_odd (y - x) h_sub_ne
+  · rw [h_shr_toNat', ← h_shr_toNat]; exact UInt64.shr_ctz_toNat_odd (y - x) h_sub_ne
   · rw [h_shr_toNat', h_sub_toNat]
     rw [Nat.gcd_comm x.toNat]
     rw [_aux_gcd_sub_div_pow2 y.toNat x.toNat _ hxle_nat hxodd

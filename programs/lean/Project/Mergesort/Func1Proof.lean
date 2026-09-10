@@ -20,8 +20,7 @@ open scoped Wasm.SmallStep.Outcome
 
 private theorem func1_index :
     Project.Mergesort.module.funcs[1]? =
-      some Project.Mergesort.func1Def := by
-  rfl
+      some Project.Mergesort.func1Def := by rfl
 
 private theorem byteSlice_address_eq
     [WasmSmallStepGS hlc Universal.State]
@@ -64,25 +63,18 @@ private theorem growSource_live_lookup
   ihave %hlookup : ⌜get? history.records oldId = some
       (liveMeta oldPtr
         { size := oldCapacity.toNat, alignment := 1 })⌝ $$ [Hauth Htoken]
-  · iapply AllocMetaAuth_token_agree
-    iframe Hauth Htoken
+  · iapply_frame AllocMetaAuth_token_agree using [Hauth Htoken]
   isplitl [Hcursor Hfrontier Hauth Hretired Hpages]
   · unfold BumpHeap
     iframe Hcursor Hfrontier Hauth Hretired
     iexists ownedPages
-    iframe Hpages
-    ipureintro
-    exact hheap
+    iframe_pureexact using [Hpages] => hheap
   isplitl [Htoken Hbytes]
   · unfold GrowSourceOwn LiveBlock
-    isplitr
-    · ipureintro
-      exact hsource
+    isplitr_pureexact hsource
     · iframe Htoken Hbytes
-      ipureintro
-      exact hblock
-  · ipureintro
-    exact hlookup
+      ipureexact hblock
+  · ipureexact hlookup
 
 private theorem growSource_reserveHistory
     [WasmSmallStepGS hlc Universal.State]
@@ -102,44 +94,34 @@ private theorem growSource_reserveHistory
       iintro ⟨Hbump, Hsource⟩
       isimp only [GrowSourceOwn] at Hsource
       icases Hsource with %hsource
-      isplitl [Hbump]
-      · iexact Hbump
+      isplitl_exact Hbump
       isplitl []
       · unfold GrowSourceOwn
-        ipureintro
-        exact hsource
+        ipureexact hsource
       · ipureintro
         intro newPtr newLayout
         rcases hsource with ⟨rfl, rfl, rfl⟩
         simp [VecReserveHistory, growHistory]
   | allocated oldId allBytes spare =>
       iintro Hresources
-      ihave Hfacts := growSource_live_lookup heapId storedCursor frontier
+      ihave ⟨Hbump, Hsource, %hlookup⟩ := growSource_live_lookup heapId storedCursor frontier
         history oldId capacity ptr initialized allBytes spare $$ Hresources
-      icases Hfacts with ⟨Hbump, Hsource, %hlookup⟩
       isimp only [GrowSourceOwn] at Hsource
       icases Hsource with ⟨%hsource, Hblock⟩
       have hcapacity : capacity ≠ 0 := by
         intro hzero
-        have := congrArg UInt32.toNat hzero
-        simp only [UInt32.toNat_zero] at this
+        have := congrArg UInt32.toNat hzero; simp only [UInt32.toNat_zero] at this
         omega
       ihave Hsource : GrowSourceOwn heapId capacity ptr initialized
           (.allocated oldId allBytes spare) $$ [Hblock]
       · unfold GrowSourceOwn
-        isplitr
-        · ipureintro
-          exact hsource
+        isplitr_pureexact hsource
         · iexact Hblock
-      isplitl [Hbump]
-      · iexact Hbump
-      isplitl [Hsource]
-      · iexact Hsource
+      isplitl_exacts [Hbump Hsource]
       · ipureintro
         intro newPtr newLayout
         unfold VecReserveHistory growHistory
-        rw [if_neg hcapacity]
-        exact ⟨oldId, hlookup, rfl⟩
+        rw [if_neg hcapacity]; exact ⟨oldId, hlookup, rfl⟩
 
 theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     (hfunc0 : Func0Spec (hlc := hlc)) :
@@ -166,12 +148,10 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     rw [hnewCapacityWord]
     unfold newCapacityNat selectedCapacity
     omega
-  isimp only [RuntimeContext] at Hruntime
-  icases Hruntime with ⟨Hmodule, Henv⟩
+  iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_call Project.Mergesort.module 4
-      Project.Mergesort.func1Def (by decide) func1_index $$ Hmodule
-  iintro Hmodule
+  wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 4
+      Project.Mergesort.func1Def (by decide) func1_index with Hmodule
   simp [Project.Mergesort.func1Def, Project.Mergesort.func1,
     Function.toLocals, Function.numParams]
   ihave HreserveParts := (StackReserve_split reserveBase shadow).mp $$ Hreserve
@@ -179,16 +159,14 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     ⟨%headBytes, %growBefore, %hshadow, Hhead, HgrowBefore⟩
   isimp only [VecU8, RawVecHeader] at Hvec
   icases Hvec with ⟨⟨Hcapacity, Hpointer⟩, Hlength, Hstorage⟩
-  ihave HsourceEx := (VecStorage_as_growSource heapId capacity ptr
+  ihave ⟨%source, Hsource⟩ := (VecStorage_as_growSource heapId capacity ptr
     initialized).mp $$ Hstorage
-  icases HsourceEx with ⟨%source, Hsource⟩
   ihave HsourceFacts := growSource_reserveHistory heapId storedCursor
     frontier history capacity ptr initialized source $$ [Hbump Hsource]
   · iframe
   icases HsourceFacts with ⟨Hbump, Hsource, %hreserveHistory⟩
   have hheadWord : UInt32.ofNat headBytes.length = 4 := by
-    rw [hshadow.2.1]
-    decide
+    rw [hshadow.2.1]; decide
   have hgrowAddress :
       reserveBase + UInt32.ofNat headBytes.length = reserveBase + 4 := by
     rw [hheadWord]
@@ -223,8 +201,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       show (1 : UInt32).toNat % 32 = 1 by decide,
       Nat.shiftLeft_eq, pow_one,
       Nat.mod_eq_of_lt (by
-        norm_num [UInt32.size] at hdoubleBound ⊢
-        omega),
+        norm_num [UInt32.size] at hdoubleBound ⊢; omega),
       UInt32.toNat_ofNat_of_lt' hdoubleBound]
     omega
   let firstMaxNat := max (initialized.length + current.length)
@@ -270,82 +247,50 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     unfold newCapacityNat selectedCapacity firstMaxNat
     omega
   isimp only [StackPointer] at Hsp
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  rw [show driverBase - 16 = reserveBase by decide]
-  iapply twp_localTee rfl
-  simp only [List.length]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
-  iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_add
-  rw [hsumWord]
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_localGet rfl
+  wasm_twp_rebind twp_globalGet with Hsp
+  wasm_twp_pures [twp_const twp_sub] rewriting [show driverBase - 16 = reserveBase by decide]
+  wasm_twp_localTee [List.length]
+  wasm_twp_rebind twp_globalSet with Hsp
+  wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add] rewriting [hsumWord]
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_localGet]
   iapply twp_geU (result := 1) (by
     rw [if_pos (by simpa only [← hsumWord] using hguard)])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  rw [UInt32.add_comm 4 reserveBase]
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm 4 reserveBase]
+  wasm_twp_pures [twp_localGet]
   ihave Hcapacity' : pointsTo_u32 0 (driverBase + 0) capacity $$ [Hcapacity]
-  · rw [UInt32.add_zero]
-    iexact Hcapacity
-  iapply twp_load32 (address := driverBase) (offset := 0) capacity
-      (by decide) (by decide) (by decide) (by decide) $$ Hcapacity'
-  iintro Hcapacity
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_localGet rfl
+  · irw_exact [UInt32.add_zero] with Hcapacity
+  wasm_twp_bind twp_load32 (address := driverBase) (offset := 0) capacity
+      (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_localGet]
   iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
     Hpointer
   iintro Hpointer
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_shl
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
   rw [show (1 : UInt32) % 32 = 1 by decide, hdoubleWord]
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_gtU rfl
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_localGet twp_localGet twp_gtU]
   iapply twp_select (selected := .i32 (UInt32.ofNat firstMaxNat)) (by
     by_cases hcmp : UInt32.ofNat (initialized.length + current.length) >
         UInt32.ofNat (2 * capacity.toNat)
     · have hw : UInt32.ofNat (initialized.length + current.length) =
-          UInt32.ofNat firstMaxNat := by
-        simpa only [if_pos hcmp] using hfirstMaxWord
+          UInt32.ofNat firstMaxNat := by simpa only [if_pos hcmp] using hfirstMaxWord
       rw [if_pos hcmp,
         if_pos (by decide : (1 : UInt32) ≠ 0)]
       exact congrArg Value.i32 hw.symm
     · have hw : UInt32.ofNat (2 * capacity.toNat) =
-          UInt32.ofNat firstMaxNat := by
-        simpa only [if_neg hcmp] using hfirstMaxWord
+          UInt32.ofNat firstMaxNat := by simpa only [if_neg hcmp] using hfirstMaxWord
       rw [if_neg hcmp,
         if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
       exact congrArg Value.i32 hw.symm)
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_const
-  iapply twp_const
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_eq rfl
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_const twp_const twp_localGet twp_const twp_eq]
   iapply twp_select (selected := .i32 8) (by simp)
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
-  iapply twp_gtU rfl
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_localGet twp_localGet twp_gtU]
   iapply twp_select (selected := .i32 newCapacity) (by
     rw [← hselectedWord]
     by_cases hcmp : UInt32.ofNat firstMaxNat > 8
@@ -363,10 +308,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
           show (8 : UInt32).toNat = 8 by decide] at hcmp
         omega
       simp [hcmp, max_eq_right hn])
-  iapply twp_localTee rfl
-  simp only [List.set]
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_localTee [List.set]
+  wasm_twp_pures [twp_localGet twp_localGet]
   have Hfunc0 : Func0Spec (hlc := hlc) := hfunc0
   unfold Func0Spec CallContract callExpr at Hfunc0
   dsimp only at Hfunc0
@@ -389,16 +332,8 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
     iframe Hmodule Henv
-  isplitl [HgrowBeforeAt]
-  · iexact HgrowBeforeAt
-  isplitl [Hsource]
-  · iexact Hsource
-  isplitl [Hbump]
-  · iexact Hbump
-  isplitl [Hstreams]
-  · iexact Hstreams
-  isplitl []
-  · ipureintro
+  isplitl_exacts [HgrowBeforeAt Hsource Hbump Hstreams]
+  isplitl_pureexact (by
     have hcapacityInitialized : initialized.length ≤ capacity.toNat := by
       rcases hgeo with hempty | hshort | hlarge
       · rcases hempty with ⟨_hcapacity, _hptr, hlength, _hremaining,
@@ -406,8 +341,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         omega
       · rcases hshort with ⟨_hremaining, hlength, _htotal, hcapacity,
           _hptr, _hfrontier, _hhistory⟩
-        rw [hlength, hcapacity]
-        exact le_max_left _ _
+        rw [hlength, hcapacity]; exact le_max_left _ _
       · rcases hlarge with
           ⟨_exponent, _hlower, _hupper, _hcapacity, hlength,
             _htotal, _hptr, _hfrontier, _hhistory⟩
@@ -418,12 +352,11 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       omega
     have hvalid :
         ({ size := newCapacity.toNat, alignment := 1 } : AllocLayout).Valid := by
-      rw [hnewCapacityWord]
-      exact hnewValid
+      simpa only [hnewCapacityWord] using hnewValid
     exact ⟨rfl, rfl, hshadow.2.2, by
       rw [hnewCapacityWord]
       unfold newCapacityNat selectedCapacity
-      omega, holdNew, hvalid⟩
+      omega, holdNew, hvalid⟩)
   unfold FinishGrowContinuation
   dsimp only
   cases hdecision : classifyBump frontier newLayout with
@@ -453,9 +386,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       ihave Hreserve : StackReserve reserveBase shadow $$ [Hhead HresultAt]
       · iapply (StackReserve_split reserveBase shadow).mpr
         iexists headBytes, growBefore
-        isplitr
-        · ipureintro
-          exact hshadow
+        isplitr_pureexact hshadow
         · iframe
       ihave Hsp' : StackPointer reserveBase $$ [Hsp]
       · unfold StackPointer
@@ -469,13 +400,11 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         simpa only [newLayout, newCapacityNat] using hdecision
       have hdecision' : classifyBump frontier
           { size := newCapacity.toNat, alignment := 1 } =
-            .success newPtr finish := by
-        simpa only [newLayout, hnewCapacityWord] using hdecision
+            .success newPtr finish := by simpa only [newLayout, hnewCapacityWord] using hdecision
       rw [hdecision']
       isplit
       · iintro %newBytes Hruntime Hresult Hbump Hblock %hcopy Hstreams
-        isimp only [RuntimeContext] at Hruntime
-        icases Hruntime with ⟨Hmodule, Henv⟩
+        iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
         isimp only [ResumeWP, resumeExpr, List.nil_append]
         isimp only [Representations.ByteSlice, growResultBytes] at Hresult
         icases Hresult with ⟨%hresultNowrap, HresultBytes⟩
@@ -486,46 +415,31 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
           iexact HresultBytes
         isimp only [arrayAt] at Harray
         icases Harray with ⟨Htag, HnewPointer, HnewCapacity, _Hemp⟩
-        iapply twp_block
-        iapply twp_localGet rfl
-        ihave Htag' : pointsTo_u32 0 (reserveBase + 4) 0 $$ [Htag]
-        · iexact Htag
-        iapply twp_load32 (address := reserveBase) (offset := 4) 0
-            (by decide) (by decide) (by decide) (by decide) $$ Htag'
-        iintro Htag
-        iapply twp_const
+        wasm_twp_pures [twp_block twp_localGet]
+        wasm_twp_rebind twp_load32 (address := reserveBase) (offset := 4) 0
+            (by decide) (by decide) (by decide) (by decide) with Htag
+        wasm_twp_pures [twp_const]
         iapply twp_ne (result := 1) (by decide)
         iapply twp_brIf (by decide) (by rfl)
         simp only [List.take_zero, List.drop_zero, List.nil_append]
-        iapply twp_localGet rfl
+        wasm_twp_pures [twp_localGet]
         ihave HnewPointer' : pointsTo_u32 0 (reserveBase + 8) newPtr $$
             [HnewPointer]
-        · rw [← show reserveBase + 4 + 4 = reserveBase + 8 by decide]
-          iexact HnewPointer
-        iapply twp_load32 (address := reserveBase) (offset := 8) newPtr
-            (by decide) (by decide) (by decide) (by decide) $$ HnewPointer'
-        iintro HnewPointer
-        iapply twp_localSet rfl
-        simp only [List.set]
-        iapply twp_localGet rfl
-        iapply twp_localGet rfl
-        iapply twp_store32 (address := driverBase) (offset := 0) capacity
-            (by decide) (by decide) (by decide) (by decide) $$ Hcapacity
-        iintro Hcapacity
-        iapply twp_localGet rfl
-        iapply twp_localGet rfl
-        iapply twp_store32 (address := driverBase) (offset := 4) ptr
-            (by decide) (by decide) (by decide) (by decide) $$ Hpointer
-        iintro Hpointer
-        iapply twp_localGet rfl
-        iapply twp_const
-        iapply twp_add
+        · irw_exact [← show reserveBase + 4 + 4 = reserveBase + 8 by decide] with HnewPointer
+        wasm_twp_bind twp_load32 (address := reserveBase) (offset := 8) newPtr
+            (by decide) (by decide) (by decide) (by decide) with HnewPointer' => HnewPointer
+        wasm_twp_localSet [List.set]
+        wasm_twp_pures [twp_localGet twp_localGet]
+        wasm_twp_rebind twp_store32 (address := driverBase) (offset := 0) capacity
+            (by decide) (by decide) (by decide) (by decide) with Hcapacity
+        wasm_twp_pures [twp_localGet twp_localGet]
+        wasm_twp_rebind twp_store32 (address := driverBase) (offset := 4) ptr
+            (by decide) (by decide) (by decide) (by decide) with Hpointer
+        wasm_twp_pures [twp_localGet twp_const twp_add]
         rw [UInt32.add_comm 16 reserveBase,
           show reserveBase + 16 = driverBase by decide]
-        iapply twp_globalSet $$ Hsp
-        iintro Hsp
-        iapply twp_returnFromCallFallthrough $$ Hmodule
-        iintro Hmodule
+        wasm_twp_rebind twp_globalSet with Hsp
+        wasm_twp_rebind twp_returnFromCallFallthrough with Hmodule
         simp only [List.take_zero, List.nil_append]
         ihave HnewStorage := LiveBlock_to_VecStorage heapId history.nextId
           newCapacity newPtr initialized newBytes hnewPositive hcopy.2 $$ Hblock
@@ -538,14 +452,12 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Harray : arrayAt 0 (reserveBase + 4)
             [0, newPtr, newCapacity] $$ [Htag HnewPointer HnewCapacity]
         · isimp only [arrayAt]
-          isplitl [Htag]
-          · iexact Htag
+          isplitl_exact Htag
           isplitl [HnewPointer]
           · iapply pointsTo_u32_address_eq (by decide :
                 reserveBase + 8 = reserveBase + 4 + 4)
             iexact HnewPointer
-          isplitl [HnewCapacity]
-          · iexact HnewCapacity
+          isplitl_exact HnewCapacity
           · itrivial
         ihave HresultBytes : WordCells (reserveBase + 4)
             [0, newPtr, newCapacity] $$ [Harray]
@@ -555,9 +467,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Hresult : Representations.ByteSlice (reserveBase + 4)
             (growResultBytes newPtr newCapacity) $$ [HresultBytes]
         · unfold Representations.ByteSlice growResultBytes
-          iframe HresultBytes
-          ipureintro
-          exact hresultNowrap
+          iframe_pureexact using [HresultBytes] => hresultNowrap
         have hheadTake : shadow.take 4 = headBytes := by
           rw [hshadow.1]
           simp [hshadow.2.1]
@@ -567,16 +477,15 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         · iapply (StackReserve_split reserveBase
             (reserveSuccessShadow shadow newPtr newCapacity)).mpr
           iexists headBytes, growResultBytes newPtr newCapacity
-          isplitr
-          · ipureintro
+          isplitr_pureexact (by
             constructor
             · unfold reserveSuccessShadow
               rw [hheadTake]
             exact ⟨hshadow.2.1, by
               unfold growResultBytes
               rw [serialize_length]
-              norm_num⟩
-          · iframe
+              norm_num⟩)
+          iframe
         have hreserve : VecReserveHistory history
             (growHistory history source capacity ptr newPtr newLayout)
             capacity ptr newPtr newLayout :=
@@ -589,9 +498,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Hsp' : StackPointer driverBase $$ [Hsp]
         · unfold StackPointer
           iexact Hsp
-        ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
-        · unfold RuntimeContext
-          iframe Hmodule Henv
+        iclose_runtime Hruntime with Hmodule Henv
         isimp only [newCapacity, newCapacityNat] at Hreserve Hvec
         isimp only [newLayout, newCapacityNat, hnewCapacityWord] at Hbump
         have hnormalFacts :
@@ -636,9 +543,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         ihave Hreserve : StackReserve reserveBase shadow $$ [Hhead HresultAt]
         · iapply (StackReserve_split reserveBase shadow).mpr
           iexists headBytes, growBefore
-          isplitr
-          · ipureintro
-            exact hshadow
+          isplitr_pureexact hshadow
           · iframe
         ihave Hsp' : StackPointer reserveBase $$ [Hsp]
         · unfold StackPointer

@@ -10,6 +10,8 @@ namespace Project.FloatTrunc
 
 open Wasm
 
+-- WAT SHA-256: be9c28b9c265939eb627cae797ad2d1a5005ce38bed2aecbc48bff5f4e5cdd38
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/float_trunc/program.wat" 0
 
 def func0Def : Wasm.Function :=

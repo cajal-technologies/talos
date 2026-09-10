@@ -37,9 +37,9 @@ theorem pointsTo_u64_two_as_u32 [WasmSmallStepGS hlc Universal.State]
     pointsTo_u64 (α := Universal.State) 0 address 2 ⊣⊢
       pointsTo_u32 0 address 2 ∗ pointsTo_u32 0 (address + 4) 0 := by
   simp only [pointsTo_u64, pointsTo_u32, u64Byte, u32Byte]
-  rw [show address + 4 + 1 = address + 5 by bv_decide,
-    show address + 4 + 2 = address + 6 by bv_decide,
-    show address + 4 + 3 = address + 7 by bv_decide]
+  rw [show address + 4 + 1 = address + 5 by bv_normalize (config := { enums := false }),
+    show address + 4 + 2 = address + 6 by bv_normalize (config := { enums := false }),
+    show address + 4 + 3 = address + 7 by bv_normalize (config := { enums := false })]
   have e1 : (((2 : UInt64) >>> 8).toUInt8) =
       (((2 : UInt32) >>> 8).toUInt8) := by decide
   have e2 : (((2 : UInt64) >>> 16).toUInt8) =
@@ -143,7 +143,7 @@ theorem twp_decode_odd
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 96 + (sp - 96) = sp := by bv_decide
+  have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ Hframe
   iintro Hsp
@@ -265,13 +265,13 @@ theorem twp_decode_empty
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hlenEq : (sp - 96) + 44 = ((sp - 96) + 40) + 4 := by bv_decide
+  have hlenEq : (sp - 96) + 44 = ((sp - 96) + 40) + 4 := by bv_normalize (config := { enums := false })
   ihave HinputLenIter :
       pointsTo_u32 0 (((sp - 96) + 40) + 4) 0 $$ [HinputLen]
   · rw [← hlenEq]
     iexact HinputLen
-  rw [show 40 + (sp - 96) = (sp - 96) + 40 by bv_decide,
-    show 24 + (sp - 96) = (sp - 96) + 24 by bv_decide]
+  rw [show 40 + (sp - 96) = (sp - 96) + 40 by bv_normalize (config := { enums := false }),
+    show 24 + (sp - 96) = (sp - 96) + 24 by bv_normalize (config := { enums := false })]
   iapply twp_decodePair_empty
       (out := (sp - 96) + 24) (iterator := (sp - 96) + 40)
       oldTag oldPayload hiterLen.noWrap hiterLen.one hiterLen.two
@@ -319,7 +319,7 @@ theorem twp_decode_empty
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  have hrestore : 96 + (sp - 96) = sp := by bv_decide
+  have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
   rw [hrestore]
   iapply twp_globalSet $$ Hframe
   iintro Hsp

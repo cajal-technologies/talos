@@ -41,8 +41,7 @@ theorem wp_of_eventually_const {α : Type} {m : Module} {env : HostEnv α}
     wp m prog Q st s env := by
   unfold wp
   refine ⟨N, fun f hf => ?_⟩
-  rw [hconst f hf]
-  exact hQ
+  rw [hconst f hf]; exact hQ
 
 /-- `wp` transported along an eventual agreement: if from `N` on, running
 `prog` from `(st, s)` *is* running `prog'` from `(st', s')` at the same fuel,
@@ -58,8 +57,7 @@ theorem wp_of_eventually_eq {α : Type} {m : Module} {env : HostEnv α}
   unfold wp at hcont ⊢
   obtain ⟨Nr, hNr⟩ := hcont
   refine ⟨max N Nr, fun f hf => ?_⟩
-  rw [heq f (by omega)]
-  exact hNr f (by omega)
+  rw [heq f (by omega)]; exact hNr f (by omega)
 
 /-- Fuel stabilisation of a body's `wp` — the `by_cases` / `exec_fuel_mono`
 preamble every structural rule opens with.

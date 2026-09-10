@@ -190,7 +190,7 @@ theorem read_to_end_nonempty_outcome (input : List UInt8) (hinput : input ≠ []
     apply first_nonempty_read_invariant input bytes allocStore hbytes hbytesNe
     exact hsuccess
   have htoLoop := read_to_end_after_first_nonempty_to_loop finalStore
-    [] encodeLocals [] (func10.drop 9) 0 [] [] [] 1048564 readToEndStack
+    [] encodeLocals [] (func10.drop 9) 0 [] [] [] 1048552 readToEndStack
     capacity data count
     (by
       simp [finalStore, readChunkFinishedStore, Mem.read8, Mem.write32,
@@ -238,8 +238,8 @@ theorem encode_reserve_after_read
         (inputCapacity inputPtr inputBump : UInt32)
         (allocStore : MachineStore Universal.State),
         ReadToEndSuccess input (encodeAfterReadConfig store) ∧
-        store.wasm.mem.read32 1048564 = inputCapacity ∧
-        store.wasm.mem.read32 (1048564 + 4) = inputPtr ∧
+        store.wasm.mem.read32 1048552 = inputCapacity ∧
+        store.wasm.mem.read32 (1048552 + 4) = inputPtr ∧
         store.wasm.mem.read32 1053960 = inputBump ∧
         ByteGrowSuccess
           (reserveFrameStore (encodeAllocFrameStore store) (1048512 - 16))
@@ -254,7 +254,7 @@ theorem encode_reserve_after_read
             1048516 (allocatorPtr inputBump 1)
               (reserveNewCapacity 0 (UInt32.ofNat input.length <<< 1) 0)
             1048512)
-          [.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)]
+          [.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)]
           [.i32 1048512,
             .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
             .i32 0, .i32 0]
@@ -289,8 +289,8 @@ theorem encode_reserve_after_read
   have hnewCapacity := encode_allocation_capacity input hinput (by omega)
   have hmain := main_after_read_to_encode_call store 1048544 inputCapacity
     inputPtr length hcapacity hptr hlength
-    (by change 1048572 ≤ store.wasm.mem.pages * 65536; omega)
-    (by change 1048576 ≤ store.wasm.mem.pages * 65536; omega)
+    (by change 1048560 ≤ store.wasm.mem.pages * 65536; omega)
+    (by change 1048564 ≤ store.wasm.mem.pages * 65536; omega)
   apply ReachesOrOOM.prependReaches hmain
   have hencode := encode_call_to_reserve store inputPtr length hmod hglobal
     (by
@@ -306,7 +306,7 @@ theorem encode_reserve_after_read
       omega)
   apply ReachesOrOOM.prependReaches hencode
   have hreserve := reserve_call_reachesOrOOM encodeStore
-    [.i32 1048552, .i32 inputPtr, .i32 length]
+    [.i32 1048564, .i32 inputPtr, .i32 length]
     [.i32 1048512, .i32 (inputPtr + length), .i32 0, .i32 0, .i32 0,
       .i32 0]
     [] [] 0 [] encodeReserveControls (encodeMainCalls store inputPtr)
@@ -341,7 +341,7 @@ theorem encode_reserve_after_read
         omega)
     (by simpa [hallocPtr] using hinputBumpNe)
     (by change 1048512 ≤ store.wasm.mem.pages * 65536; omega)
-    (by decide) (by decide) (by bv_decide)
+    (by decide) (by decide) (by bv_normalize (config := { enums := false }))
     (by change 1048520 ≤ store.wasm.mem.pages * 65536; omega)
     (by change 1048524 ≤ store.wasm.mem.pages * 65536; omega)
     (by
@@ -404,12 +404,12 @@ private theorem main_after_encode_finishes {hlc : HasLC}
       hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») ∗
       hostStateOwn store.wasm.host ∗
       globalPointsToAt 0 0 (.i32 1048544) ∗
-      pointsTo_u32 0 (1048544 + 8) outputCapacity ∗
-      pointsTo_u32 0 (1048544 + 12) output ∗
-      pointsTo_u32 0 (1048544 + 16) (UInt32.ofNat (encode input).length) ∗
-      pointsTo_u32 0 (1048544 + 20) inputCapacity ∗
-      pointsTo_u32 0 (1048544 + 24) inputPtr ∗
-      pointsTo_u32 0 (1048544 + 28) (UInt32.ofNat input.length) ∗
+      pointsTo_u32 0 (1048544 + 20) outputCapacity ∗
+      pointsTo_u32 0 (1048544 + 24) output ∗
+      pointsTo_u32 0 (1048544 + 28) (UInt32.ofNat (encode input).length) ∗
+      pointsTo_u32 0 (1048544 + 8) inputCapacity ∗
+      pointsTo_u32 0 (1048544 + 12) inputPtr ∗
+      pointsTo_u32 0 (1048544 + 16) (UInt32.ofNat input.length) ∗
       pointsToBytes 0 inputPtr input ∗
       pointsToBytes 0 output (encode input) ∗
       (⟨0, (1048544 : UInt32) - 16⟩ ↦w
@@ -490,9 +490,9 @@ private theorem encode_function_finishes {hlc : HasLC}
       hostStateOwn store.wasm.host ∗
       pointsTo_u32 0 1048544 (finalStore.wasm.mem.read32 1048544) ∗
       pointsTo_u32 0 1048548 (finalStore.wasm.mem.read32 1048548) ∗
-      pointsTo_u32 0 1048564 inputCapacity ∗
-      pointsTo_u32 0 1048568 inputPtr ∗
-      pointsTo_u32 0 1048572 (UInt32.ofNat input.length)) ∗
+      pointsTo_u32 0 1048552 inputCapacity ∗
+      pointsTo_u32 0 1048556 inputPtr ∗
+      pointsTo_u32 0 1048560 (UInt32.ofNat input.length)) ∗
       runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» ∗
       globalPointsToAt 0 0 (.i32 1048512) ∗
       pointsTo_u32 0 (1048512 + 4)
@@ -507,16 +507,16 @@ private theorem encode_function_finishes {hlc : HasLC}
         (finalStore.wasm.mem.read32 1048536) ∗
       pointsTo_u32 0 (1048512 + 28)
         (finalStore.wasm.mem.read32 1048540) ∗
-      pointsTo_u64 0 (1048552 + 0)
-        ((finalStore.wasm.mem.read32 1048552).toUInt64 |||
-          ((finalStore.wasm.mem.read32 1048556).toUInt64 <<< 32)) ∗
-      pointsTo_u32 0 (1048552 + 8)
-        (finalStore.wasm.mem.read32 1048560) ∗
+      pointsTo_u64 0 (1048564 + 0)
+        ((finalStore.wasm.mem.read32 1048564).toUInt64 |||
+          ((finalStore.wasm.mem.read32 1048568).toUInt64 <<< 32)) ∗
+      pointsTo_u32 0 (1048564 + 8)
+        (finalStore.wasm.mem.read32 1048572) ∗
       pointsToBytes 0 inputPtr input ∗
       pointsToBytes 0 1048576 Project.HexEncodeStdio.Hex.asciiTable ∗
       pointsToBytes 0 output out ⊢
     WP (.running
-      ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
+      ⟨⟨[.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
           [.i32 1048512,
             .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
             .i32 0, .i32 0], []⟩,
@@ -532,9 +532,9 @@ private theorem encode_function_finishes {hlc : HasLC}
     hostStateOwn store.wasm.host ∗
     pointsTo_u32 0 1048544 (finalStore.wasm.mem.read32 1048544) ∗
     pointsTo_u32 0 1048548 (finalStore.wasm.mem.read32 1048548) ∗
-    pointsTo_u32 0 1048564 inputCapacity ∗
-    pointsTo_u32 0 1048568 inputPtr ∗
-    pointsTo_u32 0 1048572 (UInt32.ofNat input.length))
+    pointsTo_u32 0 1048552 inputCapacity ∗
+    pointsTo_u32 0 1048556 inputPtr ∗
+    pointsTo_u32 0 1048560 (UInt32.ofNat input.length))
   iintro ⟨HR, Hruntime0, HglobalAt, HcapCall, HoutputPtrCall, HzeroCall,
     H3Call, H4Call, H5Call, H6Call, HresultPairCall, HresultLenCall,
     Hinput, Htable, Hout⟩
@@ -544,14 +544,14 @@ private theorem encode_function_finishes {hlc : HasLC}
       (_observations : List StepKind),
       stateInterp (GF := WasmHeapGF Universal.State) final 0 [] 0 -∗
         ⌜values = [] ∧ final.wasm.host.stdio.output = encode input⌝)
-    1048552 inputPtr 1048512 output input out
+    1048564 inputPtr 1048512 output input out
     (finalStore.wasm.mem.read32 1048528)
     (finalStore.wasm.mem.read32 1048532)
     (finalStore.wasm.mem.read32 1048536)
     (finalStore.wasm.mem.read32 1048540)
-    ((finalStore.wasm.mem.read32 1048552).toUInt64 |||
-      ((finalStore.wasm.mem.read32 1048556).toUInt64 <<< 32))
-    (finalStore.wasm.mem.read32 1048560) R
+    ((finalStore.wasm.mem.read32 1048564).toUInt64 |||
+      ((finalStore.wasm.mem.read32 1048568).toUInt64 <<< 32))
+    (finalStore.wasm.mem.read32 1048572) R
     hinput houtLen (by omega) (by decide) (by
       have hpos : 0 < input.length := List.length_pos_iff.mpr hinput
       omega)
@@ -584,32 +584,32 @@ private theorem encode_function_finishes {hlc : HasLC}
   ihave HglobalMain : globalPointsToAt 0 0 (.i32 1048544) $$ [Hglobal]
   · rw [show (1048512 : UInt32) + 32 = 1048544 by decide]
     iexact Hglobal
-  ihave HcapMain : pointsTo_u32 0 ((1048544 : UInt32) + 8)
+  ihave HcapMain : pointsTo_u32 0 ((1048544 : UInt32) + 20)
       outputCapacity $$ [HcapResult]
-  · rw [show (1048544 : UInt32) + 8 = 1048552 by decide,
+  · rw [show (1048544 : UInt32) + 20 = 1048564 by decide,
       hcapacityEq]
     iexact HcapResult
-  ihave HptrMain : pointsTo_u32 0 ((1048544 : UInt32) + 12)
+  ihave HptrMain : pointsTo_u32 0 ((1048544 : UInt32) + 24)
       output $$ [HptrResult]
-  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide,
-      ← show (1048552 : UInt32) + 4 = 1048556 by decide]
+  · rw [show (1048544 : UInt32) + 24 = 1048568 by decide,
+      ← show (1048564 : UInt32) + 4 = 1048568 by decide]
     iexact HptrResult
-  ihave HlenMain : pointsTo_u32 0 ((1048544 : UInt32) + 16)
+  ihave HlenMain : pointsTo_u32 0 ((1048544 : UInt32) + 28)
       (UInt32.ofNat (encode input).length) $$ [HlenResult]
-  · rw [show (1048544 : UInt32) + 16 = 1048560 by decide,
-      ← show (1048552 : UInt32) + 8 = 1048560 by decide]
+  · rw [show (1048544 : UInt32) + 28 = 1048572 by decide,
+      ← show (1048564 : UInt32) + 8 = 1048572 by decide]
     iexact HlenResult
-  ihave HinputCapMain : pointsTo_u32 0 ((1048544 : UInt32) + 20)
+  ihave HinputCapMain : pointsTo_u32 0 ((1048544 : UInt32) + 8)
       inputCapacity $$ [HinputCap]
-  · rw [show (1048544 : UInt32) + 20 = 1048564 by decide]
+  · rw [show (1048544 : UInt32) + 8 = 1048552 by decide]
     iexact HinputCap
-  ihave HinputPtrMain : pointsTo_u32 0 ((1048544 : UInt32) + 24)
+  ihave HinputPtrMain : pointsTo_u32 0 ((1048544 : UInt32) + 12)
       inputPtr $$ [HinputPtr]
-  · rw [show (1048544 : UInt32) + 24 = 1048568 by decide]
+  · rw [show (1048544 : UInt32) + 12 = 1048556 by decide]
     iexact HinputPtr
-  ihave HinputLenMain : pointsTo_u32 0 ((1048544 : UInt32) + 28)
+  ihave HinputLenMain : pointsTo_u32 0 ((1048544 : UInt32) + 16)
       (UInt32.ofNat input.length) $$ [HinputLen]
-  · rw [show (1048544 : UInt32) + 28 = 1048572 by decide]
+  · rw [show (1048544 : UInt32) + 16 = 1048560 by decide]
     iexact HinputLen
   iapply (main_after_encode_finishes input store inputCapacity inputPtr output
     outputCapacity hinput hhostOutput hcapacityNat hlimitSmall
@@ -820,9 +820,9 @@ private theorem encode_prefix_finishes {hlc : HasLC}
     (hfinalOutput : finalStore.wasm.mem.read32 1048520 = output)
     (hfinalZero : finalStore.wasm.mem.read32 1048524 = 0)
     (hfinalInputCapacity :
-      finalStore.wasm.mem.read32 1048564 = inputCapacity)
-    (hfinalInputPtr : finalStore.wasm.mem.read32 1048568 = inputPtr)
-    (hfinalInputLen : finalStore.wasm.mem.read32 1048572 =
+      finalStore.wasm.mem.read32 1048552 = inputCapacity)
+    (hfinalInputPtr : finalStore.wasm.mem.read32 1048556 = inputPtr)
+    (hfinalInputLen : finalStore.wasm.mem.read32 1048560 =
       UInt32.ofNat input.length)
     (hinputEnd : inputPtr.toNat + input.length ≤ output.toNat)
     (hstackEnd : 1048516 + 76 ≤ inputPtr.toNat) :
@@ -838,7 +838,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
       hostEnvOwn finalStore.runtime.entry.id finalStore.runtime.currentHost ∗
       hostStateOwn finalStore.wasm.host ⊢
     WP (.running
-      ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
+      ⟨⟨[.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
           [.i32 1048512,
             .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
             .i32 0, .i32 0], []⟩,
@@ -851,7 +851,7 @@ private theorem encode_prefix_finishes {hlc : HasLC}
           ⌜values = [] ∧ final.wasm.host.stdio.output = encode input⌝ }] := by
   let body : Config Universal.State :=
     ⟨.running
-      ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
+      ⟨⟨[.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
           [.i32 1048512,
             .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
             .i32 0, .i32 0], []⟩,
@@ -892,9 +892,9 @@ private theorem encode_prefix_finishes {hlc : HasLC}
     finalStore.wasm.mem 1048516 15 (by decide) $$ Hstack
   isimp only [Project.HexEncodeStdio.PrefixMemory.wordsAt, arrayAt] at Hwords
   isimp only [UInt32.reduceAdd] at Hwords
-  icases Hwords with ⟨H0, H1, H2, H3, H4, H5, H6, H7, H8, H9,
-    H10, H11, H12, H13, H14⟩
-  icases H14 with ⟨H14, _Hemp⟩
+  icases Hwords with ⟨H0, H1, H2, H3, H4, H5, H6, H7, H8, H12,
+    H13, H14, H9, H10, H11⟩
+  icases H11 with ⟨H11, _Hemp⟩
   ihave Hcap : pointsTo_u32 0 1048516 outputCapacity $$ [H0]
   · rw [hfinalCapacity]
     iexact H0
@@ -904,35 +904,35 @@ private theorem encode_prefix_finishes {hlc : HasLC}
   ihave Hzero : pointsTo_u32 0 1048524 0 $$ [H2]
   · rw [hfinalZero]
     iexact H2
-  ihave HinputCap : pointsTo_u32 0 1048564 inputCapacity $$ [H12]
+  ihave HinputCap : pointsTo_u32 0 1048552 inputCapacity $$ [H12]
   · rw [hfinalInputCapacity]
     iexact H12
-  ihave HinputPtr : pointsTo_u32 0 1048568 inputPtr $$ [H13]
+  ihave HinputPtr : pointsTo_u32 0 1048556 inputPtr $$ [H13]
   · rw [hfinalInputPtr]
     iexact H13
-  ihave HinputLen : pointsTo_u32 0 1048572
+  ihave HinputLen : pointsTo_u32 0 1048560
       (UInt32.ofNat input.length) $$ [H14]
   · rw [hfinalInputLen]
     iexact H14
-  ihave HpairCells : pointsTo_u32 0 1048552
-      (finalStore.wasm.mem.read32 1048552) ∗
-      pointsTo_u32 0 (1048552 + 4)
-        (finalStore.wasm.mem.read32 1048556) $$ [H9 H10]
+  ihave HpairCells : pointsTo_u32 0 1048564
+      (finalStore.wasm.mem.read32 1048564) ∗
+      pointsTo_u32 0 (1048564 + 4)
+        (finalStore.wasm.mem.read32 1048568) $$ [H9 H10]
   · isplitl [H9]
     · iexact H9
-    · rw [show (1048552 : UInt32) + 4 = 1048556 by decide]
+    · rw [show (1048564 : UInt32) + 4 = 1048568 by decide]
       iexact H10
   ihave HresultPair := Project.HexEncodeStdio.Helpers.pointsTo_u64_pair_join
-    0 1048552 (finalStore.wasm.mem.read32 1048552)
-      (finalStore.wasm.mem.read32 1048556) $$ HpairCells
+    0 1048564 (finalStore.wasm.mem.read32 1048564)
+      (finalStore.wasm.mem.read32 1048568) $$ HpairCells
   let R : IProp (WasmHeapGF Universal.State) := iprop(
     hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») ∗
     hostStateOwn store.wasm.host ∗
     pointsTo_u32 0 1048544 (finalStore.wasm.mem.read32 1048544) ∗
     pointsTo_u32 0 1048548 (finalStore.wasm.mem.read32 1048548) ∗
-    pointsTo_u32 0 1048564 inputCapacity ∗
-    pointsTo_u32 0 1048568 inputPtr ∗
-    pointsTo_u32 0 1048572 (UInt32.ofNat input.length))
+    pointsTo_u32 0 1048552 inputCapacity ∗
+    pointsTo_u32 0 1048556 inputPtr ∗
+    pointsTo_u32 0 1048560 (UInt32.ofNat input.length))
   ihave HR : R $$ [Henv Hhost H7 H8 HinputCap HinputPtr HinputLen]
   · unfold R
     isplitl [Henv]
@@ -983,14 +983,14 @@ private theorem encode_prefix_finishes {hlc : HasLC}
       (finalStore.wasm.mem.read32 1048540) $$ [H6]
   · rw [show (1048512 : UInt32) + 28 = 1048540 by decide]
     iexact H6
-  ihave HresultPairCall : pointsTo_u64 0 ((1048552 : UInt32) + 0)
-      ((finalStore.wasm.mem.read32 1048552).toUInt64 |||
-        ((finalStore.wasm.mem.read32 1048556).toUInt64 <<< 32)) $$ [HresultPair]
+  ihave HresultPairCall : pointsTo_u64 0 ((1048564 : UInt32) + 0)
+      ((finalStore.wasm.mem.read32 1048564).toUInt64 |||
+        ((finalStore.wasm.mem.read32 1048568).toUInt64 <<< 32)) $$ [HresultPair]
   · simp only [UInt32.add_zero]
     iexact HresultPair
-  ihave HresultLenCall : pointsTo_u32 0 ((1048552 : UInt32) + 8)
-      (finalStore.wasm.mem.read32 1048560) $$ [H11]
-  · rw [show (1048552 : UInt32) + 8 = 1048560 by decide]
+  ihave HresultLenCall : pointsTo_u32 0 ((1048564 : UInt32) + 8)
+      (finalStore.wasm.mem.read32 1048572) $$ [H11]
+  · rw [show (1048564 : UInt32) + 8 = 1048572 by decide]
     iexact H11
   iapply (encode_function_finishes input store finalStore inputCapacity
     inputPtr output outputCapacity out hinput houtLen hentry hhostOutput
@@ -1033,15 +1033,15 @@ private theorem encode_after_alloc_finish
     (hfinalOutput : finalStore.wasm.mem.read32 1048520 = output)
     (hfinalZero : finalStore.wasm.mem.read32 1048524 = 0)
     (hfinalInputCapacity :
-      finalStore.wasm.mem.read32 1048564 = inputCapacity)
-    (hfinalInputPtr : finalStore.wasm.mem.read32 1048568 = inputPtr)
-    (hfinalInputLen : finalStore.wasm.mem.read32 1048572 =
+      finalStore.wasm.mem.read32 1048552 = inputCapacity)
+    (hfinalInputPtr : finalStore.wasm.mem.read32 1048556 = inputPtr)
+    (hfinalInputLen : finalStore.wasm.mem.read32 1048560 =
       UInt32.ofNat input.length)
     (hinputEnd : inputPtr.toNat + input.length ≤ output.toNat)
     (hstackEnd : 1048516 + 76 ≤ inputPtr.toNat) :
     TerminatesWith
       ⟨.running
-        ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
+        ⟨⟨[.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
             [.i32 1048512,
               .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
               .i32 0, .i32 0], []⟩,
@@ -1052,7 +1052,7 @@ private theorem encode_after_alloc_finish
         final.wasm.host.stdio.output = encode input) := by
   let body : Config Universal.State :=
     ⟨.running
-      ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
+      ⟨⟨[.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
           [.i32 1048512,
             .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
             .i32 0, .i32 0], []⟩,
@@ -1090,8 +1090,8 @@ theorem encode_after_alloc_terminates
     (inputCapacity inputPtr inputBump : UInt32)
     (allocStore : MachineStore Universal.State)
     (hinput : input ≠ [])
-    (hcapacityArg : store.wasm.mem.read32 1048564 = inputCapacity)
-    (hptrArg : store.wasm.mem.read32 (1048564 + 4) = inputPtr)
+    (hcapacityArg : store.wasm.mem.read32 1048552 = inputCapacity)
+    (hptrArg : store.wasm.mem.read32 (1048552 + 4) = inputPtr)
     (hbumpArg : store.wasm.mem.read32 1053960 = inputBump)
     (hread : ReadToEndSuccess input (encodeAfterReadConfig store))
     (halloc : ByteGrowSuccess
@@ -1102,7 +1102,7 @@ theorem encode_after_alloc_terminates
       (growResultFinal
         (encodeOutputStore allocStore (allocatorPtr inputBump 1)
           (reserveNewCapacity 0 (UInt32.ofNat input.length <<< 1) 0))
-        [.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)]
+        [.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)]
         [.i32 1048512,
           .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
           .i32 0, .i32 0]
@@ -1130,7 +1130,7 @@ theorem encode_after_alloc_terminates
   let finalStore := encodeOutputStore allocStore output outputCapacity
   let body : Config Universal.State :=
     ⟨.running
-      ⟨⟨[.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
+      ⟨⟨[.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)],
           [.i32 1048512,
             .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
             .i32 0, .i32 0], []⟩,
@@ -1139,7 +1139,7 @@ theorem encode_after_alloc_terminates
       finalStore⟩
   have hprefix : Reaches
       (growResultFinal finalStore
-        [.i32 1048552, .i32 inputPtr, .i32 (UInt32.ofNat input.length)]
+        [.i32 1048564, .i32 inputPtr, .i32 (UInt32.ofNat input.length)]
         [.i32 1048512,
           .i32 (inputPtr + UInt32.ofNat input.length), .i32 0, .i32 0,
           .i32 0, .i32 0]
@@ -1313,27 +1313,27 @@ theorem encode_after_alloc_terminates
       rw [Mem.read32_write64_disjoint, Mem.read32_write32_same]
       decide
     all_goals decide
-  have hfinalInputCapacity : finalStore.wasm.mem.read32 1048564 =
+  have hfinalInputCapacity : finalStore.wasm.mem.read32 1048552 =
       inputCapacity := by
     rw [encodeOutputStore_preserves_read32 allocStore output outputCapacity
-      1048564 (by decide)]
+      1048552 (by decide)]
     rw [halloc.fresh_preserves_read32 (by decide)]
     simp only [reserveFrameStore, encodeAllocFrameStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
     · exact hcapacityArg
     all_goals decide
-  have hfinalInputPtr : finalStore.wasm.mem.read32 1048568 = inputPtr := by
+  have hfinalInputPtr : finalStore.wasm.mem.read32 1048556 = inputPtr := by
     rw [encodeOutputStore_preserves_read32 allocStore output outputCapacity
-      1048568 (by decide)]
+      1048556 (by decide)]
     rw [halloc.fresh_preserves_read32 (by decide)]
     simp only [reserveFrameStore, encodeAllocFrameStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
     · exact hptrArg
     all_goals decide
-  have hfinalInputLen : finalStore.wasm.mem.read32 1048572 =
+  have hfinalInputLen : finalStore.wasm.mem.read32 1048560 =
       UInt32.ofNat input.length := by
     rw [encodeOutputStore_preserves_read32 allocStore output outputCapacity
-      1048572 (by decide)]
+      1048560 (by decide)]
     rw [halloc.fresh_preserves_read32 (by decide)]
     simp only [reserveFrameStore, encodeAllocFrameStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]

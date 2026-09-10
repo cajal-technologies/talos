@@ -1,6 +1,11 @@
 import Interpreter.Wasm.SmallStep
 import Interpreter.Wasm.Examples.Harness
 
+kernel_decoder
+
+set_option maxRecDepth 100000
+set_option maxHeartbeats 4000000
+
 /-! ## Example: table inspection and decoded indirect dispatch
 
 The symbolic probe frames an arbitrary physical store with a known table.
@@ -95,26 +100,25 @@ private def runVals (index : Nat)
     (args : List Value) : Option (List Value) :=
   (runSteps 20 (decodedConfig index args)).result.values?
 
-theorem decodes_five_funcs : decoded.funcs.length = 5 := by native_decide
+theorem decodes_five_funcs : decoded.funcs.length = 5 := by cbv
 
 theorem table_populated :
     (decoded.initialStore (α := Unit)).tables =
-      [[.funcref (some 0), .funcref (some 1), .funcref none]] := by
-  native_decide
+      [[.funcref (some 0), .funcref (some 1), .funcref none]] := by cbv
 
-theorem sz_runs : runVals 2 [] = some [.i32 3] := by native_decide
+theorem sz_runs : runVals 2 [] = some [.i32 3] := by cbv
 
 theorem is_null_slot0_runs :
-    runVals 3 [.i32 0] = some [.i32 0] := by native_decide
+    runVals 3 [.i32 0] = some [.i32 0] := by cbv
 
 theorem is_null_slot2_runs :
-    runVals 3 [.i32 2] = some [.i32 1] := by native_decide
+    runVals 3 [.i32 2] = some [.i32 1] := by cbv
 
 theorem dispatch_slot0_runs :
-    runVals 4 [.i32 0] = some [.i32 10] := by native_decide
+    runVals 4 [.i32 0] = some [.i32 10] := by cbv
 
 theorem dispatch_slot1_runs :
-    runVals 4 [.i32 1] = some [.i32 20] := by native_decide
+    runVals 4 [.i32 1] = some [.i32 20] := by cbv
 
 theorem dispatch_slot0_terminates :
     TerminatesWith (decodedConfig 4 [.i32 0])

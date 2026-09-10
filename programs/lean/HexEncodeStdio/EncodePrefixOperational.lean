@@ -35,7 +35,7 @@ theorem encode_to_read_to_end (input : List UInt8) :
     Reaches (encodeInitialConfig input)
       ({ expr := .running
           ⟨⟨[], [.i32 1048544, .i32 0, .i32 0, .i32 0],
-              [.i32 1048564]⟩,
+              [.i32 1048552]⟩,
             [.call 10] ++ func10.drop 9, 0, [], [], []⟩
          store := encodeFrameStore input } : Config Universal.State) := by
   simp only [encodeInitialConfig, func10, List.drop]

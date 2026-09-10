@@ -105,7 +105,10 @@ Kinds:
   *different* crate's export is recorded with `resolved=false` and
   emits a `cross_crate_reference` info diagnostic; cross-crate
   resolution is a job for a later graph-builder pass.
+- `"rust-exported-partial"` — the same export resolution as `"rust-exported"`,
+  preserving the fact that the specification makes no termination claim.
 - `"rust-internal"` — any other Rust path. Opaque to the extractor.
+- `"rust-internal-partial"` — an internal Rust reference with a partial contract.
 - `"lean"` — any Lean symbol. Opaque to the extractor.
 
 Multiple `@[spec_of …]` attributes on one def are allowed and yield

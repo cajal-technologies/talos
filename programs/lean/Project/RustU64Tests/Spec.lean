@@ -68,24 +68,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AddChainSpec]
 theorem add_chain_correct : AddChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func0]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_addI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::add_then_mul"]
 def AddThenMulSpec : Prop := ∀ (a b c : UInt64),
@@ -95,24 +81,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AddThenMulSpec]
 theorem add_then_mul_correct : AddThenMulSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func1]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_mulI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_addI64 wp_localGet wp_mulI64]
+  wasm_wp_return_value_rfl
 
 /-! ## sub -/
 @[spec_of "rust-exported" "rust_u64_tests::sub_chain"]
@@ -123,24 +95,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.SubChainSpec]
 theorem sub_chain_correct : SubChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func18]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_subI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_subI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_subI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::sub_then_add"]
 def SubThenAddSpec : Prop := ∀ (a b c : UInt64),
@@ -150,24 +108,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.SubThenAddSpec]
 theorem sub_then_add_correct : SubThenAddSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func19]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_subI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_subI64 wp_localGet wp_addI64]
+  wasm_wp_return_value_rfl
 
 /-! ## mul -/
 @[spec_of "rust-exported" "rust_u64_tests::mul_chain"]
@@ -178,24 +122,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.MulChainSpec]
 theorem mul_chain_correct : MulChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func6]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_mulI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_mulI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_mulI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::mul_then_add"]
 def MulThenAddSpec : Prop := ∀ (a b c : UInt64),
@@ -205,24 +135,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.MulThenAddSpec]
 theorem mul_then_add_correct : MulThenAddSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func7]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_mulI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_mulI64 wp_localGet wp_addI64]
+  wasm_wp_return_value_rfl
 
 /-! ## bitand -/
 @[spec_of "rust-exported" "rust_u64_tests::and_chain"]
@@ -233,24 +149,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AndChainSpec]
 theorem and_chain_correct : AndChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func2]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_andI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_andI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_andI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::and_then_or"]
 def AndThenOrSpec : Prop := ∀ (a b c : UInt64),
@@ -260,24 +162,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.AndThenOrSpec]
 theorem and_then_or_correct : AndThenOrSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func3]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_andI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_orI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_andI64 wp_localGet wp_orI64]
+  wasm_wp_return_value_rfl
 
 /-! ## bitor -/
 @[spec_of "rust-exported" "rust_u64_tests::or_chain"]
@@ -288,24 +176,10 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.OrChainSpec]
 theorem or_chain_correct : OrChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func10]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_orI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_orI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet wp_orI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::or_then_xor"]
 def OrThenXorSpec : Prop := ∀ (a b c : UInt64),
@@ -315,24 +189,11 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.OrThenXorSpec]
 theorem or_then_xor_correct : OrThenXorSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func11]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_orI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_orI64 wp_localGet]
+  wasm_wp_next SmallStep.wp_xorI64
+  wasm_wp_return_value_rfl
 
 /-! ## bitxor -/
 @[spec_of "rust-exported" "rust_u64_tests::xor_chain"]
@@ -343,24 +204,13 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.XorChainSpec]
 theorem xor_chain_correct : XorChainSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func20]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next SmallStep.wp_xorI64
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_next SmallStep.wp_xorI64
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::xor_then_and"]
 def XorThenAndSpec : Prop := ∀ (a b c : UInt64),
@@ -370,24 +220,12 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.XorThenAndSpec]
 theorem xor_then_and_correct : XorThenAndSpec := by
   intro a b c
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func21]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_andI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet]
+  wasm_wp_next SmallStep.wp_xorI64
+  wasm_wp_pures [wp_localGet wp_andI64]
+  wasm_wp_return_value_rfl
 
 /-! ## not -/
 @[spec_of "rust-exported" "rust_u64_tests::not_twice"]
@@ -398,27 +236,19 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.NotTwiceSpec]
 theorem not_twice_correct : NotTwiceSpec := by
   intro a
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [unaryConfig, func9]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by bv_decide]
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
+  wasm_wp_pures [wp_localGet wp_constI64]
+  wasm_wp_next SmallStep.wp_xorI64
+  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
+  wasm_wp_pures [wp_constI64]
+  wasm_wp_next SmallStep.wp_xorI64
   rw [show (~~~a) ^^^ (18446744073709551615 : UInt64) = ~~~(~~~a) by
-    bv_decide]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::not_then_xor"]
 def NotThenXorSpec : Prop := ∀ (a b : UInt64),
@@ -428,25 +258,16 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.NotThenXorSpec]
 theorem not_then_xor_correct : NotThenXorSpec := by
   intro a b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [binaryConfig, func8]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by bv_decide]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_xorI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_constI64]
+  wasm_wp_next SmallStep.wp_xorI64
+  rw [show a ^^^ (18446744073709551615 : UInt64) = ~~~a by
+    apply UInt64.toBitVec_inj.mp
+    exact BitVec.xor_allOnes]
+  wasm_wp_pures [wp_localGet]
+  wasm_wp_next SmallStep.wp_xorI64
+  wasm_wp_return_value_rfl
 
 /-! ## div (divisor nonzero) -/
 @[spec_of "rust-exported" "rust_u64_tests::div_then_add"]
@@ -457,39 +278,15 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.DivThenAddSpec]
 theorem div_then_add_correct : DivThenAddSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func4]
-  iapply SmallStep.wp_block
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_divUI64 hb
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_block wp_localGet wp_constI64]
+  wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
+  wasm_wp_next SmallStep.wp_divUI64 hb
+  wasm_wp_pures [wp_localGet wp_addI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::div_then_mul"]
 def DivThenMulSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
@@ -499,39 +296,15 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.DivThenMulSpec]
 theorem div_then_mul_correct : DivThenMulSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func5]
-  iapply SmallStep.wp_block
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_divUI64 hb
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_mulI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_block wp_localGet wp_constI64]
+  wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
+  wasm_wp_next SmallStep.wp_divUI64 hb
+  wasm_wp_pures [wp_localGet wp_mulI64]
+  wasm_wp_return_value_rfl
 
 /-! ## rem (divisor nonzero) -/
 @[spec_of "rust-exported" "rust_u64_tests::rem_then_add"]
@@ -542,39 +315,15 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.RemThenAddSpec]
 theorem rem_then_add_correct : RemThenAddSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func12]
-  iapply SmallStep.wp_block
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_remUI64 hb
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_block wp_localGet wp_constI64]
+  wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
+  wasm_wp_next SmallStep.wp_remUI64 hb
+  wasm_wp_pures [wp_localGet wp_addI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::rem_then_mul"]
 def RemThenMulSpec : Prop := ∀ (a b c : UInt64), b ≠ 0 →
@@ -584,39 +333,15 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.RemThenMulSpec]
 theorem rem_then_mul_correct : RemThenMulSpec := by
   intro a b c hb
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [ternaryConfig, func13]
-  iapply SmallStep.wp_block
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_constI64
-  inext
-  iapply SmallStep.wp_eqI64 (result := 0) (by simp [hb])
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [show (0 &&& 1 : UInt32) = 0 by decide]
-  iapply SmallStep.wp_brIfZero
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_remUI64 hb
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_mulI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_block wp_localGet wp_constI64]
+  wasm_wp_next SmallStep.wp_eqI64 (result := 0) (by simp [hb])
+  wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
+  wasm_wp_next SmallStep.wp_remUI64 hb
+  wasm_wp_pures [wp_localGet wp_mulI64]
+  wasm_wp_return_value_rfl
 
 /-! ## shl / shr — mask, extend, then shift -/
 @[spec_of "rust-exported" "rust_u64_tests::shl_then_add"]
@@ -627,32 +352,13 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShlThenAddSpec]
 theorem shl_then_add_correct : ShlThenAddSpec := by
   intro a n b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftValueConfig, func14]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [UInt32.and_comm n 63]
-  iapply SmallStep.wp_extendUI32
-  inext
-  iapply SmallStep.wp_shlI64
-  inext
-  rw [shiftAmount_norm]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_addI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
+  wasm_wp_next SmallStep.wp_extendUI32
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
+  wasm_wp_pures [wp_localGet wp_addI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shl_twice"]
 def ShlTwiceSpec : Prop := ∀ (a : UInt64) (n m : UInt32),
@@ -663,40 +369,15 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShlTwiceSpec]
 theorem shl_twice_correct : ShlTwiceSpec := by
   intro a n m
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftTwiceConfig, func15]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [UInt32.and_comm n 63]
-  iapply SmallStep.wp_extendUI32
-  inext
-  iapply SmallStep.wp_shlI64
-  inext
-  rw [shiftAmount_norm]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [UInt32.and_comm m 63]
-  iapply SmallStep.wp_extendUI32
-  inext
-  iapply SmallStep.wp_shlI64
-  inext
-  rw [shiftAmount_norm]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
+  wasm_wp_next SmallStep.wp_extendUI32
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
+  wasm_wp_pures [wp_localGet wp_const wp_and] rewriting [UInt32.and_comm m 63]
+  wasm_wp_next SmallStep.wp_extendUI32
+  wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_then_sub"]
 def ShrThenSubSpec : Prop := ∀ (a : UInt64) (n : UInt32) (b : UInt64),
@@ -706,32 +387,13 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShrThenSubSpec]
 theorem shr_then_sub_correct : ShrThenSubSpec := by
   intro a n b
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftValueConfig, func16]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [UInt32.and_comm n 63]
-  iapply SmallStep.wp_extendUI32
-  inext
-  iapply SmallStep.wp_shrUI64
-  inext
-  rw [shiftAmount_norm]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_subI64
-  inext
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
+  wasm_wp_next SmallStep.wp_extendUI32
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
+  wasm_wp_pures [wp_localGet wp_subI64]
+  wasm_wp_return_value_rfl
 
 @[spec_of "rust-exported" "rust_u64_tests::shr_twice"]
 def ShrTwiceSpec : Prop := ∀ (a : UInt64) (n m : UInt32),
@@ -742,39 +404,14 @@ set_option maxRecDepth 4096 in
 @[proves Project.RustU64Tests.Spec.ShrTwiceSpec]
 theorem shr_twice_correct : ShrTwiceSpec := by
   intro a n m
-  apply SmallStep.wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [shiftTwiceConfig, func17]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [UInt32.and_comm n 63]
-  iapply SmallStep.wp_extendUI32
-  inext
-  iapply SmallStep.wp_shrUI64
-  inext
-  rw [shiftAmount_norm]
-  iapply SmallStep.wp_localGet rfl
-  inext
-  iapply SmallStep.wp_const
-  inext
-  iapply SmallStep.wp_and
-  inext
-  rw [UInt32.and_comm m 63]
-  iapply SmallStep.wp_extendUI32
-  inext
-  iapply SmallStep.wp_shrUI64
-  inext
-  rw [shiftAmount_norm]
-  iapply SmallStep.wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_and] rewriting [UInt32.and_comm n 63]
+  wasm_wp_next SmallStep.wp_extendUI32
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
+  wasm_wp_pures [wp_localGet wp_const wp_and] rewriting [UInt32.and_comm m 63]
+  wasm_wp_next SmallStep.wp_extendUI32
+  wasm_wp_pures [wp_shrUI64] rewriting [shiftAmount_norm]
+  wasm_wp_return_value_rfl
 
 end Project.RustU64Tests.Spec

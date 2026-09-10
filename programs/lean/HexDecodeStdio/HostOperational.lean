@@ -84,8 +84,7 @@ theorem read_adapter_reaches
     rw [hmod]
     rfl
   apply Reaches.prepend (Step.call hnot hfn)
-  simp [func16Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func16]
+  simp [func16Def, Function.toLocals, Function.numParams,  func16]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   have himplen : 0 < store.runtime.currentModule.imports.length := by
@@ -138,7 +137,7 @@ theorem read_adapter_reaches
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.store8 (address := out) (offset := 0) (by
+    (Step.store8 rfl (address := .i32 (out)) (offset := 0) (by
       simpa [universalReadStore] using houtBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
@@ -148,11 +147,11 @@ theorem read_adapter_reaches
         store.wasm.mem.pages := by
     rfl
   apply Reaches.prepend
-    (Step.store32 (address := out) (offset := 4) (by
+    (Step.store32 rfl (address := .i32 (out)) (offset := 4) (by
       simpa [universalReadStore, hpages] using hout4Bound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.returnFromCallFallthrough (by
-    simp [universalReadStore]))
+    simp []))
   simp [readAdapterResultStore, universalReadStore, resumeCaller]
   exact ⟨[], .refl _⟩
 
@@ -276,7 +275,7 @@ theorem write_adapter_reaches
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.store8 (address := out) (offset := 0) (by
+    (Step.store8 rfl (address := .i32 (out)) (offset := 0) (by
       simpa [universalWriteStore] using houtBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
@@ -285,7 +284,7 @@ theorem write_adapter_reaches
       (store.wasm.mem.write8 out 4).pages = store.wasm.mem.pages := by
     rfl
   apply Reaches.prepend
-    (Step.store32 (address := out) (offset := 4) (by
+    (Step.store32 rfl (address := .i32 (out)) (offset := 4) (by
       simpa [universalWriteStore, hpages] using hout4Bound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.returnFromCallFallthrough (by simp))

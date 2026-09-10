@@ -10,21 +10,21 @@ theorem decimal_route (c : UInt8)
   rcases c with ⟨⟨n, hn⟩⟩
   interval_cases n <;> norm_num at h
   all_goals norm_num [HexRoute.valid]
-  all_goals bv_decide
+  all_goals bv_normalize (config := { enums := false })
 
 theorem lower_route (c : UInt8)
     (h : 97 ≤ c.toNat ∧ c.toNat ≤ 102) : HexRoute.lower.valid c := by
   rcases c with ⟨⟨n, hn⟩⟩
   interval_cases n <;> norm_num at h
   all_goals norm_num [HexRoute.valid]
-  all_goals bv_decide
+  all_goals bv_normalize (config := { enums := false })
 
 theorem upper_route (c : UInt8)
     (h : 65 ≤ c.toNat ∧ c.toNat ≤ 70) : HexRoute.upper.valid c := by
   rcases c with ⟨⟨n, hn⟩⟩
   interval_cases n <;> norm_num at h
   all_goals norm_num [HexRoute.valid]
-  all_goals bv_decide
+  all_goals bv_normalize (config := { enums := false })
 
 theorem decimal_nibble (c : UInt8)
     (h : 48 ≤ c.toNat ∧ c.toNat ≤ 57) :
@@ -75,7 +75,7 @@ theorem hexValue_of_route_valid (route : HexRoute) (c : UInt8)
   rcases c with ⟨⟨n, hn⟩⟩
   cases route <;> interval_cases n <;>
     norm_num [HexRoute.valid, HexRoute.nibble, hexValue] at h ⊢ <;>
-    bv_decide
+    bv_normalize (config := { enums := false })
 
 theorem hexValue_none_tests (c : UInt8) (h : hexValue c = none) :
     ¬ (((4294967231 + c.toUInt32) &&& 255) < 6) ∧
@@ -83,7 +83,7 @@ theorem hexValue_none_tests (c : UInt8) (h : hexValue c = none) :
     ¬ (((4294967248 + c.toUInt32) &&& 255) < 10) := by
   rcases c with ⟨⟨n, hn⟩⟩
   interval_cases n <;> norm_num [hexValue] at h
-  all_goals bv_decide
+  all_goals bv_normalize (config := { enums := false })
 
 /-- Combining two four-bit route values is exactly the byte construction in
 the mathematical decoder. -/

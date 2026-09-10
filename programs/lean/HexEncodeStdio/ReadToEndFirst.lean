@@ -25,14 +25,14 @@ theorem read_to_end_first_outcome
     let count := UInt32.ofNat bytes.length
     ReachesOrOOM
       ({ expr := .running
-          ⟨⟨outerParams, outerLocalValues, .i32 1048564 :: stack⟩,
+          ⟨⟨outerParams, outerLocalValues, .i32 1048552 :: stack⟩,
             [.call 10] ++ code, arity, remainder, controls, calls⟩
          store := store } : Config Universal.State)
       (fun final =>
         if bytes = [] then
           final =
             { expr := .running
-                ⟨⟨[.i32 1048564],
+                ⟨⟨[.i32 1048552],
                     [.i32 readToEndStack, .i32 0, .i32 0, .i32 0, .i32 0,
                       .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
                       .i32 0, .i32 0, .i64 0], []⟩,
@@ -57,7 +57,7 @@ theorem read_to_end_first_outcome
                 (reserveNewCapacity 0 count 0) firstChunkFrame
             final =
               { expr := .running
-                  ⟨⟨[.i32 1048564],
+                  ⟨⟨[.i32 1048552],
                       [.i32 readToEndStack, .i32 0, .i32 0, .i32 0, .i32 0,
                         .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
                         .i32 0, .i32 0, .i64 0], []⟩,
@@ -76,11 +76,11 @@ theorem read_to_end_first_outcome
   let framed := readToEndFrameStore store readToEndStack
   let bytes := store.wasm.host.stdio.input.take 32
   have hprefix := read_to_end_to_first_chunk store outerParams outerLocalValues
-    stack code arity remainder controls calls 1048564 1048544 hmod hglobal
+    stack code arity remainder controls calls 1048552 1048544 hmod hglobal
     (by rw [hpages]; decide)
   apply ReachesOrOOM.prependReaches hprefix
   apply read_chunk_first_outcome framed
-      [.i32 1048564]
+      [.i32 1048552]
       [.i32 readToEndStack, .i32 0, .i32 0, .i32 0, .i32 0,
         .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
         .i32 0, .i32 0, .i64 0]
@@ -102,12 +102,12 @@ theorem read_to_end_first_outcome
   · rfl
   · simpa [framed] using hpages
   · simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32, Mem.write8] <;> decide
+      Mem.write32] <;> decide
   · simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32, Mem.write8] <;> decide
+      Mem.write32] <;> decide
   · rw [show readToEndVector + 8 = readToEndStack + 12 by decide]
     simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32, Mem.write8] <;> decide
+      Mem.write32] <;> decide
   · simp only [framed, readToEndFrameStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
     · exact hbump

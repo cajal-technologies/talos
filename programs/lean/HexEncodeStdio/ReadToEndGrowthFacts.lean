@@ -261,7 +261,7 @@ theorem Mem.readBytes_prefix (mem : Mem) (address small large : Nat)
   · simp [Mem.readBytes, h]
   · intro i hleft hright
     have hi : i < small := by simpa [Mem.readBytes] using hleft
-    simp [Mem.readBytes, hi, show i < large by omega]
+    simp [Mem.readBytes]
 
 def readToEndGrownStore (allocStore : MachineStore Universal.State)
     (capacity bump : UInt32) : MachineStore Universal.State :=

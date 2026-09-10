@@ -364,19 +364,19 @@ theorem reserve_to_grow_call
   apply Reaches.prepend (Step.geU (result := 1)
     (Eq.symm (if_pos hsum')))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp [reserveRequired]
+  simp []
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (address := vector) (offset := 0)
+  apply Reaches.prepend (Step.load32 rfl (address := .i32 (vector)) (offset := 0)
     (by simpa [reserveFrameStore] using hcapBound))
-  simp only [reserveFrameStore, UInt32.add_zero, hcapacity]
+  simp only [UInt32.add_zero, hcapacity]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (address := vector) (offset := 4)
+  apply Reaches.prepend (Step.load32 rfl (address := .i32 (vector)) (offset := 4)
     (by simpa [reserveFrameStore] using hdataBound))
-  simp only [reserveFrameStore, hdata]
+  simp only [hdata]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
@@ -406,7 +406,7 @@ theorem reserve_to_grow_call
       · simp [reserveNewCapacity, h]
       · simp [reserveNewCapacity, h]))
   apply Reaches.prepend (Step.localTee rfl)
-  rw [show 4 + (sp - 16) = (sp - 16) + 4 by bv_decide]
+  rw [show 4 + (sp - 16) = (sp - 16) + 4 by bv_normalize (config := { enums := false })]
   simp [reserveGrowCall, reserveFrameStore, reserveNewCapacity,
     reserveCandidate, reserveRequired, reserveDoubled]
   exact ⟨[], .refl _⟩
@@ -444,30 +444,30 @@ theorem reserve_success_suffix
   simp only [reserveAfterGrow, func2, List.drop]
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (address := frame) (offset := 4) htagBound)
+  apply Reaches.prepend (Step.load32 rfl (address := .i32 (frame)) (offset := 4) htagBound)
   simp only [htag]
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.ne (result := 1) (by simp))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (address := frame) (offset := 8) hdataBound)
+  apply Reaches.prepend (Step.load32 rfl (address := .i32 (frame)) (offset := 8) hdataBound)
   simp only [hdata]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend
-    (Step.store32 (address := vector) (offset := 0) hvectorBound)
+    (Step.store32 rfl (address := .i32 (vector)) (offset := 0) hvectorBound)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend
-    (Step.store32 (address := vector) (offset := 4) (by
+    (Step.store32 rfl (address := .i32 (vector)) (offset := 4) (by
       simpa [setMemory_eq] using hvectorDataBound))
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   have hrestore' : 16 + frame = sp := by
-    rw [show 16 + frame = frame + 16 by bv_decide, hrestore]
+    rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }), hrestore]
   rw [hrestore']
   apply Reaches.prepend (Step.globalSet (by
     simpa [setMemory_eq, globalAt?] using hglobal))
@@ -654,7 +654,7 @@ theorem reserve_call_outcome
         (allocatorPtr oldBump 1) newCapacity
     have hdata' : postGrow.wasm.mem.read32 ((sp - 16) + 8) =
         allocatorPtr oldBump 1 := by
-      rw [show (sp - 16) + 8 = out + 4 by simp [out]; bv_decide]
+      rw [show (sp - 16) + 8 = out + 4 by simp [out]; bv_normalize (config := { enums := false })]
       exact growResultOkStore_read_ptr allocStore out
         (allocatorPtr oldBump 1) newCapacity houtNext
     have hpostGlobal : (globalAt? postGrow 0).isSome = true := by

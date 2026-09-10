@@ -67,7 +67,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   have s8' : ((stackPtr + 4) + 4).toNat =
       (stackPtr + 4).toNat + 4 := by
     calc
-      _ = (stackPtr + 8).toNat := congrArg UInt32.toNat (by bv_decide)
+      _ = (stackPtr + 8).toNat := congrArg UInt32.toNat (by bv_normalize (config := { enums := false }))
       _ = stackPtr.toNat + 8 := by simpa using s8
       _ = (stackPtr + 4).toNat + 4 := by
         rw [show (stackPtr + 4).toNat = stackPtr.toNat + 4 by
@@ -75,7 +75,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   have s9' : ((stackPtr + 4) + 5).toNat =
       (stackPtr + 4).toNat + 5 := by
     calc
-      _ = (stackPtr + 9).toNat := congrArg UInt32.toNat (by bv_decide)
+      _ = (stackPtr + 9).toNat := congrArg UInt32.toNat (by bv_normalize (config := { enums := false }))
       _ = stackPtr.toNat + 9 := by
         simpa using UInt32.add_ofNat_toNat_noWrap stackPtr 9 (by decide) (by
           norm_num [UInt32.size] at hstack ⊢; omega)
@@ -85,7 +85,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   have s10' : ((stackPtr + 4) + 6).toNat =
       (stackPtr + 4).toNat + 6 := by
     calc
-      _ = (stackPtr + 10).toNat := congrArg UInt32.toNat (by bv_decide)
+      _ = (stackPtr + 10).toNat := congrArg UInt32.toNat (by bv_normalize (config := { enums := false }))
       _ = stackPtr.toNat + 10 := by
         simpa using UInt32.add_ofNat_toNat_noWrap stackPtr 10 (by decide) (by
           norm_num [UInt32.size] at hstack ⊢; omega)
@@ -95,7 +95,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   have s11' : ((stackPtr + 4) + 7).toNat =
       (stackPtr + 4).toNat + 7 := by
     calc
-      _ = (stackPtr + 11).toNat := congrArg UInt32.toNat (by bv_decide)
+      _ = (stackPtr + 11).toNat := congrArg UInt32.toNat (by bv_normalize (config := { enums := false }))
       _ = stackPtr.toNat + 11 := by
         simpa using UInt32.add_ofNat_toNat_noWrap stackPtr 11 (by decide) (by
           norm_num [UInt32.size] at hstack ⊢; omega)
@@ -146,7 +146,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   iapply wp_localGet rfl
   inext
   ihave Hptr' : pointsTo_u32 0 ((stackPtr + 4) + 4) output $$ [Hptr]
-  · rw [show (stackPtr + 4) + 4 = stackPtr + 8 by bv_decide]
+  · rw [show (stackPtr + 4) + 4 = stackPtr + 8 by bv_normalize (config := { enums := false })]
     iexact Hptr
   ihave Hpair := Project.HexEncodeStdio.Helpers.pointsTo_u64_pair_join
     0 (stackPtr + 4) capacity output $$ [$Hcap $Hptr']
@@ -309,13 +309,13 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
   · iexact Hcurrent
   isplitl [Hcursor]
   · rw [show source + UInt32.ofNat 0 = source by simp,
-      show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide]
+      show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false })]
     iexact Hcursor
   isplitl [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   isplitl [HtablePtr]
-  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_decide]
+  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_normalize (config := { enums := false })]
     iexact HtablePtr
   isplitl [Hsource]
   · iexact Hsource
@@ -458,13 +458,13 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
   isplitl [Hcurrent]
   · iexact Hcurrent
   isplitl [Hcursor]
-  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide]
+  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false })]
     iexact Hcursor
   isplitl [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   isplitl [HtablePtr]
-  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_decide]
+  · rw [show stackPtr + 16 + 12 = stackPtr + 28 by bv_normalize (config := { enums := false })]
     iexact HtablePtr
   isplitl [Hsource]
   · iexact Hsource
@@ -589,10 +589,10 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
   isplitl [Hcurrent]
   · iexact Hcurrent
   isplitl [Hcursor]
-  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_decide]
+  · rw [show stackPtr + 16 + 4 = stackPtr + 20 by bv_normalize (config := { enums := false })]
     iexact Hcursor
   isplitl [Hend]
-  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_decide]
+  · rw [show stackPtr + 16 + 8 = stackPtr + 24 by bv_normalize (config := { enums := false })]
     iexact Hend
   iintro Hruntime Hcurrent Hcursor Hend
   iapply wp_localTee rfl

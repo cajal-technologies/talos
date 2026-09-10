@@ -96,14 +96,13 @@ theorem twp_decodePair_empty
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_and
-  simp [Locals.set?, Locals.set]
+  simp []
   iapply twp_store8_addr (address := out) (value := 0) oldTag $$ Htag
   iintro Htag'
   iapply twp_returnFromCallFallthrough
     (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime'
   iintro Hruntime''
-  simp only [func0Def, List.take_zero, List.nil_append,
-    List.drop_succ_cons, List.drop_zero]
+  simp only [List.take_zero, List.nil_append]
   iapply Hcont
   simp
   iframe
@@ -210,7 +209,7 @@ theorem twp_decodePair_valid
       have heq : len = (2 : UInt32) := by
         apply UInt32.toNat_inj.mp
         omega
-      simp [h, heq])
+      simp [heq])
   iapply twp_localTee rfl
   iapply twp_sub
   iapply twp_store32 len hlenAddr.noWrap hlenAddr.one hlenAddr.two

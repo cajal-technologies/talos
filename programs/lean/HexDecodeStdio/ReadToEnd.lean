@@ -106,8 +106,7 @@ theorem twp_read_to_end_empty
   simp only [List.singleton_append]
   iapply twp_call «module» 10 func7Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
-  simp only [func7Def, Function.toLocals, Function.numParams,
-    ValueType.zero]
+  simp only [func7Def, Function.toLocals, Function.numParams]
   rw [func7_first_read_split]
   simp
   iapply twp_globalGet $$ Hsp
@@ -143,13 +142,13 @@ theorem twp_read_to_end_empty
   iapply twp_localGet rfl
   iapply twp_const
   iapply twp_add
-  rw [show 16 + (sp - 32) = (sp - 32) + 16 by bv_decide,
-    show 31 + (sp - 32) = (sp - 32) + 31 by bv_decide,
-    show 4 + (sp - 32) = (sp - 32) + 4 by bv_decide]
+  rw [show 16 + (sp - 32) = (sp - 32) + 16 by bv_normalize (config := { enums := false }),
+    show 31 + (sp - 32) = (sp - 32) + 31 by bv_normalize (config := { enums := false }),
+    show 4 + (sp - 32) = (sp - 32) + 4 by bv_normalize (config := { enums := false })]
   ihave HlenVec : pointsTo_u32 0 (((sp - 32) + 4) + 8) 0 $$ [Hlen]
-  · rw [show ((sp - 32) + 4) + 8 = (sp - 32) + 12 by bv_decide]
+  · rw [show ((sp - 32) + 4) + 8 = (sp - 32) + 12 by bv_normalize (config := { enums := false })]
     iexact Hlen
-  simp [Locals.set?, Locals.set, ValueType.zero]
+  simp [ValueType.zero]
   iapply twp_read_chunk_eof (s := s) (E := E) (Φ := Φ)
       host ((sp - 32) + 16) ((sp - 32) + 31)
       ((sp - 32) + 4) (sp - 32) 0 0 old8 old16 old24 old32
@@ -191,23 +190,23 @@ theorem twp_read_to_end_empty
   have hbase16 : ((sp - 32) + 16).toNat = (sp - 32).toNat + 16 := by
     exact hframe16No
   have h20no : ((sp - 32) + 20).toNat = (sp - 32).toNat + 20 := by
-    rw [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by bv_decide,
+    rw [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by bv_normalize (config := { enums := false }),
       hresultCount.noWrap, hbase16]
     rw [show (4 : UInt32).toNat = 4 by decide]
   have h20one : (((sp - 32) + 20) + 1).toNat =
       ((sp - 32) + 20).toNat + 1 := by
     simpa only [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by
-      bv_decide] using hresultCount.one
+      bv_normalize (config := { enums := false })] using hresultCount.one
   have h20two : (((sp - 32) + 20) + 2).toNat =
       ((sp - 32) + 20).toNat + 2 := by
     simpa only [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by
-      bv_decide] using hresultCount.two
+      bv_normalize (config := { enums := false })] using hresultCount.two
   have h20three : (((sp - 32) + 20) + 3).toNat =
       ((sp - 32) + 20).toNat + 3 := by
     simpa only [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by
-      bv_decide] using hresultCount.three
+      bv_normalize (config := { enums := false })] using hresultCount.three
   ihave Hcount20 : pointsTo_u32 0 ((sp - 32) + 20) 0 $$ [Hcount]
-  · rw [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by bv_decide]
+  · rw [show (sp - 32) + 20 = ((sp - 32) + 16) + 4 by bv_normalize (config := { enums := false })]
     iexact Hcount
   iapply twp_localGet rfl
   iapply twp_load32 0 h20no h20one h20two h20three $$ Hcount20
@@ -218,7 +217,7 @@ theorem twp_read_to_end_empty
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   ihave Hlen12 : pointsTo_u32 0 ((sp - 32) + 12) 0 $$ [Hlen]
-  · rw [show (sp - 32) + 12 = ((sp - 32) + 4) + 8 by bv_decide]
+  · rw [show (sp - 32) + 12 = ((sp - 32) + 4) + 8 by bv_normalize (config := { enums := false })]
     iexact Hlen
   iapply twp_load32 0 hframe12.noWrap hframe12.one hframe12.two
       hframe12.three $$ Hlen12
@@ -259,7 +258,7 @@ theorem twp_read_to_end_empty
   ihave Hread : pointsTo_u64 0 ((sp - 32) + 16) (ioWord oldRead 4 0) $$
       [Htag Hpad1 Hpad2 Hpad3 Hcount20]
   · iapply (pointsTo_ioWord ((sp - 32) + 16) oldRead 4 0).mpr
-    rw [show ((sp - 32) + 16) + 4 = (sp - 32) + 20 by bv_decide]
+    rw [show ((sp - 32) + 16) + 4 = (sp - 32) + 20 by bv_normalize (config := { enums := false })]
     iframe
   ihave HbufferRep : pointsToBytes 0 (((sp - 32) - 48) + 8)
       (List.replicate 32 (0 : UInt8)) $$ [Hbuffer]
@@ -269,11 +268,11 @@ theorem twp_read_to_end_empty
     (four_u64_zero_as_bytes (((sp - 32) - 48) + 8)).mpr $$ HbufferRep
   icases HbufferParts with ⟨H8, H16, H24, H32⟩
   isimp only [show (((sp - 32) - 48) + 8) + 8 =
-      ((sp - 32) - 48) + 16 by bv_decide] at H16
+      ((sp - 32) - 48) + 16 by bv_normalize (config := { enums := false })] at H16
   isimp only [show (((sp - 32) - 48) + 8) + 16 =
-      ((sp - 32) - 48) + 24 by bv_decide] at H24
+      ((sp - 32) - 48) + 24 by bv_normalize (config := { enums := false })] at H24
   isimp only [show (((sp - 32) - 48) + 8) + 24 =
-      ((sp - 32) - 48) + 32 by bv_decide] at H32
+      ((sp - 32) - 48) + 32 by bv_normalize (config := { enums := false })] at H32
   iapply Hcont
   iframe
 

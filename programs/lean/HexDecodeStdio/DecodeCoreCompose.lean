@@ -260,12 +260,12 @@ theorem decode_none_of_odd_length (input : List UInt8)
 theorem decodeOddStore_result_tag (store : MachineStore Universal.State) :
     (decodeOddStore store).wasm.mem.read32 decodeResultOut = 2147483648 := by
   simp [decodeOddStore, Mem.read32, Mem.write64]
-  bv_decide
+  bv_normalize (config := { enums := false })
 
 theorem decodeOddStore_result_payload (store : MachineStore Universal.State) :
     (decodeOddStore store).wasm.mem.read32 (decodeResultOut + 4) = 1114112 := by
   simp [decodeOddStore, Mem.read32, Mem.write64]
-  bv_decide
+  bv_normalize (config := { enums := false })
 
 theorem decodeOddStore_core_facts
     (store : MachineStore Universal.State) (bump : UInt32)
@@ -415,11 +415,11 @@ theorem decodeEmptyCoreStore_result
   left
   refine ⟨decodeEmptyCoreStore store data, 0, 1, 0, [], rfl, by simp [decode],
     (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write64, Mem.write32] <;>
-      bv_decide),
+      bv_normalize (config := { enums := false })),
     (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write64, Mem.write32] <;>
-      bv_decide),
+      bv_normalize (config := { enums := false })),
     (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write64, Mem.write32] <;>
-      bv_decide), by simp, by simp, by norm_num,
+      bv_normalize (config := { enums := false })), by simp, by simp, by norm_num,
     (by
       have hp := hfacts.pages_lower
       change 1 ≤ store.wasm.mem.pages * 65536
@@ -460,7 +460,7 @@ theorem decode_post_success_result
     (hfits : outLen.toNat ≤ capacity.toNat)
     (houtBound : ptr.toNat + outLen.toNat ≤
       store.wasm.mem.pages * 65536)
-    (hptrLower : 1048564 ≤ ptr.toNat)
+    (hptrLower : 1048576 ≤ ptr.toNat)
     (hbytes : store.wasm.mem.readBytes ptr.toNat bytes.length = bytes)
     (hptrAllocLower : 1054000 ≤ ptr.toNat)
     (houtputEnd : ptr.toNat + capacity.toNat = bump.toNat)
@@ -871,7 +871,7 @@ theorem decode_second_empty_outcome
       omega
   have hpairedStatus (addr value : UInt32)
       (habove : 1048528 ≤ addr.toNat)
-      (hupper : addr.toNat + 4 ≤ 1048560)
+      (hupper : addr.toNat + 4 ≤ 1048572)
       (hstore : store.wasm.mem.read32 addr = value) :
       paired.wasm.mem.read32 addr = value := by
     have hfirst : first.wasm.mem.read32 addr = value :=
@@ -1163,7 +1163,7 @@ theorem decode_loop_initial_invariant
     hmetaIndex, hmetaMarker, hmetaGlobal⟩
   have hpairedStatus (addr value : UInt32)
       (habove : 1048528 ≤ addr.toNat)
-      (hupper : addr.toNat + 4 ≤ 1048560)
+      (hupper : addr.toNat + 4 ≤ 1048572)
       (hstore : store.wasm.mem.read32 addr = value) :
       paired.wasm.mem.read32 addr = value := by
     have hfirst : first.wasm.mem.read32 addr = value :=
@@ -1234,7 +1234,7 @@ theorem decode_loop_initial_invariant
         _ = 2 + (data + 2) :=
           decodeSecondPairValidStore_pointer_field initial (data + 2)
             (len - 2) 1 next
-        _ = data + 4 := by bv_decide
+        _ = data + 4 := by bv_normalize (config := { enums := false })
     iterator_index := by
       rw [show loopIterator = secondIterator by decide]
       calc
@@ -1465,7 +1465,7 @@ theorem decode_after_initial_alloc_outcome
             simpa only [initial, ptr] using hmeta.2.2.2.2.2.2
           have hinitialPreserve (addr value : UInt32)
               (habove : 1048528 ≤ addr.toNat)
-              (hupper : addr.toNat + 4 ≤ 1048560)
+              (hupper : addr.toNat + 4 ≤ 1048572)
               (hstore : store.wasm.mem.read32 addr = value) :
               initial.wasm.mem.read32 addr = value := by
             have hfirst : first.wasm.mem.read32 addr = value :=

@@ -32,9 +32,7 @@ theorem trapDivZero_steps_success (a b : UInt32) (hb : b ≠ 0) :
       [(.instruction (.localGet 0)), (.instruction (.localGet 1)),
        (.instruction .divU), (.administrative .finish)]
       ⟨.done [.i32 (a / b)], (trapDivZeroConfig a b).store⟩ := by
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.divU hb)
+  wasm_steps [(.localGet rfl), (.localGet rfl), (.divU hb)]
   exact Steps.cons .finish (Steps.refl _)
 
 theorem trapDivZero_steps_trap (a : UInt32) :
@@ -42,8 +40,7 @@ theorem trapDivZero_steps_trap (a : UInt32) :
       [(.instruction (.localGet 0)), (.instruction (.localGet 1)),
        (.instruction .divU)]
       ⟨.trapped .integerDivideByZero, (trapDivZeroConfig a 0).store⟩ := by
-  apply Steps.cons (.localGet rfl)
-  apply Steps.cons (.localGet rfl)
+  wasm_steps [(.localGet rfl), (.localGet rfl)]
   exact Steps.cons .divUZero (Steps.refl _)
 
 theorem trapDivZero_runs_success (a b : UInt32) (hb : b ≠ 0) :
@@ -59,16 +56,15 @@ theorem trapDivZero_runs_trap (a : UInt32) :
 /-- Fuel-free public trap specification. -/
 theorem trapDivZero_traps (a : UInt32) :
     TrapsWith (trapDivZeroConfig a 0) .integerDivideByZero
-      (fun store => store = (trapDivZeroConfig a 0).store) := by
-  apply runSteps_trapped_trapsWith (trapDivZero_runs_trap a)
-  rfl
+      (fun store => store = (trapDivZeroConfig a 0).store) :=
+  runSteps_trapped_trapsWith_store (trapDivZero_runs_trap a)
 
 theorem trapDivZero_terminates (a b : UInt32) (hb : b ≠ 0) :
     TerminatesWith (trapDivZeroConfig a b)
-      (fun values _ => values = [.i32 (a / b)]) := by
-  apply runSteps_success_terminates
-  · exact trapDivZero_runs_success a b hb
-  · rfl
+      (fun values _ => values = [.i32 (a / b)]) :=
+  runSteps_values_terminates (fuel := 4) (by
+    rw [trapDivZero_runs_success a b hb]
+    rfl)
 
 theorem trapDivZero_partial (a b : UInt32) (hb : b ≠ 0) :
     PartiallyMeets (trapDivZeroConfig a b)

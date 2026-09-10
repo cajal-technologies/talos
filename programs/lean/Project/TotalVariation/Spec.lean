@@ -54,30 +54,19 @@ theorem total_variation_correct : TotalVariationSpec := by
     ihave Hscratch := absDiffHeap_pointsTo 0 $$ Hbytes
     ihave Hglobal := absDiffGlobals_pointsTo $$ Hglobals
     simp only [func1]
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
+    wasm_wp_pures [wp_localGet wp_localGet]
+    wasm_wp_next wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
       Hruntime
-    inext
     iintro Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
     rw [show func0 = absDiffBody by rfl]
     iapply absDiff_smallStep_wp_to_return
       (runtimeModuleOwn ⟨0⟩ «module») _ 1048576 a b 0 (by decide) (by decide)
     · iintro ⟨Hruntime, Hglobal, Hscratch⟩
-      iapply wp_returnFromCallExplicit' $$ Hruntime
-      inext
-      iintro Hruntime
-      iapply wp_localGet rfl
-      inext
-      iapply wp_localGet rfl
-      inext
-      simp only [List.take, UInt32.reduceSub, UInt32.reduceAdd]
-      iapply wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
+      wasm_wp_return_from_call Hruntime
+      wasm_wp_pures [wp_localGet wp_localGet] using [List.take, UInt32.reduceSub, UInt32.reduceAdd]
+      wasm_wp_next wp_call «module» 0 func0Def (by simp [«module»]) (by simp [«module»]) $$
         Hruntime
-      inext
       iintro Hruntime
       simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
       rw [show func0 = absDiffBody by rfl]
@@ -85,16 +74,10 @@ theorem total_variation_correct : TotalVariationSpec := by
         (runtimeModuleOwn ⟨0⟩ «module») _ 1048576 b c
         (if a < b then b - a else a - b) (by decide) (by decide)
       · iintro ⟨Hruntime, Hglobal, Hscratch⟩
-        iapply wp_returnFromCallExplicit $$ Hruntime
-        inext
+        wasm_wp_next wp_returnFromCallExplicit $$ Hruntime
         simp only [List.take, List.singleton_append]
-        iapply wp_addI64
-        inext
-        iapply wp_returnFromFunction
-        inext
-        iapply wp_value'
-        ipureintro
-        rfl
+        wasm_wp_pures [wp_addI64]
+        wasm_wp_return_value_rfl
       · simp only [UInt32.reduceSub, UInt32.reduceAdd]
         iframe
     · simp only [UInt32.reduceSub, UInt32.reduceAdd]

@@ -57,7 +57,7 @@ function exportsBoundBySpec(
 ): ExportedFunction[] {
   const targetFns = new Set<string>();
   for (const r of refs) {
-    if (r.kind !== "rust-exported") continue;
+    if (r.kind !== "rust-exported" && r.kind !== "rust-exported-partial") continue;
     const parts = r.target.split("::");
     if (parts.length === 2 && parts[0] === crate) {
       targetFns.add(parts[1]);

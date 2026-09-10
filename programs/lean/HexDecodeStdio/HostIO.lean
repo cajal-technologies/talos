@@ -437,8 +437,7 @@ theorem twp_write_adapter
   simp only [List.singleton_append]
   iapply twp_call «module» 20 func17Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
-  simp [func17Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func17]
+  simp [func17Def, Function.toLocals, Function.numParams,  func17]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_callHost «module» 1
@@ -516,8 +515,7 @@ theorem twp_write_adapter
   · iintro %pre %results %post %hinvoke
       ⟨⟨%hresults, Hhost, Hbytes, Htag, Hcount, Hcont⟩, Hruntime⟩
     subst results
-    simp only [List.take_zero, List.nil_append, List.drop_succ_cons,
-      List.drop_zero]
+    simp only []
     iapply twp_localGet rfl
     iapply twp_const
     iapply twp_store8_addr oldTag $$ Htag
@@ -620,8 +618,7 @@ theorem twp_read_adapter
   simp only [List.singleton_append]
   iapply twp_call «module» 19 func16Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
-  simp [func16Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func16]
+  simp [func16Def, Function.toLocals, Function.numParams,  func16]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_callHost «module» 0

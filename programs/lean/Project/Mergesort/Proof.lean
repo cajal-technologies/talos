@@ -29,8 +29,7 @@ open Project.Mergesort.Contracts
 composition of all reachable local-function correctness theorems. -/
 theorem func3_correct
     {hlc : HasLC} [WasmSmallStepGS hlc Universal.State] :
-    Func3Spec (hlc := hlc) := by
-  exact Project.Mergesort.DriverProof.func3_correct_of
+    Func3Spec (hlc := hlc) := Project.Mergesort.DriverProof.func3_correct_of
     (Project.Mergesort.Func1Proof.func1_correct_of
       (Project.Mergesort.Func0Proof.func0_correct_of
         Project.Mergesort.Func5Proof.func5_correct
@@ -42,7 +41,7 @@ theorem func3_correct
 `mergesort` call. -/
 @[proves Project.Mergesort.Spec.PublicEntrySpecification]
 theorem mergesort_correct :
-    Project.Mergesort.Spec.PublicEntrySpecification := by
-  exact Project.Mergesort.Adequacy.entry_adequacy_of_func3 func3_correct
+    Project.Mergesort.Spec.PublicEntrySpecification :=
+  Project.Mergesort.Adequacy.entry_adequacy_of_func3 func3_correct
 
 end Project.Mergesort.Proof

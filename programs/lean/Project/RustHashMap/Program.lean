@@ -10,6 +10,8 @@ namespace Project.RustHashMap
 
 open Wasm
 
+-- WAT SHA-256: 578221d6197053edb0629e77a9ae62c2c4099ac6b7cc44079b1c534374b5bbf7
+
 def func0 : Wasm.Program := watFunctionBody% "../rust/build/rust_hash_map/program.wat" 0
 
 def func0Def : Wasm.Function :=

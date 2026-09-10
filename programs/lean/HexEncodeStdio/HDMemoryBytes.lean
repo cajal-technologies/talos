@@ -59,8 +59,7 @@ private theorem Mem.writeBytes_singleton_eq (mem : Mem) (addr : UInt32)
     mem.writeBytes addr.toNat [b] = mem.write8 addr b := by
   cases mem with
   | mk pages bytes =>
-    simp only [Mem.writeBytes, Mem.write8, List.length_cons, List.length_nil,
-      Nat.add_zero]
+    simp only [Mem.writeBytes, Mem.write8, List.length_cons, List.length_nil]
     congr
     funext i
     by_cases h : i = addr.toNat
@@ -88,7 +87,7 @@ private theorem writeByteRange_agrees
         else resolve id) := by
   induction bytes generalizing σ addr mem resolve with
   | nil =>
-      simp only [writeByteRange, List.length_nil, Mem.writeBytes_nil_eq]
+      simp only [writeByteRange,  Mem.writeBytes_nil_eq]
       have hfun : (fun id => if id = 0 then some mem else resolve id) =
           resolve := by
         funext id
@@ -133,7 +132,7 @@ private theorem writeByteRange_inBounds
         else resolve id) := by
   induction bytes generalizing σ addr mem resolve with
   | nil =>
-      simp only [writeByteRange, List.length_nil, Mem.writeBytes_nil_eq]
+      simp only [writeByteRange,  Mem.writeBytes_nil_eq]
       have hfun : (fun id => if id = 0 then some mem else resolve id) =
           resolve := by
         funext id

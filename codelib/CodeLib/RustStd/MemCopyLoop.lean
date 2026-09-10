@@ -87,8 +87,7 @@ def copyWordsInnerFrame : Wasm.SmallStep.ControlFrame :=
 
 theorem CopyWords_eq_structured :
     CopyWords = [.const 0, .localSet 3,
-      .loop 0 0 CopyWordsLoopBody] := by
-  rfl
+      .loop 0 0 CopyWordsLoopBody] := by rfl
 
 /-- One real small-step copy iteration reads the next authoritative source
 word, writes the destination, and preserves source ownership. -/
@@ -127,14 +126,12 @@ theorem copyWords_loadStoreIteration_wp
       (i <<< (2 % 32 : UInt32)) + dst = dstAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [dstAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hsrcAddress :
       (i <<< (2 % 32 : UInt32)) + src = srcAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [srcAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hdstNat : dstAddress.toNat = dst.toNat + 4 * i.toNat :=
     Mem.words32_slotAddr_toNat dst i.toNat (by omega)
   have hsrcNat : srcAddress.toNat = src.toNat + 4 * i.toNat :=
@@ -151,81 +148,50 @@ theorem copyWords_loadStoreIteration_wp
         pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value -∗
         arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
           arrayAt 0 src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
-  · iapply arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
-    iframe
+  · iapply_frame arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
   icases Hfocused with ⟨HsrcCell, Hrest⟩
   icases Hrest with ⟨HdstCell, Hreassemble⟩
   ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
   · simp only [srcAddress]
-    rw [← hpre]
-    iexact HsrcCell
+    irw_exact [← hpre] with HsrcCell
   ihave HdstCell' : pointsTo_u32 0 dstAddress oldDst $$ [HdstCell]
   · simp only [dstAddress]
-    rw [← hpre]
-    iexact HdstCell
+    irw_exact [← hpre] with HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  rw [hdstAddress]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_shl
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  rw [hsrcAddress]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add] rewriting [hdstAddress]
+  wasm_wp_pures [wp_localGet wp_localGet wp_const wp_shl wp_add] rewriting [hsrcAddress]
   ihave HsrcLater : ▷ pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · inext
     simp only [UInt32.add_zero]
     iexact HsrcCell'
-  iapply Wasm.SmallStep.wp_load32
+  wasm_wp_next_bind Wasm.SmallStep.wp_load32
       (address := srcAddress) (offset := 0) value
       (by simp) (by simpa using hs1) (by simpa using hs2)
-      (by simpa using hs3) $$ HsrcLater
-  inext
-  iintro HsrcCell
+      (by simpa using hs3) with HsrcLater => HsrcCell
   ihave HdstLater : ▷ pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · inext
     simp only [UInt32.add_zero]
     iexact HdstCell'
-  iapply Wasm.SmallStep.wp_store32
+  wasm_wp_next_bind Wasm.SmallStep.wp_store32
       (address := dstAddress) (offset := 0) (value := value) oldDst
       (by simp) (by simpa using hd1) (by simpa using hd2)
-      (by simpa using hd3) $$ HdstLater
-  inext
-  iintro HdstCell
+      (by simpa using hd3) with HdstLater => HdstCell
   ihave HsrcCell'' :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
   · simp only [UInt32.add_zero, srcAddress]
-    rw [hpre]
-    iexact HsrcCell
+    irw_exact [hpre] with HsrcCell
   ihave HdstCell'' :
       pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value $$
       [HdstCell]
   · simp only [UInt32.add_zero, dstAddress]
-    rw [hpre]
-    iexact HdstCell
+    irw_exact [hpre] with HdstCell
   ihave Harrays :
       arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
         arrayAt 0 src (pre ++ value :: srcSuffix) $$
       [Hreassemble HsrcCell'' HdstCell'']
-  · iapply Hreassemble
-    iframe
-  iapply hcontinue
-  iframe
+  · iapply_frame Hreassemble
+  iapply_frame hcontinue
 
 theorem copyWords_incrementBackedge_wp
     {α : Type} [Wasm.SmallStep.WasmSmallStepGS hlc α]
@@ -248,18 +214,8 @@ theorem copyWords_incrementBackedge_wp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_add
-  inext
-  rw [UInt32.add_comm 1 i]
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
-  iapply Wasm.SmallStep.wp_br (by rfl)
-  inext
-  simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
+  wasm_wp_pures [wp_localGet wp_const wp_add] rewriting [UInt32.add_comm 1 i]
+  wasm_wp_pures [wp_localSet wp_br] using [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
   iexact Hcontinue
@@ -301,8 +257,7 @@ theorem copyWords_bodyTail_wp
   iintro Hresources
   iapply copyWords_incrementBackedge_wp dst src n i afterLoop arity
     remainder outerControls calls
-  iapply hback
-  iexact Hresources
+  iapply_exact hback with Hresources
 
 theorem copyWords_guard_wp
     {α : Type} [Wasm.SmallStep.WasmSmallStepGS hlc α]
@@ -335,36 +290,19 @@ theorem copyWords_guard_wp
     CopyWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [CopyWordsLoopBody]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_block
-  inext
-  simp only [CopyWordsInnerGuard]
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
-  iapply Wasm.SmallStep.wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_block] using [CopyWordsOuterBody, List.cons_append, List.nil_append]
+  wasm_wp_pures [wp_block] using [CopyWordsInnerGuard]
+  wasm_wp_pures [wp_localGet wp_localGet]
   by_cases hlt : i < n
-  · iapply Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
-    inext
-    iapply Wasm.SmallStep.wp_brIf (by decide) (by rfl)
-    inext
+  · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 1) (by simp [hlt])
+    wasm_wp_next Wasm.SmallStep.wp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
-    iapply hbody hlt
-    iexact HP
-  · iapply Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
-    inext
-    iapply Wasm.SmallStep.wp_brIfZero
-    inext
-    iapply Wasm.SmallStep.wp_br (by rfl)
-    inext
-    iapply Wasm.SmallStep.wp_exitControl rfl
-    inext
+    iapply_exact hbody hlt with HP
+  · wasm_wp_next Wasm.SmallStep.wp_ltU (result := 0) (by simp [hlt])
+    wasm_wp_pures [wp_brIfZero wp_br wp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
-    iapply hexit hlt
-    iexact HP
+    iapply_exact hexit hlt with HP
 
 /-- Universal copy invariant: `pre` is already equal in both arrays;
 `dstSuffix` and `srcSuffix` are the unprocessed tails, and their concatenation
@@ -427,8 +365,7 @@ theorem copyWords_loopBody_invariant_wp
     cases dstSuffix with
     | nil =>
         have hltNat : i.toNat < n.toNat := hlt
-        simp only [List.length_nil, Nat.add_zero] at hdstInv
-        omega
+        simp only [List.length_nil, Nat.add_zero] at hdstInv; omega
     | cons oldDst dstTail =>
       cases srcSuffix with
       | nil =>
@@ -439,26 +376,20 @@ theorem copyWords_loopBody_invariant_wp
           omega
       | cons value srcTail =>
         have hltNat : i.toNat < n.toNat := hlt
-        have hnext :
-            (i + 1).toNat = i.toNat + 1 := by
-          rw [UInt32.toNat_add]
-          simp only [UInt32.reduceToNat]
-          rw [Nat.mod_eq_of_lt
-            (lt_of_le_of_lt (by omega) n.toNat_lt)]
+        have hnext : (i + 1).toNat = i.toNat + 1 :=
+          UInt32.add_ofNat_toNat_noWrap i 1 (by decide) (by omega)
         let copied' : List UInt32 := pre ++ [value]
         have hpreNext : copied'.length = (i + 1).toNat := by
           simp only [copied', List.length_append, List.length_singleton,
             hpre, hnext]
         have hdstNext :
             copied'.length + dstTail.length = n.toNat := by
-          simp only [List.length_cons] at hdstInv
-          omega
+          simp only [List.length_cons] at hdstInv; omega
         have hsourceNext : source = copied' ++ srcTail := by
           rw [hsource]
           simp only [copied', List.append_assoc, List.singleton_append]
         let Rloop : IProp (WasmHeapGF α) := iprop% □ Kloop ∗ R
-        iintro Hcurrent
-        icases Hcurrent with ⟨#IHcurrent, HcurrentRest⟩
+        iintro ⟨#IHcurrent, HcurrentRest⟩
         icases HcurrentRest with ⟨HRcurrent, HarraysCurrent⟩
         icases HarraysCurrent with ⟨HdstCurrent, HsrcCurrent⟩
         iapply copyWords_bodyTail_wp Rloop dst src n i pre oldDst value
@@ -477,9 +408,7 @@ theorem copyWords_loopBody_invariant_wp
           icases Harrays' with ⟨Hdst', Hsrc'⟩
           ispecialize IH' $$ %(i + 1) %copied' %dstTail %srcTail
             %hpreNext %hdstNext %hsourceNext
-          iapply IH'
-          isplitl [HR']
-          · iexact HR'
+          iapply_splitl_exact IH' with HR'
           isplitl [Hdst']
           · simp only [copied', List.append_assoc, List.singleton_append]
             iexact Hdst'
@@ -487,40 +416,32 @@ theorem copyWords_loopBody_invariant_wp
             iexact Hsrc'
         · simp only [Rloop]
           isplitl [IHcurrent HRcurrent]
-          · isplitl [IHcurrent]
-            · iexact IHcurrent
+          · isplitl_exact IHcurrent
             · iexact HRcurrent
-          isplitl [HdstCurrent]
-          · iexact HdstCurrent
+          isplitl_exact HdstCurrent
           · iexact HsrcCurrent
   · intro hnlt
     simp only [P]
-    have hnltNat : ¬ i.toNat < n.toNat := by
-      simpa only [UInt32.lt_iff_toNat_lt] using hnlt
+    have hnltNat : ¬ i.toNat < n.toNat := by simpa only [UInt32.lt_iff_toNat_lt] using hnlt
     have hiNat : i.toNat = n.toNat := by
-      rw [← hpre] at hnltNat
-      omega
+      rw [← hpre] at hnltNat; omega
     have hi : i = n := UInt32.toNat_inj.mp hiNat
     subst i
     have hpreLen : pre.length = n.toNat := hpre
-    have hdstNil : dstSuffix = [] := by
-      apply List.eq_nil_of_length_eq_zero
-      omega
+    have hdstNil : dstSuffix = [] :=
+      List.eq_nil_of_length_eq_zero (by omega)
     have hsrcNil : srcSuffix = [] := by
       have hsourceLen := congrArg List.length hsource
       simp only [List.length_append, hsourceLength] at hsourceLen
       exact List.eq_nil_of_length_eq_zero (by omega)
     subst dstSuffix
     subst srcSuffix
-    have hpreSource : pre = source := by
-      simpa using hsource.symm
+    have hpreSource : pre = source := by simpa using hsource.symm
     subst pre
     iintro ⟨#_IH', Hrest⟩
     icases Hrest with ⟨HR', Harrays'⟩
     icases Harrays' with ⟨Hdst', Hsrc'⟩
-    iapply hfinish
-    isplitl [HR']
-    · iexact HR'
+    iapply_splitl_exact hfinish with HR'
     isplitl [Hdst']
     · simp only [List.append_nil]
       iexact Hdst'
@@ -557,8 +478,7 @@ theorem copyWords_loop_wp
         Wasm.SmallStep.Expr α) @ s; E {{ Φ }} := by
   iintro Hresources
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_loop
-  inext
+  wasm_wp_next Wasm.SmallStep.wp_loop
   have hframe :
       ({ kind := .loop
          paramArity := 0
@@ -569,8 +489,7 @@ theorem copyWords_loop_wp
            (⟨[.i32 dst, .i32 src, .i32 n], [.i32 0], []⟩ :
              Locals).values.drop 0 } :
         Wasm.SmallStep.ControlFrame) =
-      copyWordsLoopFrame afterLoop := by
-    rfl
+      copyWordsLoopFrame afterLoop := by rfl
   rw [hframe]
   have hbody := copyWords_loopBody_invariant_wp R dst src n 0 source
     [] destination source afterLoop arity remainder outerControls calls
@@ -611,18 +530,13 @@ theorem copyWords_smallStep_wp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.wp_const
-  inext
-  iapply Wasm.SmallStep.wp_localSet rfl
-  inext
-  simp only [List.length_cons, List.length_nil,
+  wasm_wp_pures [wp_const wp_localSet] using [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_wp R dst src n destination source
     afterLoop arity remainder controls calls hdestinationLength hsourceLength
     hdstTotal hsrcTotal hfinish
   simp only [List.cons_append, List.nil_append] at hloop
-  iapply hloop
-  iexact Hresources
+  iapply_exact hloop with Hresources
 
 /-! ## Total small-step correctness
 
@@ -675,14 +589,12 @@ theorem copyWords_loadStoreIteration_twp
       (i <<< (2 % 32 : UInt32)) + dst = dstAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [dstAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hsrcAddress :
       (i <<< (2 % 32 : UInt32)) + src = srcAddress := by
     rw [MemRegion.shl2_eq_mul4]
     dsimp only [srcAddress]
-    rw [hi]
-    exact UInt32.add_comm _ _
+    rw [hi]; exact UInt32.add_comm _ _
   have hdstNat : dstAddress.toNat = dst.toNat + 4 * i.toNat :=
     Mem.words32_slotAddr_toNat dst i.toNat (by omega)
   have hsrcNat : srcAddress.toNat = src.toNat + 4 * i.toNat :=
@@ -699,67 +611,48 @@ theorem copyWords_loadStoreIteration_twp
         pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value -∗
         arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
           arrayAt 0 src (pre ++ value :: srcSuffix)) $$ [Hdst Hsrc]
-  · iapply arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
-    iframe
+  · iapply_frame arrayAt_copy_next 0 dst src pre oldDst value dstSuffix srcSuffix
   icases Hfocused with ⟨HsrcCell, Hrest⟩
   icases Hrest with ⟨HdstCell, Hreassemble⟩
   ihave HsrcCell' : pointsTo_u32 0 srcAddress value $$ [HsrcCell]
   · simp only [srcAddress]
-    rw [← hpre]
-    iexact HsrcCell
+    irw_exact [← hpre] with HsrcCell
   ihave HdstCell' : pointsTo_u32 0 dstAddress oldDst $$ [HdstCell]
   · simp only [dstAddress]
-    rw [← hpre]
-    iexact HdstCell
+    irw_exact [← hpre] with HdstCell
   simp only [CopyWordsLoadStoreIteration, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
-  rw [hdstAddress]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_shl
-  iapply Wasm.SmallStep.twp_add
-  rw [hsrcAddress]
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add] rewriting [hdstAddress]
+  wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add] rewriting [hsrcAddress]
   ihave HsrcAt : pointsTo_u32 0 (srcAddress + 0) value $$ [HsrcCell']
   · simp only [UInt32.add_zero]
     iexact HsrcCell'
-  iapply Wasm.SmallStep.twp_load32
+  wasm_twp_bind Wasm.SmallStep.twp_load32
       (address := srcAddress) (offset := 0) value
       (by simp) (by simpa using hs1) (by simpa using hs2)
-      (by simpa using hs3) $$ HsrcAt
-  iintro HsrcCell
+      (by simpa using hs3) with HsrcAt => HsrcCell
   ihave HdstAt : pointsTo_u32 0 (dstAddress + 0) oldDst $$ [HdstCell']
   · simp only [UInt32.add_zero]
     iexact HdstCell'
-  iapply Wasm.SmallStep.twp_store32
+  wasm_twp_bind Wasm.SmallStep.twp_store32
       (address := dstAddress) (offset := 0) (value := value) oldDst
       (by simp) (by simpa using hd1) (by simpa using hd2)
-      (by simpa using hd3) $$ HdstAt
-  iintro HdstCell
+      (by simpa using hd3) with HdstAt => HdstCell
   ihave HsrcCell'' :
       pointsTo_u32 0 (src + 4 * UInt32.ofNat pre.length) value $$
       [HsrcCell]
   · simp only [UInt32.add_zero, srcAddress]
-    rw [hpre]
-    iexact HsrcCell
+    irw_exact [hpre] with HsrcCell
   ihave HdstCell'' :
       pointsTo_u32 0 (dst + 4 * UInt32.ofNat pre.length) value $$
       [HdstCell]
   · simp only [UInt32.add_zero, dstAddress]
-    rw [hpre]
-    iexact HdstCell
+    irw_exact [hpre] with HdstCell
   ihave Harrays :
       arrayAt 0 dst (pre ++ value :: dstSuffix) ∗
         arrayAt 0 src (pre ++ value :: srcSuffix) $$
       [Hreassemble HsrcCell'' HdstCell'']
-  · iapply Hreassemble
-    iframe
-  iapply hcontinue
-  iframe
+  · iapply_frame Hreassemble
+  iapply_frame hcontinue
 
 /-- Total counterpart of `copyWords_incrementBackedge_wp`. -/
 theorem copyWords_incrementBackedge_twp
@@ -783,13 +676,8 @@ theorem copyWords_incrementBackedge_twp
         calls⟩ : Wasm.SmallStep.Expr α) @ s; E [{ Φ }] := by
   iintro Hcontinue
   simp only [CopyWordsIncrementBackedge]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_add
-  rw [UInt32.add_comm 1 i]
-  iapply Wasm.SmallStep.twp_localSet rfl
-  iapply Wasm.SmallStep.twp_br (by rfl)
-  simp only [copyWordsLoopFrame, List.length_cons, List.length_nil,
+  wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm 1 i]
+  wasm_twp_pures [twp_localSet twp_br] using [copyWordsLoopFrame, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set, List.take_nil,
     List.nil_append]
   iexact Hcontinue
@@ -832,8 +720,7 @@ theorem copyWords_bodyTail_twp
   iintro Hresources
   iapply copyWords_incrementBackedge_twp dst src n i afterLoop arity
     remainder outerControls calls
-  iapply hback
-  iexact Hresources
+  iapply_exact hback with Hresources
 
 /-- Total counterpart of `copyWords_guard_wp`. -/
 theorem copyWords_guard_twp
@@ -867,26 +754,19 @@ theorem copyWords_guard_twp
     CopyWordsInnerGuard, List.cons_append, List.nil_append] at hbody
   iintro HP
   simp only [CopyWordsLoopBody]
-  iapply Wasm.SmallStep.twp_block
-  simp only [CopyWordsOuterBody, List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_block
-  simp only [CopyWordsInnerGuard]
-  iapply Wasm.SmallStep.twp_localGet rfl
-  iapply Wasm.SmallStep.twp_localGet rfl
+  wasm_twp_pures [twp_block] using [CopyWordsOuterBody, List.cons_append, List.nil_append]
+  wasm_twp_pures [twp_block] using [CopyWordsInnerGuard]
+  wasm_twp_pures [twp_localGet twp_localGet]
   by_cases hlt : i < n
   · iapply Wasm.SmallStep.twp_ltU (result := 1) (by simp [hlt])
     iapply Wasm.SmallStep.twp_brIf (by decide) (by rfl)
     simp only [List.drop_zero, List.take_nil, List.nil_append]
-    iapply hbody hlt
-    iexact HP
+    iapply_exact hbody hlt with HP
   · iapply Wasm.SmallStep.twp_ltU (result := 0) (by simp [hlt])
-    iapply Wasm.SmallStep.twp_brIfZero
-    iapply Wasm.SmallStep.twp_br (by rfl)
-    iapply Wasm.SmallStep.twp_exitControl rfl
+    wasm_twp_pures [twp_brIfZero twp_br twp_exitControl]
     simp only [copyWordsLoopFrame, List.drop_zero, List.take_nil,
       List.nil_append]
-    iapply hexit hlt
-    iexact HP
+    iapply_exact hexit hlt with HP
 
 /-- The copy loop terminates and copies: `n - i` strictly decreases across the
 back edge, so the well-founded family rule closes the proof without a
@@ -967,8 +847,7 @@ theorem copyWords_loop_twp
       cases hdst : state.dstTail with
       | nil =>
           rw [hdst] at hdstInv
-          simp only [List.length_nil, Nat.add_zero] at hdstInv
-          omega
+          simp only [List.length_nil, Nat.add_zero] at hdstInv; omega
       | cons oldDst dstTail =>
         cases hsrc : state.srcTail with
         | nil =>
@@ -978,11 +857,8 @@ theorem copyWords_loop_twp
               hsourceLength] at hsourceLen
             omega
         | cons value srcTail =>
-          have hnext : (state.index + 1).toNat = state.index.toNat + 1 := by
-            rw [UInt32.toNat_add]
-            simp only [UInt32.reduceToNat]
-            rw [Nat.mod_eq_of_lt
-              (lt_of_le_of_lt (by omega) n.toNat_lt)]
+          have hnext : (state.index + 1).toNat = state.index.toNat + 1 :=
+            UInt32.add_ofNat_toNat_noWrap state.index 1 (by decide) (by omega)
           let next : CopyWordsLoopState :=
             ⟨state.index + 1, state.copied ++ [value], dstTail, srcTail⟩
           have hcopiedNext :
@@ -1001,8 +877,7 @@ theorem copyWords_loop_twp
             simp only [next, List.append_assoc, List.singleton_append]
           have hmeasure :
               n.toNat - next.index.toNat < n.toNat - state.index.toNat := by
-            simp only [next, hnext]
-            omega
+            simp only [next, hnext]; omega
           iintro ⟨IHcurrent, HRcurrent, HdstCurrent, HsrcCurrent⟩
           iapply copyWords_bodyTail_twp
             (iprop% (∀ (j : CopyWordsLoopState),
@@ -1021,39 +896,26 @@ theorem copyWords_loop_twp
             ispecialize IH' $$ %next %hmeasure
             iapply IH'
             simp only [Inv, next]
-            isplitr
-            · ipureintro
-              exact hcopiedNext
-            isplitr
-            · ipureintro
-              exact hdstNext
-            isplitr
-            · ipureintro
-              exact hsourceNext
-            isplitl [HR']
-            · iexact HR'
+            isplitr_pureexacts [hcopiedNext, hdstNext, hsourceNext]
+            isplitl_exact HR'
             isplitl [Hdst']
             · simp only [List.append_assoc, List.singleton_append]
               iexact Hdst'
             · simp only [List.append_assoc, List.singleton_append]
               iexact Hsrc'
           · isplitl [IHcurrent HRcurrent]
-            · isplitl [IHcurrent]
-              · iexact IHcurrent
+            · isplitl_exact IHcurrent
               · iexact HRcurrent
-            isplitl [HdstCurrent]
-            · iexact HdstCurrent
+            isplitl_exact HdstCurrent
             · iexact HsrcCurrent
     · intro hnlt
       have hnltNat : ¬ state.index.toNat < n.toNat := by
         simpa only [UInt32.lt_iff_toNat_lt] using hnlt
       have hindexNat : state.index.toNat = n.toNat := by
-        rw [← hcopied] at hnltNat
-        omega
+        rw [← hcopied] at hnltNat; omega
       have hindex : state.index = n := UInt32.toNat_inj.mp hindexNat
-      have hdstNil : state.dstTail = [] := by
-        apply List.eq_nil_of_length_eq_zero
-        omega
+      have hdstNil : state.dstTail = [] :=
+        List.eq_nil_of_length_eq_zero (by omega)
       have hsrcNil : state.srcTail = [] := by
         have hsourceLen := congrArg List.length hsource
         simp only [List.length_append, hsourceLength] at hsourceLen
@@ -1065,25 +927,13 @@ theorem copyWords_loop_twp
       rw [hcopiedSource]
       iintro ⟨_IH, HR', Hdst', Hsrc'⟩
       iapply hfinish
-      isplitl [HR']
-      · iexact HR'
-      isplitl [Hdst']
-      · iexact Hdst'
+      isplitl_exacts [HR' Hdst']
       · iexact Hsrc'
     · simp only [Inv]
       iframe
   · simp only [Inv]
-    isplitr
-    · ipureintro
-      simp
-    isplitr
-    · ipureintro
-      simpa using hdestinationLength
-    isplitr
-    · ipureintro
-      simp
-    isplitl [HR]
-    · iexact HR
+    isplitr_pureexacts [by simp, by simpa using hdestinationLength, by simp]
+    isplitl_exact HR
     isplitl [Hdst]
     · simp only [List.nil_append]
       iexact Hdst
@@ -1122,15 +972,12 @@ theorem copyWords_smallStep_twp
   iintro Hresources
   rw [CopyWords_eq_structured]
   simp only [List.cons_append, List.nil_append]
-  iapply Wasm.SmallStep.twp_const
-  iapply Wasm.SmallStep.twp_localSet rfl
-  simp only [List.length_cons, List.length_nil,
+  wasm_twp_pures [twp_const twp_localSet] using [List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
   have hloop := copyWords_loop_twp R dst src n destination source
     afterLoop arity remainder controls calls hdestinationLength hsourceLength
     hdstTotal hsrcTotal hfinish
   simp only [List.cons_append, List.nil_append] at hloop
-  iapply hloop
-  iexact Hresources
+  iapply_exact hloop with Hresources
 
 end Wasm

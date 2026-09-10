@@ -105,8 +105,7 @@ theorem twp_oom_wrapper
   simp only [List.singleton_append]
   iapply twp_call «module» 16 func13Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
-  simp [func13Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func13]
+  simp [func13Def, Function.toLocals, Function.numParams,  func13]
   iapply twp_callHost «module» 2
       { module := "talos", name := "oom", params := [], results := [] }
       (OOM.oomHost.lift universalOOMLens)
@@ -284,7 +283,7 @@ theorem twp_allocator
   iapply twp_const
   iapply twp_localGet rfl
   iapply twp_select rfl
-  simp [Locals.set?, Locals.set]
+  simp []
   rw [show (if oldBump = 0 then Value.i32 1054000 else Value.i32 oldBump) =
       Value.i32 (if oldBump = 0 then 1054000 else oldBump) by
     by_cases h : oldBump = 0 <;> simp [h]]

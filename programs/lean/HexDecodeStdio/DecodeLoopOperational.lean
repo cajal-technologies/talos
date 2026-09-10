@@ -63,14 +63,14 @@ theorem decode_after_pair_to_loop
     decodeCoreOuter4, decodeCoreOuter3, decodeCoreOuter2, decodeCoreOuter1,
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048449 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 16 = decodeSecondPairOut by decide, htag]
   apply Reaches.prepend (Step.eqz (result := 0) rfl)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048450 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 17 = decodeSecondPairOut + 1 by decide, hpending]
@@ -130,7 +130,7 @@ theorem decode_loop_append_no_grow
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by
+  apply Reaches.prepend (Step.load32 rfl (by
     change 1048496 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [hcapacity]
@@ -141,7 +141,7 @@ theorem decode_loop_append_no_grow
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store8 (address := outLen + ptr) (offset := 0)
+  apply Reaches.prepend (Step.store8 rfl (address := .i32 (outLen + ptr)) (offset := 0)
     (value := pending.toUInt32) (by
       simpa [UInt32.add_comm] using hwrite))
   rw [setMemory_eq]
@@ -150,7 +150,7 @@ theorem decode_loop_append_no_grow
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change 1048504 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -220,7 +220,7 @@ theorem decode_loop_pair_valid_next
     decodeCoreOuter4, decodeCoreOuter3, decodeCoreOuter2, decodeCoreOuter1,
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     rw [show (1048432 : UInt32).toNat + (9 : UInt32).toNat + 1 =
       1048442 by decide]
     simp only [decodeLoopPairValidStore, decodeLoopPairBaseStore,
@@ -232,7 +232,7 @@ theorem decode_loop_pair_valid_next
   rw [show coreFrame + 9 = loopPairOut + 1 by decide, hpayload]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     rw [show (1048432 : UInt32).toNat + (8 : UInt32).toNat + 1 =
       1048441 by decide]
     simp only [decodeLoopPairValidStore, decodeLoopPairBaseStore,
@@ -298,13 +298,13 @@ theorem decode_loop_pair_zero_exit
     decodeCoreOuter3, decodeCoreOuter2, decodeCoreOuter1,
     coreStructuredBody, coreFirstInstruction, func5, List.drop]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048442 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 9 = loopPairOut + 1 by decide, hpayload]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by
+  apply Reaches.prepend (Step.load8U rfl (by
     change 1048441 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [show coreFrame + 8 = loopPairOut by decide, htag]

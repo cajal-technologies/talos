@@ -44,10 +44,10 @@ def encodeOutput (value : UInt64) : List UInt8 :=
 /-- The generated module has exactly the two stream imports followed by the
 allocator's terminal OOM notification. -/
 theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
-  native_decide
+  decide +kernel
 
 theorem universal_host_covers : Universal.covers «module» = true := by
-  native_decide
+  decide +kernel
 
 /-- Isolated configuration for the compiled register-only arithmetic kernel.
 Its store is deliberately irrelevant: `func1` has no memory, global, call, or

@@ -180,12 +180,12 @@ def DecodeCoreResult (input : List UInt8) (data : UInt32)
 theorem decodeLoopSuccessStore_readBytes_above
     (store : MachineStore Universal.State) (ptr : UInt32)
     (capacity outLen : UInt32) (off count : Nat)
-    (habove : 1048564 ≤ off) :
+    (habove : 1048576 ≤ off) :
     (decodeLoopSuccessStore store ptr capacity outLen).wasm.mem.readBytes
         off count = store.wasm.mem.readBytes off count := by
-  have h0 : decodeResultOut.toNat + 4 = 1048556 := by decide
-  have h4 : (decodeResultOut + 4).toNat + 4 = 1048560 := by decide
-  have h8 : (decodeResultOut + 8).toNat + 4 = 1048564 := by decide
+  have h0 : decodeResultOut.toNat + 4 = 1048568 := by decide
+  have h4 : (decodeResultOut + 4).toNat + 4 = 1048572 := by decide
+  have h8 : (decodeResultOut + 8).toNat + 4 = 1048576 := by decide
   simp only [decodeLoopSuccessStore]
   rw [Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint,
     Mem.readBytes_write32_disjoint]

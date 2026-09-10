@@ -329,14 +329,14 @@ theorem grow_result_realloc_success_suffix
   simp
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (address := out) (offset := 8) hout8)
+  apply Reaches.prepend (Step.store32 rfl (address := .i32 (out)) (offset := 8) hout8)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (address := out) (offset := 4) (by
+  apply Reaches.prepend (Step.store32 rfl (address := .i32 (out)) (offset := 4) (by
     simpa [setMemory_eq] using hout4))
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (address := out) (offset := 0) (by
+  apply Reaches.prepend (Step.store32 rfl (address := .i32 (out)) (offset := 0) (by
     simpa [setMemory_eq] using hout0))
   apply Reaches.prepend (Step.returnFromCallExplicit rfl)
   simp [growResultFinal, growResultOkStore, setMemory_eq]
@@ -363,17 +363,17 @@ theorem grow_result_success_suffix
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.brIf (condition := ptr) hptr rfl)
-  simp [growResultSuccess, growResultCheck]
+  simp []
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (address := out) (offset := 8) hout8)
+  apply Reaches.prepend (Step.store32 rfl (address := .i32 (out)) (offset := 8) hout8)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (address := out) (offset := 4) (by
+  apply Reaches.prepend (Step.store32 rfl (address := .i32 (out)) (offset := 4) (by
     simpa [setMemory_eq] using hout4))
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 (address := out) (offset := 0) (by
+  apply Reaches.prepend (Step.store32 rfl (address := .i32 (out)) (offset := 0) (by
     simpa [setMemory_eq] using hout0))
   apply Reaches.prepend (Step.returnFromCallExplicit rfl)
   simp [growResultFinal, growResultOkStore, setMemory_eq]

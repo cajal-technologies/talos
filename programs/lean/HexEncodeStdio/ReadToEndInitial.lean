@@ -284,7 +284,7 @@ theorem first_nonempty_read_invariant
   · have hb := hsuccess.read_bump (by decide)
     simp [finalStore, readChunkFinishedStore, copied, readChunkCopiedStore,
       reserved, reserveFinishStore, reserveVectorStore, postGrow,
-      growResultOkStore, base] at ⊢ hb
+      growResultOkStore] at ⊢ hb
     exact hb
   · have hentryTable : entryStore.wasm.mem.readBytes 1048576 16 =
         Project.HexEncodeStdio.Hex.asciiTable := by

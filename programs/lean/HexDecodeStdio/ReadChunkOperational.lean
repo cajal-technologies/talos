@@ -168,8 +168,8 @@ theorem read_chunk_to_after_read
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   apply Reaches.prepend Step.const
-  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_decide,
-    show 40 + (sp - 48) = (sp - 48) + 40 by bv_decide]
+  rw [show 8 + (sp - 48) = (sp - 48) + 8 by bv_normalize (config := { enums := false }),
+    show 40 + (sp - 48) = (sp - 48) + 40 by bv_normalize (config := { enums := false })]
   let framed := readChunkFrameStore store (sp - 48)
   have hframedMod : framed.runtime.currentModule = «module» := by
     simpa [framed] using hmod
@@ -268,7 +268,7 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   simp only [htag]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -276,7 +276,7 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   simp only [hcount]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -288,10 +288,10 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcapacityBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcapacityBound))
   simp only [UInt32.add_zero, hcapacity]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hlengthBound))
   simp only [hlength]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.sub
@@ -305,7 +305,7 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hdataBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
   simp only [hdata]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
@@ -313,20 +313,20 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
   apply Reaches.prepend (Step.localGet rfl)
-  rw [show 8 + frame = frame + 8 by bv_decide,
-    show length + data = data + length by bv_decide]
+  rw [show 8 + frame = frame + 8 by bv_normalize (config := { enums := false }),
+    show length + data = data + length by bv_normalize (config := { enums := false })]
   apply Reaches.prepend (by
     simpa only [setMemory_eq] using
       (Step.memoryCopy32 hdestinationBound hsourceBound))
   apply Reaches.prepend (Step.exitControl rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     simpa [Mem.copy_pages] using houtBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store8 (by
+  apply Reaches.prepend (Step.store8 rfl (by
     simpa [Mem.copy_pages] using (show out.toNat + 1 ≤
       store.wasm.mem.pages * 65536 by omega)))
   rw [setMemory_eq]
@@ -334,7 +334,7 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change vector.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536
     exact hlengthBound))
   rw [setMemory_eq]
@@ -343,12 +343,12 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  rw [show 48 + frame = frame + 48 by bv_decide]
+  rw [show 48 + frame = frame + 48 by bv_normalize (config := { enums := false })]
   apply Reaches.prepend (Step.globalSet (by
     simpa [readChunkCopiedStore, globalAt?] using hglobal))
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-  simp [readChunkCopiedStore, readChunkFinishedStore, setMemory_eq,
+  simp [readChunkCopiedStore, readChunkFinishedStore,
     resumeCaller]
   exact ⟨[], .refl _⟩
 
@@ -394,7 +394,7 @@ theorem read_chunk_after_read_eof
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U (by simpa using htagBound))
+  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
   simp only [htag]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -402,7 +402,7 @@ theorem read_chunk_after_read_eof
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcountBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
   simp only [hcount]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
@@ -413,10 +413,10 @@ theorem read_chunk_after_read_eof
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hcapacityBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hcapacityBound))
   simp only [UInt32.add_zero, hcapacity]
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 (by simpa using hlengthBound))
+  apply Reaches.prepend (Step.load32 rfl (by simpa using hlengthBound))
   simp only [hlength]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.sub
@@ -427,11 +427,11 @@ theorem read_chunk_after_read_eof
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 (by simpa using houtBound))
+  apply Reaches.prepend (Step.store32 rfl (by simpa using houtBound))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store8 (by
+  apply Reaches.prepend (Step.store8 rfl (by
     change out.toNat + 1 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
@@ -439,7 +439,7 @@ theorem read_chunk_after_read_eof
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.store32 (by
+  apply Reaches.prepend (Step.store32 rfl (by
     change vector.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536
     exact hlengthBound))
   rw [setMemory_eq]
@@ -448,7 +448,7 @@ theorem read_chunk_after_read_eof
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  rw [show 48 + frame = frame + 48 by bv_decide]
+  rw [show 48 + frame = frame + 48 by bv_normalize (config := { enums := false })]
   apply Reaches.prepend (Step.globalSet (by
     simpa [globalAt?] using hglobal))
   rw [setGlobal_zero_eq]
@@ -566,7 +566,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend Step.block
   apply ReachesOrOOM.prepend Step.block
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.load8U (by simpa using htagBound))
+  apply ReachesOrOOM.prepend (Step.load8U rfl (by simpa using htagBound))
   simp only [htag]
   apply ReachesOrOOM.prepend (Step.localTee rfl)
   apply ReachesOrOOM.prepend Step.const
@@ -574,7 +574,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.load32 (by simpa using hcountBound))
+  apply ReachesOrOOM.prepend (Step.load32 rfl (by simpa using hcountBound))
   simp only [hcount]
   apply ReachesOrOOM.prepend (Step.localTee rfl)
   apply ReachesOrOOM.prepend Step.const
@@ -586,10 +586,10 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend Step.block
   apply ReachesOrOOM.prepend (Step.localGet rfl)
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.load32 (by simpa using hcapacityBound))
+  apply ReachesOrOOM.prepend (Step.load32 rfl (by simpa using hcapacityBound))
   simp only [UInt32.add_zero, hcapacity]
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.load32 (by simpa using hlengthBound))
+  apply ReachesOrOOM.prepend (Step.load32 rfl (by simpa using hlengthBound))
   simp only [hlength]
   apply ReachesOrOOM.prepend (Step.localTee rfl)
   apply ReachesOrOOM.prepend Step.sub
@@ -620,7 +620,7 @@ theorem read_chunk_after_read_reserve
     { expr := .running _
       store := reserved } _
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.load32 (by
+  apply ReachesOrOOM.prepend (Step.load32 rfl (by
     change vector.toNat + 8 + 4 ≤ reserved.wasm.mem.pages * 65536
     exact hlengthBound))
   rw [hreservedLength]
@@ -630,7 +630,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
   apply ReachesOrOOM.prepend Step.brIfZero
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.load32 (by
+  apply ReachesOrOOM.prepend (Step.load32 rfl (by
     change vector.toNat + 4 + 4 ≤ reserved.wasm.mem.pages * 65536
     exact hreservedDataBound))
   rw [hreservedData]
@@ -640,16 +640,16 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend Step.const
   apply ReachesOrOOM.prepend Step.add
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  rw [show 8 + frame = frame + 8 by bv_decide,
+  rw [show 8 + frame = frame + 8 by bv_normalize (config := { enums := false }),
     show length + allocatorPtr oldBump 1 =
-      allocatorPtr oldBump 1 + length by bv_decide]
+      allocatorPtr oldBump 1 + length by bv_normalize (config := { enums := false })]
   apply ReachesOrOOM.prepend (by
     simpa only [setMemory_eq] using
       (Step.memoryCopy32 hdestBound hsourceBound))
   apply ReachesOrOOM.prepend (Step.exitControl rfl)
   apply ReachesOrOOM.prepend (Step.localGet rfl)
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  apply ReachesOrOOM.prepend (Step.store32 (by
+  apply ReachesOrOOM.prepend (Step.store32 rfl (by
     simpa [Mem.copy_pages] using houtBound))
   rw [setMemory_eq]
   apply ReachesOrOOM.prepend (Step.localGet rfl)
@@ -657,7 +657,7 @@ theorem read_chunk_after_read_reserve
   have houtOne : out.toNat + 1 ≤ reserved.wasm.mem.pages * 65536 := by
     exact (Nat.le_trans
       (by omega : out.toNat + 1 ≤ out.toNat + 4 + 4) houtBound)
-  apply ReachesOrOOM.prepend (Step.store8 (by
+  apply ReachesOrOOM.prepend (Step.store8 rfl (by
     change out.toNat + 1 ≤ reserved.wasm.mem.pages * 65536
     exact houtOne))
   rw [setMemory_eq]
@@ -665,7 +665,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend (Step.localGet rfl)
   apply ReachesOrOOM.prepend (Step.localGet rfl)
   apply ReachesOrOOM.prepend Step.add
-  apply ReachesOrOOM.prepend (Step.store32 (by
+  apply ReachesOrOOM.prepend (Step.store32 rfl (by
     change vector.toNat + 8 + 4 ≤ reserved.wasm.mem.pages * 65536
     exact hlengthBound))
   rw [setMemory_eq]
@@ -674,7 +674,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend (Step.localGet rfl)
   apply ReachesOrOOM.prepend Step.const
   apply ReachesOrOOM.prepend Step.add
-  rw [show 48 + frame = frame + 48 by bv_decide]
+  rw [show 48 + frame = frame + 48 by bv_normalize (config := { enums := false })]
   apply ReachesOrOOM.prepend (Step.globalSet (by
     simpa [reserved, globalAt?] using hreservedGlobal))
   rw [setGlobal_zero_eq]
@@ -683,7 +683,7 @@ theorem read_chunk_after_read_reserve
     exact (congrArg (fun runtime => runtime.entry) hruntime).symm))
   apply ReachesOrOOM.refl
   refine ⟨allocStore, hsuccess, ?_⟩
-  simp [reserved, readChunkCopiedStore, readChunkFinishedStore,
+  simp [readChunkCopiedStore, readChunkFinishedStore,
     resumeCaller]
 
 end Project.HexDecodeStdio

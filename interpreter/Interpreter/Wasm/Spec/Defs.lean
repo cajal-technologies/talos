@@ -57,8 +57,7 @@ theorem TerminatesWith.of_run {env : HostEnv α} {m : Module} {id : Nat}
   refine ⟨N, fun fuel hle => ⟨vs, st, ?_, h_post⟩⟩
   have h_ne : run N m id initial args env ≠ .OutOfFuel := by
     rw [h_run]; intro h; cases h
-  rw [run_fuel_mono hle h_ne]
-  exact h_run
+  rw [run_fuel_mono hle h_ne]; exact h_run
 
 /-- Sugar for the common case where the post is `· = expected` on values
 and ignores the final store: simply exhibit a fuel that produces the

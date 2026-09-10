@@ -207,13 +207,13 @@ abbrev encodeLocals : List Value :=
 def encodeReadLoopConfig (store : MachineStore Universal.State)
     (chunk capacity data length filled : UInt32) : Config Universal.State :=
   readToEndLoopConfig store [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] [] []
-    1048564 readToEndStack chunk capacity data length filled
+    1048552 readToEndStack chunk capacity data length filled
 
 def encodeReadContinuedConfig (store : MachineStore Universal.State)
     (chunk capacity data length filled previousCount previousTarget
       previousBase previousSpare : UInt32) : Config Universal.State :=
   readToEndContinuedLoopConfig store [] encodeLocals [] (Project.HexStdio.func10.drop 9) 0 [] []
-    [] 1048564 readToEndStack chunk capacity data length filled
+    [] 1048552 readToEndStack chunk capacity data length filled
     previousCount previousTarget previousBase previousSpare
 
 /-- The semantic content of the generated `read_to_end` loop.  `prefix` is
@@ -362,9 +362,9 @@ def ReadToEndSuccess (input : List UInt8)
     store.wasm.memoryCap store.runtime.currentModule 0 = 65536 ∧
     store.wasm.mem.pages ≤ 65536 ∧
     globalAt? store 0 = some (.i32 1048544) ∧
-    store.wasm.mem.read32 1048564 = capacity ∧
-    store.wasm.mem.read32 (1048564 + 4) = data ∧
-    store.wasm.mem.read32 (1048564 + 8) =
+    store.wasm.mem.read32 1048552 = capacity ∧
+    store.wasm.mem.read32 (1048552 + 4) = data ∧
+    store.wasm.mem.read32 (1048552 + 8) =
       UInt32.ofNat input.length ∧
     store.wasm.mem.read32 1053960 = bump ∧
     store.wasm.mem.readBytes 1048576 16 = Project.HexEncodeStdio.Hex.asciiTable ∧

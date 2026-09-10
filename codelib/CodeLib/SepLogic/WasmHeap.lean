@@ -1,4 +1,5 @@
-import Iris.ProofMode
+import CodeLib.SepLogic.Tactics
+import CodeLib.ByteReassembly
 import Iris.Instances.Lib.FUpd
 import Iris.BI.Lib.GenHeap
 import Iris.BI.Lib.MonoNat
@@ -7,7 +8,6 @@ import Interpreter.Wasm.Mem
 import Interpreter.Wasm.Syntax
 import Interpreter.Wasm.Host
 import Interpreter.Wasm.SmallStep
-import Std.Tactic.BVDecide
 /-! # Wasm Memory as an Iris GenHeap
 Instantiates iris-lean's GenHeap for Wasm byte-level memory.
 Location = MemoryKey (memory id × byte address), Value = Option UInt8 (byte).
@@ -116,16 +116,13 @@ private theorem then_isLE_trans {α β : Type} [Ord α] [Ord β]
       have hac_eq := LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₃
       rw [← hac_eq] at h₂
       have h1s := OrientedCmp.eq_swap (cmp := compare (α := α)) (a := a1) (b := b1)
-      rw [h₁, h₂] at h1s
-      exact absurd h1s (by decide)
-    · rw [h₃, ord_isLE_gt] at hac
-      exact absurd hac (by decide)
+      rw [h₁, h₂] at h1s; exact absurd h1s (by decide)
+    · rw [h₃, ord_isLE_gt] at hac; exact absurd hac (by decide)
   -- lt.eq: b1 = c1, so compare a1 c1 = .lt
   · have heq := LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₂
     simp [← heq, h₁]
   -- lt.gt: hbc is false
-  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc
-    exact absurd hbc (by decide)
+  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc; exact absurd hbc (by decide)
   -- eq.lt: a1 = b1, so compare a1 c1 = .lt
   · have heq := LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₁
     rw [← heq] at h₂
@@ -136,11 +133,9 @@ private theorem then_isLE_trans {α β : Type} [Ord α] [Ord β]
       rw [(LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₁).trans
           (LawfulEqCmp.eq_of_compare (cmp := compare (α := α)) h₂)]
       exact ReflCmp.compare_self
-    rw [hac, ord_eq_then]
-    exact TransCmp.isLE_trans hab hbc
+    rw [hac, ord_eq_then]; exact TransCmp.isLE_trans hab hbc
   -- eq.gt: hbc is false
-  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc
-    exact absurd hbc (by decide)
+  · simp only [h₂, ord_gt_then, ord_isLE_gt] at hbc; exact absurd hbc (by decide)
   -- gt.*: hab is false in all three
   · simp only [h₁, ord_gt_then, ord_isLE_gt] at hab; exact absurd hab (by decide)
   · simp only [h₁, ord_gt_then, ord_isLE_gt] at hab; exact absurd hab (by decide)
@@ -198,10 +193,11 @@ instance instLawfulEqCmpInstanceIndexKey :
     · exact absurd h (by decide)
 
 abbrev WasmHeapMap := fun V => ExtTreeMap MemoryKey V compare
-abbrev WasmGlobalMap := fun V => ExtTreeMap GlobalKey V compare
-abbrev WasmDataSegmentMap := fun V => ExtTreeMap DataSegmentKey V compare
-abbrev WasmTableMap := fun V => ExtTreeMap TableKey V compare
-abbrev WasmElementSegmentMap := fun V => ExtTreeMap ElementSegmentKey V compare
+abbrev WasmInstanceIndexMap := fun V => ExtTreeMap InstanceIndexKey V compare
+abbrev WasmGlobalMap := WasmInstanceIndexMap
+abbrev WasmDataSegmentMap := WasmInstanceIndexMap
+abbrev WasmTableMap := WasmInstanceIndexMap
+abbrev WasmElementSegmentMap := WasmInstanceIndexMap
 abbrev WasmRuntimeModuleMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmHostEnvMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmExceptionMap := fun V => ExtTreeMap Nat V compare
@@ -281,8 +277,7 @@ theorem HeapBelow.insert_fresh
     HeapBelow (insert σ key value) frontier := by
   intro query queryValue hquery hmemory
   by_cases heq : query = key
-  · subst query
-    exact hkey hmemory
+  · subst query; exact hkey hmemory
   · apply hbelow query queryValue _ hmemory
     rwa [get?_insert_ne (Ne.symm heq)] at hquery
 
@@ -670,8 +665,7 @@ theorem tagTableOwn_agree [gs : WasmTagTableGS α]
   unfold tagTableOwn
   iintro ⟨Hactual, Hexpected⟩
   icombine Hactual Hexpected gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
+  ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
 
 def runtimeModuleElem {α : Type} [gs : WasmRuntimeModuleGS α]
     (id : Nat) (m : Module) : IProp (WasmHeapGF α) :=
@@ -717,8 +711,7 @@ theorem runtimeInstancesOwn_agree {α : Type} [gs : WasmRuntimeInstancesGS α]
   unfold runtimeInstancesOwn
   iintro ⟨Hactual, Hexpected⟩
   icombine Hactual Hexpected gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
+  ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
 
 /-- Persistent knowledge of the host environment for a given instance. -/
 def hostEnvOwn {α : Type} [gs : WasmHostEnvGS α] (instanceId : Nat) (env : HostEnv α) :
@@ -760,8 +753,7 @@ theorem hostStateOwn_agree {α : Type} [gs : WasmHostStateGS α]
   unfold hostStateAuth hostStateOwn
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO α) Hvalid)
+  ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO α) Hvalid)
 
 theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
     (old new' : α) :
@@ -775,8 +767,7 @@ theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
       $$ [Hauth Hfrag] with Hboth
   · iframe
   imodintro
-  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  iframe
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Authoritative sparse-heap frontier, held inside `stateInterp`. -/
 def heapFrontierAuth {α : Type} [gs : WasmHeapDomainGS α]
@@ -798,8 +789,7 @@ theorem heapFrontierOwn_agree {α : Type} [gs : WasmHeapDomainGS α]
   unfold heapFrontierAuth heapFrontierOwn
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car
+  ipureexact congrArg DiscreteO.car
     (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
 
 theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
@@ -814,8 +804,7 @@ theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
       $$ [Hauth Hfrag] with Hboth
   · iframe
   imodintro
-  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  iframe
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Exact authoritative primary-memory page count, held inside `stateInterp`. -/
 def memoryPagesAuth {α : Type} [gs : WasmMemoryPagesGS α]
@@ -852,8 +841,7 @@ theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
   unfold memoryPagesAuth memoryPagesOwn
   iintro ⟨Hauth, Hsnapshot⟩
   icombine Hauth Hsnapshot gives %Hvalid
-  ipureintro
-  exact (MonoNat.both_valid
+  ipureexact (MonoNat.both_valid
     (MaxNat.ofNat actual) (MaxNat.ofNat expected)).mp Hvalid
 
 /-- Obtain an exact persistent snapshot from the page-count authority. -/
@@ -980,8 +968,7 @@ theorem currentInstanceOwnN_agree {α : Type} [gs : WasmInstanceGS α]
   unfold currentInstanceAuthN currentInstanceOwnN
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
-  ipureintro
-  exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
+  ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
 
 theorem currentInstanceOwnN_update {α : Type} [gs : WasmInstanceGS α]
     (old new' : Nat) :
@@ -995,8 +982,7 @@ theorem currentInstanceOwnN_update {α : Type} [gs : WasmInstanceGS α]
       $$ [Hauth Hfrag] with Hboth
   · iframe
   imodintro
-  icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  iframe
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
     (actual expected new' : Nat) :
@@ -1006,8 +992,7 @@ theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
   iintro ⟨Hauth, Hfrag⟩
   ihave %heq : ⌜actual = expected⌝ $$ [Hauth Hfrag]
   · icombine Hauth Hfrag gives %Hvalid
-    ipureintro
-    exact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
+    ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
   imod iOwn_update_op (E := gs.instanceElem)
       (ExclAuth.update (A := DiscreteO Nat)
         (a := (⟨actual⟩ : DiscreteO Nat))
@@ -1017,12 +1002,8 @@ theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
   · iframe
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩
-  isplitl [H1]
-  · iexact H1
-  isplitl [H2]
-  · iexact H2
-  · ipureintro
-    exact heq
+  isplitl_exacts [H1 H2]
+  · ipureexact heq
 
 /-! ## Points-to assertions
 
@@ -1064,93 +1045,6 @@ def u64Byte (v : UInt64) (n : Nat) : UInt8 :=
   | 6 => (v >>> 48).toUInt8
   | _ => (v >>> 56).toUInt8
 
-omit inst in
-private theorem reassemble32_nat (n : Nat) (h : n < 2 ^ 32) :
-    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 32 |||
-      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 32 |||
-      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 32 = n := by
-  apply Nat.eq_of_testBit_eq
-  intro i
-  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
-    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
-  by_cases hi8 : i < 8
-  · simp [hi8, show i < 32 by omega, show ¬i ≥ 8 by omega,
-      show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi16 : i < 16
-  · have heq : 8 + (i - 8) = i := by omega
-    simp [hi8, heq, show i ≥ 8 by omega, show i < 32 by omega,
-      show i - 8 < 8 by omega, show ¬i ≥ 16 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi24 : i < 24
-  · have heq : 16 + (i - 16) = i := by omega
-    simp [hi8, heq, show i ≥ 16 by omega, show i < 32 by omega,
-      show ¬i - 8 < 8 by omega, show i - 16 < 8 by omega, show ¬i ≥ 24 by omega]
-  by_cases hi32 : i < 32
-  · have heq : 24 + (i - 24) = i := by omega
-    simp [hi8, hi32, heq, show i ≥ 24 by omega, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show i - 24 < 8 by omega]
-  · have hibound : n.testBit i = false :=
-      Nat.testBit_lt_two_pow
-        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
-    simp [hi8, hibound, show ¬i < 32 by omega, show ¬i - 8 < 8 by omega,
-      show ¬i - 16 < 8 by omega, show ¬i - 24 < 8 by omega]
-
-private theorem reassemble64_nat (n : Nat) (h : n < 2 ^ 64) :
-    n % 2 ^ 8 ||| (((n >>> 8) % 2 ^ 8) <<< 8) % 2 ^ 64 |||
-      (((n >>> 16) % 2 ^ 8) <<< 16) % 2 ^ 64 |||
-      (((n >>> 24) % 2 ^ 8) <<< 24) % 2 ^ 64 |||
-      (((n >>> 32) % 2 ^ 8) <<< 32) % 2 ^ 64 |||
-      (((n >>> 40) % 2 ^ 8) <<< 40) % 2 ^ 64 |||
-      (((n >>> 48) % 2 ^ 8) <<< 48) % 2 ^ 64 |||
-      (((n >>> 56) % 2 ^ 8) <<< 56) % 2 ^ 64 = n := by
-  apply Nat.eq_of_testBit_eq
-  intro i
-  simp only [Nat.testBit_or, Nat.testBit_mod_two_pow,
-    Nat.testBit_shiftLeft, Nat.testBit_shiftRight]
-  by_cases h8 : i < 8
-  · simp [h8, show i < 64 by omega, show ¬ i ≥ 8 by omega, show ¬ i ≥ 16 by omega,
-      show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega, show ¬ i ≥ 40 by omega,
-      show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h16 : i < 16
-  · have heq : 8 + (i - 8) = i := by omega
-    simp [h8, heq, show i ≥ 8 by omega, show i < 64 by omega, show i - 8 < 8 by omega,
-      show ¬ i ≥ 16 by omega, show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h24 : i < 24
-  · have heq : 16 + (i - 16) = i := by omega
-    simp [h8, heq, show i ≥ 16 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show i - 16 < 8 by omega, show ¬ i ≥ 24 by omega, show ¬ i ≥ 32 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h32 : i < 32
-  · have heq : 24 + (i - 24) = i := by omega
-    simp [h8, heq, show i ≥ 24 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show i - 24 < 8 by omega, show ¬ i ≥ 32 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h40 : i < 40
-  · have heq : 32 + (i - 32) = i := by omega
-    simp [h8, heq, show i ≥ 32 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show i - 32 < 8 by omega,
-      show ¬ i ≥ 40 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h48 : i < 48
-  · have heq : 40 + (i - 40) = i := by omega
-    simp [h8, heq, show i ≥ 40 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show i - 40 < 8 by omega, show ¬ i ≥ 48 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h56 : i < 56
-  · have heq : 48 + (i - 48) = i := by omega
-    simp [h8, heq, show i ≥ 48 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show ¬ i - 40 < 8 by omega, show i - 48 < 8 by omega, show ¬ i ≥ 56 by omega]
-  by_cases h64 : i < 64
-  · have heq : 56 + (i - 56) = i := by omega
-    simp [h8, heq, show i ≥ 56 by omega, show i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show ¬ i - 40 < 8 by omega, show ¬ i - 48 < 8 by omega, show i - 56 < 8 by omega]
-  · have hibound : n.testBit i = false :=
-      Nat.testBit_lt_two_pow
-        (Nat.lt_of_lt_of_le h (Nat.pow_le_pow_right (by decide) (by omega)))
-    simp [h8, hibound, show ¬ i < 64 by omega, show ¬ i - 8 < 8 by omega,
-      show ¬ i - 16 < 8 by omega, show ¬ i - 24 < 8 by omega, show ¬ i - 32 < 8 by omega,
-      show ¬ i - 40 < 8 by omega, show ¬ i - 48 < 8 by omega, show ¬ i - 56 < 8 by omega]
 
 theorem u64Byte_reassemble (v : UInt64) :
     (u64Byte v 0).toUInt64 ||| ((u64Byte v 1).toUInt64 <<< 8) |||
@@ -1164,7 +1058,7 @@ theorem u64Byte_reassemble (v : UInt64) :
   unfold u64Byte
   simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft,
     UInt8.toNat_toUInt64, UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
-  exact reassemble64_nat v.toNat (UInt64.toNat_lt v)
+  exact Nat.reassemble64_of_lt v.toNat (UInt64.toNat_lt v)
 
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
 def pointsTo_u64 (memId : Nat) (addr : UInt32) (v : UInt64) : IProp (WasmHeapGF α) :=
@@ -1246,7 +1140,7 @@ theorem u32Byte_reassemble (v : UInt32) :
   unfold u32Byte
   simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft,
     UInt8.toNat_toUInt32, UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
-  exact reassemble32_nat v.toNat (UInt32.toNat_lt v)
+  exact Nat.reassemble32_of_lt v.toNat (UInt32.toNat_lt v)
 
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
 def pointsTo_u32 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp (WasmHeapGF α) :=
@@ -1293,7 +1187,21 @@ omit inst in
 theorem u16Byte_reassemble (v : UInt32) :
     (u16Byte v 0).toUInt32 ||| ((u16Byte v 1).toUInt32 <<< 8) = v &&& 0xFFFF := by
   unfold u16Byte
-  bv_decide
+  apply UInt32.toNat.inj
+  simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
+    UInt32.toNat_toUInt8, UInt32.toNat_shiftRight, UInt32.toNat_and]
+  change v.toNat % 2^8 ||| (((v.toNat >>> 8) % 2^8) <<< 8) % 2^32 =
+    v.toNat &&& (2^16 - 1)
+  apply Nat.eq_of_testBit_eq
+  intro i
+  simp only [Nat.testBit_or, Nat.testBit_and, Nat.testBit_mod_two_pow,
+    Nat.testBit_shiftLeft, Nat.testBit_shiftRight, Nat.testBit_two_pow_sub_one]
+  by_cases h8 : i < 8
+  · simp [h8, show i < 16 by omega, show ¬ i ≥ 8 by omega]
+  by_cases h16 : i < 16
+  · simp [h8, h16, show i < 32 by omega, show i ≥ 8 by omega,
+      show i - 8 < 8 by omega, show 8 + (i - 8) = i by omega]
+  · simp [h8, h16, show ¬ i - 8 < 8 by omega]
 
 -- Byte-range ownership: n consecutive bytes at `addr` in memory `memId`.
 def pointsToBytes (memId : Nat) (addr : UInt32) (bytes : List UInt8) :
@@ -1337,8 +1245,7 @@ theorem pointsToBytes_append (memId : Nat) (addr : UInt32) (xs ys : List UInt8) 
   | nil => simp [pointsToBytes]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, pointsToBytes]
-    rw [byte_offset_succ]
-    exact (BI.sep_congr_right (ih (addr + 1))).trans BI.sep_assoc.symm
+    rw [byte_offset_succ]; exact (BI.sep_congr_right (ih (addr + 1))).trans BI.sep_assoc.symm
 
 /-- Owning a 32-bit word is the same as owning its four little-endian bytes. -/
 theorem pointsTo_u32_as_bytes (memId : Nat) (addr v : UInt32) :
@@ -1389,8 +1296,7 @@ theorem arrayAt_append (memId : Nat) (ptr : UInt32) (xs ys : List UInt32) :
   | nil => simp [arrayAt]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, arrayAt]
-    rw [elem_offset_succ]
-    exact (BI.sep_congr_right (ih (ptr + 4))).trans BI.sep_assoc.symm
+    rw [elem_offset_succ]; exact (BI.sep_congr_right (ih (ptr + 4))).trans BI.sep_assoc.symm
 
 /-- Split a u32 array into a prefix, its next cell, and the suffix. -/
 theorem arrayAt_append_cons (memId : Nat) (ptr : UInt32) (pre : List UInt32)
@@ -1422,16 +1328,11 @@ theorem arrayAt_copy_next (memId : Nat) (dst src : UInt32) (pre : List UInt32)
   icases (arrayAt_append_cons memId src pre value srcSuffix).mp $$ Hsrc with
     ⟨HsrcPre, HsrcRest⟩
   icases HsrcRest with ⟨HsrcCell, HsrcSuffix⟩
-  isplitl [HsrcCell]
-  · iexact HsrcCell
-  isplitl [HdstCell]
-  · iexact HdstCell
+  isplitl_exacts [HsrcCell HdstCell]
   iintro ⟨HsrcCell, HdstCell⟩
   isplitl [HdstPre HdstCell HdstSuffix]
-  · iapply (arrayAt_append_cons memId dst pre value dstSuffix).mpr
-    iframe
-  · iapply (arrayAt_append_cons memId src pre value srcSuffix).mpr
-    iframe
+  · iapply_frame (arrayAt_append_cons memId dst pre value dstSuffix).mpr
+  · iapply_frame (arrayAt_append_cons memId src pre value srcSuffix).mpr
 
 -- update element k: give back a cell with a NEW value,
 -- own the updated array (merge writes out[k] = v)
@@ -1453,8 +1354,7 @@ theorem arrayAt_set (memId : Nat) (ptr : UInt32) (xs : List UInt32) (k : Nat)
       simp only [List.length_cons] at hk
       have hk' : k' < rest.length := by omega
       simp only [List.getElem_cons_succ, List.set_cons_succ, arrayAt]
-      rw [elem_offset_succ]
-      exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
+      rw [elem_offset_succ]; exact (BI.sep_mono_right (ih (ptr + 4) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))
 
@@ -1513,8 +1413,7 @@ theorem array64At_append (memId : Nat) (ptr : UInt32) (xs ys : List UInt64) :
   | nil => simp [array64At]; exact BI.emp_sep.symm
   | cons x rest ih =>
     simp only [List.cons_append, List.length_cons, array64At]
-    rw [elem64_offset_succ]
-    exact (BI.sep_congr_right (ih (ptr + 8))).trans BI.sep_assoc.symm
+    rw [elem64_offset_succ]; exact (BI.sep_congr_right (ih (ptr + 8))).trans BI.sep_assoc.symm
 
 /-- Split a u64 array into a prefix, its next cell, and the suffix. -/
 theorem array64At_append_cons (memId : Nat) (ptr : UInt32) (pre : List UInt64)
@@ -1539,14 +1438,11 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
       Harray with ⟨Hpre, Hrest⟩
   icases Hrest with ⟨Hcell, Hsuffix⟩
   ihave Hcell' : pointsTo_u64 memId (ptr + 8 * UInt32.ofNat i) old $$ [Hcell]
-  · rw [List.length_replicate]
-    iexact Hcell
+  · irw_exact [List.length_replicate] with Hcell
   ihave Hsuffix' :
       array64At memId ((ptr + 8 * UInt32.ofNat i) + 8) suffix $$ [Hsuffix]
-  · rw [List.length_replicate]
-    iexact Hsuffix
-  isplitl [Hcell']
-  · iexact Hcell'
+  · irw_exact [List.length_replicate] with Hsuffix
+  isplitl_exact Hcell'
   iintro Hcell
   have hrep :
       List.replicate (i + 1) value =
@@ -1561,13 +1457,9 @@ theorem array64At_fill_next (memId : Nat) (ptr : UInt32) (i : Nat)
   rw [List.append_assoc, List.singleton_append]
   iapply (array64At_append_cons memId ptr (List.replicate i value)
     value suffix).mpr
-  isplitl [Hpre]
-  · iexact Hpre
-  isplitl [Hcell]
-  · rw [List.length_replicate]
-    iexact Hcell
-  · rw [List.length_replicate]
-    iexact Hsuffix'
+  isplitl_exact Hpre
+  isplitl_rw_exact [List.length_replicate] with Hcell
+  · irw_exact [List.length_replicate] with Hsuffix'
 
 /-- Extract a u64 cell and a continuation accepting its replacement. -/
 theorem array64At_set (memId : Nat) (ptr : UInt32) (xs : List UInt64) (k : Nat)
@@ -1588,8 +1480,7 @@ theorem array64At_set (memId : Nat) (ptr : UInt32) (xs : List UInt64) (k : Nat)
       simp only [List.length_cons] at hk
       have hk' : k' < rest.length := by omega
       simp only [List.getElem_cons_succ, List.set_cons_succ, array64At]
-      rw [elem64_offset_succ]
-      exact (BI.sep_mono_right (ih (ptr + 8) k' hk')).trans
+      rw [elem64_offset_succ]; exact (BI.sep_mono_right (ih (ptr + 8) k' hk')).trans
         (BI.sep_left_comm.mp.trans (BI.sep_mono_right
           (BI.wand_intro
             (BI.sep_assoc.mp.trans (BI.sep_mono_right BI.wand_elim_left)))))

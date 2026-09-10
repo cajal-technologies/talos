@@ -202,7 +202,7 @@ theorem func18_low_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   inext
   iapply wp_localGet rfl
   inext
-  simp [iterLocals, List.set]
+  simp []
   iapply Hfinish
   unfold sentinel
   iexact Hstate0
@@ -346,7 +346,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   rw [Project.HexEncodeStdio.Hex.low_nibble_u32 byte]
   iapply wp_add
   inext
-  simp [iterLocals, List.set]
+  simp [List.set]
   ihave HlowActual :
       (⟨0, UInt32.ofNat (byte.toNat % 16) + 1048576⟩ ↦w
         hexDigit (byte.toNat % 16)) $$ [Hlow]
@@ -390,7 +390,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   rw [Project.HexEncodeStdio.Hex.high_nibble_u32 byte]
   iapply wp_add
   inext
-  simp [iterLocals, List.set]
+  simp []
   ihave HhighActual :
       (⟨0, UInt32.ofNat (byte.toNat / 16) + 1048576⟩ ↦w
         hexDigit (byte.toNat / 16)) $$ [Hhigh]
@@ -412,7 +412,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   inext
   iapply wp_localGet rfl
   inext
-  simp [iterLocals, List.set]
+  simp []
   ihave HindexNext : pointsTo_u32 0 (ptr + 4) (index + 1) $$ [Hindex]
   · rw [UInt32.add_comm index 1]
     iexact Hindex
@@ -491,7 +491,7 @@ theorem func18_end_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   inext
   iapply wp_localGet rfl
   inext
-  simp [iterLocals, List.set]
+  simp [List.set]
   iapply Hfinish $$ Hcurrent0 Hindex Hend
 
 /-- Caller-side contract for the saved-low-digit branch of WAT function 21. -/

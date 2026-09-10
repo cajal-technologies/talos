@@ -121,7 +121,7 @@ private theorem reassemble_low_nat (v : Nat) :
 theorem Mem.read64_low (m : Mem) (address : UInt32) :
     (m.read64 address).toUInt32 = m.read32 address := by
   simp [Mem.read64, Mem.read32]
-  bv_decide
+  bv_normalize (config := { enums := false })
 
 private theorem hbit (b j : Nat) (hb : b < 2^8) (hj : 8 ≤ j) : b.testBit j = false :=
   Nat.testBit_eq_false_of_lt (lt_of_lt_of_le hb (Nat.pow_le_pow_right (by norm_num) hj))
@@ -142,7 +142,7 @@ private theorem reassemble_high_nat (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
         hbit b2 (32+i-16) h2 (by omega), hbit b3 (32+i-24) h3 (by omega)]
       simp only [show (32 + i < 64) by omega, show 32+i-32 = i by omega, show ¬ (40 ≤ 32+i) by omega,
         show ¬ (48 ≤ 32+i) by omega, show ¬ (56 ≤ 32+i) by omega, show ¬ (8 ≤ i) by omega,
-        show ¬ (16 ≤ i) by omega, show ¬ (24 ≤ i) by omega, hi, h,
+        show ¬ (16 ≤ i) by omega, show ¬ (24 ≤ i) by omega, hi,
         decide_true, decide_false, Bool.false_and, Bool.and_false, Bool.or_false,
         Bool.false_or, Bool.true_and, show (32:Nat) ≤ 32+i by omega]
     rcases Nat.lt_or_ge i 16 with h2i | h2i
@@ -151,7 +151,7 @@ private theorem reassemble_high_nat (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
         hbit b4 (32+i-32) h4 (by omega), hbit b4 i h4 (by omega)]
       simp only [show (32 + i < 64) by omega, show 32+i-40 = i-8 by omega, show ¬ (48 ≤ 32+i) by omega,
         show ¬ (56 ≤ 32+i) by omega, show ¬ (16 ≤ i) by omega, show ¬ (24 ≤ i) by omega,
-        hi, h, h2i, decide_true, decide_false, Bool.false_and, Bool.and_false, Bool.or_false,
+        hi, h,  decide_true, decide_false, Bool.false_and, Bool.and_false, Bool.or_false,
         Bool.false_or, Bool.true_and, show (40:Nat) ≤ 32+i by omega, show (8:Nat) ≤ i by omega]
     rcases Nat.lt_or_ge i 24 with h3i | h3i
     · rw [hbit b0 (32+i) h0 (by omega), hbit b1 (32+i-8) h1 (by omega),
@@ -167,13 +167,13 @@ private theorem reassemble_high_nat (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
         hbit b4 (32+i-32) h4 (by omega), hbit b5 (32+i-40) h5 (by omega),
         hbit b6 (32+i-48) h6 (by omega), hbit b4 i h4 (by omega),
         hbit b5 (i-8) h5 (by omega), hbit b6 (i-16) h6 (by omega)]
-      simp only [show (32 + i < 64) by omega, show 32+i-56 = i-24 by omega, hi, decide_true, decide_false, Bool.false_and,
+      simp only [show (32 + i < 64) by omega, show 32+i-56 = i-24 by omega, hi, decide_true,
         Bool.and_false, Bool.or_false, Bool.false_or, Bool.true_and,
         show (56:Nat) ≤ 32+i by omega, show (8:Nat) ≤ i by omega, show (16:Nat) ≤ i by omega,
         show (24:Nat) ≤ i by omega]
   · rw [hbit b4 i h4 (by omega), hbit b5 (i-8) h5 (by omega),
       hbit b6 (i-16) h6 (by omega), hbit b7 (i-24) h7 (by omega)]
-    simp only [hi, decide_false, Bool.false_and, Bool.and_false, Bool.or_false, Bool.false_or]
+    simp only [hi, decide_false, Bool.false_and, Bool.and_false, Bool.or_false]
 
 theorem Mem.read64_high (m : Mem) (address : UInt32)
     (hnext : (address + 4).toNat = address.toNat + 4) :
@@ -666,7 +666,7 @@ theorem ReadToEndInv.finished_success
     rw [Mem.read32_write64_high _ _ _ (by decide),
       Mem.read64_high _ _ (by decide)]
     simpa only [show readToEndStack + 4 + 4 = readToEndStack + 8 by
-      bv_decide] using h.data_eq
+      bv_normalize (config := { enums := false })] using h.data_eq
   · simp only [finalStore, readToEndFinishedStore]
     rw [Mem.read32_write64_disjoint]
     · rw [Mem.read32_write32_same]
@@ -727,17 +727,17 @@ theorem read_to_end_return_success
         store.wasm.mem.pages * 65536
         have hp : 17 ≤ store.wasm.mem.pages := by
           simpa [readToEndLengthStore] using hinv.pages_lower
-        change 1048576 ≤ store.wasm.mem.pages * 65536
+        change 1048564 ≤ store.wasm.mem.pages * 65536
         omega)
     (by change decodeInputVector.toNat + 8 ≤
         store.wasm.mem.pages * 65536
         have hp : 17 ≤ store.wasm.mem.pages := by
           simpa [readToEndLengthStore] using hinv.pages_lower
-        change 1048572 ≤ store.wasm.mem.pages * 65536
+        change 1048560 ≤ store.wasm.mem.pages * 65536
         omega)
     (by decide)
     (by simpa [updated, hinv.global_eq])
-    (by bv_decide)
+    (by bv_normalize (config := { enums := false }))
   apply ReachesOrOOM.of_reaches (by
     simpa [updated, vectorWord, finalStore, decodeAfterReadConfig] using hreach)
   change ReadToEndSuccess input (decodeAfterReadConfig finalStore)

@@ -1,6 +1,8 @@
 import Project.HexStdio.Program
 import HexEncodeStdio.Helpers
 import HexEncodeStdio.Outcome
+import HexEncodeStdio.Blueprint
+import HexEncodeStdio.AllocCheck
 #check Project.HexEncodeStdio.Helpers.pointsToBytes_focus
 
 example : ¬ 21 < Project.HexStdio.«module».imports.length := by decide
@@ -30,9 +32,7 @@ example (a b : UInt8) : ∃ config fuel,
       some config ∧
     Project.HexEncodeStdio.Outcome.EncodesOrOOM [a,b]
       (Wasm.SmallStep.runSteps fuel config).result := by
-  refine ⟨_, 1100, rfl, ?_⟩
-  apply Project.HexEncodeStdio.Outcome.checkEncodesOrOOM_sound
-  rfl
+  exact Project.HexEncodeStdio.Blueprint.func10_export_run [a,b]
 
 #check UInt32.toNat_lt_size
 #check UInt32.size
@@ -61,11 +61,4 @@ def allocTerminal : SmallStep.RunnerResult Universal.State → Prop
       msg = OOM.trapMessage ∧ final.wasm.host.oom.raised = true
   | _ => False
 
-set_option maxHeartbeats 10000000 in
-set_option maxRecDepth 100000 in
-example (st : Store Universal.State) (size : UInt32) : ∃ config,
-    SmallStep.initConfig universalInstance 15 st [.i32 1, .i32 size] =
-      .ok config ∧
-    allocTerminal (SmallStep.runSteps 100 config).result := by
-  refine ⟨_, rfl, ?_⟩
-  simp [allocTerminal, SmallStep.runSteps]
+#check Project.HexEncodeStdio.AllocCheck.allocator_terminates_or_oom

@@ -92,12 +92,12 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») ∗
       hostStateOwn host ∗
       globalPointsToAt 0 0 (.i32 sp) ∗
-      pointsTo_u32 0 (sp + 8) outputCapacity ∗
-      pointsTo_u32 0 (sp + 12) outputPtr ∗
-      pointsTo_u32 0 (sp + 16) (UInt32.ofNat encoded.length) ∗
-      pointsTo_u32 0 (sp + 20) inputCapacity ∗
-      pointsTo_u32 0 (sp + 24) inputPtr ∗
-      pointsTo_u32 0 (sp + 28) (UInt32.ofNat input.length) ∗
+      pointsTo_u32 0 (sp + 20) outputCapacity ∗
+      pointsTo_u32 0 (sp + 24) outputPtr ∗
+      pointsTo_u32 0 (sp + 28) (UInt32.ofNat encoded.length) ∗
+      pointsTo_u32 0 (sp + 8) inputCapacity ∗
+      pointsTo_u32 0 (sp + 12) inputPtr ∗
+      pointsTo_u32 0 (sp + 16) (UInt32.ofNat input.length) ∗
       pointsToBytes 0 inputPtr input ∗
       pointsToBytes 0 outputPtr encoded ∗
       (⟨0, sp - 16⟩ ↦w oldWriteTag) ∗
@@ -118,30 +118,30 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   simp only [Project.HexStdio.func10, List.drop_succ_cons, List.drop_zero]
   iapply twp_localGet rfl
   iapply twp_load32 outputPtr
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 12 (by omega)).2.2.2 $$ HoutPtr
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).2.2.2 $$ HoutPtr
   iintro HoutPtr
   iapply twp_localTee rfl
   iapply twp_localGet rfl
   iapply twp_load32 (UInt32.ofNat encoded.length)
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 16 (by omega)).2.2.2 $$ HoutLen
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).2.2.2 $$ HoutLen
   iintro HoutLen
   simp [mainLocals, List.set]
   ihave HglobalWrite : globalPointsToAt 0 0 (.i32 ((sp - 16) + 16)) $$ [Hglobal]
-  · rw [show sp - 16 + 16 = sp by bv_decide]
+  · rw [show sp - 16 + 16 = sp by bv_normalize (config := { enums := false })]
     iexact Hglobal
   let R : IProp (WasmHeapGF Universal.State) := iprop(
-      pointsTo_u32 0 (sp + 8) outputCapacity ∗
-      pointsTo_u32 0 (sp + 12) outputPtr ∗
-      pointsTo_u32 0 (sp + 16) (UInt32.ofNat encoded.length) ∗
-      pointsTo_u32 0 (sp + 20) inputCapacity ∗
-      pointsTo_u32 0 (sp + 24) inputPtr ∗
-      pointsTo_u32 0 (sp + 28) (UInt32.ofNat input.length) ∗
+      pointsTo_u32 0 (sp + 20) outputCapacity ∗
+      pointsTo_u32 0 (sp + 24) outputPtr ∗
+      pointsTo_u32 0 (sp + 28) (UInt32.ofNat encoded.length) ∗
+      pointsTo_u32 0 (sp + 8) inputCapacity ∗
+      pointsTo_u32 0 (sp + 12) inputPtr ∗
+      pointsTo_u32 0 (sp + 16) (UInt32.ofNat input.length) ∗
       pointsToBytes 0 inputPtr input ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
@@ -169,10 +169,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_load32 outputCapacity
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.2 $$
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.2 $$
       HoutputCapacityMem
   iintro HoutCapLoaded
   iapply twp_localTee rfl
@@ -186,7 +186,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
     { kind := .block
       paramArity := 0
       resultArity := 0
-      body := [.localGet 0, .load32 8, .localTee 3, .eqz, .br_if 0,
+      body := [.localGet 0, .load32 20, .localTee 3, .eqz, .br_if 0,
         .localGet 2, .localGet 3, .const 1, .call 17]
       continuation := Project.HexStdio.func10.drop 25
       belowStack := [] }
@@ -197,7 +197,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       ({ kind := .block
          paramArity := 0
          resultArity := 0
-         body := [.localGet 0, .load32 8, .localTee 3, .eqz, .br_if 0,
+         body := [.localGet 0, .load32 20, .localTee 3, .eqz, .br_if 0,
            .localGet 2, .localGet 3, .const 1, .call 17]
          continuation := Project.HexStdio.func10.drop 25
          belowStack := [] } :: []) []
@@ -209,10 +209,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_load32 inputCapacity
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.2 $$
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.1
+      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.2 $$
       HinputCap
   iintro HinputCapLoaded
   iapply twp_localTee rfl
@@ -229,7 +229,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       ({ kind := .block
          paramArity := 0
          resultArity := 0
-         body := [.localGet 0, .load32 20, .localTee 2, .eqz, .br_if 0,
+         body := [.localGet 0, .load32 8, .localTee 2, .eqz, .br_if 0,
            .localGet 1, .localGet 2, .const 1, .call 17]
          continuation := Project.HexStdio.func10.drop 26
          belowStack := [] } :: []) []
@@ -246,7 +246,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   ihave Hglobal' : globalPointsToAt 0 0 (.i32 (sp + 32)) $$ [Hglobal]
   · rw [UInt32.add_comm]
     iexact Hglobal
-  simp [mainLocals]
+  simp []
   iapply Hnext $$ HruntimeAfterInputDealloc Henv Hhost Hglobal'
 
 end Project.HexEncodeStdio.TotalMain

@@ -54,7 +54,7 @@ private theorem forallUInt32Aux_iff (p : UInt32 → Bool) (n : Nat) :
       have hval := hall (UInt32.ofNat n) hlt
       simp [hf] at hval
 
-/-- `native_decide` can decide `∀ x : UInt32, P x` via a 4B-iteration countdown. -/
+/-- Finite decidability for UInt32 predicates. Proofs below use symbolic reasoning. -/
 private instance decidableForallUInt32 {P : UInt32 → Prop} [DecidablePred P] :
     Decidable (∀ x : UInt32, P x) :=
   let p := fun x => decide (P x)
@@ -68,44 +68,9 @@ private instance decidableForallUInt32 {P : UInt32 → Prop} [DecidablePred P] :
 
 /-! ## Float math helpers -/
 
-/-- Expose `private satI32S` body; provable by `rfl` since the kernel reduces it. -/
-private theorem i32TruncSatF32S_expand (x : UInt32) :
-    i32TruncSatF32S x =
-    let f := (Float32.ofBits x).toFloat
-    if f.isNaN then 0
-    else let t := if f < 0.0 then f.ceil else f.floor
-         if t ≤ (-2147483648.0 : Float) then 0x80000000
-         else if t ≥ (2147483647.0 : Float) then 0x7FFFFFFF
-         else t.toInt64.toUInt64.toUInt32 := rfl
-
-/-- IEEE 754: `f32Ne x x = true` iff `x` encodes a NaN.
-`f32Ne x x = !(f == f)` and `Float.isNaN f = !(f == f)` (both opaque externs);
-checked for all 2^32 bit patterns by native evaluation. -/
-private theorem f32Ne_self_iff_isNaN (x : UInt32) :
-    f32Ne x x = (Float32.ofBits x).toFloat.isNaN :=
-  IEEE32Exec.f32Ne_self_iff_isNaN x
-
 private theorem i32TruncSatF32S_nan {x : UInt32}
-    (h : (Float32.ofBits x).toFloat.isNaN) : i32TruncSatF32S x = 0 := by
-  simp [i32TruncSatF32S_expand, h]
-
-/-- `2^31` as a `Float32` bit pattern is `0x4F000000 = 1325400064`. When
-`f ≥ 2^31`, `floor f ≥ 2^31 > 2147483647`, so `satI32S` saturates to `MAX`.
-Checked for all 2^32 bit patterns by native evaluation. -/
-private theorem i32TruncSatF32S_large_pos {x : UInt32}
-    (hnan : f32Ne x x = false)
-    (hge : f32Ge x 1325400064 = true) :
-    i32TruncSatF32S x = 0x7FFFFFFF :=
-  IEEE32Exec.i32TruncSatF32S_large_pos hnan hge
-
-/-- `-2^31` as a `Float32` bit pattern is `0xCF000000 = 3472883712`. When
-`f < -2^31`, `ceil f ≤ -2^31 ≤ -2147483648`, so `satI32S` saturates to `MIN`.
-Checked for all 2^32 bit patterns by native evaluation. -/
-private theorem i32TruncSatF32S_large_neg {x : UInt32}
-    (hnan : f32Ne x x = false)
-    (hlt : f32Lt x 3472883712 = true) :
-    i32TruncSatF32S x = 0x80000000 :=
-  IEEE32Exec.i32TruncSatF32S_large_neg hnan hlt
+    (h : f32IsNaN x) : i32TruncSatF32S x = 0 :=
+  IEEE32Exec.i32TruncSatF32S_nan h
 
 /-! ## Per-function termination -/
 
@@ -132,26 +97,18 @@ theorem func1_body_smallStep_wp
         func1, 1, [], [], calls⟩ : Expr Unit) @ s; E {{ Φ }} := by
   simp only [func1]
   iintro Hret
-  iapply wp_localGet rfl
-  inext
-  iapply wp_scalarFloat1 rfl rfl
-  iexact Hret
+  wasm_wp_pures [wp_localGet]
+  iapply_exact wp_scalarFloat1 rfl rfl with Hret
 
 /-- iris-lean partial-correctness proof for the generated
 `i32.trunc_sat_f32_s` leaf. -/
 theorem func1_smallStep (x : UInt32) :
     PartiallyMeets (func1Config x)
       (fun rs _store => rs = [.i32 (i32TruncSatF32S x)]) := by
-  apply wasm_smallStep_partiallyMeets (α := Unit)
-  intro gs
+  wasm_wp_partially_meets gs
   simp only [func1Config]
-  iapply func1_body_smallStep_wp x []
-  inext
-  iapply wp_returnFromFunction
-  inext
-  iapply wp_value'
-  ipureintro
-  rfl
+  wasm_wp_next func1_body_smallStep_wp x []
+  wasm_wp_return_value_rfl
 
 /-- Small-step entry state for generated `naive_trunc`. -/
 def func0Config (x : UInt32) : Config Unit :=
@@ -172,50 +129,21 @@ def func0Globals : WasmGlobalMap Value :=
 theorem func0Heap_agrees :
     heapAgreesWithMem func0Heap (storeResolve (func0Config 0).store) := by
   unfold func0Heap
-  have h := store32_sound0 (∅ : WasmHeapMap (Option UInt8))
-      («module».initialStore : Store Unit).mem 1048572 0
-      (by decide) (by decide) (by decide)
-      (heapAgreesWithMem_empty _)
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (func0Config 0).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func0Config]
-    · simp [h0, storeResolve, func0Config,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word32_sound rfl
+  · exact heapAgreesWithMem_empty _
+  · decide
 
 theorem func0Heap_inBounds :
     heapAddressesInBounds func0Heap (storeResolve (func0Config 0).store) := by
   unfold func0Heap
-  have h := store32_inBounds0 (∅ : WasmHeapMap (Option UInt8))
-      («module».initialStore : Store Unit).mem 1048572 0
-      (by decide) (by decide) (by decide) (by decide)
-      (heapAddressesInBounds_empty _)
-  rw [Mem.write32_eq_self (by decide) (by decide) (by decide) (by decide)] at h
-  have hresolveEq : (fun id : Nat => if id = 0 then some («module».initialStore : Store Unit).mem else none) =
-      storeResolve (func0Config 0).store := by
-    funext id; by_cases h0 : id = 0
-    · simp [h0, storeResolve, func0Config]
-    · simp [h0, storeResolve, func0Config,
-        show («module».initialStore : Store Unit).extraMems = [] from by native_decide]
-  rw [← hresolveEq]
-  exact h
+  apply_insert_physical_word32_inBounds rfl
+  · exact heapAddressesInBounds_empty _
+  · decide
+  · decide
 
 theorem func0Globals_agree :
-    globalHeapAgrees func0Globals (func0Config 0).store.wasm.globals := by
-  intro index value hget
-  simp only [func0Globals] at hget
-  by_cases hindex : index = 0
-  · subst index
-    simp only [get?_insert_eq rfl] at hget
-    obtain rfl := Option.some.inj hget
-    rfl
-  · rw [get?_insert_ne (show (⟨0, 0⟩ : GlobalKey) ≠ ⟨0, index⟩ from
-          fun h => hindex (congrArg GlobalKey.index h).symm),
-        get?_empty] at hget
-    contradiction
+    globalHeapAgrees func0Globals (func0Config 0).store.wasm.globals :=
+  globalHeapAgrees_singleton rfl
 
 theorem func0Heap_pointsTo [WasmHeapGS Unit] :
     ([∗map] address ↦ value ∈ func0Heap,
@@ -236,8 +164,7 @@ theorem func0Globals_pointsTo [WasmGlobalGS Unit] :
   unfold func0Globals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
-  simp only [globalPointsToAt_eq]
-  rfl
+  simp only [globalPointsToAt_eq]; rfl
 
 /-- Call-stack-polymorphic form of the common scratch load tail.  `R` frames
 all unrelated ownership, and the continuation decides whether the generated
@@ -256,23 +183,16 @@ theorem func0_tail_to_ret_smallStep_wp
           [.localGet 1, .load32 12, .ret], 1, [], [], calls⟩ :
           Expr Unit) @ s; E {{ Φ }} := by
   iintro ⟨HR, Hword, Hret⟩
-  iapply wp_localGet rfl
-  inext
+  wasm_wp_pures [wp_localGet]
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) word $$ [Hword]
-  · inext
-    rw [heffective]
-    iexact Hword
-  iapply wp_load32 word (by decide) (by decide) (by decide) (by decide) $$
+  · ilater_rw_exact [heffective] with Hword
+  wasm_wp_next wp_load32 word (by decide) (by decide) (by decide) (by decide) $$
     HwordLater
-  inext
   iintro Hword
-  iapply Hret
-  isplitl [HR]
-  · iexact HR
-  · rw [heffective]
-    iexact Hword
+  iapply_splitl_exact Hret with HR
+  · irw_exact [heffective] with Hword
 
 /-- Common load-and-return tail after one of `naive_trunc`'s four branches
 has written the authoritative scratch word. -/
@@ -289,16 +209,12 @@ theorem func0_tail_smallStep_wp
   iapply func0_tail_to_ret_smallStep_wp (iprop(True)) x word []
   isplitr
   · itrivial
-  isplitl [Hword]
-  · iexact Hword
+  isplitl_exact Hword
   · inext
     iintro ⟨_Htrue, Hword⟩
-    iapply wp_returnFromFunction
-    inext
-    iapply wp_value'
+    wasm_wp_return_value
     iclear Hword
-    ipureintro
-    rfl
+    ipureexact rfl
 
 /-- Specialized authoritative store rule for `func0`'s concrete
 `1048560 + 12 = 1048572` scratch address. -/
@@ -324,16 +240,12 @@ theorem func0_store32_smallStep_wp
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave HwordLater :
       ▷ pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
-  · inext
-    rw [heffective]
-    iexact Hword
-  iapply wp_store32 oldWord (by decide) (by decide) (by decide) (by decide) $$
+  · ilater_rw_exact [heffective] with Hword
+  wasm_wp_next wp_store32 oldWord (by decide) (by decide) (by decide) (by decide) $$
     HwordLater
-  inext
   iintro Hword
   iapply Hnext
-  rw [heffective]
-  iexact Hword
+  irw_exact [heffective] with Hword
 
 /-- Call-stack-polymorphic body rule for generated `naive_trunc`.  The four
 control-flow paths write the same value as Rust's saturating cast and join
@@ -356,212 +268,105 @@ theorem func0_body_to_ret_smallStep_wp
     let Rglobal : IProp (WasmHeapGF Unit) :=
       iprop(R ∗ globalPointsToAt 0 0 (.i32 1048576))
     simp only [func0]
-    iapply wp_globalGet $$ Hglobal
-    inext
-    iintro Hglobal
-    iapply wp_const
-    inext
-    iapply wp_sub
-    inext
-    iapply wp_localSet rfl
-    inext
+    wasm_wp_next_rebind wp_globalGet with Hglobal
+    wasm_wp_pures [wp_const wp_sub wp_localSet]
     simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
       List.set, UInt32.reduceSub]
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_block
-    inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_localGet rfl
-    inext
+    wasm_wp_pures [wp_block wp_block wp_block wp_block wp_block wp_block wp_localGet
+      wp_localGet]
     cases hnan : f32Ne x x
-    · iapply wp_scalarFloat2 rfl rfl rfl
-      inext
+    · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
       simp only [hnan, Bool.false_eq_true, if_false]
-      iapply wp_const
-      inext
-      iapply wp_and
-      inext
-      rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply wp_brIfZero
-      inext
-      iapply wp_localGet rfl
-      inext
-      iapply wp_scalarFloat0 rfl
-      inext
+      wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+      wasm_wp_pures [wp_brIfZero wp_localGet wp_scalarFloat0]
       cases hge : f32Ge x 1325400064
-      · iapply wp_scalarFloat2 rfl rfl rfl
-        inext
+      · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
         simp only [hge, Bool.false_eq_true, if_false]
-        iapply wp_const
-        inext
-        iapply wp_and
-        inext
-        rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
-        iapply wp_br rfl
-        inext
-        simp only [List.take, List.drop, List.nil_append]
-        iapply wp_localGet rfl
-        inext
-        iapply wp_scalarFloat0 rfl
-        inext
+        wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+        wasm_wp_pures [wp_brIfZero wp_br] using [List.take, List.drop, List.nil_append]
+        wasm_wp_pures [wp_localGet wp_scalarFloat0]
         cases hlt : f32Lt x 3472883712
-        · iapply wp_scalarFloat2 rfl rfl rfl
-          inext
+        · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
           simp only [hlt, Bool.false_eq_true, if_false]
-          iapply wp_const
-          inext
-          iapply wp_and
-          inext
-          rw [show (0 &&& 1 : UInt32) = 0 by decide]
-          iapply wp_brIfZero
-          inext
-          iapply wp_br rfl
-          inext
-          simp only [List.take, List.nil_append]
-          iapply wp_localGet rfl
-          inext
-          iapply wp_localGet rfl
-          inext
-          iapply wp_scalarFloat1 rfl rfl
-          inext
-          iapply func0_store32_smallStep_wp 0 (i32TruncSatF32S x)
-          isplitl [Hword]
-          · iexact Hword
+          wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+          wasm_wp_pures [wp_brIfZero wp_br] using [List.take, List.nil_append]
+          wasm_wp_pures [wp_localGet wp_localGet]
+          wasm_wp_next wp_scalarFloat1 rfl rfl
+          iapply_splitl_exact func0_store32_smallStep_wp 0 (i32TruncSatF32S x) with Hword
           · inext
             iintro Hword
-            iapply wp_br rfl
-            inext
-            simp only [List.take, List.nil_append]
+            wasm_wp_pures [wp_br] using [List.take, List.nil_append]
             iapply func0_tail_to_ret_smallStep_wp
               Rglobal x (i32TruncSatF32S x) calls
             isplitl [HR Hglobal]
             · simp only [Rglobal]
               iframe
-            isplitl [Hword]
-            · iexact Hword
+            isplitl_exact Hword
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-              iapply hreturn (i32TruncSatF32S x) rfl
-              iframe
-        · iapply wp_scalarFloat2 rfl rfl rfl
-          inext
+              iapply_frame hreturn (i32TruncSatF32S x) rfl
+        · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
           simp only [hlt, if_true]
-          iapply wp_const
-          inext
-          iapply wp_and
-          inext
-          rw [show (1 &&& 1 : UInt32) = 1 by decide]
-          iapply wp_brIf (by decide) rfl
-          inext
+          wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+          wasm_wp_next wp_brIf (by decide) rfl
           simp only [List.take, List.nil_append]
-          iapply wp_localGet rfl
-          inext
-          iapply wp_const
-          inext
-          iapply func0_store32_smallStep_wp 0 2147483648
-          isplitl [Hword]
-          · iexact Hword
+          wasm_wp_pures [wp_localGet wp_const]
+          iapply_splitl_exact func0_store32_smallStep_wp 0 2147483648 with Hword
           · inext
             iintro Hword
-            iapply wp_exitControl rfl
-            inext
-            simp only [List.take, List.nil_append]
-            have heq := i32TruncSatF32S_large_neg hnan hlt
+            wasm_wp_pures [wp_exitControl] using [List.take, List.nil_append]
+            have heq := IEEE32Exec.i32TruncSatF32S_large_neg hnan hlt
             iapply func0_tail_to_ret_smallStep_wp
               Rglobal x 2147483648 calls
             isplitl [HR Hglobal]
             · simp only [Rglobal]
               iframe
-            isplitl [Hword]
-            · iexact Hword
+            isplitl_exact Hword
             · inext
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-              iapply hreturn 2147483648 heq.symm
-              iframe
-      · iapply wp_scalarFloat2 rfl rfl rfl
-        inext
+              iapply_frame hreturn 2147483648 heq.symm
+      · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
         simp only [hge, if_true]
-        iapply wp_const
-        inext
-        iapply wp_and
-        inext
-        rw [show (1 &&& 1 : UInt32) = 1 by decide]
-        iapply wp_brIf (by decide) rfl
-        inext
+        wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+        wasm_wp_next wp_brIf (by decide) rfl
         simp only [List.take, List.drop, List.nil_append]
-        iapply wp_localGet rfl
-        inext
-        iapply wp_const
-        inext
-        iapply func0_store32_smallStep_wp 0 2147483647
-        isplitl [Hword]
-        · iexact Hword
+        wasm_wp_pures [wp_localGet wp_const]
+        iapply_splitl_exact func0_store32_smallStep_wp 0 2147483647 with Hword
         · inext
           iintro Hword
-          iapply wp_br rfl
-          inext
-          simp only [List.take, List.nil_append]
-          have heq := i32TruncSatF32S_large_pos hnan hge
+          wasm_wp_pures [wp_br] using [List.take, List.nil_append]
+          have heq := IEEE32Exec.i32TruncSatF32S_large_pos hnan hge
           iapply func0_tail_to_ret_smallStep_wp
             Rglobal x 2147483647 calls
           isplitl [HR Hglobal]
           · simp only [Rglobal]
             iframe
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · inext
             iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-            iapply hreturn 2147483647 heq.symm
-            iframe
-    · iapply wp_scalarFloat2 rfl rfl rfl
-      inext
+            iapply_frame hreturn 2147483647 heq.symm
+    · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
       simp only [hnan, if_true]
-      iapply wp_const
-      inext
-      iapply wp_and
-      inext
-      rw [show (1 &&& 1 : UInt32) = 1 by decide]
-      iapply wp_brIf (by decide) rfl
-      inext
+      wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
+      wasm_wp_next wp_brIf (by decide) rfl
       simp only [List.take, List.drop, List.nil_append]
-      iapply wp_localGet rfl
-      inext
-      iapply wp_const
-      inext
-      iapply func0_store32_smallStep_wp 0 0
-      isplitl [Hword]
-      · iexact Hword
+      wasm_wp_pures [wp_localGet wp_const]
+      iapply_splitl_exact func0_store32_smallStep_wp 0 0 with Hword
       · inext
         iintro Hword
-        iapply wp_br rfl
-        inext
-        simp only [List.take, List.nil_append]
-        have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
-          (f32Ne_self_iff_isNaN x).symm.trans hnan
+        wasm_wp_pures [wp_br] using [List.take, List.nil_append]
+        have hisNaN : f32IsNaN x = true :=
+          (IEEE32Exec.f32Ne_self_iff_isNaN x).symm.trans hnan
         have heq := i32TruncSatF32S_nan hisNaN
         iapply func0_tail_to_ret_smallStep_wp
           Rglobal x 0 calls
         isplitl [HR Hglobal]
         · simp only [Rglobal]
           iframe
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · inext
           iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-          iapply hreturn 0 heq.symm
-          iframe
+          iapply_frame hreturn 0 heq.symm
 
 /-- Complete authoritative small-step proof for generated `naive_trunc`. -/
 theorem func0_smallStep (x : UInt32) :
@@ -587,18 +392,14 @@ theorem func0_smallStep (x : UInt32) :
             {{ rs, ⌜rs = [.i32 (i32TruncSatF32S x)]⌝ }} := by
       intro word heq
       iintro ⟨_Htrue, Hglobal, Hword⟩
-      iapply wp_returnFromFunction
-      inext
-      iapply wp_value'
+      wasm_wp_return_value
       iclear Hglobal Hword
-      ipureintro
-      simp [heq]
+      ipureexact (by simp [heq])
     iintro ⟨Hbytes, Hglobals⟩
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
     simp only [func0Config]
-    iapply func0_body_to_ret_smallStep_wp (iprop(True)) x [] hreturn
-    iframe
+    iapply_frame func0_body_to_ret_smallStep_wp (iprop(True)) x [] hreturn
 
 /-! ## Total WP helpers (no `▷` on continuations) -/
 
@@ -614,9 +415,8 @@ theorem twp_func1_body
         func1, 1, [], [], calls⟩ : Expr Unit) @ s; E [{ Φ }] := by
   simp only [func1]
   iintro Hret
-  iapply twp_localGet rfl
-  iapply twp_scalarFloat1 rfl rfl
-  iexact Hret
+  wasm_twp_pures [twp_localGet]
+  iapply_exact twp_scalarFloat1 rfl rfl with Hret
 
 theorem twp_func0_tail_to_ret
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -632,19 +432,14 @@ theorem twp_func0_tail_to_ret
           [.localGet 1, .load32 12, .ret], 1, [], [], calls⟩ :
           Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hword, Hcont⟩
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_localGet]
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave Hword' :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) word $$ [Hword]
-  · rw [heffective]
-    iexact Hword
-  iapply twp_load32 word (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
-  iapply Hcont
-  isplitl [HR]
-  · iexact HR
-  · rw [heffective]
-    iexact Hword
+  · irw_exact [heffective] with Hword
+  wasm_twp_bind twp_load32 word (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
+  iapply_splitl_exact Hcont with HR
+  · irw_exact [heffective] with Hword
 
 theorem twp_func0_store32
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -668,13 +463,11 @@ theorem twp_func0_store32
   have heffective : (1048560 : UInt32) + 12 = 1048572 := by decide
   ihave Hword' :
       pointsTo_u32 0 ((1048560 : UInt32) + 12) oldWord $$ [Hword]
-  · rw [heffective]
-    iexact Hword
-  iapply twp_store32 oldWord (by decide) (by decide) (by decide) (by decide) $$ Hword'
-  iintro Hword
+  · irw_exact [heffective] with Hword
+  wasm_twp_bind twp_store32 oldWord (by decide) (by decide) (by decide) (by decide)
+    with Hword' => Hword
   iapply Hcont
-  rw [heffective]
-  iexact Hword
+  irw_exact [heffective] with Hword
 
 theorem twp_func0_body_to_ret
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
@@ -694,145 +487,93 @@ theorem twp_func0_body_to_ret
   let Rglobal : IProp (WasmHeapGF Unit) :=
     iprop(R ∗ globalPointsToAt 0 0 (.i32 1048576))
   simp only [func0]
-  iapply twp_globalGet $$ Hglobal
-  iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localSet rfl
+  wasm_twp_rebind twp_globalGet with Hglobal
+  wasm_twp_pures [twp_const twp_sub twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set, UInt32.reduceSub]
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_localGet rfl
+  wasm_twp_pures [twp_block twp_block twp_block twp_block twp_block twp_block twp_localGet
+    twp_localGet]
   cases hnan : f32Ne x x
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, Bool.false_eq_true, if_false]
-    iapply twp_const
-    iapply twp_and
-    rw [show (0 &&& 1 : UInt32) = 0 by decide]
-    iapply twp_brIfZero
-    iapply twp_localGet rfl
-    iapply twp_scalarFloat0 rfl
+    wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+    wasm_twp_pures [twp_brIfZero twp_localGet twp_scalarFloat0]
     cases hge : f32Ge x 1325400064
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, Bool.false_eq_true, if_false]
-      iapply twp_const
-      iapply twp_and
-      rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply twp_brIfZero
-      iapply twp_br rfl
-      simp only [List.take, List.drop, List.nil_append]
-      iapply twp_localGet rfl
-      iapply twp_scalarFloat0 rfl
+      wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+      wasm_twp_pures [twp_brIfZero twp_br] using [List.take, List.drop, List.nil_append]
+      wasm_twp_pures [twp_localGet twp_scalarFloat0]
       cases hlt : f32Lt x 3472883712
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, Bool.false_eq_true, if_false]
-        iapply twp_const
-        iapply twp_and
-        rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply twp_brIfZero
-        iapply twp_br rfl
-        simp only [List.take, List.nil_append]
-        iapply twp_localGet rfl
-        iapply twp_localGet rfl
+        wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+        wasm_twp_pures [twp_brIfZero twp_br] using [List.take, List.nil_append]
+        wasm_twp_pures [twp_localGet twp_localGet]
         iapply twp_scalarFloat1 rfl rfl
-        iapply twp_func0_store32 0 (i32TruncSatF32S x)
-        isplitl [Hword]
-        · iexact Hword
+        iapply_splitl_exact twp_func0_store32 0 (i32TruncSatF32S x) with Hword
         · iintro Hword
-          iapply twp_br rfl
-          simp only [List.take, List.nil_append]
+          wasm_twp_pures [twp_br] using [List.take, List.nil_append]
           iapply twp_func0_tail_to_ret Rglobal x (i32TruncSatF32S x) calls
           isplitl [HR Hglobal]
           · simp only [Rglobal]
             iframe
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-            iapply hreturn (i32TruncSatF32S x) rfl
-            iframe
+            iapply_frame hreturn (i32TruncSatF32S x) rfl
       · iapply twp_scalarFloat2 rfl rfl rfl
         simp only [hlt, if_true]
-        iapply twp_const
-        iapply twp_and
-        rw [show (1 &&& 1 : UInt32) = 1 by decide]
+        wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_brIf (by decide) rfl
         simp only [List.take, List.nil_append]
-        iapply twp_localGet rfl
-        iapply twp_const
-        iapply twp_func0_store32 0 2147483648
-        isplitl [Hword]
-        · iexact Hword
+        wasm_twp_pures [twp_localGet twp_const]
+        iapply_splitl_exact twp_func0_store32 0 2147483648 with Hword
         · iintro Hword
-          iapply twp_exitControl rfl
-          simp only [List.take, List.nil_append]
-          have heq := i32TruncSatF32S_large_neg hnan hlt
+          wasm_twp_pures [twp_exitControl] using [List.take, List.nil_append]
+          have heq := IEEE32Exec.i32TruncSatF32S_large_neg hnan hlt
           iapply twp_func0_tail_to_ret Rglobal x 2147483648 calls
           isplitl [HR Hglobal]
           · simp only [Rglobal]
             iframe
-          isplitl [Hword]
-          · iexact Hword
+          isplitl_exact Hword
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-            iapply hreturn 2147483648 heq.symm
-            iframe
+            iapply_frame hreturn 2147483648 heq.symm
     · iapply twp_scalarFloat2 rfl rfl rfl
       simp only [hge, if_true]
-      iapply twp_const
-      iapply twp_and
-      rw [show (1 &&& 1 : UInt32) = 1 by decide]
+      wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply twp_brIf (by decide) rfl
       simp only [List.take, List.drop, List.nil_append]
-      iapply twp_localGet rfl
-      iapply twp_const
-      iapply twp_func0_store32 0 2147483647
-      isplitl [Hword]
-      · iexact Hword
+      wasm_twp_pures [twp_localGet twp_const]
+      iapply_splitl_exact twp_func0_store32 0 2147483647 with Hword
       · iintro Hword
-        iapply twp_br rfl
-        simp only [List.take, List.nil_append]
-        have heq := i32TruncSatF32S_large_pos hnan hge
+        wasm_twp_pures [twp_br] using [List.take, List.nil_append]
+        have heq := IEEE32Exec.i32TruncSatF32S_large_pos hnan hge
         iapply twp_func0_tail_to_ret Rglobal x 2147483647 calls
         isplitl [HR Hglobal]
         · simp only [Rglobal]
           iframe
-        isplitl [Hword]
-        · iexact Hword
+        isplitl_exact Hword
         · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-          iapply hreturn 2147483647 heq.symm
-          iframe
+          iapply_frame hreturn 2147483647 heq.symm
   · iapply twp_scalarFloat2 rfl rfl rfl
     simp only [hnan, if_true]
-    iapply twp_const
-    iapply twp_and
-    rw [show (1 &&& 1 : UInt32) = 1 by decide]
+    wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_brIf (by decide) rfl
     simp only [List.take, List.drop, List.nil_append]
-    iapply twp_localGet rfl
-    iapply twp_const
-    iapply twp_func0_store32 0 0
-    isplitl [Hword]
-    · iexact Hword
+    wasm_twp_pures [twp_localGet twp_const]
+    iapply_splitl_exact twp_func0_store32 0 0 with Hword
     · iintro Hword
-      iapply twp_br rfl
-      simp only [List.take, List.nil_append]
-      have hisNaN : (Float32.ofBits x).toFloat.isNaN = true :=
-        (f32Ne_self_iff_isNaN x).symm.trans hnan
+      wasm_twp_pures [twp_br] using [List.take, List.nil_append]
+      have hisNaN : f32IsNaN x = true :=
+        (IEEE32Exec.f32Ne_self_iff_isNaN x).symm.trans hnan
       have heq := i32TruncSatF32S_nan hisNaN
       iapply twp_func0_tail_to_ret Rglobal x 0 calls
       isplitl [HR Hglobal]
       · simp only [Rglobal]
         iframe
-      isplitl [Hword]
-      · iexact Hword
+      isplitl_exact Hword
       · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
-        iapply hreturn 0 heq.symm
-        iframe
+        iapply_frame hreturn 0 heq.symm
 
 /-! ## Top-level spec -/
 
@@ -855,35 +596,26 @@ theorem twp_check
             ⌜rs = []⌝ }] := by
   iintro ⟨Hruntime, Hglobal, Hword⟩
   simp only [func2]
-  iapply twp_block
-  iapply twp_localGet rfl
-  iapply twp_call «module» 0 func0Def
-    (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-  iintro Hruntime
+  wasm_twp_pures [twp_block twp_localGet]
+  wasm_twp_rebind twp_call «module» 0 func0Def
+    (by simp [«module»]) (by simp [«module»]) with Hruntime
   simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
   iapply twp_func0_body_to_ret
     (runtimeModuleOwn ⟨0⟩ «module») x _
     (fun word heq => by
       iintro ⟨Hruntime, Hglobal, Hword⟩
-      iapply twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
-      iapply twp_localGet rfl
-      iapply twp_call «module» 1 func1Def
-        (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-      iintro Hruntime
+      wasm_twp_return_from_call Hruntime
+      wasm_twp_pures [twp_localGet]
+      wasm_twp_rebind twp_call «module» 1 func1Def
+        (by simp [«module»]) (by simp [«module»]) with Hruntime
       simp [func1Def, Function.toLocals, Function.numParams]
       iapply twp_func1_body x _
-      iapply twp_returnFromCallExplicit $$ Hruntime
-      iintro Hruntime
-      simp only [List.take, List.singleton_append]
+      wasm_twp_return_from_call Hruntime [List.take, List.singleton_append]
       rw [heq]
       iapply twp_ne (result := 0) (by simp)
-      iapply twp_const
-      iapply twp_and
-      rw [show (0 &&& 1 : UInt32) = 0 by decide]
-      iapply twp_brIfZero
-      iapply twp_returnFromFunction
-      iapply twp.value rfl
+      wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+      wasm_twp_pures [twp_brIfZero]
+      wasm_twp_terminal_value twp_returnFromFunction
       iintro %store %obs _Hstate
       iclear Hruntime Hglobal Hword
       ipureintro
@@ -906,8 +638,7 @@ theorem check_terminatesWith (x : UInt32) :
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
-    iapply twp_check x
-    iframe
+    iapply_frame twp_check x
 
 /-- Iris partial-correctness proof for the exported agreement check. -/
 theorem check_smallStep (x : UInt32) :
@@ -925,48 +656,26 @@ theorem check_smallStep (x : UInt32) :
     ihave Hword := func0Heap_pointsTo $$ Hbytes
     ihave Hglobal := func0Globals_pointsTo $$ Hglobals
     simp only [func2]
-    iapply wp_block
-    inext
-    iapply wp_localGet rfl
-    inext
-    iapply wp_call «module» 0 func0Def
-      (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-    inext
-    iintro Hruntime
+    wasm_wp_pures [wp_block wp_localGet]
+    wasm_wp_next_rebind wp_call «module» 0 func0Def
+      (by simp [«module»]) (by simp [«module»]) with Hruntime
     simp [func0Def, Function.toLocals, Function.numParams, ValueType.zero]
     iapply func0_body_to_ret_smallStep_wp
       (runtimeModuleOwn ⟨0⟩ «module») x _
       (fun word heq => by
         iintro ⟨Hruntime, Hglobal, Hword⟩
-        iapply wp_returnFromCallExplicit' $$ Hruntime
-        inext
-        iintro Hruntime
-        iapply wp_localGet rfl
-        inext
-        iapply wp_call «module» 1 func1Def
-          (by simp [«module»]) (by simp [«module»]) $$ Hruntime
-        inext
-        iintro Hruntime
+        wasm_wp_return_from_call Hruntime
+        wasm_wp_pures [wp_localGet]
+        wasm_wp_next_rebind wp_call «module» 1 func1Def
+          (by simp [«module»]) (by simp [«module»]) with Hruntime
         simp [func1Def, Function.toLocals, Function.numParams]
-        iapply func1_body_smallStep_wp x _
-        inext
-        iapply wp_returnFromCallExplicit' $$ Hruntime
-        inext
-        iintro Hruntime
-        simp only [List.take, List.singleton_append]
+        wasm_wp_next func1_body_smallStep_wp x _
+        wasm_wp_return_from_call Hruntime [List.take, List.singleton_append]
         rw [heq]
-        iapply wp_ne (result := 0) (by simp)
-        inext
-        iapply wp_const
-        inext
-        iapply wp_and
-        inext
-        rw [show (0 &&& 1 : UInt32) = 0 by decide]
-        iapply wp_brIfZero
-        inext
-        iapply wp_returnFromFunction
-        inext
-        iapply wp_value'
+        wasm_wp_next wp_ne (result := 0) (by simp)
+        wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
+        wasm_wp_pures [wp_brIfZero]
+        wasm_wp_return_value
         iclear Hruntime Hglobal Hword
         ipureintro
         rfl)

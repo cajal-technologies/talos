@@ -83,7 +83,7 @@ theorem twp_load8U {hlc : HasLC} {α : Type}
         ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
           code, arity, remainder, controls, calls⟩,
       store, [], ⟨rfl, .instruction (.load8U offset), rfl,
-        by simpa [Hfacts.1] using (Step.load8U (α := α) hbound)⟩⟩
+        by simpa [Hfacts.1] using (Step.load8U rfl (α := α) (address := .i32 address) hbound)⟩⟩
   iintro %κ %e₂ %store₂ %forks %Hstep
   rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
   change forks = [] at hforks
@@ -99,7 +99,7 @@ theorem twp_load8U {hlc : HasLC} {α : Type}
           code, arity, remainder, controls, calls⟩, store⟩ := by
     have hbound : address.toNat + offset.toNat + 1 ≤
         store.wasm.mem.pages * 65536 := by omega
-    simpa [Hfacts.1] using (Step.load8U (α := α) hbound)
+    simpa [Hfacts.1] using (Step.load8U rfl (α := α) (address := .i32 address) hbound)
   obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
   have parts := Config.mk.inj hconfig
   have hexpr := parts.1
@@ -191,8 +191,7 @@ theorem twp_returnFromCallFallthrough' {hlc : HasLC} {α : Type}
   simp only at hexpr hstore
   subst e₂
   subst store₂
-  simp only [List.length_nil, Nat.add_zero, Iris.Algebra.BigOpL.bigOpL_nil,
-    resumeCaller]
+  simp only [resumeCaller]
   imod Hclose
   imodintro
   isplit
@@ -279,7 +278,7 @@ theorem func18_low_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
     simpa [sentinel] using hsaved)
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
-  simp [iterLocals, List.set]
+  simp []
   iapply Hfinish
   unfold sentinel
   iexact Hstate0
@@ -388,7 +387,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply twp_and
   rw [Project.HexEncodeStdio.Hex.low_nibble_u32 byte]
   iapply twp_add
-  simp [iterLocals, List.set]
+  simp [List.set]
   ihave HlowActual :
       (⟨0, UInt32.ofNat (byte.toNat % 16) + 1048576⟩ ↦w
         hexDigit (byte.toNat % 16)) $$ [Hlow]
@@ -425,7 +424,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   rw [show (4 : UInt32) % 32 = 4 by decide]
   rw [Project.HexEncodeStdio.Hex.high_nibble_u32 byte]
   iapply twp_add
-  simp [iterLocals, List.set]
+  simp []
   ihave HhighActual :
       (⟨0, UInt32.ofNat (byte.toNat / 16) + 1048576⟩ ↦w
         hexDigit (byte.toNat / 16)) $$ [Hhigh]
@@ -443,7 +442,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply twp_localSet rfl
   iapply twp_exitControl rfl
   iapply twp_localGet rfl
-  simp [iterLocals, List.set]
+  simp []
   ihave HindexNext : pointsTo_u32 0 (ptr + 4) (index + 1) $$ [Hindex]
   · rw [UInt32.add_comm index 1]
     iexact Hindex
@@ -501,7 +500,7 @@ theorem func18_end_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply twp_eq (result := 1) (by simp)
   iapply twp_brIf (by decide) rfl
   iapply twp_localGet rfl
-  simp [iterLocals, List.set]
+  simp [List.set]
   iapply Hfinish $$ Hcurrent0 Hindex Hend
 
 /-- Caller-side contract for the saved-low-digit branch of WAT function 21. -/

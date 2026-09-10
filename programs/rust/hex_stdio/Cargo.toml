@@ -1,0 +1,11 @@
+[package]
+name = "hex_stdio"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+hex_dep = { package = "hex", version = "=0.4.3" }
+talos-stdio = { path = "../talos_stdio" }
