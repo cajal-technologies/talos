@@ -85,7 +85,7 @@ private def exportArgumentsMatch (m : Module) (call : ExportCall α)
     exportValueMatches m call.initial pair.1 pair.2
 
 /-- Evidence that a named export exists and declares no Wasm parameters.
-Concrete generated modules normally discharge this with `native_decide`. -/
+Concrete generated modules normally discharge this with `decide +kernel`. -/
 def ZeroArgumentExport (m : Module) (op : String) : Prop :=
   (match m.findExport op with
    | none => false

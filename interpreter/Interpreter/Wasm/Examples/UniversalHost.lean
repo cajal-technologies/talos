@@ -82,7 +82,7 @@ def writeOnly : Module :=
 theorem writeOnly_covered : covers writeOnly = true := by decide +kernel
 
 theorem writeOnly_emit_zeroArgument : ZeroArgumentExport writeOnly "emit" := by
-  native_decide
+  decide +kernel
 
 def writeOnlyOutput (fuel : Nat) : Option (List UInt8) :=
   match SmallStep.initConfig { module := writeOnly, host := envFor writeOnly }
@@ -254,33 +254,34 @@ private def returnedValues (parameter : ValueType) (value : Value) :
   let config ← startExportConfig? (envFor m) m "identity" (call parameter value)
   (SmallStep.runSteps 2 config).result.values?
 
--- Both nullable spellings accept null; nullable and non-null exn accept a
--- live exception reference and execute the identity body normally.
-example : returnedValues (.ref true .exn) (.exnref none) =
-    some [.exnref none] := by native_decide
+-- These are executable regression checks rather than theorems: evaluating a
+-- complete machine run efficiently requires native code, while admitting the
+-- native evaluator's proof axiom would weaken the audited theorem surface.
+#eval do
+  let accepted := [
+    ((.ref true .exn, .exnref none), some [.exnref none]),
+    ((.ref true .noExn, .exnref none), some [.exnref none]),
+    ((.ref true .exn, .exnref (some 0)), some [.exnref (some 0)]),
+    ((.ref false .exn, .exnref (some 0)), some [.exnref (some 0)])]
+  for ((parameter, value), expected) in accepted do
+    unless returnedValues parameter value == expected do
+      throw (IO.userError "valid exception-reference export call was rejected")
 
-example : returnedValues (.ref true .noExn) (.exnref none) =
-    some [.exnref none] := by native_decide
-
-example : returnedValues (.ref true .exn) (.exnref (some 0)) =
-    some [.exnref (some 0)] := by native_decide
-
-example : returnedValues (.ref false .exn) (.exnref (some 0)) =
-    some [.exnref (some 0)] := by native_decide
-
--- Invalid arguments must fail at initialization, before any machine steps.
-example :
-    [(.ref false .exn, .exnref none),
-     (.ref false .noExn, .exnref none),
-     (.ref true .noExn, .exnref (some 0)),
-     (.ref false .noExn, .exnref (some 0)),
-     (.ref true .func, .exnref none),
-     (.ref true .any, .exnref (some 0)),
-     (.ref true .exn, .funcref none),
-     (.ref true .exn, .i32 0)].all (fun (parameter, value) =>
-       let m := identity parameter
-       (startExportConfig? (envFor m) m "identity" (call parameter value)).isNone) =
-      true := by native_decide
+  -- Invalid arguments must fail at initialization, before any machine steps.
+  let rejected := [
+    (.ref false .exn, .exnref none),
+    (.ref false .noExn, .exnref none),
+    (.ref true .noExn, .exnref (some 0)),
+    (.ref false .noExn, .exnref (some 0)),
+    (.ref true .func, .exnref none),
+    (.ref true .any, .exnref (some 0)),
+    (.ref true .exn, .funcref none),
+    (.ref true .exn, .i32 0)]
+  for (parameter, value) in rejected do
+    let m := identity parameter
+    unless (startExportConfig? (envFor m) m "identity"
+        (call parameter value)).isNone do
+      throw (IO.userError "invalid exception-reference export call was accepted")
 
 end ExceptionExport
 

@@ -103,7 +103,7 @@ def KernelSpecification : Prop :=
 abbrev Runs := Universal.RunsExport «module»
 
 theorem gcd_zeroArgument : ZeroArgumentExport «module» "gcd" := by
-  native_decide
+  decide +kernel
 
 /-- For every semantic input there is an output produced by the compiled
 `gcd` export, and that output is exactly Lean's reference greatest common

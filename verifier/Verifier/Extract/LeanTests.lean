@@ -36,15 +36,15 @@ private def expectedStatements (indent : String) : Array String :=
     s!"LastSpec : Prop :=\n{indent}  True"]
 
 example : (findings "").specs.map (·.statement) = expectedStatements "" := by
-  native_decide
+  decide +kernel
 
 example : (findings "  ").specs.map (·.statement) = expectedStatements "  " := by
-  native_decide
+  decide +kernel
 
 example : (findings "  ").specs.map (·.location.span.«end».line) =
-    #[4, 13, 18] := by native_decide
+    #[4, 13, 18] := by decide +kernel
 
 example : (findings "  ").verifications.map (·.name) =
-    #["Demo.run_correct"] := by native_decide
+    #["Demo.run_correct"] := by decide +kernel
 
 end Verifier.Extract.LeanScan.Tests
