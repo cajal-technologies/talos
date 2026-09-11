@@ -47,3 +47,5 @@ import Project.RustHashMap.ReadAllDefs
 import Project.RustHashMap.ReadAllPush
 import Project.RustHashMap.ReadAllLoop
 import Project.RustHashMap.ReadAllPhase
+import Project.RustHashMap.DriverTailDefs
+import Project.RustHashMap.DeallocNoop
