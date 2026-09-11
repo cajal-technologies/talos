@@ -1,4 +1,5 @@
 import CodeLib.RustStd.HashMap.Codec
+import CodeLib.SepLogic.BorshSlice
 
 /-!
 # From decoder bytes to the entry list
@@ -262,5 +263,60 @@ theorem hashMap?_eq_some_of_accepts (bytes : List UInt8)
   rw [Borsh.hashMap?,
     deserializeEntries_eq_some_of_accepts bytes haccept hexact]
   rfl
+
+/-! ## From the decoder payload to the collect precondition
+
+`Project.RustHashMap.CollectContract.Func2Spec` states its precondition with
+`serialize`, because that is the form a body proof builds.  The decoder
+contract gives the payload as a byte range.  The two lemmas below join them.
+-/
+
+/-- The pair codec rebuilds its own chunk.  Eight bytes decode to a pair and
+that pair encodes back to the same eight bytes. -/
+theorem pairCodec_u32le_encode_decode (chunk : List UInt8)
+    (hlength : chunk.length = 8) :
+    (HashMap.pairCodec WordCodec.u32le WordCodec.u32le).encode
+        ((HashMap.pairCodec WordCodec.u32le WordCodec.u32le).decode chunk)
+      = chunk := by
+  have htake : (chunk.take 4).length = 4 := by rw [List.length_take]; omega
+  have hdrop : (chunk.drop 4).length = 4 := by rw [List.length_drop]; omega
+  show WordCodec.encodeU32 (WordCodec.decodeU32 (chunk.take 4)) ++
+      WordCodec.encodeU32 (WordCodec.decodeU32 (chunk.drop 4)) = chunk
+  rw [SepLogic.Slices.encodeU32_decodeU32_of_length _ htake,
+    SepLogic.Slices.encodeU32_decodeU32_of_length _ hdrop,
+    List.take_append_drop]
+
+/-- The payload of an input the driver accepts decodes to the wire entries.
+This is the pair-codec half of `deserializeEntries_eq_some_of_accepts`. -/
+theorem pairCodec_deserialize_drop_four (bytes : List UInt8)
+    (hexact : bytes.length = 4 + 8 * headerCount bytes) :
+    (HashMap.pairCodec WordCodec.u32le WordCodec.u32le).deserialize
+        (bytes.drop 4)
+      = some (wireEntries bytes) := by
+  have hrest : (bytes.drop 4).length
+      = (HashMap.pairCodec WordCodec.u32le WordCodec.u32le).width
+        * headerCount bytes := by
+    rw [List.length_drop, hexact, pairCodec_u32le_width]
+    omega
+  rw [WordCodec.deserialize_eq_some_map_range _ _ _ hrest, wireEntries]
+  congr 1
+  apply List.map_congr_left
+  intro i _
+  rw [pairCodec_u32le_decode, pairCodec_u32le_width, List.drop_drop,
+    List.take_take, List.drop_take, List.drop_drop]
+  rw [show min 4 8 = 4 by decide, show (8 - 4 : Nat) = 4 by decide,
+    show 4 + 8 * i + 4 = 8 + 8 * i by omega]
+
+/-- The payload the decoder leaves is the serialization of the wire entries.
+`collect_entries` takes its precondition in that form. -/
+theorem serialize_wireEntries (bytes : List UInt8)
+    (hexact : bytes.length = 4 + 8 * headerCount bytes) :
+    (HashMap.pairCodec WordCodec.u32le WordCodec.u32le).serialize
+        (wireEntries bytes)
+      = bytes.drop 4 :=
+  WordCodec.serialize_of_deserialize_eq_some _
+    (fun chunk hchunk => pairCodec_u32le_encode_decode chunk
+      (by rw [hchunk, pairCodec_u32le_width]))
+    _ _ (pairCodec_deserialize_drop_four bytes hexact)
 
 end Wasm.RustStd.HashMap.BorshBridge
