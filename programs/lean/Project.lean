@@ -39,3 +39,7 @@ import Project.RustHashMap.Func58Proof
 import Project.RustHashMap.Func59Proof
 import Project.RustHashMap.EntryContracts
 import Project.RustHashMap.Adequacy
+import Project.RustHashMap.VecGrow
+import Project.RustHashMap.Func30Proof
+import Project.RustHashMap.Func97Proof
+import Project.RustHashMap.Func98Proof
