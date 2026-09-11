@@ -37,3 +37,5 @@ import Project.RustHashMap.Func55Proof
 import Project.RustHashMap.Func57Proof
 import Project.RustHashMap.Func58Proof
 import Project.RustHashMap.Func59Proof
+import Project.RustHashMap.EntryContracts
+import Project.RustHashMap.Adequacy
