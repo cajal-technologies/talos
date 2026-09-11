@@ -1,7 +1,7 @@
 import Lean
 
 /-!
-# `@[spec_of]` and `@[proves]` — load-bearing project attributes
+# `@[spec_of]`, `@[proves]` and `@[spec_test]` — load-bearing project attributes
 
 These two attributes are the link between Lean specifications and the code
 they describe, and between proofs and the specifications they discharge.
@@ -42,6 +42,15 @@ fine); the attribute is the source of truth for the link.
 
 See `verifier/EXTRACT.md` (§P4, §P5, §P7) for the full discovery
 contract.
+
+## `@[spec_test]`
+
+Marks the executable mirror of a specification's postcondition — a
+`Bool`-valued `post : Input → Output → Bool` defined beside the `Prop` it
+mirrors, with a `post_sound` theorem showing that `post … = true` implies that
+postcondition. `Interpreter.Wasm.SpecTest` evaluates it on concrete executions
+to test a specification before anyone tries to prove it. Like the attributes
+above, it carries metadata only.
 -/
 
 open Lean
@@ -60,6 +69,10 @@ syntax (name := spec_of) "spec_of" str str : attr
 formal spec. See module docstring. -/
 syntax (name := proves) "proves" ident : attr
 
+/-- `@[spec_test]` — tag the executable mirror of a specification's
+postcondition, used by execution-based spec testing. See module docstring. -/
+syntax (name := spec_test) "spec_test" : attr
+
 initialize
   Lean.registerBuiltinAttribute {
     name            := `spec_of
@@ -73,6 +86,15 @@ initialize
   Lean.registerBuiltinAttribute {
     name            := `proves
     descr           := "Mark a theorem as a verification of a named formal spec."
+    applicationTime := .afterCompilation
+    add             := fun _ _ _ => pure ()
+    erase           := fun _ => pure ()
+  }
+
+initialize
+  Lean.registerBuiltinAttribute {
+    name            := `spec_test
+    descr           := "Mark the executable mirror of a specification's postcondition."
     applicationTime := .afterCompilation
     add             := fun _ _ _ => pure ()
     erase           := fun _ => pure ()
