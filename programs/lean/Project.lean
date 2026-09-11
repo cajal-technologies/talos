@@ -31,3 +31,9 @@ import Project.RustHashMap.Spec
 import Project.RustHashMap.Contracts
 import Project.RustHashMap.HostProof
 import Project.RustHashMap.ImportProofs
+import Project.RustHashMap.Allocator
+import Project.RustHashMap.AllocatorContracts
+import Project.RustHashMap.Func55Proof
+import Project.RustHashMap.Func57Proof
+import Project.RustHashMap.Func58Proof
+import Project.RustHashMap.Func59Proof
