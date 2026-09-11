@@ -44,6 +44,7 @@ import CodeLib.RustStd.HashMap.TableRefinement
 import CodeLib.RustStd.HashMap.TableU32
 import CodeLib.RustStd.HashMap.Swar
 import CodeLib.RustStd.HashMap.TableMem
+import CodeLib.RustStd.HashMap.ProbeWasm
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
