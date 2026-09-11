@@ -50,3 +50,4 @@ import Project.RustHashMap.ReadAllPhase
 import Project.RustHashMap.DriverTailDefs
 import Project.RustHashMap.DeallocNoop
 import Project.RustHashMap.BodyContracts
+import Project.RustHashMap.CollectContract
