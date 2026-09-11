@@ -22,7 +22,7 @@ def totalVariationConfig (a b c : UInt64) : Config Unit :=
       { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := { initial with mem := initial.mem.write64 1048568 0 } } }
 
-@[spec_of "rust-exported" "total_variation::total_variation"]
+@[spec_of "rust-exported-partial" "total_variation::total_variation"]
 def TotalVariationSpec : Prop :=
   ∀ (a b c : UInt64),
     PartiallyMeets (totalVariationConfig a b c)

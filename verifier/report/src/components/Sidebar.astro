@@ -12,7 +12,9 @@ const diags = project.artifact.diagnostics;
   {project.specs.length === 0 && <div class="muted-text" style="padding: 4px 8px;">— none —</div>}
   {project.specs.map((sv) => (
     <a href={`#spec-${anchorId(sv.spec.name)}`}>
-      <span class={"dot " + (sv.status === "proven" ? "good" : "warn")}></span>
+      <span class={"dot " + (sv.status !== "proven" ? "warn" :
+        sv.strength === "total" ? "good" :
+          sv.strength === "partial" ? "warn" : "info")}></span>
       <span class="name">{sv.spec.name.split(".").pop()}</span>
     </a>
   ))}

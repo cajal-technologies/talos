@@ -12,13 +12,22 @@ extractor.
 
 ## `@[spec_of <kind> "qualified::name"]`
 
-Marks a `def Name : Prop := …` as a formal spec linked to a code symbol.
+Marks a `def Name : Prop := …` as a formal spec linked to code or to a
+crate-level property.
 `<kind>` is one of:
 
 * `rust-exported` — `target` is `crate::fn_name`, naming a wasm-exported
   Rust function (`#[unsafe(no_mangle)] pub extern "C" fn`).
+* `rust-exported-partial` — the same target provenance, when the public
+  proposition constrains every finite return but does not prove termination.
 * `rust-internal` — any other Rust path (`crate::module::fn`). Opaque to
   the extractor.
+* `rust-internal-partial` — the same internal target provenance for a
+  partial-correctness proposition.
+* `crate-property` — `target` is `crate::property_name`, naming a property of
+  the crate rather than pretending that a composing function exists. Such a
+  property may carry additional `rust-exported` references for the operations
+  whose executions occur in its statement.
 * `lean` — any Lean symbol. Opaque to the extractor.
 
 A def may carry several `@[spec_of …]` attributes if it specifies more
@@ -40,11 +49,11 @@ open Lean
 namespace CodeLib
 
 /-- `@[spec_of "<kind>" "qualified::name"]` — tag a `def : Prop` as a
-formal spec linked to a code symbol. `<kind>` is one of
-`"rust-exported"`, `"rust-internal"`, `"lean"`. The kind is passed as a
-quoted string so that the hyphenated names don't trip up the Lean
-tokenizer; the extractor sees identical text either way. See module
-docstring. -/
+formal spec linked to code or to a crate-level property. `<kind>` is one of
+`"rust-exported"`, `"rust-exported-partial"`, `"rust-internal"`,
+`"rust-internal-partial"`, `"crate-property"`, `"lean"`. The kind is passed
+as a quoted string so that the hyphenated names don't trip up the Lean
+tokenizer; the extractor sees identical text either way. See module docstring. -/
 syntax (name := spec_of) "spec_of" str str : attr
 
 /-- `@[proves SpecName]` — tag a theorem as a verification of the named

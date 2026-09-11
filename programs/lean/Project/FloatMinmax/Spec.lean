@@ -8,13 +8,13 @@ namespace Project.FloatMinmax.Spec
 
 open Wasm
 
-/-- TODO: state and prove the behaviour of the wasm export `float_minmax`.
+/-- TODO: state and prove the behaviour of the `check_min` and `check_max`
+exports as two separate semantic specifications.
 
 Informal spec:
-Describe what `float_minmax` computes here, then replace `True` with a
-`TerminatesWith` / `PartiallyMeets` statement over `«module»` (the decoded
-program emitted into `Program.lean`). -/
-@[spec_of "rust-exported" "float_minmax::float_minmax"]
+Describe what each exported check computes, then replace `True` with real
+properties. This placeholder is deliberately not registered with `@[spec_of]`:
+there is no `float_minmax` export, and `True` is not a specification. -/
 def FloatMinmaxSpec : Prop :=
   True
 

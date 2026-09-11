@@ -39,7 +39,7 @@ private def unaryConfig (body : Program)
       { runtime := { instances := #[{ module := «module», host := {} }], entry := ⟨0⟩ }
         wasm := «module».initialStore } }
 
-@[spec_of "rust-internal" "core::num::abs_diff"]
+@[spec_of "rust-internal-partial" "core::num::abs_diff"]
 def AbsDiffSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets
@@ -54,7 +54,7 @@ theorem abs_diff_correct : AbsDiffSpec := by
   · rfl
   · decide +kernel
 
-@[spec_of "rust-exported" "rust_u64::add"]
+@[spec_of "rust-exported-partial" "rust_u64::add"]
 def AddSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets (pureBinaryConfig func2 a b)
@@ -67,7 +67,7 @@ theorem add_correct : AddSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_addI64]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::sub"]
+@[spec_of "rust-exported-partial" "rust_u64::sub"]
 def SubSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets (pureBinaryConfig func8 a b)
@@ -80,7 +80,7 @@ theorem sub_correct : SubSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_subI64]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::mul"]
+@[spec_of "rust-exported-partial" "rust_u64::mul"]
 def MulSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets (pureBinaryConfig func9 a b)
@@ -93,7 +93,7 @@ theorem mul_correct : MulSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_mulI64]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::div"]
+@[spec_of "rust-exported-partial" "rust_u64::div"]
 def DivSpec : Prop :=
   ∀ (a b : UInt64), b ≠ 0 →
     SmallStep.PartiallyMeets (pureBinaryConfig func6 a b)
@@ -110,7 +110,7 @@ theorem div_correct : DivSpec := by
   wasm_wp_next SmallStep.wp_divUI64 hb
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::rem"]
+@[spec_of "rust-exported-partial" "rust_u64::rem"]
 def RemSpec : Prop :=
   ∀ (a b : UInt64), b ≠ 0 →
     SmallStep.PartiallyMeets (pureBinaryConfig func10 a b)
@@ -127,7 +127,7 @@ theorem rem_correct : RemSpec := by
   wasm_wp_next SmallStep.wp_remUI64 hb
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::bitand"]
+@[spec_of "rust-exported-partial" "rust_u64::bitand"]
 def BitAndSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets (pureBinaryConfig func3 a b)
@@ -140,7 +140,7 @@ theorem bitand_correct : BitAndSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_andI64]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::bitor"]
+@[spec_of "rust-exported-partial" "rust_u64::bitor"]
 def BitOrSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets (pureBinaryConfig func4 a b)
@@ -153,7 +153,7 @@ theorem bitor_correct : BitOrSpec := by
   wasm_wp_pures [wp_localGet wp_localGet wp_orI64]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::bitxor"]
+@[spec_of "rust-exported-partial" "rust_u64::bitxor"]
 def BitXorSpec : Prop :=
   ∀ (a b : UInt64),
     SmallStep.PartiallyMeets (pureBinaryConfig func5 a b)
@@ -167,7 +167,7 @@ theorem bitxor_correct : BitXorSpec := by
   wasm_wp_next SmallStep.wp_xorI64
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::not"]
+@[spec_of "rust-exported-partial" "rust_u64::not"]
 def NotSpec : Prop :=
   ∀ (a : UInt64),
     SmallStep.PartiallyMeets (unaryConfig func11 a)
@@ -184,7 +184,7 @@ theorem not_correct : NotSpec := by
     exact BitVec.xor_allOnes]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::shl"]
+@[spec_of "rust-exported-partial" "rust_u64::shl"]
 def ShlSpec : Prop :=
   ∀ (a : UInt64) (b : UInt32),
     SmallStep.PartiallyMeets (shiftConfig func12 a b)
@@ -199,7 +199,7 @@ theorem shl_correct : ShlSpec := by
   wasm_wp_pures [wp_shlI64] rewriting [shiftAmount_norm]
   wasm_wp_return_value_rfl
 
-@[spec_of "rust-exported" "rust_u64::shr"]
+@[spec_of "rust-exported-partial" "rust_u64::shr"]
 def ShrSpec : Prop :=
   ∀ (a : UInt64) (b : UInt32),
     SmallStep.PartiallyMeets (shiftConfig func13 a b)
