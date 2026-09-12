@@ -1,6 +1,7 @@
 import Project.RustHashMap.ErrorNewContracts
 import Project.RustHashMap.FrameCells
 import CodeLib.RustStd.HashMap.TableMem
+import CodeLib.SepLogic.SmallStepTotalLiftingBytesTerminal
 
 /-!
 # Proof of the pack of the `io::Error::new` chain
@@ -250,7 +251,7 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
     Nat.reduceSub, List.set]
   -- `[frame + 28] := kind` as one byte
   wasm_twp_pures [twp_localGet twp_localGet]
-  wasm_twp_rebind twp_store8 (address := sp - 32) (offset := 28) oldKindByte
+  wasm_twp_rebind twp_store8_gen (address := sp - 32) (offset := 28) oldKindByte
     hs28 with Hkindbyte
   -- `[frame + 24] := [record + 8]`
   ihave Hreccells := cells_of_ByteSlice (record + 8) [word2] $$ Hrechigh

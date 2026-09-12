@@ -949,57 +949,6 @@ theorem twp_store32
       iapply_exact Htwp with Hword
 
 
-/-- Primitive rule for `i32.store8` (total form).  The counterpart of
-`wp_store8`: one owned byte goes in and the truncated value comes out.
-The byte is owned directly, because `pointsTo_u32` is the smallest word
-view and a single byte is below it. -/
-theorem twp_store8
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldByte : UInt8)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-        .store8 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  wasm_twp_start_with iintro Hpt Htwp
-  ihave_pure HinBounds :
-      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
-    stateInterp_pointsTo_inBounds store ns obs nt
-      (address + offset) oldByte $$ [Hσ Hpt]
-  have hbound : address.toNat + offset.toNat + 1 ≤
-      store.wasm.mem.pages * 65536 := by omega
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-          .store8 offset :: code, arity, remainder, controls, calls⟩,
-        store⟩
-      (.instruction (.store8 offset))
-      ⟨.running
-        ⟨⟨params, localValues, values⟩,
-          code, arity, remainder, controls, calls⟩,
-        { store with wasm :=
-            { store.wasm with
-              mem := store.wasm.mem.write8
-                (address + offset) value.toUInt8 } }⟩ :=
-    Step.store8 (α := α) (address := Value.i32 address) rfl hbound
-  wasm_twp_step expectedStep =>
-    imod stateInterp_store8 store ns obs nt
-        (address + offset) oldByte value.toUInt8
-        (by simpa only [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-    wasm_twp_frame
-      iapply_exact Htwp with Hpt
-
 wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
     (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
   .geS, .i32 rhs :: .i32 lhs :: values =>
