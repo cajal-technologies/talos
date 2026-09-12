@@ -72,3 +72,4 @@ import Project.RustHashMap.DecodeErrorContract
 import Project.RustHashMap.DecoderPrologue
 import Project.RustHashMap.DropErrorContracts
 import Project.RustHashMap.Func51Proof
+import Project.RustHashMap.Func44Proof
