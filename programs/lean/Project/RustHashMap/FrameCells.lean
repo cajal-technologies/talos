@@ -195,6 +195,33 @@ theorem set_three_twice (values : List UInt32) (first second third : UInt32)
   · rfl
   · simp at hlength
 
+/-- The eight address facts that `twp_load64` and `twp_store64` ask for
+at one frame offset. -/
+theorem offset_facts64 (base offset : UInt32) (o : Nat)
+    (hoffset : UInt32.ofNat o = offset)
+    (hbound : base.toNat + o + 8 ≤ UInt32.size) :
+    (base + offset).toNat = base.toNat + offset.toNat ∧
+      (base + offset + 1).toNat = (base + offset).toNat + 1 ∧
+      (base + offset + 2).toNat = (base + offset).toNat + 2 ∧
+      (base + offset + 3).toNat = (base + offset).toNat + 3 ∧
+      (base + offset + 4).toNat = (base + offset).toNat + 4 ∧
+      (base + offset + 5).toNat = (base + offset).toNat + 5 ∧
+      (base + offset + 6).toNat = (base + offset).toNat + 6 ∧
+      (base + offset + 7).toNat = (base + offset).toNat + 7 := by
+  subst hoffset
+  have ho : o < UInt32.size := by omega
+  have hto : (UInt32.ofNat o).toNat = o := UInt32.toNat_ofNat_of_lt' ho
+  have h0 : (base + UInt32.ofNat o).toNat = base.toNat + o :=
+    Slices.byteOffset_toNat base o (by omega)
+  refine ⟨by rw [h0, hto], ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 1 (by omega)
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 2 (by omega)
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 3 (by omega)
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 4 (by omega)
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 5 (by omega)
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 6 (by omega)
+  · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 7 (by omega)
+
 /-! ## The own frame and the region that a callee gets -/
 
 /-- Lowering an address twice is one subtraction. -/
