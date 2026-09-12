@@ -91,11 +91,22 @@ frame is 16 bytes; the rest is the format and allocate chain 42, 43, 57,
 The audit measured the worst path and it uses exactly 160 bytes:
 
 ```
-f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48) f49(+16) f44(+32)
+f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48) f50(+16) f44(+32)
 ```
 
 The path returns normally, so 160 is the true maximum for a run that does
-not trap.  There is no slack. -/
+not trap.  There is no slack.
+
+A second read of the WAT on 2026-09-11 replaced `f49` by `f50` in this
+path.  Both frames are 16 bytes, so the total does not move, but `f49` is
+the dead arm.  `func 48` picks between `f49` and `f50` on bit 0 of its
+third argument at WAT line 9426, and `func 51` passes the folded constant
+`0 & 1` there at WAT lines 9593 to 9596.  So `f50` is the live arm.
+
+The other branch of `func 55` is `f55(+16) f56(+32)`, which is 48 bytes.
+`func 56` does not commit the stack pointer; it writes a red zone below
+the value it inherits.  The leaves `func 33` and `func 58` take no frame
+at all, so the chain ends at `f44`. -/
 def errorNewDepth : Nat := 160
 
 /-! ## `borsh::io::Error::new` -/
@@ -170,7 +181,7 @@ def Func52Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         Streams input output raised ∗
         ⌜outBefore.length = 16 ∧ errorNewDepth ≤ sp.toNat ∧
           out.toNat + 16 < UInt32.size ∧
-          msgLen.toNat ≤ 2147483647 ∧
+          0 < msgLen.toNat ∧ msgLen.toNat ≤ 2147483647 ∧
           msgBytes.length = msgLen.toNat⌝ ∗
         ((∀ word0 : UInt32, ∀ word1 : UInt32, ∀ word2 : UInt32,
             ∀ word3 : UInt32, ∀ below' : List UInt8,
