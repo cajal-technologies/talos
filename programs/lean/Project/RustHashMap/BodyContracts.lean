@@ -222,8 +222,12 @@ The audit measured the worst path and it uses exactly 240 bytes:
 
 ```
 f4(+64) f52(+16) f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48)
-f49(+16) f44(+32)
+f50(+16) f44(+32)
 ```
+
+`func 48` calls `f50` and not `f49`, because `func 51` passes the zeroed
+flag 0 at WAT line 9594.  The two frames are both 16 bytes, so the total
+is the same either way.
 
 The path returns normally, so 240 is the true maximum for a run that does
 not trap.  There is no slack. -/
@@ -258,11 +262,12 @@ that nothing bounds.  The decoder reaches the same `RawVec` code and needs
 no bound, because the quantity that can overflow there is tied to the
 input length through the bump heap.
 
-`func 4` reaches `func 99` at two sites, and both arms of `func 99` end in
-`unreachable`.  The subtree behind it never calls the OOM import: one arm
-runs 102, 80, 81 and 70, the other runs 103, 104 and 79, and each ends in
-a bare trap.  Neither arm of the continuation below covers that outcome,
-so both sites must be dead.
+`func 4` reaches `func 99` at three sites, and both arms of `func 99` end
+in `unreachable`.  The subtree behind it never calls the OOM import: one
+arm runs 102, 80, 81 and 70, the other runs 103, 104 and 79, and each ends
+in a bare trap.  The only call of the OOM import in the module is in
+`func 59`, and `func 99` does not reach it.  Neither arm of the
+continuation below covers a trap, so all three sites must be dead.
 
 * WAT line 818 pushes the literal 4 as the first argument.  A non-zero
   first argument selects the allocation-failure arm.  That arm is dead,
@@ -274,6 +279,9 @@ so both sites must be dead.
   selects the same dead arm as the first site.  The capacity-overflow arm
   writes 0 beside the flag, so it selects the panic arm, and that one is
   live code.
+* WAT line 9611 sits in `func 51`, the `RawVec` allocate of the error
+  chain.  `Project.RustHashMap.Func48Proof` proves that body and shows the
+  arm is dead, so this site needs no work in the decoder proof.
 
 The overflow guard is at WAT lines 8868 to 8898.  With the element size 8
 and the alignment 4 that `func 26` passes, the guard sends control to the
@@ -292,12 +300,19 @@ them as loop invariants.
   full.  Each pair consumed eight input bytes, at WAT lines 745 to 754,
   after the four-byte header.
 
+  The eight bytes hold for every pair, because the two arms that append a
+  pair after a short read are dead.  Those arms are at WAT lines 718 and
+  743, and both need word 0 of the error that `func 55` or `func 52`
+  builds to be `okTag`.  That word is a `String` capacity, 27 at WAT line
+  626 and 26 at WAT line 9689, so it is never `okTag`.
+
 The two facts give the result.  The panic arm needs
 `8 * oldCap >= 1073741824`, the second fact then forces
 `bytes.length >= 1073741828`, and the sum is 2147483652.  That passes
 `2147483647 - heapBase`, which is 2146434079.  The margin is 1049573
-bytes, which is the static memory below `heapBase`.  The allocator budget
-is what closes this, not the width of a Wasm word. -/
+bytes, which is the static memory below `heapBase` and five bytes more.
+The allocator budget is what closes this, not the width of a Wasm
+word. -/
 def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out hdr ptr len : UInt32)
     (heapId : GName) (bytes outBefore below : List UInt8)
