@@ -69,3 +69,4 @@ import Project.RustHashMap.DriverProof
 import Project.RustHashMap.DecoderDefs
 import Project.RustHashMap.DecoderLoop
 import Project.RustHashMap.DecodeErrorContract
+import Project.RustHashMap.DecoderPrologue
