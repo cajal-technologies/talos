@@ -36,40 +36,6 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DropErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
-/-- The shape of a one-word list. -/
-private theorem one_word (values : List UInt32) (hlength : values.length = 1) :
-    ∃ a : UInt32, values = [a] := by
-  rcases values with _ | ⟨a, rest⟩
-  · simp at hlength
-  rcases rest with _ | ⟨b, rest⟩
-  · exact ⟨a, rfl⟩
-  · simp at hlength
-
-/-- The shape of a two-word list. -/
-private theorem two_words (values : List UInt32) (hlength : values.length = 2) :
-    ∃ a b : UInt32, values = [a, b] := by
-  rcases values with _ | ⟨a, rest⟩
-  · simp at hlength
-  rcases rest with _ | ⟨b, rest⟩
-  · simp at hlength
-  rcases rest with _ | ⟨c, rest⟩
-  · exact ⟨a, b, rfl⟩
-  · simp at hlength
-
-/-- The shape of a three-word list. -/
-private theorem three_words (values : List UInt32)
-    (hlength : values.length = 3) :
-    ∃ a b c : UInt32, values = [a, b, c] := by
-  rcases values with _ | ⟨a, rest⟩
-  · simp at hlength
-  rcases rest with _ | ⟨b, rest⟩
-  · simp at hlength
-  rcases rest with _ | ⟨c, rest⟩
-  · simp at hlength
-  rcases rest with _ | ⟨d, rest⟩
-  · exact ⟨a, b, c, rfl⟩
-  · simp at hlength
-
 /-- The middle cell of a three-word slot after one store. -/
 private theorem set_middle (a b c d : UInt32) :
     [a, b, c].set 1 d = [a, d, c] := rfl

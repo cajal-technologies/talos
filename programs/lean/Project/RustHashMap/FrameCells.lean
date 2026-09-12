@@ -134,6 +134,46 @@ theorem cell_load [WasmHeapGS Universal.State]
   subst hold
   exact arrayAt_get 0 base values k hk
 
+/-! ## The shape of a short word list
+
+`ByteSlice_as_cells` returns the decoded words with their length alone.  A
+body that loads or stores single cells needs the list in cons form, so that
+`arrayAt` unfolds to one `pointsTo_u32` for each cell.  The three lemmas
+below name the elements. -/
+
+/-- The shape of a one-word list. -/
+theorem one_word (values : List UInt32) (hlength : values.length = 1) :
+    ∃ a : UInt32, values = [a] := by
+  rcases values with _ | ⟨a, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨b, rest⟩
+  · exact ⟨a, rfl⟩
+  · simp at hlength
+
+/-- The shape of a two-word list. -/
+theorem two_words (values : List UInt32) (hlength : values.length = 2) :
+    ∃ a b : UInt32, values = [a, b] := by
+  rcases values with _ | ⟨a, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨b, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨c, rest⟩
+  · exact ⟨a, b, rfl⟩
+  · simp at hlength
+
+/-- The shape of a three-word list. -/
+theorem three_words (values : List UInt32) (hlength : values.length = 3) :
+    ∃ a b c : UInt32, values = [a, b, c] := by
+  rcases values with _ | ⟨a, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨b, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨c, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨d, rest⟩
+  · exact ⟨a, b, c, rfl⟩
+  · simp at hlength
+
 /-- A two-word slot that both words are written to holds exactly the two
 new words.  The eight-byte output slot of a body needs this. -/
 theorem set_two (values : List UInt32) (first second : UInt32)
