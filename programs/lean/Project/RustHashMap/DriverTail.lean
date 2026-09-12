@@ -165,7 +165,7 @@ def DriverTailSpec [WasmSmallStepGS hlc Universal.State] : Prop :=
             false -∗
           WP (.running
             ⟨finalLocals, afterTail, arity, remainder, controls, calls⟩ :
-              Expr Universal.State) @ s; E [{ Φ }]) ∧
+              Expr Universal.State) @ s; E [{ Φ }]) ∗
         (ExportOOM -∗ Φ (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
         ⟨afterReadLocals (UInt32.ofNat input.length) capacity ptr aux4,
