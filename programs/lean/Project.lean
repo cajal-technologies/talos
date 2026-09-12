@@ -53,3 +53,4 @@ import Project.RustHashMap.BodyContracts
 import Project.RustHashMap.CollectContract
 import Project.RustHashMap.DriverTail
 import Project.RustHashMap.DriverTailProof
+import Project.RustHashMap.DriverProof

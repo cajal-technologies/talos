@@ -81,14 +81,6 @@ initializer through 16, 83 and 58.  This number is measured from the WAT
 and is not proved.  A body proof that needs more must raise it here. -/
 def collectDepth : Nat := 192
 
-/-- The first of the three thread-local cells of `RandomState`: `k0` at
-1049512, `k1` at 1049520, and the state byte at 1049528. -/
-def randomStateCell : UInt32 := 1049512
-
-/-- The size of the thread-local region.  It holds the two eight-byte
-seeds, the state byte, and seven bytes of padding. -/
-def randomStateSize : Nat := 24
-
 /-- The codec of one wire pair: the key in the first four bytes, the value
 in the next four.  The compiled loop stores each key at `buffer + 8 i` and
 each value at `buffer + 8 i + 4`, so the buffer holds the pairs in wire

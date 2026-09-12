@@ -60,10 +60,14 @@ def ExportOOM [WasmHostStateGS Universal.State] : HeapIProp :=
   iprop(∃ remaining output : List UInt8, Streams remaining output true)
 
 /-- The entry contract of the export wrapper at `absoluteIndex`.  The
-function `expected` gives the output bytes for each input. -/
+function `expected` gives the output bytes for each input.
+
+The wrapper takes the thread-local `RandomState` region as well as the
+shadow stack.  `collect_entries` reads and writes those cells, and they sit
+above the stack top, so they are a separate resource. -/
 def EntrySpec [WasmSmallStepGS hlc Universal.State]
     (absoluteIndex : Nat) (expected : List UInt8 → List UInt8) : Prop :=
-  ∀ (heapId : GName) (input stackBytes : List UInt8)
+  ∀ (heapId : GName) (input stackBytes randomState : List UInt8)
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
@@ -74,9 +78,11 @@ def EntrySpec [WasmSmallStepGS hlc Universal.State]
         RuntimeContext ∗
         StackPointer entryStackTop ∗
         StackRegion 0 stackBytes ∗
+        StackRegion randomStateCell randomState ∗
         BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
         Streams input [] false ∗
-        ⌜stackBytes.length = stackSize⌝ ∗
+        ⌜stackBytes.length = stackSize ∧
+          randomState.length = randomStateSize⌝ ∗
         (RuntimeContext -∗ ExportSuccess (expected input) -∗
           ResumeWP [] callerLocals stack code arity remainder controls calls
             s E Φ) ∗
