@@ -40,11 +40,18 @@ import CodeLib.RustStd.HashMap.Basic
 import CodeLib.RustStd.HashMap.Codec
 import CodeLib.RustStd.HashMap.SipHash
 import CodeLib.RustStd.HashMap.Table
+import CodeLib.RustStd.HashMap.HashLowWord
 import CodeLib.RustStd.HashMap.TableRefinement
+import CodeLib.RustStd.HashMap.CapacityClz
 import CodeLib.RustStd.HashMap.TableU32
 import CodeLib.RustStd.HashMap.Swar
 import CodeLib.RustStd.HashMap.TableMem
+import CodeLib.RustStd.HashMap.CtrlWrite
+import CodeLib.RustStd.HashMap.FreshTable
+import CodeLib.RustStd.HashMap.OptionOut
+import CodeLib.RustStd.HashMap.SipHoist
 import CodeLib.RustStd.HashMap.ProbeWasm
+import CodeLib.RustStd.HashMap.ResizeWalk
 import CodeLib.RustStd.HashMap.BorshBridge
 import CodeLib.Near.State
 import CodeLib.Near.Env
@@ -57,6 +64,7 @@ import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.SepLogic.SmallStepTotalLiftingBits
 import CodeLib.SepLogic.SmallStepTotalLiftingBytesTerminal
 import CodeLib.SepLogic.SmallStepOutcomeLanguage
 import CodeLib.SepLogic.SmallStepOutcomeExample
