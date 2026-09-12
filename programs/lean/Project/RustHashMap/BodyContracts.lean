@@ -240,25 +240,53 @@ driver does not read it again.
 The caller keeps the input bytes throughout.  The decoder never writes
 them.
 
-CAUTION. Test this contract for the capacity-overflow trap before you
-start the body.  `Func52Spec` above needed a length bound, because the
-`RawVec` path traps with a bare `unreachable` when the requested byte
-count passes `isize::MAX`.  The decoder can reach the same code.  Two
-facts are measured:
+## Why this contract needs no length bound
 
-* `func 4` holds exactly one `call 99`, at WAT line 818, and it pushes the
-  alignment 4 as the first argument.  A non-zero first argument selects
-  the allocation-failure arm of `func 99`, not the capacity-overflow arm.
-  That arm is dead, because the bump allocator never returns null.  It
-  either succeeds or traps with `talos.oom`.
-* `func 4` also reaches `func 99` through `func 26`, at WAT line 8848.
-  That site pushes two loaded words, so it can select either arm.
+`Func52Spec` above needed one, because its `msgLen` is a free parameter
+that nothing bounds.  The decoder reaches the same `RawVec` code and needs
+no bound, because the quantity that can overflow there is tied to the
+input length through the bump heap.
 
-The second site is not yet analysed.  If it can overflow, this contract
-needs a bound near `8 * (headerWord bytes).toNat <= 2147483644`.  The
-driver can supply such a bound the way `AfterRead_length_lt` supplies the
-present one, because `VecStorage` holds a block that the bump allocator
-returned, and `classifyBump` only succeeds below `isize::MAX`. -/
+`func 4` reaches `func 99` at two sites, and both arms of `func 99` end in
+`unreachable`.  The subtree behind it never calls the OOM import: one arm
+runs 102, 80, 81 and 70, the other runs 103, 104 and 79, and each ends in
+a bare trap.  Neither arm of the continuation below covers that outcome,
+so both sites must be dead.
+
+* WAT line 818 pushes the literal 4 as the first argument.  A non-zero
+  first argument selects the allocation-failure arm.  That arm is dead,
+  because `func 58` and `func 61` never return null.  The bump allocator
+  either succeeds or raises `talos.oom`.
+* WAT line 8848 sits in `func 26`, the amortized grow of the pair buffer.
+  `func 27` writes the flag word 1 on both of its failure arms.  The
+  allocation-failure arm writes the alignment 4 beside the flag, so it
+  selects the same dead arm as the first site.  The capacity-overflow arm
+  writes 0 beside the flag, so it selects the panic arm, and that one is
+  live code.
+
+The overflow guard is at WAT lines 8868 to 8898.  With the element size 8
+and the alignment 4 that `func 26` passes, the guard sends control to the
+panic arm exactly when `8 * newCap > 2147483644`, and `newCap` is
+`max(4, 2 * oldCap)`.
+
+The body proof must carry two facts to show that the arm is dead.  Write
+them as loop invariants.
+
+* `8 * oldCap + bytes.length <= 2147483647 - heapBase`.  The old pair
+  buffer and the input bytes are two live blocks of one bump heap at the
+  moment of the grow, they do not overlap, and the allocator keeps every
+  block below `isize::MAX`.
+* `8 * oldCap + 4 <= bytes.length`.  `func 26` runs only when the length
+  word equals the capacity word, at WAT lines 764 to 772, so the buffer is
+  full.  Each pair consumed eight input bytes, at WAT lines 745 to 754,
+  after the four-byte header.
+
+The two facts give the result.  The panic arm needs
+`8 * oldCap >= 1073741824`, the second fact then forces
+`bytes.length >= 1073741828`, and the sum is 2147483652.  That passes
+`2147483647 - heapBase`, which is 2146434079.  The margin is 1049573
+bytes, which is the static memory below `heapBase`.  The allocator budget
+is what closes this, not the width of a Wasm word. -/
 def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out hdr ptr len : UInt32)
     (heapId : GName) (bytes outBefore below : List UInt8)
