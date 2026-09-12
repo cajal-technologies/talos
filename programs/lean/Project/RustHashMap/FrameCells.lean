@@ -174,6 +174,21 @@ theorem three_words (values : List UInt32) (hlength : values.length = 3) :
   · exact ⟨a, b, c, rfl⟩
   · simp at hlength
 
+/-- The shape of a four-word list. -/
+theorem four_words (values : List UInt32) (hlength : values.length = 4) :
+    ∃ a b c d : UInt32, values = [a, b, c, d] := by
+  rcases values with _ | ⟨a, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨b, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨c, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨d, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨e, rest⟩
+  · exact ⟨a, b, c, d, rfl⟩
+  · simp at hlength
+
 /-- A two-word slot that both words are written to holds exactly the two
 new words.  The eight-byte output slot of a body needs this. -/
 theorem set_two (values : List UInt32) (first second : UInt32)
