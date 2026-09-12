@@ -75,10 +75,23 @@ open scoped Wasm.SmallStep.Outcome
 /-! ## Constants -/
 
 /-- The stack that `collect_entries` takes below the caller.  Its own frame
-is 48 bytes.  The rest is the deepest chain below it: `func 18` with 16
-bytes, `func 17` with 32 bytes, and the allocator and the thread-local
-initializer through 16, 83 and 58.  This number is measured from the WAT
-and is not proved.  A body proof that needs more must raise it here. -/
+is 48 bytes.
+
+The audit measured the worst path and it uses exactly 192 bytes:
+
+```
+f5(+48) f18(+16) f17(+32) f97(+0) f104(+32) f79(+16) f72(+0) f73(+16)
+f75(+32)
+```
+
+That path does not return.  `func 97` is a bounds assert, and everything
+below it ends in `unreachable`, so the path reaches 192 bytes only on a
+run that traps.  Cut every edge into the panic subtree and the maximum
+falls to 96 bytes.
+
+Keep 192 here.  The driver already owns 240 bytes and gives 192 of them
+away, so the larger number costs the driver proof nothing, and a body
+proof that keeps the panic subtree alive still fits. -/
 def collectDepth : Nat := 192
 
 /-- The codec of one wire pair: the key in the first four bytes, the value

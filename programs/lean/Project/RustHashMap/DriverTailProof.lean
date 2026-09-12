@@ -947,7 +947,7 @@ theorem twp_not_all_read [WasmSmallStepGS hlc Universal.State]
   simp only [List.cons_append, List.nil_append] at Herr
   iapply Herr
   isplitl_exacts [Hruntime Hsp Hbelow Hslot Hbump Hstreams]
-  isplitl_pureexact ⟨herrSlot, by decide, by decide⟩
+  isplitl_pureexact ⟨herrSlot, by decide, by decide, by decide⟩
   isplit
   · iintro %word0 %word1 %word2 %word3 %below' %storedCursor' %frontier'
       %history' Hruntime Hsp Hbelow Hslot Hbump Hstreams %hword0
