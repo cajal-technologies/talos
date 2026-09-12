@@ -45,9 +45,10 @@ and `f52` there is absolute `func 52`.  So `decoderDepth` is
 
 ## What is open
 
-The body and the twelve bodies below it are not proved.  Absolute `func 52`
-reaches 34 to 41, 45 to 47, 53 and 54, which is 325 WAT lines.  The largest
-is 63 lines.
+The body and the thirteen bodies below it are not proved.  Absolute
+`func 52` reaches 34 to 41, 45 to 47, 53 and 54, which is 325 WAT lines.
+The largest is 63 lines.
+`Project.RustHashMap.DropErrorContracts` states the thirteen contracts.
 -/
 
 namespace Project.RustHashMap.DecodeErrorContracts
