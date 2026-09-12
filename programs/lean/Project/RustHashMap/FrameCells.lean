@@ -179,6 +179,22 @@ theorem offset_facts (base offset : UInt32) (o : Nat)
   · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 2 (by omega)
   · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 3 (by omega)
 
+/-- The three-word output slot of the `String` builder.  The body writes
+the third cell twice, so the dead value falls out. -/
+theorem set_three_twice (values : List UInt32) (first second third : UInt32)
+    (hlength : values.length = 3) :
+    ((((values.set 0 first).set 1 second).set 2 0).set 2 third)
+      = [first, second, third] := by
+  rcases values with _ | ⟨x, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨y, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨z, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨w, rest⟩
+  · rfl
+  · simp at hlength
+
 /-! ## The own frame and the region that a callee gets -/
 
 /-- Lowering an address twice is one subtraction. -/

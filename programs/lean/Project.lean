@@ -56,6 +56,7 @@ import Project.RustHashMap.Func41Proof
 import Project.RustHashMap.Func47Proof
 import Project.RustHashMap.Func45Proof
 import Project.RustHashMap.Func48Proof
+import Project.RustHashMap.Func54Proof
 import Project.RustHashMap.CollectContract
 import Project.RustHashMap.DriverTail
 import Project.RustHashMap.DriverTailProof
