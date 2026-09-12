@@ -53,6 +53,7 @@ import Project.RustHashMap.BodyContracts
 import Project.RustHashMap.ErrorNewContracts
 import Project.RustHashMap.FrameCells
 import Project.RustHashMap.Func41Proof
+import Project.RustHashMap.Func47Proof
 import Project.RustHashMap.CollectContract
 import Project.RustHashMap.DriverTail
 import Project.RustHashMap.DriverTailProof
