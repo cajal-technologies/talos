@@ -45,12 +45,12 @@ f50(+16) f44(+32)
 and `f52` there is absolute `func 52`.  So `decoderDepth` is
 `64 + func49Depth`, and there is no slack.
 
-## What is open
+## What is proved
 
-The body and the thirteen bodies below it are not proved.  Absolute
-`func 52` reaches 34 to 41, 45 to 47, 53 and 54, which is 325 WAT lines.
-The largest is 63 lines.
-`Project.RustHashMap.DropErrorContracts` states the thirteen contracts.
+`Project.RustHashMap.Func49Proof.func49_correct` proves the contract.  The
+thirteen bodies below it, absolute 34 to 41, 45 to 47, 53 and 54, are
+proved too.  `Project.RustHashMap.DropErrorContracts` states their
+contracts.
 -/
 
 namespace Project.RustHashMap.DecodeErrorContracts
