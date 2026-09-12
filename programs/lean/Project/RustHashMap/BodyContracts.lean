@@ -288,17 +288,32 @@ and the alignment 4 that `func 26` passes, the guard sends control to the
 panic arm exactly when `8 * newCap > 2147483644`, and `newCap` is
 `max(4, 2 * oldCap)`.
 
-The body proof must carry two facts to show that the arm is dead.  Write
-them as loop invariants.
+The body proof must carry two facts.  Write them as loop invariants.
 
-* `8 * oldCap + bytes.length <= 2147483647 - heapBase`.  The old pair
-  buffer and the input bytes are two live blocks of one bump heap at the
-  moment of the grow, they do not overlap, and the allocator keeps every
-  block below `isize::MAX`.
-* `8 * oldCap + 4 <= bytes.length`.  `func 26` runs only when the length
-  word equals the capacity word, at WAT lines 764 to 772, so the buffer is
-  full.  Each pair consumed eight input bytes, at WAT lines 745 to 754,
-  after the four-byte header.
+* `heapBase + 16 * oldCap <= frontier + 4096` kills the capacity-overflow
+  arm.  The first allocation is `8 * min(count, 512)` bytes, so the fact
+  holds when the loop starts.  A grow allocates `16 * oldCap` more bytes,
+  and `func 61` is a bump allocator that never hands the same byte out
+  twice, so the fact holds again after the grow.
+
+  `BumpHeap` bounds the frontier by 2147483648, so the fact bounds
+  `16 * oldCap` by 2146438175.  The panic arm needs
+  `8 * newCap > 2147483644` with `newCap = max(4, 2 * oldCap)`, and that
+  needs `16 * oldCap` to be 2147483645 or more.  The margin is 1045469
+  bytes.  `Project.RustHashMap.Decoder.grow_no_overflow` is the argument
+  in Lean.
+
+  The fact is about the allocator alone.  An earlier version of this
+  docstring used the input length instead, through the claim that the pair
+  buffer and the input bytes are two live blocks of one bump heap.  That
+  claim does not follow from this contract.  The contract lends the input
+  as a plain byte slice, and it never says that the input is in the heap.
+
+* `4 + 8 * index <= bytes.length` says that the input holds every pair that
+  the loop read.  The accepting arm needs it.  `func 26` runs only when the
+  length word equals the capacity word, at WAT lines 764 to 772, so the
+  buffer is full at a grow, and each pair consumed eight input bytes at WAT
+  lines 745 to 754, after the four-byte header.
 
   The eight bytes hold for every pair, because the two arms that append a
   pair after a short read are dead.  Those arms are at WAT lines 718 and
@@ -306,13 +321,7 @@ them as loop invariants.
   builds to be `okTag`.  That word is a `String` capacity, 27 at WAT line
   626 and 26 at WAT line 9689, so it is never `okTag`.
 
-The two facts give the result.  The panic arm needs
-`8 * oldCap >= 1073741824`, the second fact then forces
-`bytes.length >= 1073741828`, and the sum is 2147483652.  That passes
-`2147483647 - heapBase`, which is 2146434079.  The margin is 1049573
-bytes, which is the static memory below `heapBase` and five bytes more.
-The allocator budget is what closes this, not the width of a Wasm
-word. -/
+`Project.RustHashMap.Decoder.LoopInv` carries both facts. -/
 def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out hdr ptr len : UInt32)
     (heapId : GName) (bytes outBefore below : List UInt8)
