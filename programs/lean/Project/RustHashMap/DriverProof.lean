@@ -175,10 +175,10 @@ theorem func19_correct_of [WasmSmallStepGS hlc Universal.State]
     rw [← List.append_nil ReadAll.func19AfterRead]
     iapply twp_driver_tail hfunc1 hfunc2 hfunc52 heapId capacity ptr aux4
       input [] reserve head chunk slice tail
-      ((stackBytes.drop 1048032).take 224) randomState storedCursor'
+      ((stackBytes.drop 1048032).take 224) randomState dataBytes storedCursor'
       frontier' history' []
-    isplitl_exacts [Hafter Hextra Hrandom]
-    isplitl_pureexact ⟨hextra, hrandom, hinput⟩
+    isplitl_exacts [Hafter Hextra Hrandom Hdata]
+    isplitl_pureexact ⟨hextra, hrandom, hdata, hinput⟩
     isplitl [Hcont]
     · -- the driver falls off the end of its body and returns
       iintro %finalLocals Hruntime Hsp Hstreams

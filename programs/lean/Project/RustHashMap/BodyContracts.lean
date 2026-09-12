@@ -130,28 +130,28 @@ tag.
 
 The driver passes the literal length 18, so the bound closes by `decide`.
 
-The static message bytes are not a resource here.  They live in the data
-segment at [1048576, 1049496), and
-`Project.RustHashMap.Adequacy.entryHeap` holds only the stack, the
-allocator cursor and the thread-local cells, so no caller owns them.
+## Why the message bytes are a resource
 
-CAUTION. Read this before you start the body proof.  The contract can
-leave the message bytes out, because the driver only passes the pointer
-on.  The body cannot.  The chain reaches `func 57`, which runs
-`memory.copy` from the message pointer into the fresh `String` buffer
-(WAT line 9874).  A separation logic proof of that step needs the source
-bytes as a resource.  The driver calls this function with the pointer
-1049107 and the length 18, which is the text `Not all bytes read` inside
-the data segment.
+The chain reaches `func 57`, which runs `memory.copy` from the message
+pointer into the fresh `String` buffer at WAT line 9874.  A separation
+logic proof of that step needs the source bytes.  The contract takes
+`msgBytes` and gives it back unchanged, because the copy only reads it and
+no step of the chain writes it.
 
-Adding the data segment to `entryHeap` is the fix, as a fourth
-`insertFreshBytes` layer between the stack and the allocator cursor.  The
-existing layers give the pattern to copy.  The cost reaches `EntrySpec`,
-the driver proof and this contract, so do it before the body, not during
-it. -/
+The contract does not fix the content of `msgBytes`.  The driver passes
+the pointer 1049107 and the length 18, which is the text
+`Not all bytes read` in the data segment, but no arm of the continuation
+reads the message again.  Both error paths write nothing to the output
+stream.
+
+The bytes come from the data segment at [1048576, 1049496).
+`Project.RustHashMap.Adequacy.entryHeap` owns that region as its fourth
+`insertFreshBytes` layer, `EntrySpec` carries it, and
+`Project.RustHashMap.DriverTail.DriverTailSpec` cuts the eighteen-byte
+window out of it. -/
 def Func52Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out kind msgPtr msgLen : UInt32)
-    (heapId : GName) (outBefore below : List UInt8)
+    (heapId : GName) (outBefore below msgBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (input output : List UInt8) (raised : Bool)
     {callerLocals : Locals} {stack : List Value}
@@ -165,11 +165,13 @@ def Func52Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         StackPointer sp ∗
         StackBelow sp errorNewDepth below ∗
         Slices.ByteSlice 0 out outBefore ∗
+        Slices.ByteSlice 0 msgPtr msgBytes ∗
         BumpHeap heapId storedCursor frontier history ∗
         Streams input output raised ∗
         ⌜outBefore.length = 16 ∧ errorNewDepth ≤ sp.toNat ∧
           out.toNat + 16 < UInt32.size ∧
-          msgLen.toNat ≤ 2147483647⌝ ∗
+          msgLen.toNat ≤ 2147483647 ∧
+          msgBytes.length = msgLen.toNat⌝ ∗
         ((∀ word0 : UInt32, ∀ word1 : UInt32, ∀ word2 : UInt32,
             ∀ word3 : UInt32, ∀ below' : List UInt8,
             ∀ storedCursor' : UInt32, ∀ frontier' : Nat,
@@ -179,6 +181,7 @@ def Func52Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
             StackBelow sp errorNewDepth below' -∗
             Slices.ByteSlice 0 out
               (WordCodec.u32le.serialize [word0, word1, word2, word3]) -∗
+            Slices.ByteSlice 0 msgPtr msgBytes -∗
             BumpHeap heapId storedCursor' frontier' history' -∗
             Streams input output raised -∗
             ⌜word0 ≠ okTag⌝ -∗

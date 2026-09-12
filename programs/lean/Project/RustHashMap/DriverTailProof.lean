@@ -906,17 +906,18 @@ out of the map slot, drops the decoded pair buffer, and joins the error
 epilogue.  It writes nothing to the output stream. -/
 theorem twp_not_all_read [WasmSmallStepGS hlc Universal.State]
     (hfunc52 : Func52Spec (hlc := hlc))
-    (heapId : GName) (errSlot below : List UInt8)
+    (heapId : GName) (errSlot below msgBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (output : List UInt8)
     {l1 l2 l3 l4 l5 l6 l7 l8 : UInt32} {afterTail : Program}
     {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset} {Φ : ObservableOutcome → HeapIProp}
-    (herrSlot : errSlot.length = 16) :
+    (herrSlot : errSlot.length = 16) (hmsg : msgBytes.length = 18) :
     iprop(RuntimeContext ∗ StackPointer func19Base ∗
       StackBelow func19Base errorNewDepth below ∗
       Slices.ByteSlice 0 (func19Base + 24) errSlot ∗
+      Slices.ByteSlice 0 1049107 msgBytes ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams [] output false ∗
       TailDone output afterTail arity remainder controls calls s E Φ ∗
@@ -928,12 +929,12 @@ theorem twp_not_all_read [WasmSmallStepGS hlc Universal.State]
             notAllReadFrame :: decodeFrame :: okFrame ::
               outerFrame afterTail :: controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
-  iintro ⟨Hruntime, Hsp, Hbelow, Hslot, Hbump, Hstreams, Hcont, Hoom⟩
+  iintro ⟨Hruntime, Hsp, Hbelow, Hslot, Hmsg, Hbump, Hstreams, Hcont, Hoom⟩
   simp only [notAllReadError]
   wasm_twp_pures [twp_localGet twp_const twp_add twp_const twp_const twp_const]
     rewriting [show (24 : UInt32) + func19Base = func19Base + 24 by decide]
   have Herr := hfunc52 func19Base (func19Base + 24) 12 1049107 18 heapId
-    errSlot below storedCursor frontier history [] output false
+    errSlot below msgBytes storedCursor frontier history [] output false
     (callerLocals :=
       ⟨[], [Value.i32 func19Base, .i32 l1, .i32 l2, .i32 l3, .i32 l4,
         .i32 l5, .i32 l6, .i32 l7, .i32 l8], []⟩)
@@ -946,11 +947,12 @@ theorem twp_not_all_read [WasmSmallStepGS hlc Universal.State]
   unfold CallContract callExpr at Herr
   simp only [List.cons_append, List.nil_append] at Herr
   iapply Herr
-  isplitl_exacts [Hruntime Hsp Hbelow Hslot Hbump Hstreams]
-  isplitl_pureexact ⟨herrSlot, by decide, by decide, by decide⟩
+  isplitl_exacts [Hruntime Hsp Hbelow Hslot Hmsg Hbump Hstreams]
+  isplitl_pureexact
+    ⟨herrSlot, by decide, by decide, by decide, by simp [hmsg]⟩
   isplit
   · iintro %word0 %word1 %word2 %word3 %below' %storedCursor' %frontier'
-      %history' Hruntime Hsp Hbelow Hslot Hbump Hstreams %hword0
+      %history' Hruntime Hsp Hbelow Hslot Hmsg Hbump Hstreams %hword0
     isimp only [ResumeWP, resumeExpr, List.nil_append]
     have hne : word0 ≠ (2147483649 : UInt32) := by simpa [okTag] using hword0
     ihave ⟨Hw0, Hw1, Hw2, Hw3⟩ :=
@@ -1045,7 +1047,7 @@ theorem twp_decode_outcome [WasmSmallStepGS hlc Universal.State]
     (heapId : GName)
     (cap bufPtr count remaining oldCap oldPtr oldLen : UInt32)
     (entries : HashMap.Map UInt32 UInt32)
-    (payload spare mapBefore keysBefore below : List UInt8)
+    (payload spare mapBefore keysBefore msgBytes below : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (output finalOutput : List UInt8)
     {l1 l2 l3 l5 l7 l8 : UInt32} {afterTail : Program}
@@ -1054,6 +1056,7 @@ theorem twp_decode_outcome [WasmSmallStepGS hlc Universal.State]
     {s : Stuckness} {E : CoPset} {Φ : ObservableOutcome → HeapIProp}
     (hmapBefore : mapBefore.length = 32)
     (hkeys : keysBefore.length = randomStateSize)
+    (hmsg : msgBytes.length = 18)
     (hpayload : payload = entryCodec.serialize entries)
     (hentries : entries.length = count.toNat)
     (hcap : count.toNat ≤ cap.toNat)
@@ -1071,6 +1074,7 @@ theorem twp_decode_outcome [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 (func19Base + 24) mapBefore ∗
       Slices.ByteSlice 0 bufPtr (payload ++ spare) ∗
       Slices.ByteSlice 0 randomStateCell keysBefore ∗
+      Slices.ByteSlice 0 1049107 msgBytes ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams [] output false ∗
       TailDone finalOutput afterTail arity remainder controls calls s E Φ ∗
@@ -1082,7 +1086,7 @@ theorem twp_decode_outcome [WasmSmallStepGS hlc Universal.State]
             decodeFrame :: okFrame :: outerFrame afterTail :: controls,
             calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hbelow, Hrem, Hcount, Hcapw, Hptrw, Hlenw, Hmap,
-    Hbuf, Hkeys, Hbump, Hstreams, Hcont, Hoom⟩
+    Hbuf, Hkeys, Hmsg, Hbump, Hstreams, Hcont, Hoom⟩
   simp only [decodeOutcome_shape]
   wasm_twp_pures [twp_block]
   simp only [List.drop_zero]
@@ -1130,8 +1134,8 @@ theorem twp_decode_outcome [WasmSmallStepGS hlc Universal.State]
     · irw_exact [hsplit] with Hmap
     iclear Hlow Hrest Hbuf Hkeys Hrem Hcount Hcapw Hptrw Hlenw
     iapply twp_not_all_read hfunc52 heapId (mapBefore.take 16)
-      (below.drop (collectDepth - errorNewDepth)) storedCursor frontier
-      history output htake
+      (below.drop (collectDepth - errorNewDepth)) msgBytes storedCursor
+      frontier history output htake hmsg
     iframe
 
 /-! ## The decoder guard -/
@@ -1187,7 +1191,7 @@ theorem twp_ok_accept [WasmSmallStepGS hlc Universal.State]
     (heapId : GName)
     (cap bufPtr count remaining oldCap oldPtr oldLen : UInt32)
     (entries : HashMap.Map UInt32 UInt32)
-    (payload spare mapBefore keysBefore below : List UInt8)
+    (payload spare mapBefore keysBefore msgBytes below : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (output finalOutput : List UInt8)
     {l1 l2 l3 l5 l6 l7 l8 : UInt32} {afterTail : Program}
@@ -1196,6 +1200,7 @@ theorem twp_ok_accept [WasmSmallStepGS hlc Universal.State]
     {s : Stuckness} {E : CoPset} {Φ : ObservableOutcome → HeapIProp}
     (hmapBefore : mapBefore.length = 32)
     (hkeys : keysBefore.length = randomStateSize)
+    (hmsg : msgBytes.length = 18)
     (hpayload : payload = entryCodec.serialize entries)
     (hentries : entries.length = count.toNat)
     (hcap : count.toNat ≤ cap.toNat)
@@ -1215,6 +1220,7 @@ theorem twp_ok_accept [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 (func19Base + 24) mapBefore ∗
       Slices.ByteSlice 0 bufPtr (payload ++ spare) ∗
       Slices.ByteSlice 0 randomStateCell keysBefore ∗
+      Slices.ByteSlice 0 1049107 msgBytes ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams [] output false ∗
       TailDone finalOutput afterTail arity remainder controls calls s E Φ ∗
@@ -1226,7 +1232,7 @@ theorem twp_ok_accept [WasmSmallStepGS hlc Universal.State]
             okFrame :: outerFrame afterTail :: controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hbelow, Hrem, Htag, Hbufw, Hcount, Hcapw, Hptrw,
-    Hlenw, Hmap, Hbuf, Hkeys, Hbump, Hstreams, Hcont, Hoom⟩
+    Hlenw, Hmap, Hbuf, Hkeys, Hmsg, Hbump, Hstreams, Hcont, Hoom⟩
   simp only [okBlock]
   wasm_twp_pures [twp_block]
   simp only [List.drop_zero]
@@ -1251,9 +1257,9 @@ theorem twp_ok_accept [WasmSmallStepGS hlc Universal.State]
   rw [decodeFrame_literal]
   iclear Htag Hbufw
   iapply twp_decode_outcome hfunc2 hfunc52 heapId cap bufPtr count remaining
-    oldCap oldPtr oldLen entries payload spare mapBefore keysBefore below
-    storedCursor frontier history output finalOutput hmapBefore hkeys hpayload
-    hentries hcap hspare hok herr
+    oldCap oldPtr oldLen entries payload spare mapBefore keysBefore msgBytes
+    below storedCursor frontier history output finalOutput hmapBefore hkeys
+    hmsg hpayload hentries hcap hspare hok herr
   iframe
 
 /-! ## From the decoder outcome to the public output
@@ -1362,10 +1368,22 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
     DriverTailSpec (hlc := hlc) := by
   unfold DriverTailSpec
   intro heapId capacity ptr aux4 input output reserve head chunk slice tail
-    extra keysBefore storedCursor frontier history afterTail arity remainder
-    controls calls s E Φ
-  iintro ⟨HafterRead, Hextra, Hkeys, %hsizes, Hcont, Hoom⟩
-  obtain ⟨hextra, hkeys, hinput⟩ := hsizes
+    extra keysBefore dataBytes storedCursor frontier history afterTail arity
+    remainder controls calls s E Φ
+  iintro ⟨HafterRead, Hextra, Hkeys, Hdata, %hsizes, Hcont, Hoom⟩
+  obtain ⟨hextra, hkeys, hdata, hinput⟩ := hsizes
+  -- The static message sits at 1049107, which is `entryStackTop + 531`.  Cut
+  -- its eighteen bytes out of the data segment and lend them to the error
+  -- path, which is the only caller that reads them.
+  have hmsg : ((dataBytes.drop 531).take 18).length = 18 := by
+    simp [hdata, dataSegmentSize]
+  icases (ByteSlice_split_at entryStackTop 531 dataBytes
+    (by simp [hdata, dataSegmentSize])).mp $$ Hdata with ⟨_Hbefore, Hmsg⟩
+  isimp only [UInt32.reduceToNat,
+    show entryStackTop + 531 = 1049107 by decide] at Hmsg
+  icases (ByteSlice_split_at 1049107 18 (dataBytes.drop 531)
+    (by simp [hdata, dataSegmentSize])).mp $$ Hmsg with ⟨Hmsg, _Hafter⟩
+  isimp only [UInt32.reduceToNat] at Hmsg
   isimp only [AfterRead] at HafterRead
   icases HafterRead with ⟨Hruntime, Hsp, Hreserve, Hhead, Hchunk, Hslice,
     Hvec, Htail, Hbump, Hstreams, %hshape⟩
@@ -1540,11 +1558,12 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
       (HashMap.BorshBridge.wireEntries
         (input.take (4 + 8 * (headerWord input).toNat)))
       payload spare' (chunk.take 32) keysBefore
+      ((dataBytes.drop 531).take 18)
       (below'.drop (decoderDepth - collectDepth))
       storedCursor' frontier' history' output
       (output ++ Project.RustHashMap.Spec.lenOutput input)
-      (by simp [hchunk]) hkeys hserialize.symm hentriesLen hcapBound hspareLen
-      hok herr
+      (by simp [hchunk]) hkeys hmsg hserialize.symm hentriesLen hcapBound
+      hspareLen hok herr
     iframe
   · isplit
     · iintro %word0 %word1 %word2 %word3 %ptr' %len' %below' %storedCursor'

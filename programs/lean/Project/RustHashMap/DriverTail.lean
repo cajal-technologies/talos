@@ -123,11 +123,14 @@ theorem StackBelow_of_reserve [WasmHeapGS Universal.State]
 proof of it comes next; the statement is separate so that the driver and
 the wrapper can be written against a fixed interface.
 
-The tail takes three things beyond `AfterRead`:
+The tail takes four things beyond `AfterRead`:
 
 * 224 bytes below the reserve, which together with the reserve make the
   region the callees need;
 * the `RandomState` cells, which `collect_entries` reads and writes;
+* the whole data segment, out of which the tail cuts the eighteen bytes of
+  the static message `Not all bytes read` at 1049107 and lends them to
+  `borsh::io::Error::new`;
 * the bound on the input length, so that the stored length word reads back
   as the number of input bytes.
 
@@ -145,7 +148,7 @@ what the three lemmas of `Wasm.RustStd.HashMap.BorshBridge` state.
 def DriverTailSpec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (heapId : GName) (capacity ptr aux4 : UInt32)
     (input output : List UInt8)
-    (reserve head chunk slice tail extra keysBefore : List UInt8)
+    (reserve head chunk slice tail extra keysBefore dataBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (afterTail : Program)
     {arity : Nat} {remainder : List Value}
@@ -156,7 +159,9 @@ def DriverTailSpec [WasmSmallStepGS hlc Universal.State] : Prop :=
         storedCursor frontier history output ∗
       Slices.ByteSlice 0 (func19Base - UInt32.ofNat driverDepth) extra ∗
       Slices.ByteSlice 0 randomStateCell keysBefore ∗
+      Slices.ByteSlice 0 entryStackTop dataBytes ∗
       ⌜extra.length = 224 ∧ keysBefore.length = randomStateSize ∧
+        dataBytes.length = dataSegmentSize ∧
         input.length < UInt32.size⌝ ∗
       ((∀ finalLocals : Locals,
           RuntimeContext -∗
