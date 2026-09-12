@@ -8,9 +8,9 @@ set_option maxHeartbeats 0
 # Partial adequacy for the merge-sort entry call
 
 This file connects the authoritative `Func3Spec` call contract to the public
-outcome-sensitive partial-correctness specification.  It deliberately contains
-no termination argument: finite normal and trapping traces are classified, but
-divergence is not excluded by the current Iris integration.
+outcome-sensitive partial-correctness specification. It classifies finite
+normal and trapping traces and supplies the resource readouts reused by
+`TotalProof` for named-export termination.
 -/
 
 namespace Project.Mergesort.Adequacy
@@ -251,7 +251,8 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   isplitl_exact Hbump
   · iexact Hstreams
 
-private abbrev irisEntryPost [WasmSmallStepGS hlc Universal.State]
+/-- Hide the terminal machine resources behind the public outcome predicate. -/
+abbrev irisEntryPost [WasmSmallStepGS hlc Universal.State]
     (input : List UInt32) : ObservableOutcome → HeapIProp :=
   fun outcome => iprop(∀ (store : MachineStore Universal.State)
       (observations : List StepKind),
@@ -260,7 +261,7 @@ private abbrev irisEntryPost [WasmSmallStepGS hlc Universal.State]
 
 /-- Normal driver resources establish the public sorted-output postcondition;
 all stack, allocator, and ghost resources are intentionally hidden. -/
-private theorem DriverSuccess_public
+theorem DriverSuccess_public
     [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (input : List UInt32) :
     DriverSuccess heapId input -∗ irisEntryPost input (.done []) := by
@@ -316,7 +317,7 @@ private theorem DriverOOMState_streams
 
 /-- The exceptional continuation in `Func3Spec` maps every valid driver OOM
 phase to exactly the public `talos.oom` terminal outcome. -/
-private theorem DriverOOM_public
+theorem DriverOOM_public
     [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (input : List UInt32) :
     (∃ phase : DriverOOMPhase, DriverOOMState heapId input phase) -∗
@@ -354,6 +355,7 @@ theorem twp_entry_of_func3
     (remainder := []) (controls := []) (calls := [])
     (s := Stuckness.NotStuck) (E := ⊤) (Φ := irisEntryPost input)
   unfold CallContract at hcall
+  simp only [WithAllocationPolicy] at hcall
   iapply_frame hcall using [Hruntime Hsp Hstack Hbump Hstreams]
   isplitr_pureexact entryStackBytes_length
   isplitr
@@ -371,7 +373,8 @@ theorem twp_entry_of_func3
 partial adequacy only: it classifies all finite `.done`/`.trapped` traces and
 does not assert strong normalization or exhibit a terminal trace. -/
 theorem entry_partiallyMeets_of_func3
-    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State]
+      [WasmMemoryPagesLegacy Universal.State],
       Func3Spec (hlc := hlc))
     (input : List UInt32) :
     PartiallyMeetsOutcome (entryConfig input) (entryPost input) := by
@@ -384,7 +387,7 @@ theorem entry_partiallyMeets_of_func3
   · exact entryHeap_below_heapBase
   · exact entryGlobals_agree input
   · simp
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
     ihave Hruntime' :
         runtimeModuleOwn ⟨0⟩ Project.Mergesort.module $$ [Hruntime]
@@ -406,7 +409,8 @@ theorem entry_partiallyMeets_of_func3
 /-- Conditional final adequacy.  Once `func3_correct` is available, the final
 public proof is exactly `entry_adequacy_of_func3 func3_correct`. -/
 theorem entry_adequacy_of_func3
-    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State]
+      [WasmMemoryPagesLegacy Universal.State],
       Func3Spec (hlc := hlc)) :
     Project.Mergesort.Spec.PublicEntrySpecification := by
   unfold Project.Mergesort.Spec.PublicEntrySpecification

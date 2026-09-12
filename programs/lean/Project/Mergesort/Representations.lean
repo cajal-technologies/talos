@@ -1070,9 +1070,9 @@ the interpreter's i32 hard cap. -/
 theorem module_memoryCap :
     Project.Mergesort.module.memoryCap = Module.memoryHardCap := by rfl
 
-/-- Instantiation materializes that declaration-level cap in memory-resource
-metadata.  A modular allocator proof still needs a state-linked invariant
-showing that this immutable field remains the current store's metadata. -/
+/-- Instantiation materializes the declaration-level cap in memory-resource
+metadata. At reached stores, `stateInterp_memoryCap_lookup` connects owned cap
+slots to the current physical metadata. -/
 theorem initialStore_memoryCaps :
     (Project.Mergesort.module.initialStore
       (α := Universal.State)).memoryCaps = [Module.memoryHardCap] := by rfl
@@ -2663,6 +2663,40 @@ def GeometricVecFacts
       frontier = vectorBlockBase exponent + 2 ^ exponent ∧
       history = geometricHistory exponent)
 
+/-- Actual input-buffer lineage together with the input-dependent capacity
+bound retained by the driver read loop. -/
+def BoundedGeometricVecFacts
+    (total length remaining : Nat) (capacity ptr : UInt32)
+    (frontier : Nat) (history : AllocationHistory) : Prop :=
+  GeometricVecFacts total length remaining capacity ptr frontier history ∧
+    capacity.toNat ≤ max (2 * total) 8
+
+/-- A computable bound on retained input-buffer bytes.  It is conservative;
+the exact next-power-of-two expression is not needed for the success range. -/
+def inputFrontierBound (total : Nat) : Nat :=
+  heapBase.toNat + 2 * max (2 * total) 8
+
+/-- Conservative arithmetic room for the values and scratch allocations,
+allowing up to three padding bytes for each four-aligned request. -/
+def workArraysFrontierBound (total : Nat) : Nat :=
+  inputFrontierBound total + 2 * total + 6
+
+/-- Lineage retained at the scratch-allocation boundary: the initial
+bounded Vec lineage, the actual successful values classification, and the
+exact current allocation history/frontier. -/
+def ScratchLineage (original : List UInt32) (capacity dataPtr valuesPtr : UInt32)
+    (valuesId frontier : Nat) (history : AllocationHistory) : Prop :=
+  ∃ inputFrontier : Nat, ∃ inputHistory : AllocationHistory, ∃ valuesFinish : UInt32,
+    BoundedGeometricVecFacts (serialize original).length
+      (serialize original).length 0 capacity dataPtr inputFrontier inputHistory ∧
+    classifyBump inputFrontier
+        { size := (serialize original).length, alignment := 4 } =
+      .success valuesPtr valuesFinish ∧
+    valuesId = inputHistory.nextId ∧
+    frontier = valuesFinish.toNat ∧
+    history = inputHistory.allocate valuesPtr
+      { size := (serialize original).length, alignment := 4 }
+
 /-- A normally completed public read loop has a byte length below the signed
 address boundary.  Larger geometric Vec executions reach the allocator's OOM
 classification before they can complete. -/
@@ -3157,11 +3191,61 @@ def DriverSuccess [WasmHeapGS Universal.State]
   ∃ storedCursor : UInt32, ∃ frontier : Nat,
   ∃ history : AllocationHistory,
     ⌜SortedPermutation original sorted ∧
-      stackBytes.length = 288 ∧ AllRetired history⌝ ∗
+      stackBytes.length = 288 ∧ AllRetired history ∧
+      frontier ≤ workArraysFrontierBound (serialize original).length⌝ ∗
     StackPointer entryStackTop ∗
     StackRegion entryStackLow stackBytes ∗
     BumpHeap heapId storedCursor frontier history ∗
     Streams [] (serialize sorted) false
+
+/-- Allocation failure evidence and page ownership mode. The default keeps
+the original unrestricted allocation contracts definitionally unchanged. -/
+inductive AllocationPolicy where
+  | unrestricted
+  | trackCoverage (pages : Nat)
+  | frozen (pages : Nat)
+
+/-- A request was arithmetically rejected, or its accepted end lies beyond the
+owned page lower bound. This does not assert that physical memory is exhausted. -/
+def Uncovered (pages frontier : Nat) (layout : AllocLayout) : Prop :=
+  match classifyBump frontier layout with
+  | .oom => True
+  | .success _ finish => pages * 65536 < finish.toNat
+
+/-- Uniform proposition exposed by the optional allocation policy. -/
+def AllocationUncovered (policy : AllocationPolicy) (frontier : Nat)
+    (layout : AllocLayout) : Prop :=
+  match policy with
+  | .unrestricted => True
+  | .trackCoverage pages => Uncovered pages frontier layout
+  | .frozen pages => Uncovered pages frontier layout
+
+/-- Retain a failure witness beside its exact pre-commit resources. The
+unrestricted specialization is the original resource predicate. -/
+abbrev AllocationEvidence (policy : AllocationPolicy) (frontier : Nat)
+    (layout : AllocLayout) (P : IProp (WasmHeapGF Universal.State)) :
+    IProp (WasmHeapGF Universal.State) :=
+  match policy with
+  | .unrestricted => P
+  | .trackCoverage pages => iprop(⌜Uncovered pages frontier layout⌝ ∗ P)
+  | .frozen pages => iprop(⌜Uncovered pages frontier layout⌝ ∗ P)
+
+theorem allocationEvidence_intro (policy : AllocationPolicy) (frontier : Nat)
+    (layout : AllocLayout) (P : IProp (WasmHeapGF Universal.State)) :
+    iprop(⌜AllocationUncovered policy frontier layout⌝ ∗ P) ⊢
+      AllocationEvidence policy frontier layout P := by
+  cases policy with
+  | unrestricted =>
+      iintro ⟨_, HP⟩
+      iexact HP
+  | trackCoverage pages =>
+      simp only [AllocationUncovered, AllocationEvidence]
+      iintro H
+      iexact H
+  | frozen pages =>
+      simp only [AllocationUncovered, AllocationEvidence]
+      iintro H
+      iexact H
 
 /-- Exact reserve-phase OOM resources.  The just-read nonempty chunk is still
 in the frame and has already been removed from the host input. -/
@@ -3170,25 +3254,30 @@ def DriverReserveOOM [WasmHeapGS Universal.State]
     [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
-    (heapId : GName) (original : List UInt32) :
+    (heapId : GName) (original : List UInt32)
+    (policy : AllocationPolicy := .unrestricted) :
     IProp (WasmHeapGF Universal.State) := iprop%
   ∃ capacity ptr : UInt32,
   ∃ appended current remaining chunkTail outputBytes shadow : List UInt8,
   ∃ storedCursor : UInt32, ∃ frontier : Nat,
   ∃ history : AllocationHistory,
+    AllocationEvidence policy frontier
+      { size := selectedCapacity appended.length current.length capacity.toNat,
+        alignment := 1 } iprop(
     ⌜serialize original = appended ++ current ++ remaining ∧
       0 < current.length ∧
       current.length % 4 = 0 ∧
       current.length = min 256 (current.length + remaining.length) ∧
       (current ++ chunkTail).length = 256 ∧
-      GeometricVecFacts (serialize original).length appended.length
+      capacity.toNat - appended.length < current.length ∧
+      BoundedGeometricVecFacts (serialize original).length appended.length
         (current.length + remaining.length) capacity ptr frontier history⌝ ∗
     StackPointer reserveBase ∗
     StackReserve reserveBase shadow ∗
     ExportFrame heapId capacity ptr appended
       (current ++ chunkTail) outputBytes ∗
     BumpHeap heapId storedCursor frontier history ∗
-    Streams remaining [] true
+    Streams remaining [] true)
 
 /-- Exact values-allocation OOM resources. -/
 def DriverValuesOOM [WasmHeapGS Universal.State]
@@ -3196,21 +3285,24 @@ def DriverValuesOOM [WasmHeapGS Universal.State]
     [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
-    (heapId : GName) (original : List UInt32) :
+    (heapId : GName) (original : List UInt32)
+    (policy : AllocationPolicy := .unrestricted) :
     IProp (WasmHeapGF Universal.State) := iprop%
   ∃ capacity ptr : UInt32,
   ∃ chunkBytes outputBytes shadow : List UInt8,
   ∃ storedCursor : UInt32, ∃ frontier : Nat,
   ∃ history : AllocationHistory,
+    AllocationEvidence policy frontier
+      { size := (serialize original).length, alignment := 4 } iprop(
     ⌜0 < original.length ∧
-      GeometricVecFacts (serialize original).length
+      BoundedGeometricVecFacts (serialize original).length
         (serialize original).length 0 capacity ptr frontier history⌝ ∗
     StackPointer driverBase ∗
     StackReserve reserveBase shadow ∗
     ExportFrame heapId capacity ptr (serialize original)
       chunkBytes outputBytes ∗
     BumpHeap heapId storedCursor frontier history ∗
-    Streams [] [] true
+    Streams [] [] true)
 
 /-- Exact scratch-allocation OOM resources.  The decoded values allocation is
 still live; no scratch allocation has been committed. -/
@@ -3219,31 +3311,36 @@ def DriverScratchOOM [WasmHeapGS Universal.State]
     [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
-    (heapId : GName) (original : List UInt32) :
+    (heapId : GName) (original : List UInt32)
+    (policy : AllocationPolicy := .unrestricted) :
     IProp (WasmHeapGF Universal.State) := iprop%
   ∃ capacity ptr valuesPtr : UInt32,
   ∃ valuesId : Nat,
   ∃ chunkBytes outputBytes shadow : List UInt8,
   ∃ storedCursor : UInt32, ∃ frontier : Nat,
   ∃ history : AllocationHistory,
-    ⌜0 < original.length⌝ ∗
+    AllocationEvidence policy frontier
+      { size := (serialize original).length, alignment := 4 } iprop(
+    ⌜0 < original.length ∧
+      ScratchLineage original capacity ptr valuesPtr valuesId frontier history⌝ ∗
     StackPointer driverBase ∗
     StackReserve reserveBase shadow ∗
     ExportFrame heapId capacity ptr (serialize original)
       chunkBytes outputBytes ∗
     LiveWordBlock heapId valuesId valuesPtr original ∗
     BumpHeap heapId storedCursor frontier history ∗
-    Streams [] [] true
+    Streams [] [] true)
 
 def DriverOOMState [WasmHeapGS Universal.State]
     [WasmHeapDomainGS Universal.State]
     [WasmMemoryPagesGS Universal.State]
     [WasmGlobalGS Universal.State]
     [WasmHostStateGS Universal.State]
-    (heapId : GName) (original : List UInt32) :
-    DriverOOMPhase → IProp (WasmHeapGF Universal.State)
-  | .reserve => DriverReserveOOM heapId original
-  | .values => DriverValuesOOM heapId original
-  | .scratch => DriverScratchOOM heapId original
+    (heapId : GName) (original : List UInt32) (phase : DriverOOMPhase)
+    (policy : AllocationPolicy := .unrestricted) : IProp (WasmHeapGF Universal.State) :=
+  match phase with
+  | .reserve => DriverReserveOOM heapId original policy
+  | .values => DriverValuesOOM heapId original policy
+  | .scratch => DriverScratchOOM heapId original policy
 
 end Project.Mergesort.Representations

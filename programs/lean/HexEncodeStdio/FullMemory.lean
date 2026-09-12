@@ -381,7 +381,7 @@ theorem terminates
   · exact heap_inBounds config.store hpages
   · exact hglobals
   · exact hwf
-  · intro hlc _
+  · intro hlc _ legacyPages
     iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost⟩
     ihave Hbytes := heap_pointsTo config.store hpages $$ Hheap
     iapply htwp hlc

@@ -193,7 +193,7 @@ theorem wordRoundtrip_adequate (oldWord : UInt32) :
     apply_store32_inBounds0
     · decide +kernel
     · exact emptyHeap_inBounds _
-  · intro gs
+  · intro gs legacyPages
     iintro Hbytes
     ihave Hword := word16Heap_pointsTo oldWord $$ Hbytes
     simp only [wordRoundtripAdequacyConfig, wordRoundtripAdequacyModule]
@@ -228,7 +228,7 @@ theorem wordRoundtrip_store_partiallyMeets (oldWord : UInt32) :
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · simp only [wordRoundtripAdequacyConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hword := word16Heap_pointsTo oldWord $$ Hbytes
@@ -343,7 +343,7 @@ theorem swapWords_adequate :
   · apply swapWordsHeap_agrees
   · apply swapWordsHeap_inBounds
     decide +kernel
-  · intro gs
+  · intro gs legacyPages
     iintro Hbytes
     ihave Hwords := swapWordsHeap_pointsTo $$ Hbytes
     simp only [swapWordsAdequacyConfig, swapWordsAdequacyModule]
@@ -903,7 +903,7 @@ theorem fillFourBytes_store_partiallyMeets (oldWord : UInt32) :
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · simp only [fillFourBytesAdequacyConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := fillFourBytesHeap_pointsTo oldWord $$ Hbytes
@@ -1023,7 +1023,7 @@ theorem copyWord_store_partiallyMeets (oldDestination : UInt32) :
   · intro index value hget
     rw [get?_empty] at hget; contradiction
   · simp only [copyWordAdequacyConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, _Hruntime⟩
     ihave Hwords := copyWordHeap_pointsTo oldDestination $$ Hbytes
@@ -2060,7 +2060,7 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
       (fun values _store => values = [.i32 (if a.toInt32 ≥ b.toInt32 then 1 else 0)]) := by
   apply wasm_smallStep_terminates (signedBranchConfig a b)
     (fun values => values = [.i32 (if a.toInt32 ≥ b.toInt32 then 1 else 0)])
-  intro hlc gs
+  intro hlc gs legacyPages
   simp only [signedBranchConfig,
     show signedBranchModule.funcs[0]!.body =
         [.block 0 0 [.localGet 0, .localGet 1, .geS, .br_if 0, .const 0, .ret],
@@ -2196,7 +2196,7 @@ theorem fillThenRead_terminatesWith (val : UInt32) :
   · apply fillThenReadInitialHeap_inBounds
     decide +kernel
   · simp [fillThenReadConfig]
-  · intro hlc gs
+  · intro hlc gs legacyPages
     simp only [fillThenReadConfig,
       show fillThenReadModule.funcs[0]!.body =
           [.const 0, .localGet 0, .const 4, .memoryFill, .const 0, .load32 0] from rfl]
@@ -2247,7 +2247,7 @@ theorem exceptionLifecycle_terminatesWith (arg : UInt32) :
   apply wasm_smallStep_runtime_tags_terminates (exceptionLifecycleConfig arg)
     (fun values => values = [.i32 arg])
   · simp [exceptionLifecycleConfig]
-  intro hlc gs
+  intro hlc gs legacyPages
   simp only [exceptionLifecycleConfig, RuntimeEnv.currentModule_mk1,
     show exceptionLifecycleModule.funcs[0]!.body =
         [.tryTable 0 1 [.catch 0 0] [.localGet 0, .throwI 0], .const 99] from rfl]

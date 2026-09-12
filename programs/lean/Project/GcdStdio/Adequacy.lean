@@ -503,7 +503,7 @@ theorem entry_terminatesWithOutcome (a b : UInt64) :
   · exact entryGlobals_agree a b
   · change 0 < 1
     decide
-  · intro hlc gs
+  · intro hlc gs legacyPages
     iintro ⟨Hheap, Hglobals, Hmodule, Henv, Hhost⟩
     ihave Hmodule' : runtimeModuleOwn ⟨0⟩ Project.GcdStdio.module $$ [Hmodule]
     · rw [← entryConfig_entry a b, ← entryConfig_currentModule a b]

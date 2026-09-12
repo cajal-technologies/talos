@@ -11,10 +11,11 @@ The exported Rust function reads packed little-endian `UInt32` values from
 standard input until exhaustion and writes the sorted values in the same
 four-byte-per-value format.
 
-The public specification deliberately hides fuel, linear memory, allocator
-state, and the implementation's internal scratch array. Every finite terminal
-trace is classified as either a correctly sorted output or the allocator's
-distinguished `talos.oom` host trap; termination itself is not claimed.
+The partial contract classifies terminal outcomes. The total contract also
+proves termination, permitting either sorted output or the allocator's OOM
+trap. The growing-memory contract gives a sufficient input-size condition for
+normal return and bounds physical Wasm pages throughout execution. Internal
+allocator ownership and numerical runner budgets stay in the proof APIs.
 -/
 
 namespace Project.Mergesort.Spec
@@ -104,5 +105,69 @@ terminal execution either reports OOM or satisfies `Post`. -/
 def PublicEntrySpecification : Prop :=
   ∀ input : List UInt32,
     PartiallyRuns input (Post input)
+
+abbrev Input := List UInt32
+
+/-- The two permitted semantic outcomes of the compiled streaming sorter. -/
+inductive Output where
+  | sorted (values : List UInt32)
+  | outOfMemory
+
+/-- Canonical initialization with the public packed input stream. -/
+def args (input : Input) : ExportCall Universal.State :=
+  ExportCall.ofHost «module» (Universal.State.ofInput (encodeValues input))
+
+/-- Observe sorted output or the precise OOM trap in the actual terminal store. -/
+def result : Output → ExportOutcome Universal.State → Prop
+  | .sorted values, returned =>
+      returned.outcome = .done [] ∧
+        returned.final.host.stdio.output = encodeValues values
+  | .outOfMemory, returned =>
+      returned.outcome = .trapped (.host OOM.trapMessage) ∧
+        returned.final.host.oom.raised = true
+
+abbrev Runs := Universal.RunsExportOutcome «module»
+
+/-- Total correctness of the compiled merge-sort export.
+
+Informal spec:
+For every finite packed word input, the named export reaches a terminal
+outcome: sorted output containing exactly the input values, or the allocator's
+distinguished OOM trap. No other trap or divergent execution is an allowed
+outcome of this total contract. -/
+@[spec_of "rust-exported" "mergesort::mergesort"]
+def PublicTotalSpecification : Prop :=
+  ∀ input : Input, ∃ output : Output,
+    Runs "mergesort" (args input) (result output) ∧
+      match output with
+      | .sorted values => SortedPermutation input values
+      | .outOfMemory => True
+
+/-- A conservative physical-page budget for the input buffers and both work
+arrays. One Wasm page is 65,536 bytes; this is not a host-memory or time bound. -/
+def growingPageBound (input : Input) : Nat :=
+  max 17 ((1049542 + 24 * input.length + 65535) / 65536)
+
+/-- Successful sorting within the proved physical-memory budget.
+
+Informal spec:
+For every input of at most 89,434,754 packed UInt32 values, the actual
+mergesort export returns normally and writes the same values in sorted order,
+including duplicates. Every execution prefix uses at most `growingPageBound`
+physical Wasm pages. The standard host and 65,536-page cap are unchanged.
+The input limit is sufficient for successful allocation; larger inputs may
+also succeed. -/
+@[spec_of "rust-exported" "mergesort::mergesort"]
+def PublicGrowingMemorySpecification : Prop :=
+  ∀ input : Input, input.length ≤ 89434754 →
+    (∃ values : List UInt32,
+      Runs "mergesort" (args input) (result (.sorted values)) ∧
+        SortedPermutation input values) ∧
+    ∀ initial : SmallStep.Config Universal.State,
+      startExportConfig? (Universal.envFor «module»)
+        «module» "mergesort" (args input) = some initial →
+      ∀ (trace : List SmallStep.StepKind) (reached : SmallStep.Config Universal.State),
+        SmallStep.Steps initial trace reached →
+          reached.store.wasm.mem.pages ≤ growingPageBound input
 
 end Project.Mergesort.Spec

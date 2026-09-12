@@ -1,4 +1,5 @@
 import HexEncodeStdio.OperationalOutcome
+import CodeLib.SepLogic.MemoryTrace
 
 namespace Project.HexEncodeStdio
 
@@ -429,8 +430,134 @@ theorem allocator_grow_failure_traps
   simp
   exact oom_wrapper_traps store _ _ _ _ _ _ _ _ hmod henv
 
+private theorem allocator_trace_prepend
+    {initial next final : Config Universal.State} {kind : StepKind} {n : Nat}
+    (head : Step initial kind next) (allowed : GrowthCostKind kind)
+    (tail : ∃ trace, trace.length = n ∧
+      (∀ label ∈ trace, GrowthCostKind label) ∧ Steps next trace final) :
+    ∃ trace, trace.length = n + 1 ∧
+      (∀ label ∈ trace, GrowthCostKind label) ∧ Steps initial trace final := by
+  obtain ⟨trace, length, labels, execution⟩ := tail
+  refine ⟨kind :: trace, by simp [length], ?_, .cons head execution⟩
+  intro label member
+  rcases List.mem_cons.mp member with rfl | member
+  · exact allowed
+  · exact labels label member
+
+local macro "hex_allocator_step " head:term : tactic =>
+  `(tactic| apply allocator_trace_prepend $head (by trivial))
+
 /-- If the allocator's computed end already lies in the current memory, the
 call returns the aligned pointer and updates only the bump word. -/
+theorem allocator_no_grow_steps_trace
+    (store : MachineStore Universal.State)
+    (params localValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (size align oldBump : UInt32)
+    (hmod : store.runtime.currentModule = «module»)
+    (hread : store.wasm.mem.read32 1053960 = oldBump)
+    (hbound : 1053960 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hfirst : ¬ allocatorBase oldBump +
+      ((0xffffffff : UInt32) + align) < (0xffffffff : UInt32) + align)
+    (hsecond : ¬ allocatorFinish size align oldBump <
+      allocatorPtr oldBump align)
+    (hnegative : ¬ (allocatorFinish size align oldBump).toInt32 <
+      UInt32.toInt32 0)
+    (henough : allocatorRequiredPages size align oldBump ≤
+      UInt32.ofNat store.wasm.mem.pages) :
+    ∃ trace, trace.length = 49 ∧
+      (∀ kind ∈ trace, GrowthCostKind kind) ∧
+      Steps
+        ⟨.running
+          ⟨⟨params, localValues, [.i32 align, .i32 size] ++ stack⟩,
+            [.call 15] ++ code, arity, remainder, controls, calls⟩,
+          store⟩ trace
+        ⟨.running
+          ⟨⟨params, localValues, .i32 (allocatorPtr oldBump align) :: stack⟩,
+            code, arity, remainder, controls, calls⟩,
+          allocatorBumpStore store (allocatorFinish size align oldBump)⟩ := by
+  have hnot : ¬15 < store.runtime.currentModule.imports.length := by
+    rw [hmod]
+    decide
+  have hfn : store.runtime.currentModule.funcs[
+      15 - store.runtime.currentModule.imports.length]? = some func12Def := by
+    rw [hmod]
+    rfl
+  hex_allocator_step (Step.call hnot hfn)
+  simp [func12Def, Function.toLocals, Function.numParams,
+    ValueType.zero, func12]
+  hex_allocator_step Step.block
+  hex_allocator_step Step.block
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step Step.add
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step
+    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
+  simp only [UInt32.zero_add, hread]
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.select
+    (selected := .i32 (allocatorBase oldBump)) (by
+      simp only [allocatorBase]
+      by_cases h : oldBump = 0 <;> simp [h]))
+  hex_allocator_step Step.add
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.ltU (result := 0) (by simp [hfirst]))
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.sub
+  hex_allocator_step Step.and
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.add
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.localGet rfl)
+  have hptr :
+      (allocatorBase oldBump + ((0xffffffff : UInt32) + align)) &&&
+          (0 - align) = allocatorPtr oldBump align := by
+    rfl
+  rw [hptr]
+  hex_allocator_step
+    (Step.ltU (result := 0) (if_neg hsecond).symm)
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step
+    (Step.ltS (result := 0) (if_neg hnegative).symm)
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step Step.add
+  hex_allocator_step Step.const
+  hex_allocator_step Step.shrU
+  rw [show (65535 + (size + allocatorPtr oldBump align)) >>> (16 % 32) =
+      allocatorRequiredPages size align oldBump by rfl]
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step Step.memorySize
+  rw [hmod]
+  have hm64 : «module».memIs64 = false := rfl
+  rw [hm64]
+  simp only [sizeValue, Bool.false_eq_true, if_false]
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.leU (result := 1) (if_pos henough).symm)
+  hex_allocator_step (Step.brIf (condition := 1) (by decide) rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step
+    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
+  simp only [setMemory_eq, allocatorBumpStore]
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.returnFromCallFallthrough rfl)
+  exact ⟨[], rfl, by simp, .refl _⟩
+
+/-- Compatibility projection retaining the original reachability contract. -/
 theorem allocator_no_grow_steps
     (store : MachineStore Universal.State)
     (params localValues stack : List Value) (code : Program)
@@ -457,6 +584,48 @@ theorem allocator_no_grow_steps
           ⟨⟨params, localValues, .i32 (allocatorPtr oldBump align) :: stack⟩,
             code, arity, remainder, controls, calls⟩,
           allocatorBumpStore store (allocatorFinish size align oldBump)⟩ := by
+  obtain ⟨trace, _, _, execution⟩ := allocator_no_grow_steps_trace
+    store params localValues stack code arity remainder controls calls
+    size align oldBump hmod hread hbound hfirst hsecond hnegative henough
+  exact ⟨trace, execution⟩
+
+/-- Successful `memory.grow` followed by the allocator's ordinary return. -/
+theorem allocator_grow_success_steps_trace
+    (store : MachineStore Universal.State)
+    (params localValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (size align oldBump : UInt32) (memory : Mem) (previousPages : Nat)
+    (hmod : store.runtime.currentModule = «module»)
+    (hread : store.wasm.mem.read32 1053960 = oldBump)
+    (hbound : 1053960 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hboundGrown : 1053960 + 4 ≤ memory.pages * 65536)
+    (hfirst : ¬ allocatorBase oldBump +
+      ((0xffffffff : UInt32) + align) < (0xffffffff : UInt32) + align)
+    (hsecond : ¬ allocatorFinish size align oldBump <
+      allocatorPtr oldBump align)
+    (hnegative : ¬ (allocatorFinish size align oldBump).toInt32 <
+      UInt32.toInt32 0)
+    (hneed : ¬ allocatorRequiredPages size align oldBump ≤
+      UInt32.ofNat store.wasm.mem.pages)
+    (hgrow : store.wasm.mem.grow
+        (allocatorRequiredPages size align oldBump -
+          UInt32.ofNat store.wasm.mem.pages)
+        (store.wasm.memoryCap store.runtime.currentModule 0) =
+          some (memory, previousPages))
+    (hresult : previousPages.toUInt32 ≠ (0xffffffff : UInt32)) :
+    ∃ trace, trace.length = 56 ∧
+      (∀ kind ∈ trace, GrowthCostKind kind) ∧
+      Steps
+        ⟨.running
+          ⟨⟨params, localValues, [.i32 align, .i32 size] ++ stack⟩,
+            [.call 15] ++ code, arity, remainder, controls, calls⟩,
+          store⟩ trace
+        ⟨.running
+          ⟨⟨params, localValues, .i32 (allocatorPtr oldBump align) :: stack⟩,
+            code, arity, remainder, controls, calls⟩,
+          allocatorBumpStore (allocatorGrownStore store memory)
+            (allocatorFinish size align oldBump)⟩ := by
   have hnot : ¬15 < store.runtime.currentModule.imports.length := by
     rw [hmod]
     decide
@@ -464,81 +633,90 @@ theorem allocator_no_grow_steps
       15 - store.runtime.currentModule.imports.length]? = some func12Def := by
     rw [hmod]
     rfl
-  apply Reaches.prepend (Step.call hnot hfn)
+  hex_allocator_step (Step.call hnot hfn)
   simp [func12Def, Function.toLocals, Function.numParams,
     ValueType.zero, func12]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend
+  hex_allocator_step Step.block
+  hex_allocator_step Step.block
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step Step.add
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step
     (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
   simp only [UInt32.zero_add, hread]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.select
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.select
     (selected := .i32 (allocatorBase oldBump)) (by
       simp only [allocatorBase]
       by_cases h : oldBump = 0 <;> simp [h]))
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU (result := 0) (by simp [hfirst]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
+  hex_allocator_step Step.add
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.ltU (result := 0) (by simp [hfirst]))
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.sub
+  hex_allocator_step Step.and
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.add
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.localGet rfl)
   have hptr :
       (allocatorBase oldBump + ((0xffffffff : UInt32) + align)) &&&
           (0 - align) = allocatorPtr oldBump align := by
     rfl
   rw [hptr]
-  apply Reaches.prepend
+  hex_allocator_step
     (Step.ltU (result := 0) (if_neg hsecond).symm)
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step
     (Step.ltS (result := 0) (if_neg hnegative).symm)
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.shrU
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step Step.add
+  hex_allocator_step Step.const
+  hex_allocator_step Step.shrU
   rw [show (65535 + (size + allocatorPtr oldBump align)) >>> (16 % 32) =
       allocatorRequiredPages size align oldBump by rfl]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend Step.memorySize
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step Step.memorySize
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
   simp only [sizeValue, Bool.false_eq_true, if_false]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.leU (result := 1) (if_pos henough).symm)
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend
-    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
+  hex_allocator_step (Step.localTee rfl)
+  hex_allocator_step (Step.leU (result := 0) (if_neg hneed).symm)
+  hex_allocator_step Step.brIfZero
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step Step.sub
+  hex_allocator_step (Step.memoryGrowSuccess hgrow)
+  rw [setMemory_eq]
+  simp only [allocatorGrownStore]
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.ne (result := 1) (if_pos hresult).symm)
+  hex_allocator_step (Step.brIf (condition := 1) (by decide) rfl)
+  hex_allocator_step Step.const
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step
+    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960)
+      (by simpa using hboundGrown))
   simp only [setMemory_eq, allocatorBumpStore]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.returnFromCallFallthrough rfl)
-  simp []
-  exact ⟨[], .refl _⟩
+  hex_allocator_step (Step.localGet rfl)
+  hex_allocator_step (Step.returnFromCallFallthrough rfl)
+  exact ⟨[], rfl, by simp, .refl _⟩
 
-/-- Successful `memory.grow` followed by the allocator's ordinary return. -/
+/-- Compatibility projection retaining the original reachability contract. -/
 theorem allocator_grow_success_steps
     (store : MachineStore Universal.State)
     (params localValues stack : List Value) (code : Program)
@@ -573,96 +751,11 @@ theorem allocator_grow_success_steps
             code, arity, remainder, controls, calls⟩,
           allocatorBumpStore (allocatorGrownStore store memory)
             (allocatorFinish size align oldBump)⟩ := by
-  have hnot : ¬15 < store.runtime.currentModule.imports.length := by
-    rw [hmod]
-    decide
-  have hfn : store.runtime.currentModule.funcs[
-      15 - store.runtime.currentModule.imports.length]? = some func12Def := by
-    rw [hmod]
-    rfl
-  apply Reaches.prepend (Step.call hnot hfn)
-  simp [func12Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func12]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend
-    (Step.load32 rfl (address := .i32 (0)) (offset := 1053960) (by simpa using hbound))
-  simp only [UInt32.zero_add, hread]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.select
-    (selected := .i32 (allocatorBase oldBump)) (by
-      simp only [allocatorBase]
-      by_cases h : oldBump = 0 <;> simp [h]))
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU (result := 0) (by simp [hfirst]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  have hptr :
-      (allocatorBase oldBump + ((0xffffffff : UInt32) + align)) &&&
-          (0 - align) = allocatorPtr oldBump align := by
-    rfl
-  rw [hptr]
-  apply Reaches.prepend
-    (Step.ltU (result := 0) (if_neg hsecond).symm)
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend
-    (Step.ltS (result := 0) (if_neg hnegative).symm)
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.shrU
-  rw [show (65535 + (size + allocatorPtr oldBump align)) >>> (16 % 32) =
-      allocatorRequiredPages size align oldBump by rfl]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend Step.memorySize
-  rw [hmod]
-  have hm64 : «module».memIs64 = false := rfl
-  rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.leU (result := 0) (if_neg hneed).symm)
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.memoryGrowSuccess hgrow)
-  rw [setMemory_eq]
-  simp only [allocatorGrownStore]
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.ne (result := 1) (if_pos hresult).symm)
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend
-    (Step.store32 rfl (address := .i32 (0)) (offset := 1053960)
-      (by simpa using hboundGrown))
-  simp only [setMemory_eq, allocatorBumpStore]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.returnFromCallFallthrough rfl)
-  simp []
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, _, _, execution⟩ := allocator_grow_success_steps_trace
+    store params localValues stack code arity remainder controls calls
+    size align oldBump memory previousPages hmod hread hbound hboundGrown
+    hfirst hsecond hnegative hneed hgrow hresult
+  exact ⟨trace, execution⟩
 
 /-- Complete one-call allocator case split.  The two successful alternatives
 record whether the concrete memory was unchanged or grew; every other branch

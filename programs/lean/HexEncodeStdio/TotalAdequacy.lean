@@ -18,7 +18,7 @@ theorem heap_globals_runtime_host_store_adequacy
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -43,9 +43,13 @@ theorem heap_globals_runtime_host_store_adequacy
     ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
   imod heapDomain_init (α := α) σ with ⟨%heapDomainGS, HheapDomain⟩
   letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init_authority (α := α) config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth⟩
+  imod memoryPages_init_authority_legacy (α := α) config.store.wasm.mem.pages with
+    ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth⟩
   letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+  imod memoryCaps_init_empty (α := α) config.store.wasm.mem.pages config.store.wasm.memoryCaps with
+    ⟨%memoryCapsGS, HmemoryCapsInterp⟩
+  letI _ : WasmMemoryCapsGS α := memoryCapsGS
   letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap := by
     constructor
     exists 7
@@ -183,6 +187,7 @@ theorem heap_globals_runtime_host_store_adequacy
       toWasmHeapGS := wasmHeapGS
       heapDomain := heapDomainGS
       memoryPages := memoryPagesGS
+      memoryCaps := memoryCapsGS
       global := wasmGlobalGS
       dataSegment := wasmDataSegmentGS
       table := wasmTableGS
@@ -215,10 +220,10 @@ theorem heap_globals_runtime_host_store_adequacy
       · ipureintro
         exact List.prefix_rfl
   ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
-      config.store.wasm.exns config.store.wasm.tagIds $$
-      [HmemoryPagesAuth HheapDomain HexceptionInterp]
+      config.store.wasm.memoryCaps config.store.wasm.exns config.store.wasm.tagIds $$
+      [HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp]
   · unfold machineAuxInterp
-    iframe HmemoryPagesAuth HheapDomain HexceptionInterp
+    iframe HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
@@ -279,7 +284,7 @@ theorem heap_globals_runtime_host_store_terminates
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -306,9 +311,13 @@ theorem heap_globals_runtime_host_store_terminates
       ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
     imod heapDomain_init (α := α) σ with ⟨%heapDomainGS, HheapDomain⟩
     letI _ : WasmHeapDomainGS α := heapDomainGS
-    imod memoryPages_init_authority (α := α) config.store.wasm.mem.pages with
-      ⟨%memoryPagesGS, HmemoryPagesAuth⟩
+    imod memoryPages_init_authority_legacy (α := α) config.store.wasm.mem.pages with
+      ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth⟩
     letI _ : WasmMemoryPagesGS α := memoryPagesGS
+    letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+    imod memoryCaps_init_empty (α := α) config.store.wasm.mem.pages config.store.wasm.memoryCaps with
+      ⟨%memoryCapsGS, HmemoryCapsInterp⟩
+    letI _ : WasmMemoryCapsGS α := memoryCapsGS
     letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap := by
       constructor
       exists 7
@@ -446,6 +455,7 @@ theorem heap_globals_runtime_host_store_terminates
         toWasmHeapGS := wasmHeapGS
         heapDomain := heapDomainGS
         memoryPages := memoryPagesGS
+        memoryCaps := memoryCapsGS
         global := wasmGlobalGS
         dataSegment := wasmDataSegmentGS
         table := wasmTableGS
@@ -483,10 +493,10 @@ theorem heap_globals_runtime_host_store_terminates
         · ipureintro
           exact List.prefix_rfl
     ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
-        config.store.wasm.exns config.store.wasm.tagIds $$
-        [HmemoryPagesAuth HheapDomain HexceptionInterp]
+        config.store.wasm.memoryCaps config.store.wasm.exns config.store.wasm.tagIds $$
+        [HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp]
     · unfold machineAuxInterp
-      iframe HmemoryPagesAuth HheapDomain HexceptionInterp
+      iframe HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp
     isplitl [Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth'
       HhostState Hexc]
@@ -540,7 +550,7 @@ theorem heap_globals_runtime_host_store_terminates
             · unfold hostStateOwn; iexact HhostStateFrag
   · apply heap_globals_runtime_host_store_adequacy config σ globalσ post
       hagree hinBounds hglobals hwf
-    intro gs
+    intro gs legacyPages
     iintro ⟨Hpoints, Hglobals, HruntimeModule, HhostEnv, HhostState⟩
     iapply twp.to_wp
     iapply htwp .hasLC

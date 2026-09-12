@@ -1,9 +1,47 @@
 import HexEncodeStdio.ReadChunkFull
+import HexEncodeStdio.ReadChunkCost
+import CodeLib.SepLogic.CostedLoop
+import CodeLib.SepLogic.CostedStepsStdIO
+import CodeLib.SepLogic.HostMemoryTrace
 
 namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
+open ReadChunkCost
+
+/-- Exact scalar work and admitted memory labels for one generated segment. -/
+def ScalarReadRun (initial final : Config Universal.State) (count : Nat) : Prop :=
+  ∃ trace, Steps initial trace final ∧ trace.length = count ∧
+    (∀ before kind after, kind ∈ trace → CostedStdIO.work before kind after = 1) ∧
+    (∀ kind ∈ trace, HostPrimaryMemoryKind kind)
+
+theorem ScalarReadRun.refl (config : Config Universal.State) : ScalarReadRun config config 0 :=
+  ⟨[], Steps.refl _, rfl, by simp, by simp⟩
+
+theorem ScalarReadRun.prepend {initial middle final : Config Universal.State}
+    {kind : StepKind} {count : Nat}
+    (head : Step initial kind middle)
+    (unit : ∀ before after, CostedStdIO.work before kind after = 1)
+    (allowed : HostPrimaryMemoryKind kind)
+    (tail : ScalarReadRun middle final count) : ScalarReadRun initial final (count + 1) := by
+  obtain ⟨trace, run, length, charges, labels⟩ := tail
+  refine ⟨kind :: trace, Steps.cons head run, by simp [length], ?_, ?_⟩
+  · intro before next after member
+    rcases List.mem_cons.mp member with rfl | rest
+    · exact unit before after
+    · exact charges before next after rest
+  · intro next member
+    rcases List.mem_cons.mp member with rfl | rest
+    · exact allowed
+    · exact labels next rest
+
+theorem ScalarReadRun.costed {initial final : Config Universal.State} {count : Nat}
+    (h : ScalarReadRun initial final count) :
+    ∃ trace, CostedSteps CostedStdIO.work initial trace final count ∧
+      trace.length = count ∧ (∀ kind ∈ trace, HostPrimaryMemoryKind kind) := by
+  obtain ⟨trace, run, length, charges, labels⟩ := h
+  exact ⟨trace, by simpa only [length] using run.with_unit_cost charges, length, labels⟩
 
 /-- The continuation of read_to_end after its first read_chunk call. -/
 def readToEndAfterFirstRead : Program := func7.drop 21
@@ -37,6 +75,79 @@ def readToEndFrameStore (store : MachineStore Universal.State)
     (readToEndFrameStore store frame).wasm.mem.pages = store.wasm.mem.pages := by
   rfl
 
+theorem read_to_end_to_first_chunk_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out sp : UInt32)
+    (hmod : store.runtime.currentModule = «module»)
+    (hglobal : globalAt? store 0 = some (.i32 sp))
+    (hframe : (sp - 32).toNat + 32 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      ({ expr := .running
+          ⟨⟨outerParams, outerLocalValues, .i32 out :: stack⟩,
+            [.call 10] ++ code, arity, remainder, controls, calls⟩
+         store := store } : Config Universal.State)
+      ({ expr := .running
+          ⟨⟨[.i32 out],
+              [.i32 (sp - 32), .i32 0, .i32 0, .i32 0, .i32 0,
+                .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
+                .i32 0, .i32 0, .i64 0],
+              [.i32 ((sp - 32) + 4), .i32 ((sp - 32) + 31),
+                .i32 ((sp - 32) + 16)]⟩,
+            [.call 4] ++ readToEndAfterFirstRead, 0, [], [],
+            { locals := ⟨outerParams, outerLocalValues, stack⟩
+              continuation := code
+              resultArity := arity
+              callerRemainder := remainder
+              control := controls
+              returningInstance := store.runtime.entry } :: calls⟩
+         store := readToEndFrameStore store (sp - 32) } :
+        Config Universal.State) 21 := by
+  have hnot : ¬10 < store.runtime.currentModule.imports.length := by
+    rw [hmod]
+    decide
+  have hfn : store.runtime.currentModule.funcs[
+      10 - store.runtime.currentModule.imports.length]? = some func7Def := by
+    rw [hmod]
+    rfl
+  apply ScalarReadRun.prepend (Step.call hnot hfn) (by intro before after; rfl) (by trivial)
+  simp only [func7Def, Function.toLocals, Function.numParams,  func7_first_read_split]
+  simp
+  apply ScalarReadRun.prepend (Step.globalGet hglobal) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.sub (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.globalSet (by simp [hglobal])) (by intro before after; rfl) (by trivial)
+  rw [setGlobal_zero_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by
+    simpa using (show (sp - 32).toNat + 12 + 4 ≤
+      store.wasm.mem.pages * 65536 by omega))) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.constI64 (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store64 rfl (by
+    simpa using (show (sp - 32).toNat + 4 + 8 ≤
+      store.wasm.mem.pages * 65536 by omega))) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  rw [show 4 + (sp - 32) = (sp - 32) + 4 by bv_normalize (config := { enums := false }),
+    show 31 + (sp - 32) = (sp - 32) + 31 by bv_normalize (config := { enums := false }),
+    show 16 + (sp - 32) = (sp - 32) + 16 by bv_normalize (config := { enums := false })]
+  simp [readToEndFrameStore, readToEndAfterFirstRead]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_to_first_chunk
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -67,48 +178,9 @@ theorem read_to_end_to_first_chunk
               returningInstance := store.runtime.entry } :: calls⟩
          store := readToEndFrameStore store (sp - 32) } :
         Config Universal.State) := by
-  have hnot : ¬10 < store.runtime.currentModule.imports.length := by
-    rw [hmod]
-    decide
-  have hfn : store.runtime.currentModule.funcs[
-      10 - store.runtime.currentModule.imports.length]? = some func7Def := by
-    rw [hmod]
-    rfl
-  apply Reaches.prepend (Step.call hnot hfn)
-  simp only [func7Def, Function.toLocals, Function.numParams,  func7_first_read_split]
-  simp
-  apply Reaches.prepend (Step.globalGet hglobal)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.globalSet (by simp [hglobal]))
-  rw [setGlobal_zero_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.store32 rfl (by
-    simpa using (show (sp - 32).toNat + 12 + 4 ≤
-      store.wasm.mem.pages * 65536 by omega)))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.constI64
-  apply Reaches.prepend (Step.store64 rfl (by
-    simpa using (show (sp - 32).toNat + 4 + 8 ≤
-      store.wasm.mem.pages * 65536 by omega)))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  rw [show 4 + (sp - 32) = (sp - 32) + 4 by bv_normalize (config := { enums := false }),
-    show 31 + (sp - 32) = (sp - 32) + 31 by bv_normalize (config := { enums := false }),
-    show 16 + (sp - 32) = (sp - 32) + 16 by bv_normalize (config := { enums := false })]
-  simp [readToEndFrameStore, readToEndAfterFirstRead]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_to_first_chunk_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out sp hmod hglobal hframe
+  exact ⟨trace, execution⟩
 
 def readToEndFinishedStore (store : MachineStore Universal.State)
     (out frame restore : UInt32) (vectorWord : UInt64)
@@ -486,6 +558,72 @@ def readToEndGrowFinishedStore (store : MachineStore Universal.State)
       mem := memData.write32 (frame + 4) newCapacity } }
 
 /-- A successful nonempty first chunk initializes the direct-read loop. -/
+theorem read_to_end_after_first_nonempty_to_loop_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame capacity data length : UInt32)
+    (htag : store.wasm.mem.read8 (frame + 16) = 4)
+    (hcount : store.wasm.mem.read32 (frame + 20) = length)
+    (hlengthNe : length ≠ 0)
+    (hcapacity : store.wasm.mem.read32 (frame + 4) = capacity)
+    (hdata : store.wasm.mem.read32 (frame + 8) = data)
+    (hlength : store.wasm.mem.read32 (frame + 12) = length)
+    (htagBound : frame.toNat + 16 + 1 ≤ store.wasm.mem.pages * 65536)
+    (hcountBound : frame.toNat + 20 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hcapacityBound : frame.toNat + 4 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hdataBound : frame.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hlengthBound : frame.toNat + 12 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      ({ expr := .running
+          ⟨⟨[.i32 out],
+              [.i32 frame, .i32 0, .i32 0, .i32 0, .i32 0,
+                .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
+                .i32 0, .i32 0, .i64 0], []⟩,
+            readToEndAfterFirstRead, 0, [], [],
+            { locals := ⟨outerParams, outerLocalValues, stack⟩
+              continuation := code
+              resultArity := arity
+              callerRemainder := remainder
+              control := controls
+              returningInstance := store.runtime.entry } :: calls⟩
+         store := store } : Config Universal.State)
+      (readToEndLoopConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame 8192 capacity data length 0) 23 := by
+  simp only [readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load8U rfl (by simpa using htagBound)) (by intro before after; rfl) (by trivial)
+  rw [htag]
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 0) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hcountBound)) (by intro before after; rfl) (by trivial)
+  rw [hcount]
+  apply ScalarReadRun.prepend (Step.eqz (result := 0) (by simp [hlengthNe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hcapacityBound)) (by intro before after; rfl) (by trivial)
+  rw [hcapacity]
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
+  rw [hlength]
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.loop (by intro before after; rfl) (by trivial)
+  simp [readToEndLoopConfig, readToEndLoopControls, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    structuredBody, firstInstruction]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_after_first_nonempty_to_loop
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -519,41 +657,60 @@ theorem read_to_end_after_first_nonempty_to_loop
          store := store } : Config Universal.State)
       (readToEndLoopConfig store outerParams outerLocalValues stack code arity
         remainder controls calls out frame 8192 capacity data length 0) := by
-  simp only [readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
-  rw [htag]
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.ne (result := 0) (by decide))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
-  rw [hcount]
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hlengthNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hcapacityBound))
-  rw [hcapacity]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hlengthBound))
-  rw [hlength]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.loop
-  simp [readToEndLoopConfig, readToEndLoopControls, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    structuredBody, firstInstruction]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_first_nonempty_to_loop_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame capacity data length htag hcount hlengthNe hcapacity hdata hlength htagBound hcountBound hcapacityBound hdataBound hlengthBound
+  exact ⟨trace, execution⟩
 
 /-- A loop iteration whose vector still has spare capacity skips the grow
 call and reaches the direct-read phase. -/
+theorem read_to_end_loop_skip_growth_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled : UInt32)
+    (hlengthNe : length ≠ 0) (hspare : length ≠ capacity)
+    (hdata : store.wasm.mem.read32 (frame + 8) = data)
+    (hdataBound : frame.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndLoopConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame chunk capacity data length filled)
+      (readToEndDirectConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame chunk capacity data length filled) 20 := by
+  simp only [readToEndLoopConfig, readToEndLoopBody, structuredBody,
+    firstInstruction, readToEndInnerBody, readToEndMiddleBody,
+    readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := length ||| capacity)
+    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hdataBound)) (by intro before after; rfl) (by trivial)
+  rw [hdata]
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 1) (by simp [hspare])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndDirectConfig, readToEndDirectControls, blockControl,
+    readToEndIteration6, readToEndIteration5, readToEndIteration4,
+    readToEndIteration3, readToEndIteration2, readToEndIteration1,
+    readToEndIterationOuter,  readToEndLoopControls,
+    readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
+    readToEndOuterBody, structuredBody, firstInstruction,
+    readToEndAfterFirstRead, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_loop_skip_growth
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -568,42 +725,62 @@ theorem read_to_end_loop_skip_growth
         remainder controls calls out frame chunk capacity data length filled)
       (readToEndDirectConfig store outerParams outerLocalValues stack code arity
         remainder controls calls out frame chunk capacity data length filled) := by
-  simp only [readToEndLoopConfig, readToEndLoopBody, structuredBody,
-    firstInstruction, readToEndInnerBody, readToEndMiddleBody,
-    readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.or
-  apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
-    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
-  rw [hdata]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 1) (by simp [hspare]))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp [readToEndDirectConfig, readToEndDirectControls, blockControl,
-    readToEndIteration6, readToEndIteration5, readToEndIteration4,
-    readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter,  readToEndLoopControls,
-    readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
-    readToEndOuterBody, structuredBody, firstInstruction,
-    readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_loop_skip_growth_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled hlengthNe hspare hdata hdataBound
+  exact ⟨trace, execution⟩
 
 /-- The same spare-capacity branch for a loop reached after an earlier
 successful read; the four overwritten scratch locals may contain old data. -/
+theorem read_to_end_continued_loop_skip_growth_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled previousCount previousTarget
+      previousBase previousSpare : UInt32)
+    (hlengthNe : length ≠ 0) (hspare : length ≠ capacity)
+    (hdata : store.wasm.mem.read32 (frame + 8) = data)
+    (hdataBound : frame.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndContinuedLoopConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled previousCount previousTarget previousBase previousSpare)
+      (readToEndContinuedDirectConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled previousTarget previousBase previousSpare) 20 := by
+  simp only [readToEndContinuedLoopConfig, readToEndLoopBody, structuredBody,
+    firstInstruction, readToEndInnerBody, readToEndMiddleBody,
+    readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := length ||| capacity)
+    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hdataBound)) (by intro before after; rfl) (by trivial)
+  rw [hdata]
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 1) (by simp [hspare])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndContinuedDirectConfig, readToEndDirectControls, blockControl,
+    readToEndIteration6, readToEndIteration5, readToEndIteration4,
+    readToEndIteration3, readToEndIteration2, readToEndIteration1,
+    readToEndIterationOuter, readToEndLoopControls, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_continued_loop_skip_growth
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -621,40 +798,85 @@ theorem read_to_end_continued_loop_skip_growth
       (readToEndContinuedDirectConfig store outerParams outerLocalValues stack
         code arity remainder controls calls out frame chunk capacity data
         length filled previousTarget previousBase previousSpare) := by
-  simp only [readToEndContinuedLoopConfig, readToEndLoopBody, structuredBody,
-    firstInstruction, readToEndInnerBody, readToEndMiddleBody,
-    readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.or
-  apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
-    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
-  rw [hdata]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 1) (by simp [hspare]))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp [readToEndContinuedDirectConfig, readToEndDirectControls, blockControl,
-    readToEndIteration6, readToEndIteration5, readToEndIteration4,
-    readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter, readToEndLoopControls, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_continued_loop_skip_growth_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled previousCount previousTarget previousBase previousSpare hlengthNe hspare hdata hdataBound
+  exact ⟨trace, execution⟩
 
 /-- A full vector reaches the byte-vector grow call. -/
+theorem read_to_end_loop_to_grow_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled : UInt32)
+    (hlengthNe : length ≠ 0) (hfull : length = capacity)
+    (hdata : store.wasm.mem.read32 (frame + 8) = data)
+    (hdataBound : frame.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndLoopConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame chunk capacity data length filled)
+      (readToEndGrowCallConfig store outerParams outerLocalValues stack code
+        arity remainder controls calls out frame chunk capacity data length
+        filled 0 0) 38 := by
+  simp only [readToEndLoopConfig, readToEndLoopBody, structuredBody,
+    firstInstruction, readToEndInnerBody, readToEndMiddleBody,
+    readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := length ||| capacity)
+    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hdataBound)) (by intro before after; rfl) (by trivial)
+  rw [hdata]
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 0) (by simp [hfull])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.shl (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.gtU
+    (result := if (32 : UInt32) + capacity > capacity <<< 1 then 1 else 0)
+    (by simp)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.select
+    (selected := .i32 (readToEndNewCapacity capacity)) (by
+      by_cases h : (32 : UInt32) + capacity > capacity <<< 1 <;>
+        simp [readToEndNewCapacity, h])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false })]
+  simp [readToEndGrowCallConfig, readToEndNewCapacity,
+    readToEndGrowthControls, readToEndDirectControls, blockControl,
+    readToEndIteration6, readToEndIteration5, readToEndIteration4,
+    readToEndIteration3, readToEndIteration2, readToEndIteration1,
+    readToEndIterationOuter, readToEndGrowthCheck, readToEndLoopControls,
+    readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
+    readToEndOuterBody, structuredBody, firstInstruction,
+    readToEndAfterFirstRead, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_loop_to_grow
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -670,54 +892,77 @@ theorem read_to_end_loop_to_grow
       (readToEndGrowCallConfig store outerParams outerLocalValues stack code
         arity remainder controls calls out frame chunk capacity data length
         filled 0 0) := by
-  simp only [readToEndLoopConfig, readToEndLoopBody, structuredBody,
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_loop_to_grow_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled hlengthNe hfull hdata hdataBound
+  exact ⟨trace, execution⟩
+
+/-- Continued full-vector iterations reach the same byte-vector grow call
+while preserving the status scratch word. -/
+theorem read_to_end_continued_loop_to_grow_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled previousCount previousTarget
+      previousBase previousSpare : UInt32)
+    (hlengthNe : length ≠ 0) (hfull : length = capacity)
+    (hdata : store.wasm.mem.read32 (frame + 8) = data)
+    (hdataBound : frame.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndContinuedLoopConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled previousCount previousTarget previousBase previousSpare)
+      (readToEndGrowCallConfig store outerParams outerLocalValues stack code
+        arity remainder controls calls out frame chunk capacity data length
+        filled previousSpare 4) 38 := by
+  simp only [readToEndContinuedLoopConfig, readToEndLoopBody, structuredBody,
     firstInstruction, readToEndInnerBody, readToEndMiddleBody,
     readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.or
-  apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
-    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := length ||| capacity)
+    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hdataBound)) (by intro before after; rfl) (by trivial)
   rw [hdata]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 0) (by simp [hfull]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.shl
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.gtU
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 0) (by simp [hfull])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.shl (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.gtU
     (result := if (32 : UInt32) + capacity > capacity <<< 1 then 1 else 0)
-    (by simp))
-  apply Reaches.prepend (Step.select
+    (by simp)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.select
     (selected := .i32 (readToEndNewCapacity capacity)) (by
       by_cases h : (32 : UInt32) + capacity > capacity <<< 1 <;>
-        simp [readToEndNewCapacity, h]))
-  apply Reaches.prepend (Step.localTee rfl)
+        simp [readToEndNewCapacity, h])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
   rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false })]
   simp [readToEndGrowCallConfig, readToEndNewCapacity,
     readToEndGrowthControls, readToEndDirectControls, blockControl,
@@ -727,10 +972,8 @@ theorem read_to_end_loop_to_grow
     readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
     readToEndOuterBody, structuredBody, firstInstruction,
     readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  exact ScalarReadRun.refl _
 
-/-- Continued full-vector iterations reach the same byte-vector grow call
-while preserving the status scratch word. -/
 theorem read_to_end_continued_loop_to_grow
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -748,64 +991,9 @@ theorem read_to_end_continued_loop_to_grow
       (readToEndGrowCallConfig store outerParams outerLocalValues stack code
         arity remainder controls calls out frame chunk capacity data length
         filled previousSpare 4) := by
-  simp only [readToEndContinuedLoopConfig, readToEndLoopBody, structuredBody,
-    firstInstruction, readToEndInnerBody, readToEndMiddleBody,
-    readToEndOuterBody, readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.or
-  apply Reaches.prepend (Step.brIf (condition := length ||| capacity)
-    (by simp only [ne_eq, UInt32.or_eq_zero_iff]; aesop) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hdataBound))
-  rw [hdata]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 0) (by simp [hfull]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.shl
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.gtU
-    (result := if (32 : UInt32) + capacity > capacity <<< 1 then 1 else 0)
-    (by simp))
-  apply Reaches.prepend (Step.select
-    (selected := .i32 (readToEndNewCapacity capacity)) (by
-      by_cases h : (32 : UInt32) + capacity > capacity <<< 1 <;>
-        simp [readToEndNewCapacity, h]))
-  apply Reaches.prepend (Step.localTee rfl)
-  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false })]
-  simp [readToEndGrowCallConfig, readToEndNewCapacity,
-    readToEndGrowthControls, readToEndDirectControls, blockControl,
-    readToEndIteration6, readToEndIteration5, readToEndIteration4,
-    readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter, readToEndGrowthCheck, readToEndLoopControls,
-    readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
-    readToEndOuterBody, structuredBody, firstInstruction,
-    readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_continued_loop_to_grow_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled previousCount previousTarget previousBase previousSpare hlengthNe hfull hdata hdataBound
+  exact ⟨trace, execution⟩
 
 /-- Invoke the byte-vector grow routine, preserving its normal result store
 or propagating the distinguished allocator OOM trap. -/
@@ -895,6 +1083,57 @@ theorem read_to_end_grow_call_outcome
 
 /-- Consume a successful byte-vector grow result, install its pointer and
 capacity in the vector descriptor, and rejoin the direct-read phase. -/
+theorem read_to_end_after_grow_success_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled scratch9 status ptr : UInt32)
+    (htag : store.wasm.mem.read32 (frame + 16) = 0)
+    (hptrRead : store.wasm.mem.read32 (frame + 20) = ptr)
+    (htagBound : frame.toNat + 16 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hptrBound : frame.toNat + 20 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hdataBound : frame.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hcapacityBound : frame.toNat + 4 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterGrowConfig store outerParams outerLocalValues stack code
+        arity remainder controls calls out frame chunk capacity data length
+        filled scratch9 status)
+      (readToEndGrownDirectConfig
+        (readToEndGrowFinishedStore store frame ptr
+          (readToEndNewCapacity capacity))
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk (readToEndNewCapacity capacity) ptr length filled
+        (readToEndNewCapacity capacity) (capacity <<< 1) scratch9 status) 14 := by
+  simp only [readToEndAfterGrowConfig, readToEndGrowthCheck]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using htagBound)) (by intro before after; rfl) (by trivial)
+  rw [htag]
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hptrBound)) (by intro before after; rfl) (by trivial)
+  rw [hptrRead]
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using hdataBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by
+    simpa [Mem.write32_pages] using hcapacityBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.exitControl rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndGrownDirectConfig, readToEndGrowFinishedStore,  readToEndDirectControls, blockControl,
+    readToEndIteration6, readToEndIteration5, readToEndIteration4,
+    readToEndIteration3, readToEndIteration2, readToEndIteration1,
+    readToEndIterationOuter, readToEndLoopControls, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_after_grow_success
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -918,39 +1157,15 @@ theorem read_to_end_after_grow_success
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk (readToEndNewCapacity capacity) ptr length filled
         (readToEndNewCapacity capacity) (capacity <<< 1) scratch9 status) := by
-  simp only [readToEndAfterGrowConfig, readToEndGrowthCheck]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using htagBound))
-  rw [htag]
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hptrBound))
-  rw [hptrRead]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 rfl (by simpa using hdataBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.store32 rfl (by
-    simpa [Mem.write32_pages] using hcapacityBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.exitControl rfl)
-  simp [readToEndGrownDirectConfig, readToEndGrowFinishedStore,  readToEndDirectControls, blockControl,
-    readToEndIteration6, readToEndIteration5, readToEndIteration4,
-    readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter, readToEndLoopControls, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_grow_success_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled scratch9 status ptr htag hptrRead htagBound hptrBound hdataBound hcapacityBound
+  exact ⟨trace, execution⟩
 
 set_option maxRecDepth 20000 in
 /-- Fill the uninitialized spare range with zeros and perform one universal
 host read.  The result configuration is positioned immediately after the
 adapter call. -/
-theorem read_to_end_direct_read
+theorem read_to_end_direct_read_cost
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
     (arity : Nat) (remainder : List Value)
@@ -969,7 +1184,7 @@ theorem read_to_end_direct_read
       store.wasm.mem.pages * 65536)
     (hresultBound : (frame + 16).toNat + 4 + 4 ≤
       store.wasm.mem.pages * 65536) :
-    Reaches
+    ReadCostRun
       (readToEndDirectConfig store outerParams outerLocalValues stack code arity
         remainder controls calls out frame chunk capacity data length filled)
       (readToEndAfterAdapterConfig
@@ -977,61 +1192,61 @@ theorem read_to_end_direct_read
           (readToEndFillStore store (filled + (length + data)) remaining)
           (frame + 16) (length + data) bytes)
         outerParams outerLocalValues stack code arity remainder controls calls
-        out frame chunk capacity data length filled target remaining) := by
+        out frame chunk capacity data length filled target remaining) 47 (remaining.toNat + bytes.length) := by
   simp only [readToEndDirectConfig, readToEndIteration6, structuredBody,
     firstInstruction, readToEndIteration5, readToEndIteration4,
     readToEndIteration3, readToEndIteration2, readToEndIteration1,
     readToEndIterationOuter, readToEndLoopBody, readToEndInnerBody,
     readToEndMiddleBody, readToEndOuterBody, readToEndAfterFirstRead,
     func7, List.drop]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU
-    (result := if chunk < capacity - length then 1 else 0) (by simp))
-  apply Reaches.prepend (Step.select (selected := .i32 target) (by
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localSet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.block (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.ltU
+    (result := if chunk < capacity - length then 1 else 0) (by simp)) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.select (selected := .i32 target) (by
     rw [← htarget]
     by_cases h : chunk < capacity - length <;>
-      simp [readToEndTarget, h]))
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
+      simp [readToEndTarget, h])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
   rw [hremaining]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hremainingNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.memoryFill32 (by simpa using hfillBound))
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.eqz (result := 0) (by simp [hremainingNe])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.brIfZero (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend_bulk (Step.memoryFill32 (by simpa using hfillBound)) (by rfl) (by trivial)
   rw [setMemory_eq]
-  apply Reaches.prepend (Step.exitControl rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
+  apply ReadCostRun.prepend (Step.exitControl rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
   rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
     show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
   let filledStore := readToEndFillStore store
     (filled + (length + data)) remaining
   have hfilledPages :
       filledStore.wasm.mem.pages = store.wasm.mem.pages := rfl
-  have hadapter := read_adapter_reaches filledStore
+  have hadapter := read_adapter_run filledStore
     [.i32 out]
     [.i32 frame, .i32 chunk, .i32 capacity, .i32 length, .i32 filled,
       .i32 remaining, .i32 target, .i32 (length + data),
@@ -1060,9 +1275,151 @@ theorem read_to_end_direct_read
     structuredBody, firstInstruction, readToEndAfterFirstRead,
     func7] using hadapter
 
+theorem read_to_end_direct_read
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target remaining : UInt32)
+    (bytes : List UInt8)
+    (htarget : readToEndTarget chunk capacity length = target)
+    (hremaining : target - filled = remaining)
+    (hremainingNe : remaining ≠ 0)
+    (hmod : store.runtime.currentModule = «module»)
+    (henv : store.runtime.currentHost = Universal.envFor «module»)
+    (hbytes : bytes = store.wasm.host.stdio.input.take target.toNat)
+    (hfillBound : (filled + (length + data)).toNat + remaining.toNat ≤
+      store.wasm.mem.pages * 65536)
+    (hreadBound : (length + data).toNat + bytes.length ≤
+      store.wasm.mem.pages * 65536)
+    (hresultBound : (frame + 16).toNat + 4 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    Reaches
+      (readToEndDirectConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame chunk capacity data length filled)
+      (readToEndAfterAdapterConfig
+        (readAdapterResultStore
+          (readToEndFillStore store (filled + (length + data)) remaining)
+          (frame + 16) (length + data) bytes)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk capacity data length filled target remaining) := by
+  exact (read_to_end_direct_read_cost store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target remaining bytes htarget hremaining hremainingNe hmod henv hbytes hfillBound hreadBound hresultBound).reaches
+
 set_option maxRecDepth 20000 in
 /-- Direct read on a continued iteration; the status scratch word already has
 the successful tag from the preceding iteration. -/
+theorem read_to_end_continued_direct_read_cost
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target remaining : UInt32)
+    (previousTarget previousBase previousSpare : UInt32)
+    (bytes : List UInt8)
+    (htarget : readToEndTarget chunk capacity length = target)
+    (hremaining : target - filled = remaining)
+    (hremainingNe : remaining ≠ 0)
+    (hmod : store.runtime.currentModule = «module»)
+    (henv : store.runtime.currentHost = Universal.envFor «module»)
+    (hbytes : bytes = store.wasm.host.stdio.input.take target.toNat)
+    (hfillBound : (filled + (length + data)).toNat + remaining.toNat ≤
+      store.wasm.mem.pages * 65536)
+    (hreadBound : (length + data).toNat + bytes.length ≤
+      store.wasm.mem.pages * 65536)
+    (hresultBound : (frame + 16).toNat + 4 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ReadCostRun
+      (readToEndContinuedDirectConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled previousTarget previousBase previousSpare)
+      (readToEndContinuedAfterAdapterConfig
+        (readAdapterResultStore
+          (readToEndFillStore store (filled + (length + data)) remaining)
+          (frame + 16) (length + data) bytes)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk capacity data length filled target remaining) 47 (remaining.toNat + bytes.length) := by
+  simp only [readToEndContinuedDirectConfig, readToEndIteration6,
+    structuredBody, firstInstruction, readToEndIteration5,
+    readToEndIteration4, readToEndIteration3, readToEndIteration2,
+    readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    readToEndAfterFirstRead, func7, List.drop]
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localSet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.block (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.ltU
+    (result := if chunk < capacity - length then 1 else 0) (by simp)) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.select (selected := .i32 target) (by
+    rw [← htarget]
+    by_cases h : chunk < capacity - length <;>
+      simp [readToEndTarget, h])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
+  rw [hremaining]
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.eqz (result := 0) (by simp [hremainingNe])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.brIfZero (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend_bulk (Step.memoryFill32 (by simpa using hfillBound)) (by rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ReadCostRun.prepend (Step.exitControl rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
+    show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
+  let filledStore := readToEndFillStore store
+    (filled + (length + data)) remaining
+  have hfilledPages :
+      filledStore.wasm.mem.pages = store.wasm.mem.pages := rfl
+  have hadapter := read_adapter_run filledStore
+    [.i32 out]
+    [.i32 frame, .i32 chunk, .i32 capacity, .i32 length, .i32 filled,
+      .i32 remaining, .i32 target, .i32 (length + data),
+      .i32 (capacity - length), .i32 0, .i32 4,
+      .i32 0, .i32 0, .i64 0]
+    [] (readToEndIteration6.drop 15) 0 [] readToEndDirectControls
+    ({ locals := ⟨outerParams, outerLocalValues, stack⟩
+       continuation := code
+       resultArity := arity
+       callerRemainder := remainder
+       control := controls
+       returningInstance := store.runtime.entry } :: calls)
+    (frame + 16) (frame + 31) (length + data) target bytes
+    (by simpa [filledStore, readToEndFillStore] using hmod)
+    (by simpa [filledStore, readToEndFillStore] using henv)
+    (by simpa [filledStore, readToEndFillStore] using hbytes)
+    (by rw [hfilledPages]; exact hreadBound)
+    (by rw [hfilledPages]; simpa using
+      (show (frame + 16).toNat + 1 ≤ store.wasm.mem.pages * 65536 by omega))
+    (by rw [hfilledPages]; exact hresultBound)
+  simpa [filledStore, readToEndContinuedAfterAdapterConfig,
+    readToEndFillStore, readToEndIteration6, readToEndIteration5,
+    readToEndIteration4, readToEndIteration3, readToEndIteration2,
+    readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    structuredBody, firstInstruction, readToEndAfterFirstRead,
+    func7] using hadapter
+
 theorem read_to_end_continued_direct_read
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1093,63 +1450,80 @@ theorem read_to_end_continued_direct_read
           (frame + 16) (length + data) bytes)
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk capacity data length filled target remaining) := by
+  exact (read_to_end_continued_direct_read_cost store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target remaining previousTarget previousBase previousSpare bytes htarget hremaining hremainingNe hmod henv hbytes hfillBound hreadBound hresultBound).reaches
+
+set_option maxRecDepth 20000 in
+/-- Continued direct read when the initialization range is already complete. -/
+theorem read_to_end_continued_direct_read_no_fill_cost
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target : UInt32)
+    (previousTarget previousBase previousSpare : UInt32)
+    (bytes : List UInt8)
+    (htarget : readToEndTarget chunk capacity length = target)
+    (hremaining : target - filled = 0)
+    (hmod : store.runtime.currentModule = «module»)
+    (henv : store.runtime.currentHost = Universal.envFor «module»)
+    (hbytes : bytes = store.wasm.host.stdio.input.take target.toNat)
+    (hreadBound : (length + data).toNat + bytes.length ≤
+      store.wasm.mem.pages * 65536)
+    (hresultBound : (frame + 16).toNat + 4 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ReadCostRun
+      (readToEndContinuedDirectConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled previousTarget previousBase previousSpare)
+      (readToEndContinuedAfterAdapterConfig
+        (readAdapterResultStore store (frame + 16) (length + data) bytes)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk capacity data length filled target 0) 40 bytes.length := by
   simp only [readToEndContinuedDirectConfig, readToEndIteration6,
     structuredBody, firstInstruction, readToEndIteration5,
     readToEndIteration4, readToEndIteration3, readToEndIteration2,
     readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU
-    (result := if chunk < capacity - length then 1 else 0) (by simp))
-  apply Reaches.prepend (Step.select (selected := .i32 target) (by
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localSet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.block (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.ltU
+    (result := if chunk < capacity - length then 1 else 0) (by simp)) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.select (selected := .i32 target) (by
     rw [← htarget]
     by_cases h : chunk < capacity - length <;>
-      simp [readToEndTarget, h]))
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
+      simp [readToEndTarget, h])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
   rw [hremaining]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hremainingNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.memoryFill32 (by simpa using hfillBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.exitControl rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.eqz (result := 1) (by decide)) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
   rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
     show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
-  let filledStore := readToEndFillStore store
-    (filled + (length + data)) remaining
-  have hfilledPages :
-      filledStore.wasm.mem.pages = store.wasm.mem.pages := rfl
-  have hadapter := read_adapter_reaches filledStore
+  have hadapter := read_adapter_run store
     [.i32 out]
     [.i32 frame, .i32 chunk, .i32 capacity, .i32 length, .i32 filled,
-      .i32 remaining, .i32 target, .i32 (length + data),
+      .i32 0, .i32 target, .i32 (length + data),
       .i32 (capacity - length), .i32 0, .i32 4,
       .i32 0, .i32 0, .i64 0]
     [] (readToEndIteration6.drop 15) 0 [] readToEndDirectControls
@@ -1160,23 +1534,17 @@ theorem read_to_end_continued_direct_read
        control := controls
        returningInstance := store.runtime.entry } :: calls)
     (frame + 16) (frame + 31) (length + data) target bytes
-    (by simpa [filledStore, readToEndFillStore] using hmod)
-    (by simpa [filledStore, readToEndFillStore] using henv)
-    (by simpa [filledStore, readToEndFillStore] using hbytes)
-    (by rw [hfilledPages]; exact hreadBound)
-    (by rw [hfilledPages]; simpa using
+    hmod henv hbytes hreadBound
+    (by simpa using
       (show (frame + 16).toNat + 1 ≤ store.wasm.mem.pages * 65536 by omega))
-    (by rw [hfilledPages]; exact hresultBound)
-  simpa [filledStore, readToEndContinuedAfterAdapterConfig,
-    readToEndFillStore, readToEndIteration6, readToEndIteration5,
-    readToEndIteration4, readToEndIteration3, readToEndIteration2,
-    readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    structuredBody, firstInstruction, readToEndAfterFirstRead,
-    func7] using hadapter
+    hresultBound
+  simpa [readToEndContinuedAfterAdapterConfig,
+    readToEndIteration6, readToEndIteration5, readToEndIteration4,
+    readToEndIteration3, readToEndIteration2, readToEndIteration1,
+    readToEndIterationOuter, readToEndLoopBody, readToEndInnerBody,
+    readToEndMiddleBody, readToEndOuterBody, structuredBody,
+    firstInstruction, readToEndAfterFirstRead, func7] using hadapter
 
-set_option maxRecDepth 20000 in
-/-- Continued direct read when the initialization range is already complete. -/
 theorem read_to_end_continued_direct_read_no_fill
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1202,75 +1570,11 @@ theorem read_to_end_continued_direct_read_no_fill
         (readAdapterResultStore store (frame + 16) (length + data) bytes)
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk capacity data length filled target 0) := by
-  simp only [readToEndContinuedDirectConfig, readToEndIteration6,
-    structuredBody, firstInstruction, readToEndIteration5,
-    readToEndIteration4, readToEndIteration3, readToEndIteration2,
-    readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU
-    (result := if chunk < capacity - length then 1 else 0) (by simp))
-  apply Reaches.prepend (Step.select (selected := .i32 target) (by
-    rw [← htarget]
-    by_cases h : chunk < capacity - length <;>
-      simp [readToEndTarget, h]))
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  rw [hremaining]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.eqz (result := 1) (by decide))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
-    show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
-  have hadapter := read_adapter_reaches store
-    [.i32 out]
-    [.i32 frame, .i32 chunk, .i32 capacity, .i32 length, .i32 filled,
-      .i32 0, .i32 target, .i32 (length + data),
-      .i32 (capacity - length), .i32 0, .i32 4,
-      .i32 0, .i32 0, .i64 0]
-    [] (readToEndIteration6.drop 15) 0 [] readToEndDirectControls
-    ({ locals := ⟨outerParams, outerLocalValues, stack⟩
-       continuation := code
-       resultArity := arity
-       callerRemainder := remainder
-       control := controls
-       returningInstance := store.runtime.entry } :: calls)
-    (frame + 16) (frame + 31) (length + data) target bytes
-    hmod henv hbytes hreadBound
-    (by simpa using
-      (show (frame + 16).toNat + 1 ≤ store.wasm.mem.pages * 65536 by omega))
-    hresultBound
-  simpa [readToEndContinuedAfterAdapterConfig,
-    readToEndIteration6, readToEndIteration5, readToEndIteration4,
-    readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter, readToEndLoopBody, readToEndInnerBody,
-    readToEndMiddleBody, readToEndOuterBody, structuredBody,
-    firstInstruction, readToEndAfterFirstRead, func7] using hadapter
+  exact (read_to_end_continued_direct_read_no_fill_cost store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target previousTarget previousBase previousSpare bytes htarget hremaining hmod henv hbytes hreadBound hresultBound).reaches
 
 set_option maxRecDepth 20000 in
 /-- Direct read after a successful vector growth. -/
-theorem read_to_end_grown_direct_read
+theorem read_to_end_grown_direct_read_cost
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
     (arity : Nat) (remainder : List Value)
@@ -1290,7 +1594,7 @@ theorem read_to_end_grown_direct_read
       store.wasm.mem.pages * 65536)
     (hresultBound : (frame + 16).toNat + 4 + 4 ≤
       store.wasm.mem.pages * 65536) :
-    Reaches
+    ReadCostRun
       (readToEndGrownDirectConfig store outerParams outerLocalValues stack code
         arity remainder controls calls out frame chunk capacity data length
         filled previousTarget previousBase scratch9 status)
@@ -1300,61 +1604,61 @@ theorem read_to_end_grown_direct_read
           (frame + 16) (length + data) bytes)
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk capacity data length filled target remaining previousBase
-        scratch9 status) := by
+        scratch9 status) 47 (remaining.toNat + bytes.length) := by
   simp only [readToEndGrownDirectConfig, readToEndIteration6,
     structuredBody, firstInstruction, readToEndIteration5,
     readToEndIteration4, readToEndIteration3, readToEndIteration2,
     readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU
-    (result := if chunk < capacity - length then 1 else 0) (by simp))
-  apply Reaches.prepend (Step.select (selected := .i32 target) (by
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localSet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.block (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.ltU
+    (result := if chunk < capacity - length then 1 else 0) (by simp)) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.select (selected := .i32 target) (by
     rw [← htarget]
     by_cases h : chunk < capacity - length <;>
-      simp [readToEndTarget, h]))
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
+      simp [readToEndTarget, h])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.sub (by rfl) (by trivial)
   rw [hremaining]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hremainingNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.memoryFill32 (by simpa using hfillBound))
+  apply ReadCostRun.prepend (Step.localTee rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.eqz (result := 0) (by simp [hremainingNe])) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.brIfZero (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend_bulk (Step.memoryFill32 (by simpa using hfillBound)) (by rfl) (by trivial)
   rw [setMemory_eq]
-  apply Reaches.prepend (Step.exitControl rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
+  apply ReadCostRun.prepend (Step.exitControl rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.const (by rfl) (by trivial)
+  apply ReadCostRun.prepend Step.add (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
+  apply ReadCostRun.prepend (Step.localGet rfl) (by rfl) (by trivial)
   rw [show 16 + frame = frame + 16 by bv_normalize (config := { enums := false }),
     show 31 + frame = frame + 31 by bv_normalize (config := { enums := false })]
   let filledStore := readToEndFillStore store
     (filled + (length + data)) remaining
   have hfilledPages :
       filledStore.wasm.mem.pages = store.wasm.mem.pages := rfl
-  have hadapter := read_adapter_reaches filledStore
+  have hadapter := read_adapter_run filledStore
     [.i32 out]
     [.i32 frame, .i32 chunk, .i32 capacity, .i32 length, .i32 filled,
       .i32 remaining, .i32 target, .i32 (length + data),
@@ -1385,6 +1689,65 @@ theorem read_to_end_grown_direct_read
 
 /-- The successful `Result` tag returned by the read adapter is classified
 and control returns to the common vector-length update tail. -/
+theorem read_to_end_after_adapter_success_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target remaining count : UInt32)
+    (htag : store.wasm.mem.read8 (frame + 16) = 4)
+    (hcount : store.wasm.mem.read32 (frame + 20) = count)
+    (hcountLe : count ≤ target)
+    (htagBound : frame.toNat + 16 + 1 ≤ store.wasm.mem.pages * 65536)
+    (hcountBound : frame.toNat + 20 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterAdapterConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target remaining)
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count) 26 := by
+  simp only [readToEndAfterAdapterConfig, readToEndIteration6, structuredBody,
+    firstInstruction, readToEndIteration5, readToEndIteration4,
+    readToEndIteration3, readToEndIteration2, readToEndIteration1,
+    readToEndIterationOuter, readToEndLoopBody, readToEndInnerBody,
+    readToEndMiddleBody, readToEndOuterBody, readToEndAfterFirstRead,
+    func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load8U rfl (by simpa using htagBound)) (by intro before after; rfl) (by trivial)
+  rw [htag]
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eq (result := 1) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hcountBound)) (by intro before after; rfl) (by trivial)
+  rw [hcount]
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.gtU (result := 0) (by simp [hcountLe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.and (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.exitControl rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.and (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brTable rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndAfterReadSuccessConfig,
+    readToEndLoopControls, blockControl, readToEndIterationOuter,
+    readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
+    readToEndOuterBody, structuredBody, firstInstruction,
+    readToEndAfterFirstRead, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_after_adapter_success
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1403,49 +1766,70 @@ theorem read_to_end_after_adapter_success
       (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
         code arity remainder controls calls out frame chunk capacity data
         length filled target count) := by
-  simp only [readToEndAfterAdapterConfig, readToEndIteration6, structuredBody,
-    firstInstruction, readToEndIteration5, readToEndIteration4,
-    readToEndIteration3, readToEndIteration2, readToEndIteration1,
-    readToEndIterationOuter, readToEndLoopBody, readToEndInnerBody,
-    readToEndMiddleBody, readToEndOuterBody, readToEndAfterFirstRead,
-    func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
-  rw [htag]
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.eq (result := 1) (by decide))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
-  rw [hcount]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.gtU (result := 0) (by simp [hcountLe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.or
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.exitControl rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend (Step.brTable rfl)
-  simp [readToEndAfterReadSuccessConfig,
-    readToEndLoopControls, blockControl, readToEndIterationOuter,
-    readToEndLoopBody, readToEndInnerBody, readToEndMiddleBody,
-    readToEndOuterBody, structuredBody, firstInstruction,
-    readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_adapter_success_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target remaining count htag hcount hcountLe htagBound hcountBound
+  exact ⟨trace, execution⟩
 
 /-- Continued iterations classify the adapter result in the same way; the
 already-successful status scratch word remains exactly `4`. -/
+theorem read_to_end_continued_after_adapter_success_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target remaining count : UInt32)
+    (htag : store.wasm.mem.read8 (frame + 16) = 4)
+    (hcount : store.wasm.mem.read32 (frame + 20) = count)
+    (hcountLe : count ≤ target)
+    (htagBound : frame.toNat + 16 + 1 ≤ store.wasm.mem.pages * 65536)
+    (hcountBound : frame.toNat + 20 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndContinuedAfterAdapterConfig store outerParams outerLocalValues
+        stack code arity remainder controls calls out frame chunk capacity data
+        length filled target remaining)
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count) 26 := by
+  simp only [readToEndContinuedAfterAdapterConfig, readToEndIteration6,
+    structuredBody, firstInstruction, readToEndIteration5,
+    readToEndIteration4, readToEndIteration3, readToEndIteration2,
+    readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load8U rfl (by simpa using htagBound)) (by intro before after; rfl) (by trivial)
+  rw [htag]
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eq (result := 1) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hcountBound)) (by intro before after; rfl) (by trivial)
+  rw [hcount]
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.gtU (result := 0) (by simp [hcountLe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.and (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.exitControl rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.and (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brTable rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndAfterReadSuccessConfig, readToEndLoopControls,
+    blockControl, readToEndIterationOuter, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_continued_after_adapter_success
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1464,47 +1848,72 @@ theorem read_to_end_continued_after_adapter_success
       (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
         code arity remainder controls calls out frame chunk capacity data
         length filled target count) := by
-  simp only [readToEndContinuedAfterAdapterConfig, readToEndIteration6,
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_continued_after_adapter_success_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target remaining count htag hcount hcountLe htagBound hcountBound
+  exact ⟨trace, execution⟩
+
+/-- Classify a successful adapter result after growth. -/
+theorem read_to_end_grown_after_adapter_success_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target remaining count : UInt32)
+    (previousBase scratch9 status : UInt32)
+    (hstatus : (status &&& 4294967040) ||| 4 = 4)
+    (htag : store.wasm.mem.read8 (frame + 16) = 4)
+    (hcount : store.wasm.mem.read32 (frame + 20) = count)
+    (hcountLe : count ≤ target)
+    (htagBound : frame.toNat + 16 + 1 ≤ store.wasm.mem.pages * 65536)
+    (hcountBound : frame.toNat + 20 + 4 ≤ store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndGrownAfterAdapterConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target remaining previousBase scratch9 status)
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count) 26 := by
+  simp only [readToEndGrownAfterAdapterConfig, readToEndIteration6,
     structuredBody, firstInstruction, readToEndIteration5,
     readToEndIteration4, readToEndIteration3, readToEndIteration2,
     readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load8U rfl (by simpa using htagBound)) (by intro before after; rfl) (by trivial)
   rw [htag]
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.eq (result := 1) (by decide))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eq (result := 1) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hcountBound)) (by intro before after; rfl) (by trivial)
   rw [hcount]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.gtU (result := 0) (by simp [hcountLe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.or
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.exitControl rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend (Step.brTable rfl)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.gtU (result := 0) (by simp [hcountLe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.and (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.or (by intro before after; rfl) (by trivial)
+  rw [hstatus]
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.exitControl rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.and (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brTable rfl) (by intro before after; rfl) (by trivial)
   simp [readToEndAfterReadSuccessConfig, readToEndLoopControls,
     blockControl, readToEndIterationOuter, readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  exact ScalarReadRun.refl _
 
-/-- Classify a successful adapter result after growth. -/
 theorem read_to_end_grown_after_adapter_success
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1525,49 +1934,46 @@ theorem read_to_end_grown_after_adapter_success
       (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
         code arity remainder controls calls out frame chunk capacity data
         length filled target count) := by
-  simp only [readToEndGrownAfterAdapterConfig, readToEndIteration6,
-    structuredBody, firstInstruction, readToEndIteration5,
-    readToEndIteration4, readToEndIteration3, readToEndIteration2,
-    readToEndIteration1, readToEndIterationOuter, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
-  rw [htag]
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.eq (result := 1) (by decide))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
-  rw [hcount]
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.gtU (result := 0) (by simp [hcountLe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.or
-  rw [hstatus]
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.exitControl rfl)
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.and
-  apply Reaches.prepend (Step.brTable rfl)
-  simp [readToEndAfterReadSuccessConfig, readToEndLoopControls,
-    blockControl, readToEndIterationOuter, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    structuredBody, firstInstruction, readToEndAfterFirstRead, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_grown_after_adapter_success_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target remaining count previousBase scratch9 status hstatus htag hcount hcountLe htagBound hcountBound
+  exact ⟨trace, execution⟩
 
 /-- A zero-byte successful read updates the vector length and exits the loop
 to the function's common return suffix. -/
+theorem read_to_end_after_read_eof_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target count : UInt32)
+    (hcount : count = 0)
+    (hlengthBound : frame.toNat + 12 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count)
+      (readToEndReturnConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame chunk capacity data length filled
+        target count) 9 := by
+  simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
+    structuredBody, firstInstruction, readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 1) (by simp [hcount])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndReturnConfig, readToEndLengthStore,
+    readToEndAfterFirstRead,  func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_after_read_eof
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1584,26 +1990,57 @@ theorem read_to_end_after_read_eof
       (readToEndReturnConfig store outerParams outerLocalValues stack code arity
         remainder controls calls out frame chunk capacity data length filled
         target count) := by
-  simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
-    structuredBody, firstInstruction, readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 1) (by simp [hcount]))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp [readToEndReturnConfig, readToEndLengthStore,
-    readToEndAfterFirstRead,  func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_read_eof_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target count hcount hlengthBound
+  exact ⟨trace, execution⟩
 
 /-- A nonempty read that exhausts the current spare tail restarts the loop
 without changing the adaptive chunk size. -/
+theorem read_to_end_after_read_spare_lt_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target count : UInt32)
+    (hcountNe : count ≠ 0)
+    (hspareLt : capacity - length < chunk)
+    (hlengthBound : frame.toNat + 12 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count)
+      (readToEndContinuedLoopConfig
+        (readToEndLengthStore store frame count length)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk capacity data (length + count) (target - count)
+        count target (length + data) (capacity - length)) 17 := by
+  simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
+    structuredBody, firstInstruction]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 0) (by simp [hcountNe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.sub (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ltU (result := 1) (by simp [hspareLt])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndContinuedLoopConfig, readToEndLengthStore,
+    readToEndLoopControls,  readToEndLoopBody,
+    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
+    readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_after_read_spare_lt
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1623,34 +2060,62 @@ theorem read_to_end_after_read_spare_lt
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk capacity data (length + count) (target - count)
         count target (length + data) (capacity - length)) := by
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_read_spare_lt_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target count hcountNe hspareLt hlengthBound
+  exact ⟨trace, execution⟩
+
+/-- A short nonempty read restarts the loop with the unread part of the
+current target recorded in `filled`. -/
+theorem read_to_end_after_read_partial_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target count : UInt32)
+    (hcountNe : count ≠ 0)
+    (hspareNotLt : ¬ capacity - length < chunk)
+    (hpartial : target ≠ count)
+    (hlengthBound : frame.toNat + 12 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count)
+      (readToEndContinuedLoopConfig
+        (readToEndLengthStore store frame count length)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk capacity data (length + count) (target - count)
+        count target (length + data) (capacity - length)) 21 := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
     structuredBody, firstInstruction]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
   rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU (result := 1) (by simp [hspareLt]))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 0) (by simp [hcountNe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.sub (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ltU (result := 0) (by simp [hspareNotLt])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 1) (by simp [hpartial])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
     readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
-  exact ⟨[], .refl _⟩
+  exact ScalarReadRun.refl _
 
-/-- A short nonempty read restarts the loop with the unread part of the
-current target recorded in `filled`. -/
 theorem read_to_end_after_read_partial
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1671,38 +2136,76 @@ theorem read_to_end_after_read_partial
         outerParams outerLocalValues stack code arity remainder controls calls
         out frame chunk capacity data (length + count) (target - count)
         count target (length + data) (capacity - length)) := by
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_read_partial_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target count hcountNe hspareNotLt hpartial hlengthBound
+  exact ⟨trace, execution⟩
+
+/-- A full target read doubles a nonnegative adaptive chunk size before
+restarting the loop. -/
+theorem read_to_end_after_read_full_double_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target count : UInt32)
+    (hcountNe : count ≠ 0)
+    (hspareNotLt : ¬ capacity - length < chunk)
+    (hfull : target = count)
+    (hchunkNonnegative : ¬ chunk.toInt32 < (0 : UInt32).toInt32)
+    (hlengthBound : frame.toNat + 12 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count)
+      (readToEndContinuedLoopConfig
+        (readToEndLengthStore store frame count length)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame (chunk <<< 1) capacity data (length + count)
+        (target - count) 0 target (length + data)
+        (capacity - length)) 32 := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
     structuredBody, firstInstruction]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
   rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU (result := 0) (by simp [hspareNotLt]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 1) (by simp [hpartial]))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 0) (by simp [hcountNe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.sub (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ltU (result := 0) (by simp [hspareNotLt])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 0) (by simp [hfull])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ltS (result := 0)
+    (if_neg (by simpa using hchunkNonnegative)).symm) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.shl (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 1) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
     readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
-  exact ⟨[], .refl _⟩
+  exact ScalarReadRun.refl _
 
-/-- A full target read doubles a nonnegative adaptive chunk size before
-restarting the loop. -/
 theorem read_to_end_after_read_full_double
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1725,50 +2228,79 @@ theorem read_to_end_after_read_full_double
         out frame (chunk <<< 1) capacity data (length + count)
         (target - count) 0 target (length + data)
         (capacity - length)) := by
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_read_full_double_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target count hcountNe hspareNotLt hfull hchunkNonnegative hlengthBound
+  exact ⟨trace, execution⟩
+
+/-- When doubling would cross the signed boundary, the adaptive chunk size
+saturates at `UInt32.max`. -/
+theorem read_to_end_after_read_full_saturate_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target count : UInt32)
+    (hcountNe : count ≠ 0)
+    (hspareNotLt : ¬ capacity - length < chunk)
+    (hfull : target = count)
+    (hchunkNegative : chunk.toInt32 < (0 : UInt32).toInt32)
+    (hlengthBound : frame.toNat + 12 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    ScalarReadRun
+      (readToEndAfterReadSuccessConfig store outerParams outerLocalValues stack
+        code arity remainder controls calls out frame chunk capacity data
+        length filled target count)
+      (readToEndContinuedLoopConfig
+        (readToEndLengthStore store frame count length)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame 4294967295 capacity data (length + count)
+        (target - count) 1 target (length + data)
+        (capacity - length)) 35 := by
   simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
     structuredBody, firstInstruction]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localTee rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
   rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU (result := 0) (by simp [hspareNotLt]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 0) (by simp [hfull]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.ltS (result := 0)
-    (if_neg (by simpa using hchunkNonnegative)).symm)
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.shl
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 1) (by decide))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 0) (by simp [hcountNe])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.sub (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ltU (result := 0) (by simp [hspareNotLt])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 0) (by simp [hfull])) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ltS (result := 1)
+    (if_pos (by simpa using hchunkNegative)).symm) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.shl (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.eqz (result := 0) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localSet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.br rfl) (by intro before after; rfl) (by trivial)
   simp [readToEndContinuedLoopConfig, readToEndLengthStore,
     readToEndLoopControls,  readToEndLoopBody,
     readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
     readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
-  exact ⟨[], .refl _⟩
+  exact ScalarReadRun.refl _
 
-/-- When doubling would cross the signed boundary, the adaptive chunk size
-saturates at `UInt32.max`. -/
 theorem read_to_end_after_read_full_saturate
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1791,53 +2323,71 @@ theorem read_to_end_after_read_full_saturate
         out frame 4294967295 capacity data (length + count)
         (target - count) 1 target (length + data)
         (capacity - length)) := by
-  simp only [readToEndAfterReadSuccessConfig, readToEndIterationOuter,
-    structuredBody, firstInstruction]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.add
-  apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.store32 rfl (by simpa using hlengthBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by simp [hcountNe]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.sub
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ltU (result := 0) (by simp [hspareNotLt]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.ne (result := 0) (by simp [hfull]))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.ltS (result := 1)
-    (if_pos (by simpa using hchunkNegative)).symm)
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.shl
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.eqz (result := 0) (by decide))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.localSet rfl)
-  apply Reaches.prepend (Step.br rfl)
-  simp [readToEndContinuedLoopConfig, readToEndLengthStore,
-    readToEndLoopControls,  readToEndLoopBody,
-    readToEndInnerBody, readToEndMiddleBody, readToEndOuterBody,
-    readToEndAfterFirstRead, structuredBody, firstInstruction, func7]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_read_full_saturate_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target count hcountNe hspareNotLt hfull hchunkNegative hlengthBound
+  exact ⟨trace, execution⟩
 
 /-- The common successful return suffix copies the vector descriptor to the
 caller result slot, restores the stack pointer, and returns. -/
+theorem read_to_end_return_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target count restore : UInt32)
+    (vectorWord : UInt64)
+    (hlength : (readToEndLengthStore store frame count length).wasm.mem.read32
+      (frame + 12) = length + count)
+    (hvector : (readToEndLengthStore store frame count length).wasm.mem.read64
+      (frame + 4) = vectorWord)
+    (hlengthBound : frame.toNat + 12 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hvectorBound : frame.toNat + 4 + 8 ≤ store.wasm.mem.pages * 65536)
+    (houtLenBound : out.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536)
+    (houtBound : out.toNat + 8 ≤ store.wasm.mem.pages * 65536)
+    (hdisjoint : (out + 8).toNat + 4 ≤ (frame + 4).toNat ∨
+      (frame + 4).toNat + 8 ≤ (out + 8).toNat)
+    (hglobal : (globalAt? (readToEndLengthStore store frame count length) 0).isSome = true)
+    (hrestore : frame + 32 = restore) :
+    ScalarReadRun
+      (readToEndReturnConfig store outerParams outerLocalValues stack code arity
+        remainder controls calls out frame chunk capacity data length filled
+        target count)
+      ({ expr := .running
+          ⟨⟨outerParams, outerLocalValues, stack⟩,
+            code, arity, remainder, controls, calls⟩
+         store := readToEndFinishedStore
+           (readToEndLengthStore store frame count length)
+           out frame restore vectorWord (length + count) } :
+        Config Universal.State) 13 := by
+  simp only [readToEndReturnConfig, readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by
+    simpa [readToEndLengthStore] using hlengthBound)) (by intro before after; rfl) (by trivial)
+  rw [hlength]
+  apply ScalarReadRun.prepend (Step.store32 rfl (by
+    simpa [readToEndLengthStore] using houtLenBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load64 rfl (by
+    simpa [readToEndLengthStore] using hvectorBound)) (by intro before after; rfl) (by trivial)
+  rw [Mem.read64_write32_disjoint _ _ _ _ hdisjoint]
+  rw [hvector]
+  apply ScalarReadRun.prepend (Step.store64 rfl (by
+    simpa [readToEndLengthStore] using houtBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  rw [show 32 + frame = frame + 32 by bv_normalize (config := { enums := false }), hrestore]
+  apply ScalarReadRun.prepend (Step.globalSet (by
+    simpa [globalAt?] using hglobal)) (by intro before after; rfl) (by trivial)
+  rw [setGlobal_zero_eq]
+  apply ScalarReadRun.prepend (Step.returnFromCallFallthrough rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndFinishedStore, readToEndLengthStore, resumeCaller]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_return
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1868,37 +2418,92 @@ theorem read_to_end_return
            (readToEndLengthStore store frame count length)
            out frame restore vectorWord (length + count) } :
         Config Universal.State) := by
-  simp only [readToEndReturnConfig, readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by
-    simpa [readToEndLengthStore] using hlengthBound))
-  rw [hlength]
-  apply Reaches.prepend (Step.store32 rfl (by
-    simpa [readToEndLengthStore] using houtLenBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load64 rfl (by
-    simpa [readToEndLengthStore] using hvectorBound))
-  rw [Mem.read64_write32_disjoint _ _ _ _ hdisjoint]
-  rw [hvector]
-  apply Reaches.prepend (Step.store64 rfl (by
-    simpa [readToEndLengthStore] using houtBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  rw [show 32 + frame = frame + 32 by bv_normalize (config := { enums := false }), hrestore]
-  apply Reaches.prepend (Step.globalSet (by
-    simpa [globalAt?] using hglobal))
-  rw [setGlobal_zero_eq]
-  apply Reaches.prepend (Step.returnFromCallFallthrough rfl)
-  simp [readToEndFinishedStore, readToEndLengthStore, resumeCaller]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_return_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target count restore vectorWord hlength hvector hlengthBound hvectorBound houtLenBound houtBound hdisjoint hglobal hrestore
+  exact ⟨trace, execution⟩
 
 /-- The EOF branch immediately after the first `read_chunk`: copy the vector
 descriptor to the caller's result slot, restore the stack pointer, and return. -/
+theorem read_to_end_after_first_eof_steps_trace
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame restore : UInt32) (vectorWord : UInt64) (length : UInt32)
+    (htag : store.wasm.mem.read8 (frame + 16) = 4)
+    (hcount : store.wasm.mem.read32 (frame + 20) = 0)
+    (hlength : store.wasm.mem.read32 (frame + 12) = length)
+    (hvector : store.wasm.mem.read64 (frame + 4) = vectorWord)
+    (htagBound : frame.toNat + 16 + 1 ≤ store.wasm.mem.pages * 65536)
+    (hcountBound : frame.toNat + 20 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hlengthBound : frame.toNat + 12 + 4 ≤ store.wasm.mem.pages * 65536)
+    (hvectorBound : frame.toNat + 4 + 8 ≤ store.wasm.mem.pages * 65536)
+    (houtLenBound : out.toNat + 8 + 4 ≤ store.wasm.mem.pages * 65536)
+    (houtBound : out.toNat + 8 ≤ store.wasm.mem.pages * 65536)
+    (hdisjoint : (out + 8).toNat + 4 ≤ (frame + 4).toNat ∨
+      (frame + 4).toNat + 8 ≤ (out + 8).toNat)
+    (hglobal : (globalAt? store 0).isSome = true)
+    (hrestore : frame + 32 = restore) :
+    ScalarReadRun
+      ({ expr := .running
+          ⟨⟨[.i32 out],
+              [.i32 frame, .i32 0, .i32 0, .i32 0, .i32 0,
+                .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
+                .i32 0, .i32 0, .i64 0], []⟩,
+            readToEndAfterFirstRead, 0, [], [],
+            { locals := ⟨outerParams, outerLocalValues, stack⟩
+              continuation := code
+              resultArity := arity
+              callerRemainder := remainder
+              control := controls
+              returningInstance := store.runtime.entry } :: calls⟩
+         store := store } : Config Universal.State)
+      ({ expr := .running
+          ⟨⟨outerParams, outerLocalValues, stack⟩,
+            code, arity, remainder, controls, calls⟩
+         store := readToEndFinishedStore store out frame restore vectorWord
+           length } : Config Universal.State) 25 := by
+  simp only [readToEndAfterFirstRead, func7, List.drop]
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.block (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load8U rfl (by simpa using htagBound)) (by intro before after; rfl) (by trivial)
+  rw [htag]
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.ne (result := 0) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.brIfZero (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hcountBound)) (by intro before after; rfl) (by trivial)
+  rw [hcount]
+  apply ScalarReadRun.prepend (Step.eqz (result := 1) (by decide)) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.brIf (condition := 1) (by decide) rfl) (by intro before after; rfl) (by trivial)
+  simp
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load32 rfl (by simpa using hlengthBound)) (by intro before after; rfl) (by trivial)
+  rw [hlength]
+  apply ScalarReadRun.prepend (Step.store32 rfl (by simpa using houtLenBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend (Step.load64 rfl (by simpa using hvectorBound)) (by intro before after; rfl) (by trivial)
+  rw [Mem.read64_write32_disjoint _ _ _ _ hdisjoint]
+  rw [hvector]
+  apply ScalarReadRun.prepend (Step.store64 rfl (by
+    simpa using houtBound)) (by intro before after; rfl) (by trivial)
+  rw [setMemory_eq]
+  apply ScalarReadRun.prepend (Step.localGet rfl) (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.const (by intro before after; rfl) (by trivial)
+  apply ScalarReadRun.prepend Step.add (by intro before after; rfl) (by trivial)
+  rw [show 32 + frame = frame + 32 by bv_normalize (config := { enums := false }), hrestore]
+  apply ScalarReadRun.prepend (Step.globalSet (by
+    simpa [globalAt?] using hglobal)) (by intro before after; rfl) (by trivial)
+  rw [setGlobal_zero_eq]
+  apply ScalarReadRun.prepend (Step.returnFromCallFallthrough rfl) (by intro before after; rfl) (by trivial)
+  simp [readToEndFinishedStore, resumeCaller]
+  exact ScalarReadRun.refl _
+
 theorem read_to_end_after_first_eof
     (store : MachineStore Universal.State)
     (outerParams outerLocalValues stack : List Value) (code : Program)
@@ -1938,45 +2543,43 @@ theorem read_to_end_after_first_eof
             code, arity, remainder, controls, calls⟩
          store := readToEndFinishedStore store out frame restore vectorWord
            length } : Config Universal.State) := by
-  simp only [readToEndAfterFirstRead, func7, List.drop]
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend Step.block
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load8U rfl (by simpa using htagBound))
-  rw [htag]
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.ne (result := 0) (by decide))
-  apply Reaches.prepend Step.brIfZero
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hcountBound))
-  rw [hcount]
-  apply Reaches.prepend (Step.eqz (result := 1) (by decide))
-  apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load32 rfl (by simpa using hlengthBound))
-  rw [hlength]
-  apply Reaches.prepend (Step.store32 rfl (by simpa using houtLenBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend (Step.load64 rfl (by simpa using hvectorBound))
-  rw [Mem.read64_write32_disjoint _ _ _ _ hdisjoint]
-  rw [hvector]
-  apply Reaches.prepend (Step.store64 rfl (by
-    simpa using houtBound))
-  rw [setMemory_eq]
-  apply Reaches.prepend (Step.localGet rfl)
-  apply Reaches.prepend Step.const
-  apply Reaches.prepend Step.add
-  rw [show 32 + frame = frame + 32 by bv_normalize (config := { enums := false }), hrestore]
-  apply Reaches.prepend (Step.globalSet (by
-    simpa [globalAt?] using hglobal))
-  rw [setGlobal_zero_eq]
-  apply Reaches.prepend (Step.returnFromCallFallthrough rfl)
-  simp [readToEndFinishedStore, resumeCaller]
-  exact ⟨[], .refl _⟩
+  obtain ⟨trace, execution, _, _, _⟩ := read_to_end_after_first_eof_steps_trace
+    store outerParams outerLocalValues stack code arity remainder controls calls out frame restore vectorWord length htag hcount hlength hvector htagBound hcountBound hlengthBound hvectorBound houtLenBound houtBound hdisjoint hglobal hrestore
+  exact ⟨trace, execution⟩
+
+theorem read_to_end_grown_direct_read
+    (store : MachineStore Universal.State)
+    (outerParams outerLocalValues stack : List Value) (code : Program)
+    (arity : Nat) (remainder : List Value)
+    (controls : List ControlFrame) (calls : List CallFrame)
+    (out frame chunk capacity data length filled target remaining : UInt32)
+    (previousTarget previousBase scratch9 status : UInt32)
+    (bytes : List UInt8)
+    (htarget : readToEndTarget chunk capacity length = target)
+    (hremaining : target - filled = remaining)
+    (hremainingNe : remaining ≠ 0)
+    (hmod : store.runtime.currentModule = «module»)
+    (henv : store.runtime.currentHost = Universal.envFor «module»)
+    (hbytes : bytes = store.wasm.host.stdio.input.take target.toNat)
+    (hfillBound : (filled + (length + data)).toNat + remaining.toNat ≤
+      store.wasm.mem.pages * 65536)
+    (hreadBound : (length + data).toNat + bytes.length ≤
+      store.wasm.mem.pages * 65536)
+    (hresultBound : (frame + 16).toNat + 4 + 4 ≤
+      store.wasm.mem.pages * 65536) :
+    Reaches
+      (readToEndGrownDirectConfig store outerParams outerLocalValues stack code
+        arity remainder controls calls out frame chunk capacity data length
+        filled previousTarget previousBase scratch9 status)
+      (readToEndGrownAfterAdapterConfig
+        (readAdapterResultStore
+          (readToEndFillStore store (filled + (length + data)) remaining)
+          (frame + 16) (length + data) bytes)
+        outerParams outerLocalValues stack code arity remainder controls calls
+        out frame chunk capacity data length filled target remaining previousBase
+        scratch9 status) := by
+  exact (read_to_end_grown_direct_read_cost store outerParams outerLocalValues stack code arity remainder controls calls out frame chunk capacity data length filled target remaining previousTarget previousBase scratch9 status bytes htarget hremaining hremainingNe hmod henv hbytes hfillBound hreadBound hresultBound).reaches
+
+
 
 end Project.HexEncodeStdio

@@ -72,7 +72,7 @@ theorem empty_plus_three_correct : EmptyPlusThreeSpec := by
   intro ptr len
   apply SmallStep.wasm_smallStep_runtime_instance_partiallyMeets (α := Unit)
   · simp [bodyConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [bodyConfig, func4, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, -⟩
     wasm_wp_pures [wp_localGet wp_localGet]
@@ -105,7 +105,7 @@ theorem empty_xor_flag_correct : EmptyXorFlagSpec := by
   intro ptr len flag
   apply SmallStep.wasm_smallStep_runtime_instance_partiallyMeets (α := Unit)
   · simp [bodyConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [bodyConfig, func2, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hruntime, -⟩
     wasm_wp_pures [wp_localGet wp_localGet]
@@ -156,7 +156,7 @@ theorem len_plus_one_export_correct : LenPlusOneExportSpec := by
   · exact fatPtrHeap_agrees _ (by simp [storeResolve, exportConfig]) hfat
   · exact fatPtrHeap_inBounds _ (by simp [storeResolve, exportConfig]) hfat
   · simp [exportConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
@@ -192,7 +192,7 @@ theorem len_plus_arg_export_correct : LenPlusArgExportSpec := by
   · exact fatPtrHeap_agrees _ (by simp [storeResolve, exportConfig]) hfat
   · exact fatPtrHeap_inBounds _ (by simp [storeResolve, exportConfig]) hfat
   · simp [exportConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
@@ -229,7 +229,7 @@ theorem empty_plus_three_export_correct : EmptyPlusThreeExportSpec := by
   · exact fatPtrHeap_agrees _ (by simp [storeResolve, exportConfig]) hfat
   · exact fatPtrHeap_inBounds _ (by simp [storeResolve, exportConfig]) hfat
   · simp [exportConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
@@ -281,7 +281,7 @@ theorem empty_xor_flag_export_correct : EmptyXorFlagExportSpec := by
   · exact fatPtrHeap_agrees _ (by simp [storeResolve, exportConfig]) hfat
   · exact fatPtrHeap_inBounds _ (by simp [storeResolve, exportConfig]) hfat
   · simp [exportConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes

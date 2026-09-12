@@ -73,7 +73,7 @@ private theorem twp_call_func11 {hlc : HasLC}
 /-- Syntactic presentation of the allocator rule for a concrete local frame.
 This avoids record-update metavariables at generated call sites. -/
 private theorem func12_alloc_outcome_explicit {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
+    [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State]
     {E : CoPset} {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (size align oldBump : UInt32) (host : Universal.State)
     (owned : List UInt8) (params localValues stack : List Value)
@@ -106,7 +106,7 @@ set_option maxRecDepth 100000 in
 requested capacity in the caller's three-word result record.  Allocator
 failure terminates via the Universal OOM host. -/
 theorem func4_alloc_fresh {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
+    [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State]
     {E : CoPset} {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (result ignored newSize oldBump : UInt32) (host : Universal.State)
     (arena : List UInt8) (old0 old4 old8 : UInt32)

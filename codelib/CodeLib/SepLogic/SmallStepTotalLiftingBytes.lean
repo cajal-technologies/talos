@@ -424,6 +424,7 @@ theorem twp_memorySize_framed
 /-- Total rule for `memory.grow`, exposing both the successful old-page
 count and the `0xffffffff` failure result to the continuation. -/
 theorem twp_memoryGrow_framed
+    [WasmMemoryPagesLegacy α]
     {params localValues values : List Value}
     {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -517,7 +518,7 @@ theorem twp_memoryGrow_framed
     subst store₂
     imod stateInterp_memoryGrow store ns obs nt delta
       (store.wasm.memoryCap store.runtime.currentModule 0)
-      memory previousPages hg $$ Hσ with Hσ
+      memory previousPages hg rfl $$ Hσ with Hσ
     imod Hclose
     imodintro
     isplit
@@ -601,6 +602,7 @@ theorem twp_store64_addr
 
 /-- A tracked `memory.grow` rule that owns each newly claimed byte. -/
 theorem twp_memoryGrow_fresh
+    [WasmMemoryPagesLegacy α]
     {params localValues values : List Value} {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
@@ -785,7 +787,7 @@ theorem twp_memoryGrow_fresh
     icombine Hstate Hclient as Hinput
     imod stateInterp_memoryGrow_tracked_frame store ns obs nt delta
         (store.wasm.memoryCap store.runtime.currentModule 0)
-        memory previousPages hg
+        memory previousPages hg rfl
         (P := iprop(runtimeModuleOwn instanceId runtimeModule ∗ R ∗
           heapFrontierOwn (measuredPages * 65536) ∗
           memoryPagesOwn measuredPages)) $$ Hinput with Hout

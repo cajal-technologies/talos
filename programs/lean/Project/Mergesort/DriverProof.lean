@@ -1,4 +1,5 @@
 import Project.Mergesort.ContractProofs
+import Project.Mergesort.BoundedDriverFacts
 
 set_option maxRecDepth 1048576
 
@@ -17,14 +18,15 @@ open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic Wasm.SmallStep
 open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
+open Project.Mergesort.MemoryBounds
 open scoped Wasm.SmallStep.Outcome
 
 /-- The first instruction after the generated stack/Vec initialization. -/
-private def func3AfterInit : Program :=
+def func3AfterInit : Program :=
   Project.Mergesort.func3.drop 21
 
 /-- Exact locals after the generated stack/Vec initialization. -/
-private def func3InitializedLocals : Locals :=
+def func3InitializedLocals : Locals :=
   { locals :=
       [.i32 driverBase, .i32 0, .i32 4, .i32 0, .i32 0, .i32 0,
         .i32 0, .i32 0, .i32 0, .i32 0, .i32 0] }
@@ -176,7 +178,7 @@ theorem twp_func3_read_chunk
 
 /-- Locals relevant to the read-loop append path.  The auxiliary slots are
 threaded explicitly so the lemma applies at every loop iteration. -/
-private def func3AppendLocals
+def func3AppendLocals
     (dataPtr current length aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
     (values : List Value) : Locals :=
   { locals :=
@@ -187,7 +189,7 @@ private def func3AppendLocals
 
 /-- Exact body of the generated block which either observes enough spare
 capacity or calls `func1` and reloads the changed Vec header. -/
-private def func3CapacityBody : Program :=
+def func3CapacityBody : Program :=
   [.localGet 3, .localGet 0, .load32 0, .localGet 6, .sub, .leU, .br_if 0,
     .localGet 0, .localGet 6, .localGet 3, .const 1, .const 1, .call 4,
     .localGet 0, .load32 4, .localSet 1,
@@ -202,7 +204,7 @@ private def func3AppendCopyBody : Program :=
     .localGet 3, .memoryCopy]
 
 /-- Exact append block plus the length commit which follows that block. -/
-private def func3AppendBody : Program :=
+def func3AppendBody : Program :=
   [.block 0 0 func3AppendCopyBody,
     .localGet 0, .localGet 6, .localGet 3, .add,
     .localTee 6, .store32 8]
@@ -380,7 +382,8 @@ def Func3ReserveContinuation
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   let newCapacityNat :=
     selectedCapacity initialized.length current.length capacity.toNat
   let newCapacity := UInt32.ofNat newCapacityNat
@@ -398,7 +401,7 @@ def Func3ReserveContinuation
           BumpHeap heapId finish finish.toNat finalHistory -∗
           ⌜VecReserveHistory history finalHistory capacity dataPtr newPtr
               newLayout ∧
-            GeometricVecFacts totalBytes
+            BoundedGeometricVecFacts totalBytes
               (initialized.length + current.length) remaining.length
               newCapacity newPtr finish.toNat finalHistory⌝ -∗
           Streams remaining output raised -∗
@@ -410,14 +413,16 @@ def Func3ReserveContinuation
             chunkBytes outputBytes -∗
           BumpHeap heapId storedCursor frontier history -∗
           Streams remaining output true -∗
-          Φ (.trapped (.host OOM.trapMessage))))
+          AllocationFailure policy frontier newLayout
+            (Φ (.trapped (.host OOM.trapMessage)))))
   | .oom => iprop(
       StackPointer reserveBase -∗
       StackReserve reserveBase shadow -∗
       ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes -∗
       BumpHeap heapId storedCursor frontier history -∗
       Streams remaining output true -∗
-      Φ (.trapped (.host OOM.trapMessage)))
+      AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage))))
 
 /-- Execute the generated reserve call after the capacity guard has proved
 that the current nonempty chunk does not fit.  All excluded RawVec error
@@ -426,7 +431,8 @@ edges are discharged by the explicit valid-input facts passed to
 reserve OOM state. -/
 theorem twp_func3_reserve
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (totalBytes : Nat) (current remaining : List UInt8)
     (capacity dataPtr : UInt32)
     (initialized chunkBytes outputBytes shadow : List UInt8)
@@ -439,7 +445,7 @@ theorem twp_func3_reserve
       0 < current.length ∧ current.length % 4 = 0 ∧
       capacity.toNat - initialized.length < current.length ∧
       totalBytes = initialized.length + current.length + remaining.length ∧
-      GeometricVecFacts totalBytes initialized.length
+      BoundedGeometricVecFacts totalBytes initialized.length
         (current.length + remaining.length) capacity dataPtr frontier history ∧
       initialized.length + current.length < UInt32.size ∧
       selectedCapacity initialized.length current.length capacity.toNat <
@@ -453,7 +459,7 @@ theorem twp_func3_reserve
     let callerLocals := func3AppendLocals dataPtr
       (UInt32.ofNat current.length) (UInt32.ofNat initialized.length)
       aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -463,7 +469,7 @@ theorem twp_func3_reserve
       Func3ReserveContinuation totalBytes current capacity dataPtr initialized
         chunkBytes outputBytes shadow heapId storedCursor frontier history
         remaining output raised callerLocals stack code arity remainder
-        controls calls s E Φ) ⊢
+        controls calls s E Φ policy) ⊢
       WP (.running
         ⟨callerLocals,
           [.localGet 0, .localGet 6, .localGet 3,
@@ -484,7 +490,9 @@ theorem twp_func3_reserve
   have hcurrentWord :
       (UInt32.ofNat current.length).toNat = current.length :=
     UInt32.toNat_ofNat_of_lt' (by omega)
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  iintro Hpre
+  ihave Hpre := withAllocationPolicy_open policy _ $$ Hpre
+  icases Hpre with ⟨#Hpolicy, Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
   isimp only [ExportFrame] at Hframe
   icases Hframe with ⟨Hvec, Hchunk, Houtput, %hframeLengths⟩
   simp only [List.cons_append, List.nil_append, func3AppendLocals]
@@ -506,11 +514,14 @@ theorem twp_func3_reserve
   simp only [List.cons_append, List.nil_append, callerLocals,
     func3AppendLocals] at HreserveCall
   iapply HreserveCall
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hsp Hreserve Hvec Hbump Hstreams]
   isplitl_pureexact ⟨True.intro, True.intro, True.intro,
       hinitializedWord, hcurrentWord,
       hfacts.1, hfacts.2.1, hfacts.2.2.1, hfacts.2.2.2.1,
-      hfacts.2.2.2.2.1, hfacts.2.2.2.2.2.1,
+      hfacts.2.2.2.2.1, hfacts.2.2.2.2.2.1.1,
       hfacts.2.2.2.2.2.2.1, hfacts.2.2.2.2.2.2.2.1,
       hfacts.2.2.2.2.2.2.2.2⟩
   isimp only [Func3ReserveContinuation] at Hcont
@@ -533,9 +544,14 @@ theorem twp_func3_reserve
             chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
         · unfold ExportFrame
           iframe_pureexact hframeLengths
+        have hbounded := BoundedGeometricVecFacts.reserveSuccess totalBytes
+          initialized.length current.length remaining.length capacity dataPtr
+          newPtr finish frontier history finalHistory hfacts.2.2.2.2.2.1
+          hfacts.1 hfacts.2.1
+          (by have hreserve := hfacts.2.2.2.1; omega) hdecision hpure.1
         ihave Hnormal := BI.and_elim_l $$ Hcont
         iapply Hnormal $$ %finalHistory Hruntime Hsp Hreserve Hframe Hbump
-          %hpure Hstreams
+          %(And.intro hpure.1 hbounded) Hstreams
       · iintro Hsp Hreserve Hvec Hbump Hstreams
         ihave Hframe : ExportFrame heapId capacity dataPtr initialized
             chunkBytes outputBytes $$ [Hvec Hchunk Houtput]
@@ -559,7 +575,8 @@ def Func3AppendContinuation
     (stack : List Value) (code : Program) (arity : Nat)
     (remainder : List Value) (controls : List ControlFrame)
     (calls : List CallFrame) (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp := iprop(
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp := iprop(
   (∀ finalCapacity : UInt32, ∀ finalPtr : UInt32,
     ∀ finalStoredCursor : UInt32, ∀ finalFrontier : Nat,
     ∀ finalHistory : AllocationHistory, ∀ finalShadow : List UInt8,
@@ -570,7 +587,7 @@ def Func3AppendContinuation
         chunkBytes outputBytes -∗
       BumpHeap heapId finalStoredCursor finalFrontier finalHistory -∗
       Streams remaining output false -∗
-      ⌜GeometricVecFacts totalBytes (initialized.length + current.length)
+      ⌜BoundedGeometricVecFacts totalBytes (initialized.length + current.length)
         remaining.length finalCapacity finalPtr finalFrontier finalHistory⌝ -∗
       WP (.running
         ⟨func3AppendLocals finalPtr (UInt32.ofNat current.length)
@@ -578,12 +595,15 @@ def Func3AppendContinuation
             aux2 aux4 aux5 aux7 aux8 aux9 aux10 stack,
           code, arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }]) ∧
-  (StackPointer reserveBase -∗
+  (⌜capacity.toNat - initialized.length < current.length⌝ -∗
+    StackPointer reserveBase -∗
     StackReserve reserveBase shadow -∗
     ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes -∗
     BumpHeap heapId storedCursor frontier history -∗
     Streams remaining output true -∗
-    Φ (.trapped (.host OOM.trapMessage))))
+    AllocationFailure policy frontier
+      { size := selectedCapacity initialized.length current.length capacity.toNat,
+        alignment := 1 } (Φ (.trapped (.host OOM.trapMessage)))))
 
 /-- Discharge the generated `count ≥ 257` panic edge at its originating
 guard.  The only premise is the `count ≤ 256` fact returned by `func10`; no
@@ -630,7 +650,7 @@ theorem twp_func3_count_guard
 
 /-- Splitting a canonical byte stream at the driver's 256-byte read size
 preserves four-byte word boundaries on both sides. -/
-private theorem readChunk_mod_four (input : List UInt8)
+theorem readChunk_mod_four (input : List UInt8)
     (hmod : input.length % 4 = 0) :
     let count := min 256 input.length
     (input.take count).length = count ∧
@@ -771,11 +791,12 @@ theorem twp_func3_read_and_classify
 
 /-- Execute the generated capacity block and append one nonempty read chunk.
 The fitting branch performs no allocation.  The non-fitting branch derives
-all of `Func1Spec`'s valid-input premises from `GeometricVecFacts`, reloads
+all of `Func1Spec`'s valid-input premises from `BoundedGeometricVecFacts`, reloads
 the returned header, and then uses the same append proof. -/
 theorem twp_func3_append_current
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (totalBytes : Nat) (current remaining : List UInt8)
     (capacity dataPtr : UInt32)
     (initialized chunkTail outputBytes shadow : List UInt8)
@@ -787,13 +808,13 @@ theorem twp_func3_append_current
       current.length = min 256 (current.length + remaining.length) ∧
       0 < current.length ∧ current.length % 4 = 0 ∧
       totalBytes = initialized.length + current.length + remaining.length ∧
-      GeometricVecFacts totalBytes initialized.length
+      BoundedGeometricVecFacts totalBytes initialized.length
         (current.length + remaining.length) capacity dataPtr frontier history)
     {stack : List Value} {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -804,7 +825,7 @@ theorem twp_func3_append_current
       Func3AppendContinuation totalBytes current remaining capacity dataPtr
         initialized (current ++ chunkTail) outputBytes shadow heapId
         storedCursor frontier history output aux2 aux4 aux5 aux7 aux8 aux9
-        aux10 stack code arity remainder controls calls s E Φ) ⊢
+        aux10 stack code arity remainder controls calls s E Φ policy) ⊢
       WP (.running
         ⟨func3AppendLocals dataPtr (UInt32.ofNat current.length)
             (UInt32.ofNat initialized.length)
@@ -814,11 +835,11 @@ theorem twp_func3_append_current
         @ s; E [{ Φ }] := by
   have hlayout := GeometricVecFacts.reserveLayout totalBytes
     initialized.length (current.length + remaining.length) current.length
-    capacity dataPtr frontier history hfacts.2.2.2.2
+    capacity dataPtr frontier history hfacts.2.2.2.2.1
     hfacts.1 hfacts.2.1
   dsimp only at hlayout
   have hinitializedCapacity : initialized.length ≤ capacity.toNat := by
-    rcases hfacts.2.2.2.2 with hinitial | hshort | hlarge
+    rcases hfacts.2.2.2.2.1 with hinitial | hshort | hlarge
     · omega
     · omega
     · rcases hlarge with
@@ -837,7 +858,9 @@ theorem twp_func3_append_current
       (capacity - UInt32.ofNat initialized.length).toNat =
         capacity.toNat - initialized.length := by
     rw [UInt32.toNat_sub_of_le _ _ hinitializedLe, hinitializedWord]
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
   isimp only [Func3AppendContinuation] at Hcont
   isimp only [ExportFrame, VecU8, RawVecHeader] at Hframe
   icases Hframe with
@@ -878,7 +901,7 @@ theorem twp_func3_append_current
       (s := s) (E := E) (Φ := Φ)
     simp only [func3AppendLocals, func3AppendBody] at Happend
     iapply_frame_intro Happend as Hframe
-    have hgeo := GeometricVecFacts.appendWithoutReserve totalBytes
+    have hgeo := BoundedGeometricVecFacts.appendWithoutReserve totalBytes
       initialized.length current.length remaining.length capacity dataPtr
       frontier history hfacts.2.2.2.2 hfacts.2.1 hfits
     ihave Hnormal := BI.and_elim_l $$ Hcont
@@ -918,6 +941,9 @@ theorem twp_func3_append_current
     simp only [func3AppendLocals, func3CapacityBody, List.cons_append,
       List.nil_append] at HreserveStep
     iapply HreserveStep
+    iapply withAllocationPolicy_close
+    isplitr
+    · iexact Hpolicy
     isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     unfold Func3ReserveContinuation
     dsimp only
@@ -927,7 +953,7 @@ theorem twp_func3_append_current
     | oom =>
         iintro Hsp Hreserve Hframe Hbump Hstreams
         ihave Hoom := BI.and_elim_r $$ Hcont
-        iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
+        iapply Hoom $$ %(Nat.lt_of_not_ge hfits) Hsp Hreserve Hframe Hbump Hstreams
     | success newPtr finish =>
         isplit
         · iintro %finalHistory Hruntime Hsp Hreserve Hframe Hbump %hpure
@@ -991,10 +1017,10 @@ theorem twp_func3_append_current
           · ipureexact hpure.2
         · iintro Hsp Hreserve Hframe Hbump Hstreams
           ihave Hoom := BI.and_elim_r $$ Hcont
-          iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
+          iapply Hoom $$ %(Nat.lt_of_not_ge hfits) Hsp Hreserve Hframe Hbump Hstreams
 
 /-- The generated read/categorize suffix of one active loop iteration. -/
-private def func3ReadClassifyBody : Program :=
+def func3ReadClassifyBody : Program :=
   [.localGet 0, .const 12, .add, .const 256, .call 13,
     .localTee 3, .eqz]
 
@@ -1012,7 +1038,8 @@ def Func3IterationContinuation
     (stack : List Value) (code : Program) (arity : Nat)
     (remainder : List Value) (controls : List ControlFrame)
     (calls : List CallFrame) (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   let count := min 256 remaining.length
   let nextCurrent := remaining.take count
   let nextRemaining := remaining.drop count
@@ -1029,7 +1056,7 @@ def Func3IterationContinuation
         BumpHeap heapId finalStoredCursor finalFrontier finalHistory -∗
         Streams [] output false -∗
         ⌜remaining = [] ∧
-          GeometricVecFacts totalBytes
+          BoundedGeometricVecFacts totalBytes
             (initialized.length + current.length) 0 finalCapacity finalPtr
             finalFrontier finalHistory⌝ -∗
         WP (.running
@@ -1056,7 +1083,7 @@ def Func3IterationContinuation
             remaining = nextCurrent ++ nextRemaining ∧
             totalBytes = (initialized ++ current).length +
               nextCurrent.length + nextRemaining.length ∧
-            GeometricVecFacts totalBytes
+            BoundedGeometricVecFacts totalBytes
               (initialized.length + current.length)
               (nextCurrent.length + nextRemaining.length)
               finalCapacity finalPtr finalFrontier finalHistory ∧
@@ -1068,19 +1095,23 @@ def Func3IterationContinuation
                 aux2 aux4 aux5 aux7 aux8 aux9 aux10 (.i32 0 :: stack),
               code, arity, remainder, controls, calls⟩ : Expr Universal.State)
             @ s; E [{ Φ }])) ∧
-    (StackPointer reserveBase -∗
+    (⌜capacity.toNat - initialized.length < current.length⌝ -∗
+    StackPointer reserveBase -∗
       StackReserve reserveBase shadow -∗
       ExportFrame heapId capacity dataPtr initialized chunkBytes outputBytes -∗
       BumpHeap heapId storedCursor frontier history -∗
       Streams remaining output true -∗
-      Φ (.trapped (.host OOM.trapMessage))))
+      AllocationFailure policy frontier
+        { size := selectedCapacity initialized.length current.length capacity.toNat,
+          alignment := 1 } (Φ (.trapped (.host OOM.trapMessage)))))
 
 /-- One exact active iteration: exclude the oversized-read panic edge,
 append the current chunk (reserving if needed), then read and classify the
 next chunk. -/
 theorem twp_func3_read_loop_iteration
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (totalBytes : Nat) (current remaining : List UInt8)
     (capacity dataPtr : UInt32)
     (initialized chunkTail outputBytes shadow : List UInt8)
@@ -1093,13 +1124,13 @@ theorem twp_func3_read_loop_iteration
       0 < current.length ∧ current.length ≤ 256 ∧
       current.length % 4 = 0 ∧ remaining.length % 4 = 0 ∧
       totalBytes = initialized.length + current.length + remaining.length ∧
-      GeometricVecFacts totalBytes initialized.length
+      BoundedGeometricVecFacts totalBytes initialized.length
         (current.length + remaining.length) capacity dataPtr frontier history)
     {stack : List Value} {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -1110,7 +1141,7 @@ theorem twp_func3_read_loop_iteration
       Func3IterationContinuation totalBytes current remaining capacity dataPtr
         initialized (current ++ chunkTail) outputBytes shadow heapId
         storedCursor frontier history output aux2 aux4 aux5 aux7 aux8 aux9
-        aux10 stack code arity remainder controls calls s E Φ) ⊢
+        aux10 stack code arity remainder controls calls s E Φ policy) ⊢
       WP (.running
         ⟨func3AppendLocals dataPtr (UInt32.ofNat current.length)
             (UInt32.ofNat initialized.length)
@@ -1120,7 +1151,9 @@ theorem twp_func3_read_loop_iteration
               func3ReadClassifyBody ++ code,
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
   isimp only [Func3IterationContinuation] at Hcont
   have Hguard := twp_func3_count_guard dataPtr current.length
     initialized.length aux2 aux4 aux5 aux7 aux8 aux9 aux10 hfacts.2.2.1
@@ -1141,6 +1174,9 @@ theorem twp_func3_read_loop_iteration
     (calls := calls) (s := s) (E := E) (Φ := Φ)
   rw [List.append_assoc func3AppendBody func3ReadClassifyBody code]
   iapply Happend
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   unfold Func3AppendContinuation
   isplit
@@ -1174,7 +1210,7 @@ theorem twp_func3_read_loop_iteration
         rw [← List.length_append,
           List.take_append_drop (min 256 remaining.length) remaining]
       have hgeoNext :
-          GeometricVecFacts totalBytes
+          BoundedGeometricVecFacts totalBytes
             (initialized.length + current.length)
             ((remaining.take (min 256 remaining.length)).length +
               (remaining.drop (min 256 remaining.length)).length)
@@ -1214,12 +1250,12 @@ theorem twp_func3_read_loop_iteration
           hnextMod, hnext.2.2.2.2.2.1, hnext.2.2.2.2.2.2,
           htotalNext,
           hgeoNext, hmeasure⟩
-  · iintro Hsp Hreserve Hframe Hbump Hstreams
+  · iintro %hreserve Hsp Hreserve Hframe Hbump Hstreams
     ihave Hoom := BI.and_elim_r $$ Hcont
-    iapply Hoom $$ Hsp Hreserve Hframe Hbump Hstreams
+    iapply Hoom $$ %hreserve Hsp Hreserve Hframe Hbump Hstreams
 
 /-- Exact generated loop body for the input-accumulation phase. -/
-private def func3ReadLoopBody : Program :=
+def func3ReadLoopBody : Program :=
   [.localGet 3, .const 257, .geU, .br_if 1,
     .block 0 0 func3CapacityBody] ++ func3AppendBody ++
     func3ReadClassifyBody ++ [.br_if 2, .br 0]
@@ -1230,49 +1266,49 @@ private def func3OversizedReadPanic : Program :=
   [.const 0, .localGet 3, .const 256, .const 1049096, .call 49,
     .unreachable]
 
-private def func3ReadLoopBlockBody : Program :=
+def func3ReadLoopBlockBody : Program :=
   [.loop 0 0 func3ReadLoopBody]
 
-private def func3ReadPhaseBody : Program :=
+def func3ReadPhaseBody : Program :=
   [.block 0 0 func3ReadLoopBlockBody] ++ func3OversizedReadPanic
 
-private def func3InitialReadPrefix : Program :=
+def func3InitialReadPrefix : Program :=
   [.localGet 0, .const 12, .add, .const 256, .call 13,
     .localTee 3, .br_if 0]
 
-private def func3EmptyInputSuffix : Program :=
+def func3EmptyInputSuffix : Program :=
   [.const 1, .localSet 4, .const 1, .localSet 5, .br 1]
 
 /-- Exact initial-read block.  The suffix is the generated empty-input arm;
 the nonempty arm branches to the block continuation before reaching it. -/
-private def func3InitialReadBody : Program :=
+def func3InitialReadBody : Program :=
   func3InitialReadPrefix ++ func3EmptyInputSuffix
 
-private def func3AfterInitialRead (afterLoop : Program) : Program :=
+def func3AfterInitialRead (afterLoop : Program) : Program :=
   [.const 0, .localSet 6, .const 1, .localSet 1,
     .block 0 0 func3ReadPhaseBody] ++ afterLoop
 
-private def func3InitialReadFrame (afterLoop : Program) : ControlFrame :=
+def func3InitialReadFrame (afterLoop : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3InitialReadBody,
     continuation := func3AfterInitialRead afterLoop,
     belowStack := [] }
 
-private def func3EmptyLocals : Locals :=
+def func3EmptyLocals : Locals :=
   func3AppendLocals 0 0 0 4 1 1 0 0 0 0 []
 
-private def func3EnclosingDriverFrame
+def func3EnclosingDriverFrame
     (body afterEmpty : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := body, continuation := afterEmpty, belowStack := [] }
 
-private def func3ReadInnerFrame : ControlFrame :=
+def func3ReadInnerFrame : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3ReadLoopBlockBody,
     continuation := func3OversizedReadPanic,
     belowStack := [] }
 
-private def func3ReadPhaseFrame (afterLoop : Program) : ControlFrame :=
+def func3ReadPhaseFrame (afterLoop : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3ReadPhaseBody,
     continuation := afterLoop,
@@ -1281,12 +1317,12 @@ private def func3ReadPhaseFrame (afterLoop : Program) : ControlFrame :=
 /-! ## Completed-read dispatch -/
 
 /-- Exact reload of the completed Vec's data pointer. -/
-private def func3CompletedPtrReload : Program :=
+def func3CompletedPtrReload : Program :=
   [.localGet 0, .load32 4, .localSet 4]
 
 /-- The generated partial-word guard.  Public entry bytes are a canonical
 serialization, so this branch condition is always zero. -/
-private def func3CompletedLengthGuard : Program :=
+def func3CompletedLengthGuard : Program :=
   [.localGet 6, .const 3, .and, .br_if 0]
 
 /-- The generated empty/nonempty split after the partial-word guard.  The
@@ -1400,7 +1436,7 @@ theorem twp_func3_enter_nonempty_decode
     (history : AllocationHistory)
     (horiginal : original ≠ [])
     (hcompleted : serialize original = completed)
-    (hgeo : GeometricVecFacts (serialize original).length completed.length 0
+    (hgeo : BoundedGeometricVecFacts (serialize original).length completed.length 0
       capacity dataPtr frontier history)
     (current aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
     {stack : List Value} {afterBlock : Program} {arity : Nat}
@@ -1422,7 +1458,7 @@ theorem twp_func3_enter_nonempty_decode
   iintro Hcont
   have hboundTotal := GeometricVecFacts.completed_lt_signed
     (serialize original).length completed.length 0 capacity dataPtr frontier
-    history hgeo rfl
+    history hgeo.1 rfl
   have hbound : completed.length < 2147483648 := by simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
     rw [← hcompleted, serialize_length]; omega
@@ -1471,7 +1507,8 @@ the exact `.values` driver OOM state; a normal result retains the stack/frame
 resources and exposes the fresh complete live block. -/
 theorem twp_func3_allocate_values
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc5 : Func5Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32)
     (capacity dataPtr : UInt32)
     (completed chunkBytes outputBytes shadow : List UInt8)
@@ -1479,7 +1516,7 @@ theorem twp_func3_allocate_values
     (history : AllocationHistory)
     (horiginal : original ≠ [])
     (hcompleted : serialize original = completed)
-    (hgeo : GeometricVecFacts (serialize original).length completed.length 0
+    (hgeo : BoundedGeometricVecFacts (serialize original).length completed.length 0
       capacity dataPtr frontier history)
     (callerLocals : Locals)
     (hlocal7 : callerLocals.get 7 =
@@ -1490,7 +1527,7 @@ theorem twp_func3_allocate_values
     {Φ : ObservableOutcome → HeapIProp} :
     let layout : AllocLayout :=
       { size := completed.length, alignment := 4 }
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -1510,8 +1547,8 @@ theorem twp_func3_allocate_values
           Streams [] [] false -∗
           ResumeWP [.i32 base] callerLocals stack code arity remainder controls
             calls s E Φ) ∧
-        (DriverValuesOOM heapId original -∗
-          Φ (.trapped (.host OOM.trapMessage))))) ⊢
+        (DriverValuesOOM heapId original policy -∗
+          OOMTarget policy (Φ (.trapped (.host OOM.trapMessage)))))) ⊢
       WP (.running
         ⟨{ callerLocals with values := stack },
           [.call 7, .localGet 7, .const 4, .call 8] ++ code,
@@ -1522,7 +1559,7 @@ theorem twp_func3_allocate_values
     { size := completed.length, alignment := 4 }
   have hboundTotal := GeometricVecFacts.completed_lt_signed
     (serialize original).length completed.length 0 capacity dataPtr frontier
-    history hgeo rfl
+    history hgeo.1 rfl
   have hbound : completed.length < 2147483648 := by simpa [hcompleted] using hboundTotal
   have halign : completed.length % 4 = 0 := by
     rw [← hcompleted, serialize_length]; omega
@@ -1540,10 +1577,12 @@ theorem twp_func3_allocate_values
       layout.Matches (UInt32.ofNat completed.length) 4 := by
     unfold AllocLayout.Matches layout
     simp only [hlengthWord]; decide
-  have hgeoOriginal : GeometricVecFacts (serialize original).length
+  have hgeoOriginal : BoundedGeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity dataPtr frontier history := by
     simpa only [hcompleted] using hgeo
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hcont⟩
   simp only [List.cons_append, List.nil_append]
   have Hmarker := Project.Mergesort.ContractProofs.func4_correct
       (hlc := hlc) (callerLocals := callerLocals) (stack := stack)
@@ -1570,12 +1609,17 @@ theorem twp_func3_allocate_values
   unfold CallContract callExpr at Halloc
   simp only [List.cons_append, List.nil_append] at Halloc
   iapply Halloc
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hbump Hstreams]
   isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, Or.inr rfl⟩
   unfold AllocContinuation
   cases hdecision : classifyBump frontier layout with
   | oom =>
       iintro Hbump Hstreams
+      iapply allocationFailure_intro
+      iintro %hfailure
       ihave Hoom := BI.and_elim_r $$ Hcont
       iapply Hoom
       ihave HframeOriginal : ExportFrame heapId capacity dataPtr
@@ -1584,6 +1628,8 @@ theorem twp_func3_allocate_values
       unfold DriverValuesOOM
       iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
         storedCursor, frontier, history
+      iapply allocationEvidence_intro
+      isplitl_pureexact (by simpa only [layout, hcompleted] using hfailure)
       isplitl_pureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
       iframe
   | success base finish =>
@@ -1596,6 +1642,8 @@ theorem twp_func3_allocate_values
         simp only [resumeExpr, List.cons_append, List.nil_append]
         iexact Hresume
       · iintro Hbump Hstreams
+        iapply allocationFailure_intro
+        iintro %hfailure
         ihave Hoom := BI.and_elim_r $$ Hcont
         iapply Hoom
         ihave HframeOriginal : ExportFrame heapId capacity dataPtr
@@ -1604,6 +1652,8 @@ theorem twp_func3_allocate_values
         unfold DriverValuesOOM
         iexists capacity, dataPtr, chunkBytes, outputBytes, shadow,
           storedCursor, frontier, history
+        iapply allocationEvidence_intro
+        isplitl_pureexact (by simpa only [layout, hcompleted] using hfailure)
         isplitl_pureexact ⟨List.length_pos_iff_ne_nil.mpr horiginal, hgeoOriginal⟩
         iframe
 
@@ -2331,7 +2381,7 @@ theorem twp_func3_decode_bulk_loop
 
 /-- Arithmetic and local initialization immediately following the values
 null check. -/
-private def func3DecodeSetup : Program :=
+def func3DecodeSetup : Program :=
   [.localGet 7, .const 4294967292, .add, .localTee 6,
     .const 2, .shrU, .const 1, .add, .localTee 1,
     .const 3, .and, .localSet 8,
@@ -2453,7 +2503,7 @@ private def func3DecodeBulkBlockBody : Program :=
     .localGet 8, .eqz, .br_if 1,
     .localGet 4, .localGet 3, .add, .localSet 3]
 
-private def func3DecodeOuterBlockBody : Program :=
+def func3DecodeOuterBlockBody : Program :=
   [.block 0 0 func3DecodeBulkBlockBody] ++ func3DecodeTailContinuation
 
 private def func3DecodeOuterFrame (afterDecode : Program) : ControlFrame :=
@@ -2727,7 +2777,7 @@ theorem twp_func3_decode_allocated
     (frontier : Nat) (history : AllocationHistory)
     (current aux2 aux8 aux9 aux10 : UInt32)
     (horiginal : original ≠ [])
-    (hgeo : GeometricVecFacts (serialize original).length
+    (hgeo : BoundedGeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity source frontier history)
     {afterDecode : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
@@ -2768,7 +2818,7 @@ theorem twp_func3_decode_allocated
   have hbyteBound : 4 * original.length < 2147483648 := by
     have htotal := GeometricVecFacts.completed_lt_signed
       (serialize original).length (serialize original).length 0 capacity
-      source frontier history hgeo rfl
+      source frontier history hgeo.1 rfl
     simpa only [serialize_length] using htotal
   iintro ⟨Hframe, Hblock, Hcont⟩
   have Hguard := twp_func3_values_nonnull_guard
@@ -2793,7 +2843,7 @@ theorem twp_func3_decode_allocated
     iframe_pureexact hblockFacts
   ihave Hbuffers := DriverDecodeBuffers_open heapId capacity source destination
     valuesId original chunkBytes outputBytes bytes frontier history horiginal
-    hgeo $$ [Hframe Hblock]
+    hgeo.1 $$ [Hframe Hblock]
   · iframe
   icases Hbuffers with ⟨Hsource, HcloseSource, Hvalues⟩
   isimp only [LiveWordBlock] at Hvalues
@@ -2835,7 +2885,8 @@ The valid layout follows from the same signed byte bound used by the decode;
 the allocator's only exceptional result is repackaged as `.scratch` OOM. -/
 theorem twp_func3_allocate_scratch
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc9 : Func9Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc9 : Func9Spec (hlc := hlc) policy)
     (heapId : GName) (valuesId : Nat)
     (capacity source valuesPtr : UInt32)
     (original : List UInt32)
@@ -2847,6 +2898,8 @@ theorem twp_func3_allocate_scratch
     (hbyteBound : 4 * original.length < 2147483648)
     (hfrontier : heapBase.toNat ≤ frontier)
     (hvaluesEnd : valuesPtr.toNat + 4 * original.length ≤ frontier)
+    (hlineage : ScratchLineage original capacity source valuesPtr
+      valuesId frontier history)
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset}
@@ -2857,7 +2910,7 @@ theorem twp_func3_allocate_scratch
       func3AppendLocals final1 final3 final6 valuesPtr source final5
         (UInt32.ofNat (4 * original.length)) final8
         (UInt32.ofNat original.length) (UInt32.ofNat (4 * original.length)) []
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -2884,8 +2937,8 @@ theorem twp_func3_allocate_scratch
             ⟨scratch, 4 * original.length⟩⌝ -∗
           ResumeWP [.i32 scratch] callerLocals [] code arity remainder controls
             calls s E Φ) ∧
-        (DriverScratchOOM heapId original -∗
-          Φ (.trapped (.host OOM.trapMessage))))) ⊢
+        (DriverScratchOOM heapId original policy -∗
+          OOMTarget policy (Φ (.trapped (.host OOM.trapMessage)))))) ⊢
       WP (.running
         ⟨func3AppendLocals final1 final3 final6 valuesPtr source final5
             (UInt32.ofNat (4 * original.length)) final8
@@ -2912,7 +2965,9 @@ theorem twp_func3_allocate_scratch
       layout.Matches (UInt32.ofNat (4 * original.length)) 4 := by
     unfold AllocLayout.Matches layout
     simp only [hsizeWord]; decide
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hvalues, Hbump, Hstreams, Hcont⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hvalues, Hbump, Hstreams, Hcont⟩
   simp only [List.cons_append, List.nil_append]
   have Hmarker := Project.Mergesort.ContractProofs.func4_correct
     (hlc := hlc)
@@ -2947,18 +3002,25 @@ theorem twp_func3_allocate_scratch
   dsimp only [callerLocals] at Halloc
   simp only [func3AppendLocals] at Halloc
   iapply Halloc
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hbump Hstreams]
   isplitl_pureexact ⟨hlayoutMatches, hlayoutValid, rfl⟩
   unfold ZeroAllocContinuation
   cases hdecision : classifyBump frontier layout with
   | oom =>
       iintro Hbump Hstreams
+      iapply allocationFailure_intro
+      iintro %hfailure
       ihave Hoom := BI.and_elim_r $$ Hcont
       iapply Hoom
       unfold DriverScratchOOM
       iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
         shadow, storedCursor, frontier, history
-      isplitl_pureexact hpositive
+      iapply allocationEvidence_intro
+      isplitl_pureexact (by simpa only [layout, serialize_length] using hfailure)
+      isplitl_pureexact ⟨hpositive, hlineage⟩
       iframe
   | success scratch finish =>
       have hscratchStart : frontier ≤ scratch.toNat :=
@@ -2978,16 +3040,20 @@ theorem twp_func3_allocate_scratch
         simp only [resumeExpr, List.cons_append, List.nil_append]
         iexact Hresume
       · iintro Hbump Hstreams
+        iapply allocationFailure_intro
+        iintro %hfailure
         ihave Hoom := BI.and_elim_r $$ Hcont
         iapply Hoom
         unfold DriverScratchOOM
         iexists capacity, source, valuesPtr, valuesId, chunkBytes, outputBytes,
           shadow, storedCursor, frontier, history
-        isplitl_pureexact hpositive
+        iapply allocationEvidence_intro
+        isplitl_pureexact (by simpa only [layout, serialize_length] using hfailure)
+        isplitl_pureexact ⟨hpositive, hlineage⟩
         iframe
 
 /-- Exact success tail following the generated zeroed scratch allocation. -/
-private def func3ScratchSuccessTail : Program :=
+def func3ScratchSuccessTail : Program :=
   [.localTee 8, .eqz, .br_if 2,
     .localGet 7, .const 2, .shrU, .localSet 1,
     .const 0, .localSet 5, .br 4]
@@ -3297,8 +3363,8 @@ private theorem func3_output_countdown_step
   exact hsub
 
 /-- The generated output loop emits precisely the canonical serialization of
-the sorted array.  This is a partial-correctness loop rule: it identifies the
-normal state after the loop without asserting that execution terminates. -/
+the sorted array. This total-WP loop rule passes its preserved resources to
+the normal continuation after all words have been emitted. -/
 theorem twp_func3_output_loop
     [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (valuesId : Nat)
@@ -3453,7 +3519,7 @@ theorem twp_func3_output_loop
 /-- Exact enclosing block for the generated output phase.  The guard is the
 ordinary empty/nonempty split; only the nonempty arm initializes and enters
 `func3OutputLoopBody`. -/
-private def func3OutputBlockBody : Program :=
+def func3OutputBlockBody : Program :=
   [.localGet 9, .eqz, .br_if 0,
     .localGet 9, .const 2, .shl, .localSet 6,
     .localGet 2, .localSet 3,
@@ -4004,14 +4070,14 @@ private theorem completedHistory_other_records_retired
     (frontier : Nat) (history : AllocationHistory)
     (inputId : Nat)
     (hpositive : 0 < total)
-    (hgeo : GeometricVecFacts total total 0 capacity inputPtr frontier history)
+    (hgeo : BoundedGeometricVecFacts total total 0 capacity inputPtr frontier history)
     (hinput : get? history.records inputId =
       some (liveMeta inputPtr
         { size := capacity.toNat, alignment := 1 })) :
     ∀ allocationId metadata,
       get? history.records allocationId = some metadata →
       allocationId ≠ inputId → metadata.status = .retired := by
-  rcases hgeo with hempty | hshort | hlarge
+  rcases hgeo.1 with hempty | hshort | hlarge
   · omega
   · rcases hshort with
       ⟨_remaining, _length, _totalBound, _capacity, _ptr, _frontier,
@@ -4068,7 +4134,7 @@ private theorem completedDriverHistory_allRetired
     (frontier : Nat) (history : AllocationHistory)
     (inputId : Nat) (workLayout : AllocLayout)
     (hpositive : 0 < total)
-    (hgeo : GeometricVecFacts total total 0 capacity inputPtr frontier history)
+    (hgeo : BoundedGeometricVecFacts total total 0 capacity inputPtr frontier history)
     (hinput :
       get? (completedDriverBeforeInputHistory history valuesPtr scratchPtr
           workLayout).records inputId =
@@ -4135,11 +4201,11 @@ private theorem completedDriverHistory_allRetired
         exact hothers allocationId metadata hlookup (Ne.symm hinputId)
 
 /-- Exact cleanup sequence following the generated output block. -/
-private def func3NonemptyCleanup : Program :=
+def func3NonemptyCleanup : Program :=
   [.block 0 0 func3ValuesDeallocBlockBody,
     .block 0 0 func3ScratchDeallocBlockBody] ++ func3InputDeallocTail
 
-private def func3CleanupOuterFrame (driverBody : Program) : ControlFrame :=
+def func3CleanupOuterFrame (driverBody : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := driverBody, continuation := func3RestoreStackTail,
     belowStack := [] }
@@ -4160,12 +4226,13 @@ theorem twp_func3_finish_nonempty
     (hsorted : SortedPermutation original sorted)
     (hpositive : 0 < original.length)
     (hscratchLength : scratchValues.length = sorted.length)
-    (hgeo : GeometricVecFacts (serialize original).length
+    (hgeo : BoundedGeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity inputPtr inputFrontier
         inputHistory)
     (hvaluesId : valuesId = inputHistory.nextId)
     (hscratchId : scratchId = inputHistory.nextId + 1)
     (hbyteBound : 4 * original.length < UInt32.size)
+    (hfrontierBound : frontier ≤ workArraysFrontierBound (serialize original).length)
     (driverBody : Program)
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Phi : ObservableOutcome → HeapIProp} :
@@ -4215,7 +4282,7 @@ theorem twp_func3_finish_nonempty
     hsorted.2.length_eq.symm
   have hsortedPositive : 0 < sorted.length := by simpa only [hsortedLength] using hpositive
   have hcapacityPositive : 0 < capacity.toNat := by
-    rcases hgeo with hempty | hshort | hlarge
+    rcases hgeo.1 with hempty | hshort | hlarge
     · have hzero := hempty.2.2.1
       rw [serialize_length] at hzero; omega
     · rcases hshort with ⟨_, _, _, hcapacity, _, _, _⟩
@@ -4315,19 +4382,19 @@ theorem twp_func3_finish_nonempty
       storedCursor, frontier,
       beforeInput.retire inputId inputPtr
         { size := capacity.toNat, alignment := 1 }
-    isplitl_pureexact ⟨hsorted, hstackLength, hallRetired⟩
+    isplitl_pureexact ⟨hsorted, hstackLength, hallRetired, hfrontierBound⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
 
-private def func3EmptyAfterReadSetup : Program :=
+def func3EmptyAfterReadSetup : Program :=
   [.const 0, .localSet 10, .const 0, .localSet 9,
     .const 4, .localSet 8]
 
-private def func3SortAndCleanup : Program :=
+def func3SortAndCleanup : Program :=
   [.localGet 2, .localGet 9, .localGet 8, .localGet 9, .call 5,
     .block 0 0 func3OutputBlockBody] ++ func3NonemptyCleanup
 
-private def func3EmptyMiddleFrame (body : Program) : ControlFrame :=
+def func3EmptyMiddleFrame (body : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := body, continuation := func3SortAndCleanup,
     belowStack := [] }
@@ -4455,13 +4522,14 @@ theorem twp_func3_finish_empty
     iexists [], reserveBytes ++ exportFrameBytes 0 1 [] chunkBytes outputBytes,
       0, heapBase.toNat, AllocationHistory.empty
     isplitl_pureexact ⟨⟨by simp, by simp⟩,
-        hstackLength, hallRetired⟩
+        hstackLength, hallRetired,
+        by simp [workArraysFrontierBound, inputFrontierBound, serialize]; omega⟩
     · iframe
   iapply Hcont $$ Hruntime Hsuccess
 
 /-- All dynamic ownership and ghost state carried across a read-loop
 back-edge. -/
-private structure Func3ReadLoopState where
+structure Func3ReadLoopState where
   capacity : UInt32
   dataPtr : UInt32
   initialized : List UInt8
@@ -4473,7 +4541,7 @@ private structure Func3ReadLoopState where
   frontier : Nat
   history : AllocationHistory
 
-private def func3ReadLoopLocals
+def func3ReadLoopLocals
     (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
     (state : Func3ReadLoopState) : Locals :=
   func3AppendLocals state.dataPtr (UInt32.ofNat state.current.length)
@@ -4490,7 +4558,8 @@ def Func3ReadLoopContinuation
     (afterLoop : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp := iprop(
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp := iprop(
   ((∀ completed : List UInt8, ∀ chunkBytes : List UInt8,
     ∀ finalShadow : List UInt8,
     ∀ finalCapacity : UInt32, ∀ finalPtr : UInt32,
@@ -4504,25 +4573,26 @@ def Func3ReadLoopContinuation
       BumpHeap heapId finalStoredCursor finalFrontier finalHistory -∗
       Streams [] [] false -∗
       ⌜serialize original = completed ∧
-        GeometricVecFacts (serialize original).length completed.length 0
+        BoundedGeometricVecFacts (serialize original).length completed.length 0
           finalCapacity finalPtr finalFrontier finalHistory⌝ -∗
       WP (.running
         ⟨func3AppendLocals finalPtr 0 (UInt32.ofNat completed.length)
             aux2 aux4 aux5 aux7 aux8 aux9 aux10 [],
           afterLoop, arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }]) ∧
-    ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
-      Φ (.trapped (.host OOM.trapMessage)))))
+    ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase policy) -∗
+      OOMTarget policy (Φ (.trapped (.host OOM.trapMessage))))))
 
 private def Func3ReadLoopInv
     [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy)
     (heapId : GName) (original : List UInt32) (outputBytes : List UInt8)
     (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
     (afterLoop : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
     (Φ : ObservableOutcome → HeapIProp)
-    (state : Func3ReadLoopState) : HeapIProp := iprop(
+    (state : Func3ReadLoopState) : HeapIProp := WithAllocationPolicy policy iprop(
   RuntimeContext ∗
   StackPointer driverBase ∗
   StackReserve reserveBase state.shadow ∗
@@ -4536,12 +4606,12 @@ private def Func3ReadLoopInv
       min 256 (state.current.length + state.remaining.length) ∧
     0 < state.current.length ∧ state.current.length ≤ 256 ∧
     state.current.length % 4 = 0 ∧ state.remaining.length % 4 = 0 ∧
-    GeometricVecFacts (serialize original).length state.initialized.length
+    BoundedGeometricVecFacts (serialize original).length state.initialized.length
       (state.current.length + state.remaining.length)
       state.capacity state.dataPtr state.frontier state.history⌝ ∗
   Func3ReadLoopContinuation heapId original outputBytes
     aux2 aux4 aux5 aux7 aux8 aux9 aux10 afterLoop arity remainder controls
-    calls s E Φ)
+    calls s E Φ policy)
 
 /-- The generated input loop is well-founded on unread bytes.  Its normal
 exit reaches the continuation after the enclosing phase block; the
@@ -4549,7 +4619,8 @@ oversized-read panic continuation is never entered, and reserve failure is
 packaged as the exact `.reserve` `DriverOOMState`. -/
 theorem twp_func3_read_loop
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32) (outputBytes : List UInt8)
     (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
     (initial : Func3ReadLoopState)
@@ -4557,7 +4628,7 @@ theorem twp_func3_read_loop
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp} :
-    Func3ReadLoopInv heapId original outputBytes
+    Func3ReadLoopInv policy heapId original outputBytes
         aux2 aux4 aux5 aux7 aux8 aux9 aux10 afterLoop arity remainder controls
         calls s E Φ initial ⊢
       WP (.running
@@ -4569,7 +4640,7 @@ theorem twp_func3_read_loop
     (ι := Func3ReadLoopState)
     (measure := fun state => state.current.length + state.remaining.length)
     (locals := func3ReadLoopLocals aux2 aux4 aux5 aux7 aux8 aux9 aux10)
-    (I := Func3ReadLoopInv heapId original outputBytes
+    (I := Func3ReadLoopInv policy heapId original outputBytes
       aux2 aux4 aux5 aux7 aux8 aux9 aux10 afterLoop arity remainder controls
       calls s E Φ)
     (initial := initial)
@@ -4584,6 +4655,7 @@ theorem twp_func3_read_loop
   · intro state
     simp only [Func3ReadLoopInv, Wasm.SmallStep.loopBodyExpr]
     iintro Hrec Hinv
+    ihave ⟨#Hpolicy, Hinv⟩ := withAllocationPolicy_open policy _ $$ Hinv
     icases Hinv with
       ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, %hfacts, Hfinish⟩
     isimp only [Func3ReadLoopContinuation] at Hfinish
@@ -4611,6 +4683,9 @@ theorem twp_func3_read_loop
     simp only [func3ReadLoopBody, func3ReadLoopLocals,
       List.cons_append, List.nil_append]
     iapply Hiteration
+    iapply withAllocationPolicy_close
+    isplitr
+    · iexact Hpolicy
     isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
     unfold Func3IterationContinuation
     isplit
@@ -4666,6 +4741,9 @@ theorem twp_func3_read_loop
           simp
         rw [← congrArg UInt32.ofNat htakeLength]
         iapply Hback
+        iapply withAllocationPolicy_close
+        isplitr
+        · iexact Hpolicy
         isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
         isplitl_pureexact (by
           have hserializeNext :
@@ -4689,7 +4767,7 @@ theorem twp_func3_read_loop
                     state.remaining.drop (min 256 state.remaining.length) := by
                 simp only [List.append_assoc]
           have hgeoNext :
-              GeometricVecFacts (serialize original).length
+              BoundedGeometricVecFacts (serialize original).length
                 (state.initialized ++ state.current).length
                 ((state.remaining.take (min 256 state.remaining.length)).length +
                   (state.remaining.drop (min 256 state.remaining.length)).length)
@@ -4702,7 +4780,9 @@ theorem twp_func3_read_loop
         unfold Func3ReadLoopContinuation
         simp only [func3AppendLocals]
         iexact Hfinish
-    · iintro Hsp Hreserve Hframe Hbump Hstreams
+    · iintro %hreserve Hsp Hreserve Hframe Hbump Hstreams
+      iapply allocationFailure_intro
+      iintro %hfailure
       ihave Hoom := BI.and_elim_r $$ Hfinish
       iapply Hoom
       iexists DriverOOMPhase.reserve
@@ -4713,8 +4793,10 @@ theorem twp_func3_read_loop
       iexists state.capacity, state.dataPtr, state.initialized, state.current,
         state.remaining, state.chunkTail, outputBytes, state.shadow,
         state.storedCursor, state.frontier, state.history
+      iapply allocationEvidence_intro
+      isplitl_pureexact hfailure
       isplitl_pureexact ⟨hfacts.1, hfacts.2.2.1, hfacts.2.2.2.2.1,
-          hfacts.2.1, hframeLengths.1, hfacts.2.2.2.2.2.2⟩
+          hfacts.2.1, hframeLengths.1, hreserve, hfacts.2.2.2.2.2.2⟩
       isplitl_exacts [Hsp Hreserve]
       isplitl [Hvec Hchunk Houtput]
       · unfold ExportFrame
@@ -4728,7 +4810,8 @@ continuation is precisely the excluded oversized-read panic tail, while the
 outer phase block continues with `afterLoop`. -/
 theorem twp_func3_read_phase
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32) (outputBytes : List UInt8)
     (aux2 aux4 aux5 aux7 aux8 aux9 aux10 : UInt32)
     (initial : Func3ReadLoopState)
@@ -4736,7 +4819,7 @@ theorem twp_func3_read_phase
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp} :
-    Func3ReadLoopInv heapId original outputBytes
+    Func3ReadLoopInv policy heapId original outputBytes
         aux2 aux4 aux5 aux7 aux8 aux9 aux10 afterLoop arity remainder controls
         calls s E Φ initial ⊢
       WP (.running
@@ -4762,14 +4845,15 @@ theorem twp_func3_read_phase
 locals, and enter the proved read phase. -/
 theorem twp_func3_first_read_nonempty
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32) (outputBytes shadow : List UInt8)
     (horiginal : original ≠ [])
     {afterLoop : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -4777,7 +4861,7 @@ theorem twp_func3_first_read_nonempty
       BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
       Streams (serialize original) [] false ∗
       Func3ReadLoopContinuation heapId original outputBytes
-        4 0 0 0 0 0 0 afterLoop arity remainder controls calls s E Φ) ⊢
+        4 0 0 0 0 0 0 afterLoop arity remainder controls calls s E Φ policy) ⊢
       WP (.running
         ⟨func3InitializedLocals, func3InitialReadBody,
           arity, remainder, func3InitialReadFrame afterLoop :: controls,
@@ -4826,12 +4910,14 @@ theorem twp_func3_first_read_nonempty
       _ = current ++ remaining := (List.take_append_drop count input).symm
       _ = [] ++ current ++ remaining := by simp
   have hgeo :
-      GeometricVecFacts input.length 0
+      BoundedGeometricVecFacts input.length 0
         (current.length + remaining.length) 0 1 heapBase.toNat
         AllocationHistory.empty := by
-    left
-    exact ⟨rfl, rfl, rfl, hremainingLength.symm, rfl, rfl⟩
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hfinish⟩
+    simpa only [input, current, remaining, count, List.length_nil] using
+      (BoundedDriverFacts.ReadFacts.initial original horiginal).bounded
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hfinish⟩
   have Hread := twp_func3_read_chunk heapId 0 1 []
     (List.replicate 256 0) outputBytes input [] false []
     [.i32 driverBase, .i32 0, .i32 4, .i32 0, .i32 0, .i32 0,
@@ -4880,10 +4966,13 @@ theorem twp_func3_first_read_nonempty
     hcurrentLength, List.length_nil, UInt32.reduceOfNat] at Hphase
   iapply Hphase
   unfold Func3ReadLoopInv
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isplitl_pureexact ⟨hserializeSplit, hcurrentShape, hcurrentPositive,
       hcurrentBound, hcurrentMod, hsplit.2.2, by
-        change GeometricVecFacts input.length 0
+        change BoundedGeometricVecFacts input.length 0
           (current.length + remaining.length) 0 1 heapBase.toNat
           AllocationHistory.empty
         exact hgeo⟩
@@ -4894,14 +4983,15 @@ The block body still contains the empty-input suffix, but the preceding theorem
 proves the nonzero read count takes the block branch before that suffix. -/
 theorem twp_func3_initial_read_block_nonempty
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32) (outputBytes shadow : List UInt8)
     (horiginal : original ≠ [])
     {afterLoop : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase shadow ∗
@@ -4909,7 +4999,7 @@ theorem twp_func3_initial_read_block_nonempty
       BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
       Streams (serialize original) [] false ∗
       Func3ReadLoopContinuation heapId original outputBytes
-        4 0 0 0 0 0 0 afterLoop arity remainder controls calls s E Φ) ⊢
+        4 0 0 0 0 0 0 afterLoop arity remainder controls calls s E Φ policy) ⊢
       WP (.running
         ⟨func3InitializedLocals,
           .block 0 0 func3InitialReadBody :: func3AfterInitialRead afterLoop,
@@ -5174,7 +5264,7 @@ theorem twp_func3_initialize
 
 /-- Values-allocation, decode, and scratch-allocation code in the innermost
 generated nonempty block. -/
-private def func3AllocationBody : Program :=
+def func3AllocationBody : Program :=
   [.call 7, .localGet 7, .const 4, .call 8,
     .localTee 2, .eqz, .br_if 1] ++ func3DecodeSetup ++
     [.block 0 0 func3DecodeOuterBlockBody,
@@ -5183,7 +5273,7 @@ private def func3AllocationBody : Program :=
 
 /-- Complete body of the innermost nonempty block, including the two guards
 which establish whole-word, nonempty input before allocation. -/
-private def func3DecodeAllocationBody : Program :=
+def func3DecodeAllocationBody : Program :=
   func3CompletedLengthGuard ++
     [.block 0 0 func3AlignedLengthBlockBody] ++ func3AllocationBody
 
@@ -5196,18 +5286,18 @@ private def func3EarlyInputCleanup : Program :=
 private def func3ValuesAllocationPanic : Program :=
   [.const 4, .localGet 7, .call 46, .unreachable]
 
-private def func3ScratchAllocationPanic : Program :=
+def func3ScratchAllocationPanic : Program :=
   [.const 4, .localGet 10, .call 46, .unreachable]
 
-private def func3ValuesOuterBody : Program :=
+def func3ValuesOuterBody : Program :=
   [.block 0 0 func3DecodeAllocationBody] ++ func3EarlyInputCleanup
 
-private def func3ScratchOuterBody : Program :=
+def func3ScratchOuterBody : Program :=
   [.block 0 0 func3ValuesOuterBody] ++ func3ValuesAllocationPanic
 
 /-- Body of the block containing the initial read, the read loop, and the
 complete nonempty allocation/decode dispatch. -/
-private def func3ReadAndDispatchBody : Program :=
+def func3ReadAndDispatchBody : Program :=
   [.block 0 0 func3InitialReadBody] ++
     func3AfterInitialRead
       (func3CompletedPtrReload ++
@@ -5215,33 +5305,33 @@ private def func3ReadAndDispatchBody : Program :=
         func3ScratchAllocationPanic)
 
 /-- Body of the block whose fallthrough is the valid empty-input setup. -/
-private def func3MiddleBody : Program :=
+def func3MiddleBody : Program :=
   [.block 0 0 func3ReadAndDispatchBody] ++ func3EmptyAfterReadSetup
 
 /-- Exact body of the outermost generated driver block. -/
-private def func3DriverBody : Program :=
+def func3DriverBody : Program :=
   [.block 0 0 func3MiddleBody] ++ func3SortAndCleanup
 
-private def func3DecodeAllocationFrame : ControlFrame :=
+def func3DecodeAllocationFrame : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3DecodeAllocationBody,
     continuation := func3EarlyInputCleanup, belowStack := [] }
 
-private def func3ValuesOuterFrame : ControlFrame :=
+def func3ValuesOuterFrame : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3ValuesOuterBody,
     continuation := func3ValuesAllocationPanic, belowStack := [] }
 
-private def func3ScratchOuterFrame : ControlFrame :=
+def func3ScratchOuterFrame : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
     body := func3ScratchOuterBody,
     continuation := func3ScratchAllocationPanic, belowStack := [] }
 
-private def func3ReadAndDispatchFrame : ControlFrame :=
+def func3ReadAndDispatchFrame : ControlFrame :=
   func3EnclosingDriverFrame func3ReadAndDispatchBody func3EmptyAfterReadSetup
 
 /-- The six exact frames surrounding the successful scratch-allocation tail. -/
-private def func3ScratchSuccessControls : List ControlFrame :=
+def func3ScratchSuccessControls : List ControlFrame :=
   [func3DecodeAllocationFrame,
     func3ValuesOuterFrame,
     func3ScratchOuterFrame,
@@ -5249,18 +5339,18 @@ private def func3ScratchSuccessControls : List ControlFrame :=
     func3EmptyMiddleFrame func3MiddleBody,
     func3CleanupOuterFrame func3DriverBody]
 
-private theorem func3_scratch_success_branch :
+theorem func3_scratch_success_branch :
     branchTarget? 0 4 func3ScratchSuccessControls [] =
       some (func3SortAndCleanup,
         [func3CleanupOuterFrame func3DriverBody], []) := by rfl
 
-private theorem geometricVec_frontier_ge_heapBase
+theorem geometricVec_frontier_ge_heapBase
     (total length remaining : Nat) (capacity ptr : UInt32)
     (frontier : Nat) (history : AllocationHistory)
-    (hgeo : GeometricVecFacts total length remaining capacity ptr frontier
+    (hgeo : BoundedGeometricVecFacts total length remaining capacity ptr frontier
       history) :
     heapBase.toNat ≤ frontier := by
-  rcases hgeo with hinitial | hshort | hlarge
+  rcases hgeo.1 with hinitial | hshort | hlarge
   · rw [hinitial.2.2.2.2.1]
   · rw [hshort.2.2.2.2.2.1]; omega
   · rcases hlarge with
@@ -5277,19 +5367,20 @@ The only terminal alternatives admitted by the two allocator contracts are
 the phase-indexed `talos.oom` outcomes. -/
 theorem twp_func3_complete_nonempty
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc9 : Func9Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc9 : Func9Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32)
     (capacity inputPtr : UInt32)
     (chunkBytes outputBytes reserveBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory)
     (horiginal : original ≠ [])
-    (hgeo : GeometricVecFacts (serialize original).length
+    (hgeo : BoundedGeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity inputPtr frontier history)
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Phi : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase reserveBytes ∗
@@ -5302,8 +5393,8 @@ theorem twp_func3_complete_nonempty
         WP (.running
           ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
           @ s; E [{ Phi }]) ∗
-      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
-        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase policy) -∗
+        OOMTarget policy (Phi (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
         ⟨func3AppendLocals inputPtr 0
             (UInt32.ofNat (4 * original.length)) 4 inputPtr 0
@@ -5317,7 +5408,7 @@ theorem twp_func3_complete_nonempty
   have hbyteBoundSigned : 4 * original.length < 2147483648 := by
     have htotal := GeometricVecFacts.completed_lt_signed
       (serialize original).length (serialize original).length 0 capacity
-      inputPtr frontier history hgeo rfl
+      inputPtr frontier history hgeo.1 rfl
     simpa only [serialize_length] using htotal
   have hbyteBound : 4 * original.length < UInt32.size := by
     norm_num [UInt32.size] at hbyteBoundSigned ⊢; omega
@@ -5325,7 +5416,9 @@ theorem twp_func3_complete_nonempty
       (by omega) hbyteBoundSigned (by omega)
   have hfrontier : heapBase.toNat ≤ frontier :=
     geometricVec_frontier_ge_heapBase _ _ _ _ _ _ _ hgeo
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
   have HvaluesAlloc := twp_func3_allocate_values hfunc5 heapId original
     capacity inputPtr (serialize original) chunkBytes outputBytes reserveBytes
     storedCursor frontier history horiginal rfl hgeo
@@ -5345,10 +5438,17 @@ theorem twp_func3_complete_nonempty
     List.nil_append]
     at HvaluesAlloc ⊢
   iapply HvaluesAlloc
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isplit
   · iintro %valuesPtr %valuesFinish %valuesBytes %hvaluesClassify
       Hruntime Hsp Hreserve Hframe Hbump Hvalues Hstreams
+    have hlineage : ScratchLineage original capacity inputPtr valuesPtr
+        history.nextId valuesFinish.toNat (history.allocate valuesPtr layout) := by
+      simpa only [layout, serialize_length] using
+        BoundedDriverFacts.ScratchLineage.of_values_allocation hgeo hvaluesClassify
     have hvaluesFacts := classifyBump_success_reachable frontier layout
       valuesPtr valuesFinish hfrontier hlayoutValid (Or.inr rfl)
       (by simpa only [layout, serialize_length] using hvaluesClassify)
@@ -5378,13 +5478,16 @@ theorem twp_func3_complete_nonempty
       history.nextId capacity inputPtr valuesPtr original chunkBytes outputBytes
       reserveBytes valuesFinish valuesFinish.toNat
       (history.allocate valuesPtr layout) final1 final3 final6 final5 final8 0
-      hpositive hbyteBoundSigned hvaluesFrontier hvaluesEnd
+      hpositive hbyteBoundSigned hvaluesFrontier hvaluesEnd hlineage
       (code := func3ScratchSuccessTail) (arity := 0) (remainder := [])
       (controls := func3ScratchSuccessControls) (calls := calls)
       (s := s) (E := E) (Φ := Phi)
     simp only [func3AppendLocals, List.cons_append, List.nil_append]
       at HscratchAlloc ⊢
     iapply HscratchAlloc
+    iapply withAllocationPolicy_close
+    isplitr
+    · iexact Hpolicy
     isplitl_exacts [Hruntime Hsp Hreserve Hframe Hvalues]
     isplitl [Hbump]
     · isimp only [serialize_length] at Hbump
@@ -5394,6 +5497,8 @@ theorem twp_func3_complete_nonempty
     · iintro %scratchPtr %scratchFinish %hscratchClassify
         Hruntime Hsp Hreserve Hframe Hvalues Hbump Hscratch Hstreams
         %hdisjoint
+      have hfinalFrontier := BoundedDriverFacts.ScratchLineage.scratch_finish_le
+        hlineage (by simpa only [serialize_length] using hscratchClassify)
       unfold ResumeWP resumeExpr
       have HscratchTail := twp_func3_scratch_success_tail heapId
         (history.allocate valuesPtr layout).nextId scratchPtr layout
@@ -5449,7 +5554,7 @@ theorem twp_func3_complete_nonempty
         (history.allocate valuesPtr layout).nextId chunkBytes finalOutput
         reserveBytes scratchFinish scratchFinish.toNat frontier history
         outputCursor final6' hsorted hpositive hscratchLength hgeo rfl
-        (by simp [AllocationHistory.allocate]) hbyteBound func3DriverBody
+        (by simp [AllocationHistory.allocate]) hbyteBound hfinalFrontier func3DriverBody
         (calls := calls) (s := s) (E := E) (Phi := Phi)
       simp only [func3AppendLocals, hsortedLength] at Hfinish ⊢
       iapply Hfinish
@@ -5479,19 +5584,20 @@ read, discharge the canonical whole-word/nonempty guards, and hand the exact
 innermost continuation to `twp_func3_complete_nonempty`. -/
 theorem twp_func3_completed_nonempty
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc9 : Func9Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc9 : Func9Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32)
     (capacity inputPtr : UInt32)
     (chunkBytes outputBytes reserveBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory)
     (horiginal : original ≠ [])
-    (hgeo : GeometricVecFacts (serialize original).length
+    (hgeo : BoundedGeometricVecFacts (serialize original).length
       (serialize original).length 0 capacity inputPtr frontier history)
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Phi : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase reserveBytes ∗
@@ -5504,8 +5610,8 @@ theorem twp_func3_completed_nonempty
         WP (.running
           ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
           @ s; E [{ Phi }]) ∗
-      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
-        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase policy) -∗
+        OOMTarget policy (Phi (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
         ⟨func3AppendLocals inputPtr 0
             (UInt32.ofNat (4 * original.length)) 4 0 0 0 0 0 0 [],
@@ -5517,7 +5623,9 @@ theorem twp_func3_completed_nonempty
             func3EmptyMiddleFrame func3MiddleBody,
             func3CleanupOuterFrame func3DriverBody],
           calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
   have Hreload := twp_func3_reload_completed_ptr heapId capacity inputPtr
     (serialize original) chunkBytes outputBytes 0 4 0 0 0 0 0 0
     (stack := [])
@@ -5556,22 +5664,27 @@ theorem twp_func3_completed_nonempty
     func3ValuesOuterBody, func3ScratchOuterBody,
     func3CompletedLengthGuard, List.cons_append, List.nil_append]
     at Hcomplete ⊢
-  iapply_frame Hcomplete
+  iapply Hcomplete
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
+  iframe
 
 /-- Execute the exact initial-read block and well-founded read loop for a
 nonempty public input, then compose its authoritative completed-Vec result
 with the full nonempty suffix. -/
 theorem twp_func3_read_dispatch_nonempty
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc9 : Func9Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc9 : Func9Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32)
     (outputBytes reserveBytes : List UInt8)
     (horiginal : original ≠ [])
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Phi : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase reserveBytes ∗
@@ -5583,15 +5696,17 @@ theorem twp_func3_read_dispatch_nonempty
         WP (.running
           ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
           @ s; E [{ Phi }]) ∗
-      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
-        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase policy) -∗
+        OOMTarget policy (Phi (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
         ⟨func3InitializedLocals, func3ReadAndDispatchBody, 0, [],
           [func3ReadAndDispatchFrame,
             func3EmptyMiddleFrame func3MiddleBody,
             func3CleanupOuterFrame func3DriverBody],
           calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
   have Hread := twp_func3_initial_read_block_nonempty hfunc1 heapId original
     outputBytes reserveBytes horiginal
     (afterLoop := func3CompletedPtrReload ++
@@ -5605,13 +5720,16 @@ theorem twp_func3_read_dispatch_nonempty
   simp only [func3ReadAndDispatchBody, func3AfterInitialRead,
     func3InitializedLocals, List.cons_append, List.nil_append] at Hread ⊢
   iapply Hread
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl_exacts [Hruntime Hsp Hreserve Hframe Hbump Hstreams]
   isimp only [Func3ReadLoopContinuation]
   isplit
   · iintro %completed %chunkBytes %finalShadow %finalCapacity %finalPtr
       %finalStoredCursor %finalFrontier %finalHistory Hruntime Hsp Hreserve
       Hframe Hbump Hstreams %hfacts
-    have hgeo : GeometricVecFacts (serialize original).length
+    have hgeo : BoundedGeometricVecFacts (serialize original).length
         (serialize original).length 0 finalCapacity finalPtr finalFrontier
         finalHistory := by simpa only [← hfacts.1] using hfacts.2
     isimp only [← hfacts.1] at Hframe
@@ -5621,13 +5739,17 @@ theorem twp_func3_read_dispatch_nonempty
       (calls := calls) (s := s) (E := E) (Phi := Phi)
     simp only [← hfacts.1, func3AppendLocals, serialize_length]
       at Hcompleted ⊢
-    iapply_frame Hcompleted
+    iapply Hcompleted
+    iapply withAllocationPolicy_close
+    isplitr
+    · iexact Hpolicy
+    iframe
   · iintro HOOM
     iapply_exact Hoom with HOOM
 
 /-- Audited decomposition of the generated body following its 21-instruction
 prologue. -/
-private theorem func3_after_init_exact :
+theorem func3_after_init_exact :
     func3AfterInit =
       [.block 0 0 func3DriverBody] ++ func3RestoreStackTail := by
   simp [func3AfterInit, func3DriverBody, func3MiddleBody,
@@ -5653,14 +5775,15 @@ the empty arm takes the compiler's early branch, while the nonempty arm uses
 the read-loop and allocation composition above. -/
 theorem twp_func3_after_initialize
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc9 : Func9Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc9 : Func9Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32)
     (outputBytes reserveBytes : List UInt8)
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Phi : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer driverBase ∗
       StackReserve reserveBase reserveBytes ∗
@@ -5672,12 +5795,14 @@ theorem twp_func3_after_initialize
         WP (.running
           ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
           @ s; E [{ Phi }]) ∗
-      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
-        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase policy) -∗
+        OOMTarget policy (Phi (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
         ⟨func3InitializedLocals, func3AfterInit, 0, [], [], calls⟩ :
           Expr Universal.State) @ s; E [{ Phi }] := by
-  iintro ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hreserve, Hframe, Hbump, Hstreams, Hdone, Hoom⟩
   rw [func3_after_init_exact]
   simp only [List.cons_append, List.nil_append]
   wasm_twp_pures [twp_block] using [func3DriverBody, List.cons_append, List.nil_append]
@@ -5724,20 +5849,25 @@ theorem twp_func3_after_initialize
       func3CleanupOuterFrame, func3MiddleBody, func3DriverBody,
       func3SortAndCleanup, List.cons_append,
       List.nil_append] at Hnonempty ⊢
-    iapply_frame Hnonempty
+    iapply Hnonempty
+    iapply withAllocationPolicy_close
+    isplitr
+    · iexact Hpolicy
+    iframe
 
 /-- Execute the generated prologue and the complete reviewed driver body,
 stopping at the administrative return boundary. -/
 theorem twp_func3_body
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc9 : Func9Spec (hlc := hlc))
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc9 : Func9Spec (hlc := hlc) policy)
     (heapId : GName) (original : List UInt32) (entryBytes : List UInt8)
     (hentryLength : entryBytes.length = 288)
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Phi : ObservableOutcome → HeapIProp} :
-    iprop(
+    WithAllocationPolicy policy iprop(
       RuntimeContext ∗
       StackPointer entryStackTop ∗
       StackRegion entryStackLow entryBytes ∗
@@ -5748,12 +5878,14 @@ theorem twp_func3_body
         WP (.running
           ⟨finalLocals, [], 0, [], [], calls⟩ : Expr Universal.State)
           @ s; E [{ Phi }]) ∗
-      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase) -∗
-        Phi (.trapped (.host OOM.trapMessage)))) ⊢
+      ((∃ phase : DriverOOMPhase, DriverOOMState heapId original phase policy) -∗
+        OOMTarget policy (Phi (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
         ⟨Project.Mergesort.func3Def.toLocals [], Project.Mergesort.func3,
           0, [], [], calls⟩ : Expr Universal.State) @ s; E [{ Phi }] := by
-  iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, Hdone, Hoom⟩
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, Hdone, Hoom⟩
   have Hinitialize := twp_func3_initialize heapId entryBytes
     (calls := calls) (s := s) (E := E) (Φ := Phi)
   iapply Hinitialize
@@ -5763,7 +5895,11 @@ theorem twp_func3_body
   have Hbody := twp_func3_after_initialize hfunc1 hfunc5 hfunc9 heapId
     original outputBytes reserveBytes (calls := calls) (s := s) (E := E)
     (Phi := Phi)
-  iapply_frame Hbody
+  iapply Hbody
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
+  iframe
 
 private theorem func3_index :
     Project.Mergesort.module.funcs[3]? =
@@ -5773,14 +5909,17 @@ private theorem func3_index :
 reachable allocator/Vec contracts that are proved in their own files. -/
 theorem func3_correct_of
     [WasmSmallStepGS hlc Universal.State]
-    (hfunc1 : Func1Spec (hlc := hlc))
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc9 : Func9Spec (hlc := hlc)) :
-    Func3Spec (hlc := hlc) := by
+    {policy : AllocationPolicy}
+    (hfunc1 : Func1Spec (hlc := hlc) policy)
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc9 : Func9Spec (hlc := hlc) policy) :
+    Func3Spec (hlc := hlc) policy := by
   unfold Func3Spec CallContract callExpr
   intro heapId original entryBytes callerLocals stack code arity remainder
     controls calls s E Phi
-  iintro ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, %hentryLength,
+  iintro HpolicyPre
+  ihave ⟨#Hpolicy, HpolicyPre⟩ := withAllocationPolicy_open policy _ $$ HpolicyPre
+  icases HpolicyPre with ⟨Hruntime, Hsp, Hstack, Hbump, Hstreams, %hentryLength,
     Hnormal, Hoom⟩
   iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
   wasm_twp_rebind Wasm.SmallStep.twp_call Project.Mergesort.module 6
@@ -5798,6 +5937,9 @@ theorem func3_correct_of
     (s := s) (E := E) (Phi := Phi)
   simp [Project.Mergesort.func3Def, Function.toLocals, callerFrame] at Hbody
   iapply Hbody
+  iapply withAllocationPolicy_close
+  isplitr
+  · iexact Hpolicy
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
     iframe

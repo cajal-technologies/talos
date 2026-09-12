@@ -25,4 +25,12 @@ roots = [
   "CodeLib.Examples.Gcd",
   "CodeLib.Examples.MergeSort.StdIO",
   "CodeLib.Examples.Quicksort.TotalProof",
+  "CodeLib.SepLogic.CostedStepsChecks",
+  "CodeLib.SepLogic.CostedLoop",
+  "CodeLib.SepLogic.SmallStepMemoryCaps",
+  "CodeLib.SepLogic.MemoryTrace",
+  "CodeLib.SepLogic.SequentialExecution",
+  "CodeLib.SepLogic.HostMemoryTrace",
+  "CodeLib.SepLogic.PrefixResources",
+  "CodeLib.SepLogic.SmallStepExactPages",
 ]

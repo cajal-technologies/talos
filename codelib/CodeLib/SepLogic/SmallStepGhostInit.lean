@@ -118,6 +118,7 @@ written once here. -/
     [wasmHeapGS : WasmHeapGS α]
     [heapDomainGS : WasmHeapDomainGS α]
     [memoryPagesGS : WasmMemoryPagesGS α]
+    [memoryCapsGS : WasmMemoryCapsGS α]
     [wasmGlobalGS : WasmGlobalGS α]
     [wasmDataSegmentGS : WasmDataSegmentGS α]
     [wasmTableGS : WasmTableGS α]
@@ -134,6 +135,7 @@ written once here. -/
     toWasmHeapGS := wasmHeapGS
     heapDomain := heapDomainGS
     memoryPages := memoryPagesGS
+    memoryCaps := memoryCapsGS
     global := wasmGlobalGS
     dataSegment := wasmDataSegmentGS
     table := wasmTableGS
@@ -147,7 +149,15 @@ written once here. -/
     runtimeInstances := runtimeInstancesGS }
 
 set_option hygiene false in
-/-- Allocate the physical memory heap, its domain, and the page authority. -/
+/-- Existing adequacy frontends retain no assumptions about physical caps. -/
+macro "wasm_alloc_empty_memory_caps " config:term : tactic =>
+  `(tactic|
+    (imod memoryCaps_init_empty (α := α) ($config).store.wasm.mem.pages ($config).store.wasm.memoryCaps with
+       ⟨%memoryCapsGS, HmemoryCapsInterp⟩
+     letI _ : WasmMemoryCapsGS α := memoryCapsGS))
+
+set_option hygiene false in
+/-- Allocate the physical memory heap, its domain, pages, and empty cap map. -/
 macro "wasm_alloc_memory_ghosts " config:term " from " heap:term : tactic =>
   `(tactic|
     (imod genHeap_init (L := MemoryKey) (V := Option UInt8)
@@ -156,10 +166,12 @@ macro "wasm_alloc_memory_ghosts " config:term " from " heap:term : tactic =>
      imod heapDomain_init (α := α) ($heap) with
        ⟨%heapDomainGS, HheapDomain⟩
      letI _ : WasmHeapDomainGS α := heapDomainGS
-     imod memoryPages_init_authority (α := α)
+     imod memoryPages_init_authority_legacy (α := α)
          ($config).store.wasm.mem.pages with
-       ⟨%memoryPagesGS, HmemoryPagesAuth⟩
-     letI _ : WasmMemoryPagesGS α := memoryPagesGS))
+       ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth⟩
+     letI _ : WasmMemoryPagesGS α := memoryPagesGS
+     letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+     wasm_alloc_empty_memory_caps $config))
 
 set_option hygiene false in
 /-- Allocate empty global, segment, table, and element-segment ghost maps. -/
@@ -421,10 +433,11 @@ macro "wasm_build_machine_aux " config:term : tactic =>
          next =>
            ipureexact List.prefix_rfl
      ihave Hexc : machineAuxInterp _ ($config).store.wasm.mem.pages
+         ($config).store.wasm.memoryCaps
          ($config).store.wasm.exns ($config).store.wasm.tagIds $$
-         [HmemoryPagesAuth HheapDomain HexceptionInterp]
+         [HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp]
      next =>
        unfold machineAuxInterp
-       iframe HmemoryPagesAuth HheapDomain HexceptionInterp))
+       iframe HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp))
 
 end Wasm.SmallStep

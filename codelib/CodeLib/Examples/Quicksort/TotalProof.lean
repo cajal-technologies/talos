@@ -671,7 +671,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
     (quicksortHeap_agrees arr input hfit)
     (quicksortHeap_inBounds arr input hfit hmem)
     (by simp [quicksortConfig])
-    (fun hlc gs => by
+    (fun hlc gs legacyPages => by
       have hentry : (quicksortConfig arr input).store.runtime.entry = ⟨0⟩ := rfl
       have hmod : (quicksortConfig arr input).store.runtime.currentModule = quicksortModule := by
         simp [quicksortConfig, RuntimeEnv.currentModule_mk1]
@@ -724,7 +724,7 @@ theorem quicksort_partiallyMeets (arr : UInt32) (input : List UInt32)
   · exact quicksortHeap_inBounds arr input hfit hmem
   · intro index value hget; simp [get?_empty] at hget
   · simp [quicksortConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq, quicksortConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, _Hemp, Hruntime, _Hhost⟩
     have hfitStrict : arr.toNat + 4 * input.length < UInt32.size := by

@@ -149,25 +149,25 @@ private theorem ByteSlice_twelve_storeFocus
     simp [serialize, Wasm.WordCodec.serialize_cons]]
   iexact Hall
 
-private def func0FinalCode : Program :=
+def func0FinalCode : Program :=
   [.localGet 0, .localGet 7, .add, .localGet 3, .store32 0,
     .localGet 0, .localGet 6, .store32 0]
 
 /-- The outer generated block body, extracted from the authoritative emitted
 program so the common return-tail lemma does not duplicate its dead code. -/
-private def func0OuterBody : Program :=
+def func0OuterBody : Program :=
   match Project.Mergesort.func0.drop 4 with
   | .block _ _ body :: _ => body
   | _ => []
 
 /-- The third nested block in `func0OuterBody`, whose continuation is the
 successful result writeback. -/
-private def func0MiddleBody : Program :=
+def func0MiddleBody : Program :=
   match func0OuterBody.drop 2 with
   | .block _ _ body :: _ => body
   | _ => []
 
-private theorem LiveBlock_with_nonnull
+theorem LiveBlock_with_nonnull
     [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (allocationId : Nat) (ptr : UInt32)
     (layout : AllocLayout) (bytes : List UInt8) :
@@ -183,7 +183,7 @@ private theorem LiveBlock_with_nonnull
 
 /-- Common normal-return tail after either the first allocation or a
 reallocation has produced a non-null pointer. -/
-private theorem twp_func0_success_tail
+theorem twp_func0_success_tail
     [WasmSmallStepGS hlc Universal.State]
     (result oldCapacity oldPtr newCapacity newPtr finish : UInt32)
     (product : UInt64) (newBytes growBefore initialized : List UInt8)
@@ -321,16 +321,20 @@ private theorem twp_func0_success_tail
   iclose_runtime Hruntime with Hmodule Henv
   iapply Hcont $$ Hruntime Hresult Hbump Hblock %hcopied Hstreams
 
-theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
-    (hfunc5 : Func5Spec (hlc := hlc))
-    (hfunc8 : Func8Spec (hlc := hlc)) :
-    Func0Spec (hlc := hlc) := by
+/-- Propagate the allocator's failure information through the actual grow wrapper. -/
+theorem func0_correct_of_policy [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy)
+    (hfunc5 : Func5Spec (hlc := hlc) policy)
+    (hfunc8 : Func8Spec (hlc := hlc) policy) :
+    Func0Spec (hlc := hlc) policy := by
   unfold Func0Spec CallContract callExpr
   intro result oldCapacity oldPtr newCapacity alignment elementSize source
     initialized growBefore heapId storedCursor frontier history input output
     raised callerLocals stack code arity remainder controls calls s E Φ
   dsimp only
-  iintro ⟨Hruntime, Hresult, Hsource, Hbump, Hstreams, %hfacts, Hcont⟩
+  iintro Hpre
+  ihave ⟨#Hpolicy, Hpre⟩ := withAllocationPolicy_open policy _ $$ Hpre
+  icases Hpre with ⟨Hruntime, Hresult, Hsource, Hbump, Hstreams, %hfacts, Hcont⟩
   isimp only [Representations.ByteSlice] at Hresult
   icases Hresult with ⟨%hresultNowrap, HresultBytes⟩
   ihave Hresult : Representations.ByteSlice result growBefore $$ [HresultBytes]
@@ -426,7 +430,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         iintro Hruntime
         iopen_runtime Hruntime with ⟨Hmodule, Henv⟩
         wasm_twp_pures [twp_localGet twp_localGet]
-        have Halloc : Func5Spec (hlc := hlc) := hfunc5
+        have Halloc : Func5Spec (hlc := hlc) policy := hfunc5
         unfold Func5Spec CallContract callExpr at Halloc
         simp only [List.cons_append, List.nil_append] at Halloc
         iapply Halloc (size := newCapacity) (alignment := 1)
@@ -440,6 +444,9 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               locals := [.i32 1, .i32 4, .i64 newCapacity.toUInt64]
               values := [] })
           (stack := [])
+        iapply withAllocationPolicy_close policy
+        isplitr
+        · iexact Hpolicy
         isplitl [Hmodule Henv]
         · unfold RuntimeContext
           iframe Hmodule Henv
@@ -541,7 +548,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet twp_mul]
       rw [show oldCapacity * (1 : UInt32) = oldCapacity by bv_normalize]
       wasm_twp_pures [twp_localGet twp_localGet]
-      have Hrealloc : Func8Spec (hlc := hlc) := hfunc8
+      have Hrealloc : Func8Spec (hlc := hlc) policy := hfunc8
       unfold Func8Spec CallContract callExpr at Hrealloc
       simp only [List.cons_append, List.nil_append] at Hrealloc
       iapply Hrealloc (oldPtr := oldPtr)
@@ -557,6 +564,9 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
             locals := [.i32 1, .i32 4, .i64 newCapacity.toUInt64]
             values := [] })
         (stack := [])
+      iapply withAllocationPolicy_close policy
+      isplitr
+      · iexact Hpolicy
       isplitl [Hmodule Henv]
       · unfold RuntimeContext
         iframe Hmodule Henv
@@ -665,5 +675,12 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
               isplitr_pureexact hsource
               · iexact Hblock'
             iapply Hoom $$ Hresult Hsource Hbump Hstreams
+
+/-- The original unrestricted specification is the default specialization. -/
+theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
+    (hfunc5 : Func5Spec (hlc := hlc))
+    (hfunc8 : Func8Spec (hlc := hlc)) :
+    Func0Spec (hlc := hlc) :=
+  func0_correct_of_policy .unrestricted hfunc5 hfunc8
 
 end Project.Mergesort.Func0Proof

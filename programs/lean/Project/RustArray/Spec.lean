@@ -97,7 +97,7 @@ theorem len_export_correct : LenExportSpec := by
   · exact fatPtrHeap_agrees _ (by simp [storeResolve, exportConfig]) hfat
   · exact fatPtrHeap_inBounds _ (by simp [storeResolve, exportConfig]) hfat
   · simp [exportConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes
@@ -143,7 +143,7 @@ theorem is_empty_export_correct : IsEmptyExportSpec := by
   · exact fatPtrHeap_agrees _ (by simp [storeResolve, exportConfig]) hfat
   · exact fatPtrHeap_inBounds _ (by simp [storeResolve, exportConfig]) hfat
   · simp [exportConfig]
-  · intro gs
+  · intro gs legacyPages
     simp only [exportConfig, SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hdata, Hlen⟩ := fatPtrHeap_pointsTo p dataPtr len hfat.noWrap $$ Hbytes

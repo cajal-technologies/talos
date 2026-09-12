@@ -116,6 +116,7 @@ class WasmSmallStepGS (hlc : outParam HasLC) (α : outParam Type) extends
     InvGS_gen hlc (WasmHeapGF α), WasmHeapGS α where
   heapDomain : WasmHeapDomainGS α
   memoryPages : WasmMemoryPagesGS α
+  memoryCaps : WasmMemoryCapsGS α
   global : WasmGlobalGS α
   dataSegment : WasmDataSegmentGS α
   table : WasmTableGS α
@@ -132,6 +133,7 @@ attribute [instance] WasmSmallStepGS.toInvGS_gen
 attribute [instance] WasmSmallStepGS.toWasmHeapGS
 attribute [reducible, instance] WasmSmallStepGS.heapDomain
 attribute [reducible, instance] WasmSmallStepGS.memoryPages
+attribute [reducible, instance] WasmSmallStepGS.memoryCaps
 attribute [reducible, instance] WasmSmallStepGS.global
 attribute [reducible, instance] WasmSmallStepGS.dataSegment
 attribute [reducible, instance] WasmSmallStepGS.table
@@ -287,30 +289,31 @@ theorem heapDomain_init_at (σ : WasmHeapMap (Option UInt8))
 heap-domain invariant is bundled with exception state so extending the sparse
 heap does not perturb the main state-interpretation resource tuple. -/
 def machineAuxInterp [WasmHeapDomainGS α] [WasmMemoryPagesGS α]
+    [WasmMemoryCapsGS α]
     [WasmExceptionGS α] [WasmTagTableGS α]
     (σ : WasmHeapMap (Option UInt8))
-    (pages : Nat)
+    (pages : Nat) (caps : List Nat)
     (exns : List (Nat × List Value)) (tagIds : List Nat) :
     IProp (WasmHeapGF α) :=
   iprop(memoryPagesAuth pages ∗ heapDomainInterp σ ∗
-    exceptionInterp exns tagIds)
+    exceptionInterp exns tagIds ∗ memoryCapsInterp pages caps)
 
 theorem machineAuxInterp_heap_mono [WasmHeapDomainGS α]
-    [WasmMemoryPagesGS α]
+    [WasmMemoryPagesGS α] [WasmMemoryCapsGS α]
     [WasmExceptionGS α] [WasmTagTableGS α]
     {σ σ' : WasmHeapMap (Option UInt8)}
-    {pages : Nat}
+    {pages : Nat} {caps : List Nat}
     {exns : List (Nat × List Value)} {tagIds : List Nat}
     (hbelow : ∀ frontier, HeapBelow σ frontier → HeapBelow σ' frontier) :
-    machineAuxInterp (α := α) σ pages exns tagIds ⊢
-      machineAuxInterp σ' pages exns tagIds := by
+    machineAuxInterp (α := α) σ pages caps exns tagIds ⊢
+      machineAuxInterp σ' pages caps exns tagIds := by
   unfold machineAuxInterp heapDomainInterp
-  iintro ⟨Hpages, ⟨%frontier, Hfrontier, %Hbelow⟩, Hexceptions⟩
+  iintro ⟨Hpages, ⟨%frontier, Hfrontier, %Hbelow⟩, Hexceptions, Hcaps⟩
   isplitl_exact Hpages
   · isplitl [Hfrontier]
     · iexists frontier
       iframe_pureexact using [Hfrontier] => hbelow frontier Hbelow
-    · iexact Hexceptions
+    · iframe Hexceptions Hcaps
 
 /-- Ghost knowledge of an exception entry pins the physical entry. -/
 theorem exceptionInterp_lookup [WasmExceptionGS α] [WasmTagTableGS α]
@@ -357,21 +360,23 @@ theorem exceptionInterp_mono [WasmExceptionGS α] [WasmTagTableGS α]
     iframe_pureexact using [Htags] => htags ids hpre
 
 theorem machineAuxInterp_exception_mono [WasmHeapDomainGS α]
-    [WasmMemoryPagesGS α]
+    [WasmMemoryPagesGS α] [WasmMemoryCapsGS α]
     [WasmExceptionGS α] [WasmTagTableGS α]
     {σ : WasmHeapMap (Option UInt8)}
-    {pages : Nat}
+    {pages : Nat} {caps : List Nat}
     {exns exns' : List (Nat × List Value)} {tagIds tagIds' : List Nat}
     (hexns : ∀ exceptionσ : WasmExceptionMap (Nat × List Value),
       exceptionHeapAgrees exceptionσ exns →
         exceptionHeapAgrees exceptionσ exns')
     (htags : ∀ ids : List Nat, ids.IsPrefix tagIds → ids.IsPrefix tagIds') :
-    machineAuxInterp (α := α) σ pages exns tagIds ⊢
-      machineAuxInterp σ pages exns' tagIds' := by
+    machineAuxInterp (α := α) σ pages caps exns tagIds ⊢
+      machineAuxInterp σ pages caps exns' tagIds' := by
   unfold machineAuxInterp
-  iintro ⟨Hpages, Hdomain, Hexceptions⟩
+  iintro ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
   isplitl_exacts [Hpages Hdomain]
-  · iapply_exact exceptionInterp_mono hexns htags with Hexceptions
+  · isplitl [Hexceptions]
+    · iapply_exact exceptionInterp_mono hexns htags with Hexceptions
+    · iexact Hcaps
 
 /-- A tag index is canonical for `ids` when it is the first position holding
 its identity; this is what the interpreter's tag canonicalisation collapses
@@ -419,7 +424,7 @@ instance instStateInterp [WasmSmallStepGS hlc α] :
           store.runtime.instances[id]?.map (·.module) = some m) ∧
         ∀ id env, get? hostEnvσ id = some env →
           store.runtime.instances[id]?.map (·.host) = some env⌝ ∗
-      machineAuxInterp σ store.wasm.mem.pages
+      machineAuxInterp σ store.wasm.mem.pages store.wasm.memoryCaps
         store.wasm.exns store.wasm.tagIds
 
 theorem stateInterp_eq [WasmSmallStepGS hlc α]
@@ -463,7 +468,7 @@ theorem stateInterp_eq [WasmSmallStepGS hlc α]
             store.runtime.instances[id]?.map (·.module) = some m) ∧
           ∀ id env, get? hostEnvσ id = some env →
             store.runtime.instances[id]?.map (·.host) = some env⌝ ∗
-        machineAuxInterp σ store.wasm.mem.pages
+        machineAuxInterp σ store.wasm.mem.pages store.wasm.memoryCaps
           store.wasm.exns store.wasm.tagIds) :=
   .rfl
 
@@ -488,6 +493,66 @@ macro "iopen_state " state:ident " from " pat:introPat : tactic => do
     (iintro $pat
      iopen_state $spec))
 
+/-- A cap token determines an explicitly instantiated physical storage slot.
+It does not identify a module-local memory index or a declaration fallback. -/
+theorem stateInterp_memoryCap_lookup [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads index cap : Nat) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryCapOwn index cap ⊢ ⌜store.wasm.memoryCaps[index]? = some cap⌝ := by
+  iintro ⟨Hstate, Hcap⟩
+  iopen_state Hstate
+  iunfold machineAuxInterp at Hexc
+  icases Hexc with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
+  iapply memoryCapsInterp_lookup store.wasm.mem.pages store.wasm.memoryCaps index cap
+  iframe Hcaps Hcap
+
+/-- Expose a physical cap fact while preserving state and client ownership. -/
+theorem stateInterp_memoryCap_lookup_frame [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads index cap : Nat) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryCapOwn index cap ⊢
+      stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+        memoryCapOwn index cap ∗ ⌜store.wasm.memoryCaps[index]? = some cap⌝ := by
+  iintro ⟨Hstate, Hcap⟩
+  ihave %hlookup := stateInterp_memoryCap_lookup
+      store steps observations threads index cap $$ [Hstate Hcap]
+  · iframe Hstate Hcap
+  iframe Hstate Hcap
+  ipureexact hlookup
+
+/-- An owned primary cap certifies the actual cap slot and a current physical
+page upper bound. Other physical cap slots expose metadata only. -/
+theorem stateInterp_memoryCap_primary [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads cap : Nat) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryCapOwn 0 cap ⊢
+        ⌜store.wasm.memoryCaps[0]? = some cap ∧ store.wasm.mem.pages ≤ cap⌝ := by
+  iintro ⟨Hstate, Hcap⟩
+  iopen_state Hstate
+  iunfold machineAuxInterp at Hexc
+  icases Hexc with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
+  iapply memoryCapsInterp_primary store.wasm.mem.pages store.wasm.memoryCaps cap
+  iframe Hcaps Hcap
+
+/-- Read primary-cap validity while retaining the state and persistent token. -/
+theorem stateInterp_memoryCap_primary_frame [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads cap : Nat) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryCapOwn 0 cap ⊢
+      stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+        memoryCapOwn 0 cap ∗
+        ⌜store.wasm.memoryCaps[0]? = some cap ∧ store.wasm.mem.pages ≤ cap⌝ := by
+  iintro ⟨Hstate, Hcap⟩
+  ihave %hvalid := stateInterp_memoryCap_primary
+      store steps observations threads cap $$ [Hstate Hcap]
+  · iframe Hstate Hcap
+  iframe Hstate Hcap
+  ipureexact hvalid
+
 /-- The exact physical primary-memory page count is available as a persistent
 lower-bound snapshot without changing the physical or ghost state. -/
 theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
@@ -504,12 +569,12 @@ theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
       HruntimeInstances, HinstanceAuth, HhostEnvAuth, HstateAuth, %Hfacts,
       Haux⟩
   iunfold machineAuxInterp at Haux
-  icases Haux with ⟨Hpages, Hdomain, Hexceptions⟩
+  icases Haux with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
   ihave #Hsnapshot := memoryPagesOwn_snapshot store.wasm.mem.pages $$ Hpages
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
-      HhostEnvAuth HstateAuth Hpages Hdomain Hexceptions]
+      HhostEnvAuth HstateAuth Hpages Hdomain Hexceptions Hcaps]
   · iapply (stateInterp_eq store steps observations threads).mpr
     iexists σ, globalσ, dataSegmentσ, tableσ,
       elementSegmentσ, runtimeModuleσ, hostEnvσ
@@ -518,7 +583,7 @@ theorem stateInterp_memoryPages_snapshot [WasmSmallStepGS hlc α]
       HhostEnvAuth HstateAuth
     isplitl_pureexact Hfacts
     · unfold machineAuxInterp
-      iframe Hpages Hdomain Hexceptions
+      iframe Hpages Hdomain Hexceptions Hcaps
   · iexact Hsnapshot
 
 /-- Frame-preserving form of `stateInterp_memoryPages_snapshot`. This is useful
@@ -555,14 +620,14 @@ theorem stateInterp_memoryPages_agree [WasmSmallStepGS hlc α]
       HruntimeInstances, HinstanceAuth, HhostEnvAuth, HstateAuth, %Hfacts,
       Haux⟩
   iunfold machineAuxInterp at Haux
-  icases Haux with ⟨Hpages, Hdomain, Hexceptions⟩
+  icases Haux with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
   ihave %hle := memoryPagesOwn_agree
     store.wasm.mem.pages ownedPages $$ [Hpages Hsnapshot]
   · iframe Hpages Hsnapshot
   imodintro
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments
       HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
-      HhostEnvAuth HstateAuth Hpages Hdomain Hexceptions]
+      HhostEnvAuth HstateAuth Hpages Hdomain Hexceptions Hcaps]
   · iapply (stateInterp_eq store steps observations threads).mpr
     iexists σ, globalσ, dataSegmentσ, tableσ,
       elementSegmentσ, runtimeModuleσ, hostEnvσ
@@ -571,9 +636,38 @@ theorem stateInterp_memoryPages_agree [WasmSmallStepGS hlc α]
       HhostEnvAuth HstateAuth
     isplitl_pureexact Hfacts
     · unfold machineAuxInterp
-      iframe Hpages Hdomain Hexceptions
+      iframe Hpages Hdomain Hexceptions Hcaps
   isplitl_exact Hsnapshot
   · ipureexact hle
+
+/-- A frozen client token reads the exact physical count at any reached state.
+No legacy-mode or trace-label assumption is used by this readout. -/
+theorem stateInterp_memoryPages_frozen_agree [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads pages : Nat) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryPagesFrozen pages ⊢ ⌜store.wasm.mem.pages = pages⌝ := by
+  iintro ⟨Hstate, Hfrozen⟩
+  iopen_state Hstate
+  iunfold machineAuxInterp at Hexc
+  icases Hexc with ⟨Hpages, _, _, _⟩
+  ihave %heq := memoryPagesFrozen_agree store.wasm.mem.pages pages $$ [Hpages Hfrozen]
+  · iframe
+  ipureexact heq.symm
+
+/-- Retained linear page ownership also determines the current physical count. -/
+theorem stateInterp_memoryPages_half_agree [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads pages : Nat) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryPagesHalf pages ⊢ ⌜store.wasm.mem.pages = pages⌝ := by
+  iintro ⟨Hstate, Hhalf⟩
+  iopen_state Hstate
+  iunfold machineAuxInterp at Hexc
+  icases Hexc with ⟨Hpages, _, _, _⟩
+  ihave %heq := memoryPagesHalf_agree store.wasm.mem.pages pages $$ [Hpages Hhalf]
+  · iframe
+  ipureexact heq.symm
 
 theorem stateInterp_pointsTo_read8 [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
@@ -978,7 +1072,7 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
       HruntimeModuleBigSep, HruntimeInstances, HinstanceAuth,
       HhostEnvAuth, HstateAuth, %Hfacts, Haux⟩
   iunfold machineAuxInterp at Haux
-  icases Haux with ⟨Hpages, Hdomain, HexceptionInterp⟩
+  icases Haux with ⟨Hpages, Hdomain, HexceptionInterp, Hcaps⟩
   iunfold heapDomainInterp at Hdomain
   icases Hdomain with
     ⟨%actualFrontier, HfrontierAuth, %Hbelow⟩
@@ -1002,15 +1096,15 @@ theorem stateInterp_alloc_freshRange [WasmSmallStepGS hlc α]
     ⟨HfrontierAuth, HfrontierOwn⟩
   ihave Haux : machineAuxInterp
       (insertFreshBytes σ base bytes)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$
-      [Hpages HfrontierAuth HexceptionInterp]
+      [Hpages HfrontierAuth HexceptionInterp Hcaps]
   · unfold machineAuxInterp heapDomainInterp
     isplitl_exact Hpages
     · isplitl [HfrontierAuth]
       · iexists base.toNat + size
         iframe_pureexact using [HfrontierAuth] => (by simpa [hbytesLength] using HbelowFinal)
-      · iexact HexceptionInterp
+      · iframe HexceptionInterp Hcaps
   ihave HstateAndBytes :
       stateInterp (GF := WasmHeapGF α)
           store steps observations threads ∗
@@ -1218,7 +1312,7 @@ theorem stateInterp_fill_bytes [WasmSmallStepGS hlc α]
   imod fillSigma_ghost σ addr oldBytes val $$ [$Hheap $Hbytes] with
     ⟨Hheap, Hbytes, %Hbelow⟩
   ihave Hexc' : machineAuxInterp (fillSigma σ addr oldBytes val)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply_exact machineAuxInterp_heap_mono Hbelow with Hexc
   imodintro
@@ -1497,7 +1591,7 @@ theorem stateInterp_copy_bytes [WasmSmallStepGS hlc α]
   imod copySigma_ghost σ dst oldDstBytes srcBytes hlen $$ [$Hheap $Hdst] with
     ⟨Hheap, Hdst, %Hbelow⟩
   ihave Hexc' : machineAuxInterp (copySigma σ dst oldDstBytes srcBytes)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply_exact machineAuxInterp_heap_mono Hbelow with Hexc
   imodintro
@@ -1576,7 +1670,7 @@ theorem stateInterp_init_bytes [WasmSmallStepGS hlc α]
   imod copySigma_ghost σ dst oldDstBytes newDstBytes hlen_eq $$
       [$Hheap $Hdst] with ⟨Hheap, Hdst, %Hbelow⟩
   ihave Hexc' : machineAuxInterp (copySigma σ dst oldDstBytes newDstBytes)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply_exact machineAuxInterp_heap_mono Hbelow with Hexc
   imodintro
@@ -1991,7 +2085,7 @@ theorem stateInterp_exception_facts [WasmSmallStepGS hlc α]
   imodintro
   iopen_state Hstate
   iunfold machineAuxInterp at Hexc
-  icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
+  icases Hexc with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
   ihave %hlookup :=
     exceptionInterp_lookup store.wasm.exns store.wasm.tagIds index dq tagAndArgs $$
       [$Hexceptions $Hexception]
@@ -2011,7 +2105,7 @@ theorem stateInterp_tagTable_prefix [WasmSmallStepGS hlc α]
   imodintro
   iopen_state Hstate
   iunfold machineAuxInterp at Hexc
-  icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
+  icases Hexc with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
   ihave %hprefix :=
     exceptionInterp_tagPrefix store.wasm.exns store.wasm.tagIds ids $$
       [$Hexceptions $Howned]
@@ -2302,7 +2396,7 @@ theorem stateInterp_store8 [WasmSmallStepGS hlc α]
   imod genHeap_update (v₂ := some newValue) $$ [$Hheap $Hpointsto] with
     ⟨Hheap, Hpointsto⟩
   ihave Hexc' : machineAuxInterp (insert σ ⟨0, address⟩ (some newValue))
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply machineAuxInterp_heap_mono
       (fun frontier Hbelow =>
@@ -2545,7 +2639,7 @@ theorem stateInterp_store16 [WasmSmallStepGS hlc α]
   imod genHeap_update (v₂ := some (u32Byte newValue 1)) $$
       [$Hheap $H1] with ⟨Hheap, H1⟩
   ihave Hexc' : machineAuxInterp (store16Heap σ 0 address newValue)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply machineAuxInterp_heap_mono
       (fun frontier Hbelow =>
@@ -2611,7 +2705,7 @@ theorem stateInterp_store32 [WasmSmallStepGS hlc α]
   imod genHeap_update (v₂ := some (u32Byte newValue 3)) $$
       [$Hheap $H3] with ⟨Hheap, H3⟩
   ihave Hexc' : machineAuxInterp (store32Heap σ 0 address newValue)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply machineAuxInterp_heap_mono
       (fun frontier Hbelow =>
@@ -2701,7 +2795,7 @@ theorem stateInterp_store64 [WasmSmallStepGS hlc α]
   imod genHeap_update (v₂ := some (u64Byte newValue 7)) $$
       [$Hheap $H7] with ⟨Hheap, H7⟩
   ihave Hexc' : machineAuxInterp (store64Heap σ 0 address newValue)
-      store.wasm.mem.pages
+      store.wasm.mem.pages store.wasm.memoryCaps
       store.wasm.exns store.wasm.tagIds $$ [Hexc]
   · iapply machineAuxInterp_heap_mono
       (fun frontier Hbelow =>
@@ -2765,18 +2859,22 @@ theorem stateInterp_writeV128 [WasmSmallStepGS hlc α]
   isplitl_exact Hlo
   · iexact Hhi
 
-/-- Successful memory growth preserves the authoritative byte heap unchanged:
-physical bytes are identical and every previously owned address remains in
-bounds because the page count only increases. -/
-theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α]
+/-- Successful memory growth preserves the authoritative byte heap unchanged.
+The cap must be the actual physical cap, so every selected primary cap retains
+its page upper bound; a growth equation for an unrelated cap is insufficient. -/
+private theorem stateInterp_memoryGrow_of_page_update [WasmSmallStepGS hlc α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages : Nat)
-    (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages)) :
-    stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
+    (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
+    (hcap : cap = store.wasm.memoryCap store.runtime.currentModule 0)
+    (R S : IProp (WasmHeapGF α))
+    (pageUpdate : store.wasm.mem.pages ≤ memory.pages →
+      memoryPagesAuth store.wasm.mem.pages ∗ R ==∗ memoryPagesAuth memory.pages ∗ S) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗ R ==∗
       stateInterp (GF := WasmHeapGF α)
         { store with wasm := { store.wasm with mem := memory } }
-        steps observations threads := by
+        steps observations threads ∗ S := by
   have hmemoryPages :
       memory.pages = store.wasm.mem.pages + delta.toNat := by
     simp only [Mem.grow] at hgrow
@@ -2786,39 +2884,104 @@ theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α]
     · contradiction
   have hpagesMono : store.wasm.mem.pages ≤ memory.pages := by
     rw [hmemoryPages]; exact Nat.le_add_right _ _
-  iintro Hstate
+  have hpagesCap : memory.pages ≤ cap := by
+    simp only [Mem.grow] at hgrow
+    split at hgrow
+    · rename_i hfits
+      rw [hmemoryPages]
+      exact hfits
+    · contradiction
+  iintro ⟨Hstate, HR⟩
   iopen_state Hstate
   iunfold machineAuxInterp at Hexc
-  icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
-  imod memoryPagesAuth_update store.wasm.mem.pages memory.pages hpagesMono $$
-      Hpages with ⟨Hpages, -⟩
+  icases Hexc with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
+  ihave Hcaps' : memoryCapsInterp memory.pages store.wasm.memoryCaps $$ [Hcaps]
+  · iapply memoryCapsInterp_mono (pages := store.wasm.mem.pages)
+    · intro capσ hagrees
+      refine ⟨hagrees.1, ?_⟩
+      intro selectedCap hselected
+      have hlookup := hagrees.1 0 selectedCap hselected
+      have heq : cap = selectedCap := by
+        simpa only [Store.memoryCap, hlookup, Option.getD_some] using hcap
+      exact heq ▸ hpagesCap
+    · iexact Hcaps
+  imod pageUpdate hpagesMono $$ [Hpages HR] with ⟨Hpages, HS⟩
+  · iframe
   imodintro
-  iapply (stateInterp_eq
-      { store with wasm := { store.wasm with mem := memory } }
-      steps observations threads).mpr
-  iexists σ, globalσ, dataSegmentσ, tableσ,
-    elementSegmentσ, runtimeModuleσ, hostEnvσ
-  iframe Hheap Hglobals Hsegments Htables HelementSegments
-    HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
-    HhostEnvAuth Hstate_auth
-  isplitr [Hpages Hdomain Hexceptions]
-  · ipureintro
-    have h_ag := grow_sound σ (storeResolve store) 0 store.wasm.mem memory delta
-        cap previousPages hgrow (storeResolve_zero store) Hfacts.1
-    rw [storeResolve_update_mem0] at h_ag
-    have h_bn := grow_inBounds σ (storeResolve store) 0 store.wasm.mem memory delta
-        cap previousPages hgrow (storeResolve_zero store) Hfacts.2.1
-    rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
-  · unfold machineAuxInterp
-    iframe Hpages Hdomain Hexceptions
+  isplitr [HS]
+  · iapply (stateInterp_eq
+        { store with wasm := { store.wasm with mem := memory } }
+        steps observations threads).mpr
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, runtimeModuleσ, hostEnvσ
+    iframe Hheap Hglobals Hsegments Htables HelementSegments
+      HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
+      HhostEnvAuth Hstate_auth
+    isplitr [Hpages Hdomain Hexceptions Hcaps']
+    · ipureintro
+      have h_ag := grow_sound σ (storeResolve store) 0 store.wasm.mem memory delta
+          cap previousPages hgrow (storeResolve_zero store) Hfacts.1
+      rw [storeResolve_update_mem0] at h_ag
+      have h_bn := grow_inBounds σ (storeResolve store) 0 store.wasm.mem memory delta
+          cap previousPages hgrow (storeResolve_zero store) Hfacts.2.1
+      rw [storeResolve_update_mem0] at h_bn; exact ⟨h_ag, h_bn, Hfacts.2.2⟩
+    · unfold machineAuxInterp
+      iframe Hpages Hdomain Hexceptions Hcaps'
+  · iexact HS
 
-/-- Tracked successful growth additionally exposes an exact snapshot of the
-new physical page count and the concrete old/new page equations. -/
-theorem stateInterp_memoryGrow_tracked [WasmSmallStepGS hlc α]
+/-- Legacy growth owns the complete authority. Fractional clients must use
+`stateInterp_memoryGrow_exact`, which requires their matching client half. -/
+theorem stateInterp_memoryGrow [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages : Nat)
-    (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages)) :
+    (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
+    (hcap : cap = store.wasm.memoryCap store.runtime.currentModule 0) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
+      stateInterp (GF := WasmHeapGF α)
+        { store with wasm := { store.wasm with mem := memory } }
+        steps observations threads := by
+  iintro Hstate
+  imod stateInterp_memoryGrow_of_page_update store steps observations threads delta cap
+      memory previousPages hgrow hcap (iprop(emp)) (iprop(emp))
+      (fun hmono => by
+        iintro ⟨Hpages, _⟩
+        imod memoryPagesAuth_update store.wasm.mem.pages memory.pages hmono $$ Hpages
+          with ⟨Hpages, _⟩
+        imodintro
+        iframe) $$ [Hstate] with ⟨Hstate, _⟩
+  · iframe
+  imodintro
+  iexact Hstate
+
+/-- A real successful growth updates both retained authority and client half.
+The byte heap, caps and all other resources describe the same physical store. -/
+theorem stateInterp_memoryGrow_exact [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages : Nat)
+    (hmode : (inferInstance : WasmMemoryPagesGS α).stateFrac = (1 : Qp).half)
+    (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
+    (hcap : cap = store.wasm.memoryCap store.runtime.currentModule 0) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      memoryPagesHalf store.wasm.mem.pages ==∗
+      stateInterp (GF := WasmHeapGF α)
+        { store with wasm := { store.wasm with mem := memory } }
+        steps observations threads ∗ memoryPagesHalf memory.pages ∗
+          memoryPagesOwn memory.pages := by
+  iapply stateInterp_memoryGrow_of_page_update store steps observations threads delta cap
+    memory previousPages hgrow hcap (memoryPagesHalf store.wasm.mem.pages)
+    (iprop(memoryPagesHalf memory.pages ∗ memoryPagesOwn memory.pages))
+    (fun hmono => memoryPagesAuth_update_exact store.wasm.mem.pages memory.pages hmode hmono)
+
+/-- Tracked successful growth additionally exposes an exact snapshot of the
+new physical page count and the concrete old/new page equations. -/
+theorem stateInterp_memoryGrow_tracked [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages : Nat)
+    (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
+    (hcap : cap = store.wasm.memoryCap store.runtime.currentModule 0) :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
       stateInterp (GF := WasmHeapGF α)
           { store with wasm := { store.wasm with mem := memory } }
@@ -2837,7 +3000,7 @@ theorem stateInterp_memoryGrow_tracked [WasmSmallStepGS hlc α]
     · contradiction
   iintro Hstate
   imod stateInterp_memoryGrow store steps observations threads delta cap
-      memory previousPages hgrow $$ Hstate with Hstate
+      memory previousPages hgrow hcap $$ Hstate with Hstate
   imod stateInterp_memoryPages_snapshot
       { store with wasm := { store.wasm with mem := memory } }
       steps observations threads $$ Hstate with ⟨Hstate, Hpages⟩
@@ -2847,11 +3010,12 @@ theorem stateInterp_memoryGrow_tracked [WasmSmallStepGS hlc α]
 
 /-- Frame-preserving form of `stateInterp_memoryGrow_tracked`, for lifting
 rules that prepare a continuation before updating the hidden page authority. -/
-theorem stateInterp_memoryGrow_tracked_frame [WasmSmallStepGS hlc α]
+theorem stateInterp_memoryGrow_tracked_frame [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages : Nat)
     (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
+    (hcap : cap = store.wasm.memoryCap store.runtime.currentModule 0)
     {P : IProp (WasmHeapGF α)} :
     stateInterp (GF := WasmHeapGF α) store steps observations threads ∗ P ==∗
       (stateInterp (GF := WasmHeapGF α)
@@ -2864,7 +3028,7 @@ theorem stateInterp_memoryGrow_tracked_frame [WasmSmallStepGS hlc α]
   iapply bupd_frame_right
   isplitl [Hstate]
   · iapply stateInterp_memoryGrow_tracked store steps observations threads
-      delta cap memory previousPages hgrow
+      delta cap memory previousPages hgrow hcap
     iexact Hstate
   · iexact HP
 
@@ -2873,7 +3037,61 @@ host-returned store. `runtime` is unchanged and the host's mutable state is
 unchanged (`h_host`), so all ghost authorities are preserved; agreement must be
 re-established by the caller for each component that the host may have
 modified. -/
-theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
+private theorem stateInterp_hostCallReturn_of_page_update [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (newWasm : Store α)
+    (steps : Nat) (observations : List StepKind) (threads : Nat)
+    (h_host : newWasm.host = store.wasm.host)
+    (pageUpdate : memoryPagesAuth store.wasm.mem.pages ==∗ memoryPagesAuth newWasm.mem.pages) :
+    (∀ σ, heapAgreesWithMem σ (storeResolve store) →
+          heapAgreesWithMem σ (storeResolve { store with wasm := newWasm })) →
+    (∀ σ, heapAddressesInBounds σ (storeResolve store) →
+          heapAddressesInBounds σ (storeResolve { store with wasm := newWasm })) →
+    (∀ σ, globalHeapAgrees σ store.wasm.globals →
+          globalHeapAgrees σ newWasm.globals) →
+    (∀ σ, dataSegmentHeapAgrees σ store.wasm.dataSegments →
+          dataSegmentHeapAgrees σ newWasm.dataSegments) →
+    (∀ σ, tableHeapAgrees σ store.wasm.tables →
+          tableHeapAgrees σ newWasm.tables) →
+    (∀ σ, elementSegmentHeapAgrees σ store.wasm.elementSegments →
+          elementSegmentHeapAgrees σ newWasm.elementSegments) →
+    (∀ σ, exceptionHeapAgrees σ store.wasm.exns →
+          exceptionHeapAgrees σ newWasm.exns) →
+    (∀ ids : List Nat, ids.IsPrefix store.wasm.tagIds →
+          ids.IsPrefix newWasm.tagIds) →
+    (∀ σ, capHeapAgrees σ store.wasm.mem.pages store.wasm.memoryCaps →
+          capHeapAgrees σ newWasm.mem.pages newWasm.memoryCaps) →
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
+      stateInterp (GF := WasmHeapGF α) { store with wasm := newWasm }
+        steps observations threads := by
+  intro hMem hBounds hGlobals hData hTables hElems hExns hTagIds hCaps
+  iintro Hstate
+  iopen_state Hstate
+  iunfold machineAuxInterp at Hexc
+  icases Hexc with ⟨Hpages, Hdomain, Hexceptions, Hcaps⟩
+  imod pageUpdate $$ Hpages with Hpages
+  imodintro
+  iapply (stateInterp_eq
+      { store with wasm := newWasm }
+      steps observations threads).mpr
+  iexists σ, globalσ, dataSegmentσ, tableσ,
+    elementSegmentσ, runtimeModuleσ, hostEnvσ
+  ihave Hstate_auth' : hostStateAuth newWasm.host $$ [Hstate_auth]
+  · rw [h_host]; iexact Hstate_auth
+  ihave Hexc' : machineAuxInterp σ newWasm.mem.pages newWasm.memoryCaps
+      newWasm.exns newWasm.tagIds $$ [Hpages Hdomain Hexceptions Hcaps]
+  · unfold machineAuxInterp
+    isplitl_exacts [Hpages Hdomain]
+    · isplitl [Hexceptions]
+      · iapply_exact exceptionInterp_mono hExns hTagIds with Hexceptions
+      · iapply_exact memoryCapsInterp_mono hCaps with Hcaps
+  iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth' Hexc'
+  ipureexact ⟨hMem σ Hfacts.1, hBounds σ Hfacts.2.1, hGlobals globalσ Hfacts.2.2.1,
+    hData dataSegmentσ Hfacts.2.2.2.1, hTables tableσ Hfacts.2.2.2.2.1,
+    hElems elementSegmentσ Hfacts.2.2.2.2.2.1, Hfacts.2.2.2.2.2.2.1, Hfacts.2.2.2.2.2.2.2⟩
+
+
+/-- Generic growing host replacement requires full page authority. -/
+theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
     (store : MachineStore α) (newWasm : Store α)
     (steps : Nat) (observations : List StepKind) (threads : Nat)
     (h_host : newWasm.host = store.wasm.host)
@@ -2894,33 +3112,53 @@ theorem stateInterp_hostCallReturn [WasmSmallStepGS hlc α]
           exceptionHeapAgrees σ newWasm.exns) →
     (∀ ids : List Nat, ids.IsPrefix store.wasm.tagIds →
           ids.IsPrefix newWasm.tagIds) →
+    (∀ σ, capHeapAgrees σ store.wasm.mem.pages store.wasm.memoryCaps →
+          capHeapAgrees σ newWasm.mem.pages newWasm.memoryCaps) →
     stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
       stateInterp (GF := WasmHeapGF α) { store with wasm := newWasm }
         steps observations threads := by
-  intro hMem hBounds hGlobals hData hTables hElems hExns hTagIds
-  iintro Hstate
-  iopen_state Hstate
-  iunfold machineAuxInterp at Hexc
-  icases Hexc with ⟨Hpages, Hdomain, Hexceptions⟩
-  imod memoryPagesAuth_update store.wasm.mem.pages newWasm.mem.pages h_pages $$
-      Hpages with ⟨Hpages, -⟩
-  imodintro
-  iapply (stateInterp_eq
-      { store with wasm := newWasm }
-      steps observations threads).mpr
-  iexists σ, globalσ, dataSegmentσ, tableσ,
-    elementSegmentσ, runtimeModuleσ, hostEnvσ
-  ihave Hstate_auth' : hostStateAuth newWasm.host $$ [Hstate_auth]
-  · rw [h_host]; iexact Hstate_auth
-  ihave Hexc' : machineAuxInterp σ newWasm.mem.pages
-      newWasm.exns newWasm.tagIds $$ [Hpages Hdomain Hexceptions]
-  · unfold machineAuxInterp
-    isplitl_exacts [Hpages Hdomain]
-    · iapply_exact exceptionInterp_mono hExns hTagIds with Hexceptions
-  iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth HhostEnvAuth Hstate_auth' Hexc'
-  ipureexact ⟨hMem σ Hfacts.1, hBounds σ Hfacts.2.1, hGlobals globalσ Hfacts.2.2.1,
-    hData dataSegmentσ Hfacts.2.2.2.1, hTables tableσ Hfacts.2.2.2.2.1,
-    hElems elementSegmentσ Hfacts.2.2.2.2.2.1, Hfacts.2.2.2.2.2.2.1, Hfacts.2.2.2.2.2.2.2⟩
+  exact stateInterp_hostCallReturn_of_page_update store newWasm steps observations threads
+    h_host (by
+      iintro Hpages
+      imod memoryPagesAuth_update store.wasm.mem.pages newWasm.mem.pages h_pages $$
+        Hpages with ⟨Hpages, _⟩
+      imodintro
+      iexact Hpages)
+
+
+/-- A page-preserving host replacement works in legacy, exact and frozen modes. -/
+theorem stateInterp_hostCallReturn_samePages [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (newWasm : Store α)
+    (steps : Nat) (observations : List StepKind) (threads : Nat)
+    (h_host : newWasm.host = store.wasm.host)
+    (h_pages : newWasm.mem.pages = store.wasm.mem.pages) :
+    (∀ σ, heapAgreesWithMem σ (storeResolve store) →
+          heapAgreesWithMem σ (storeResolve { store with wasm := newWasm })) →
+    (∀ σ, heapAddressesInBounds σ (storeResolve store) →
+          heapAddressesInBounds σ (storeResolve { store with wasm := newWasm })) →
+    (∀ σ, globalHeapAgrees σ store.wasm.globals →
+          globalHeapAgrees σ newWasm.globals) →
+    (∀ σ, dataSegmentHeapAgrees σ store.wasm.dataSegments →
+          dataSegmentHeapAgrees σ newWasm.dataSegments) →
+    (∀ σ, tableHeapAgrees σ store.wasm.tables →
+          tableHeapAgrees σ newWasm.tables) →
+    (∀ σ, elementSegmentHeapAgrees σ store.wasm.elementSegments →
+          elementSegmentHeapAgrees σ newWasm.elementSegments) →
+    (∀ σ, exceptionHeapAgrees σ store.wasm.exns →
+          exceptionHeapAgrees σ newWasm.exns) →
+    (∀ ids : List Nat, ids.IsPrefix store.wasm.tagIds →
+          ids.IsPrefix newWasm.tagIds) →
+    (∀ σ, capHeapAgrees σ store.wasm.mem.pages store.wasm.memoryCaps →
+          capHeapAgrees σ newWasm.mem.pages newWasm.memoryCaps) →
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ==∗
+      stateInterp (GF := WasmHeapGF α) { store with wasm := newWasm }
+        steps observations threads := by
+  exact stateInterp_hostCallReturn_of_page_update store newWasm steps observations threads
+    h_host (by
+      rw [h_pages]
+      iintro Hpages
+      imodintro
+      iexact Hpages)
 
 private theorem currentInstanceAuth_ownN_agree {α : Type} [gs : WasmInstanceGS α]
     (id : ModuleInstanceId) (n : Nat) :

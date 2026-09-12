@@ -140,7 +140,7 @@ theorem opt3_func0_distinct_store_partiallyMeets
   · exact hinBounds
   · exact hglobals
   · simp only [opt3ConfigFromStore]; decide
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
     ihave ⟨HA, HB⟩ := hresources $$ Hheap
     have hpost : ∀ values : List Value,

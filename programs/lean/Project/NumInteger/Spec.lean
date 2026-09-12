@@ -792,7 +792,7 @@ theorem func1_zero_smallStep_partiallyMeets
     rfl
   · exact func1GlobalHeap_agrees
   · simp only [func1ZeroConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hframe, Hglobals, Hruntime⟩
     ihave Hglobal := func1GlobalHeap_pointsTo $$ Hglobals
     have hpost : ∀ rs : List Value,
@@ -2837,7 +2837,7 @@ theorem func1_nonzero_smallStep_partiallyMeets
     rfl
   · exact func1GlobalHeap_agrees
   · simp only [func1ZeroConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hframe, Hglobals, Hruntime⟩
     ihave Hglobal := func1GlobalHeap_pointsTo $$ Hglobals
     have hpost : ∀ rs : List Value,
@@ -3621,7 +3621,7 @@ theorem func0_smallStep_partiallyMeets (a b : UInt64) :
   · exact func0InitialHeap_inBounds
   · exact func0GlobalHeap_agrees
   · simp only [func0Config]; decide
-  · intro gs
+  · intro gs legacyPages
     unfold func0InitialHeap
     simp only [func0Config, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hframe, Hglobals, Hruntime⟩
@@ -3663,7 +3663,7 @@ theorem func2_smallStep_partiallyMeets (a b : UInt64) :
   · exact func0InitialHeap_inBounds
   · exact func0GlobalHeap_agrees
   · simp only [func2Config]; decide
-  · intro gs
+  · intro gs legacyPages
     unfold func0InitialHeap
     simp only [func2Config, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hframe, Hglobals, Hruntime⟩
@@ -6546,7 +6546,7 @@ theorem func2_terminatesWith :
   · exact func0InitialHeap_inBounds
   · exact func0GlobalHeap_agrees
   · simp only [func2Config]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     unfold func0InitialHeap
     simp only [func2Config, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hframe, Hglobals, Hruntime⟩

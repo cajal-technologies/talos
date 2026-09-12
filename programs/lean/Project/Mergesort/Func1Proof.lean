@@ -22,7 +22,7 @@ private theorem func1_index :
     Project.Mergesort.module.funcs[1]? =
       some Project.Mergesort.func1Def := by rfl
 
-private theorem byteSlice_address_eq
+theorem byteSlice_address_eq
     [WasmSmallStepGS hlc Universal.State]
     {address address' : UInt32} {bytes : List UInt8}
     (haddress : address = address') :
@@ -30,7 +30,7 @@ private theorem byteSlice_address_eq
       Representations.ByteSlice address' bytes := by
   rw [haddress]
 
-private theorem pointsTo_u32_address_eq
+theorem pointsTo_u32_address_eq
     [WasmSmallStepGS hlc Universal.State]
     {address address' value : UInt32}
     (haddress : address = address') :
@@ -76,7 +76,7 @@ private theorem growSource_live_lookup
       ipureexact hblock
   · ipureexact hlookup
 
-private theorem growSource_reserveHistory
+theorem growSource_reserveHistory
     [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory) (capacity ptr : UInt32)
@@ -123,16 +123,22 @@ private theorem growSource_reserveHistory
         unfold VecReserveHistory growHistory
         rw [if_neg hcapacity]; exact ⟨oldId, hlookup, rfl⟩
 
-theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
-    (hfunc0 : Func0Spec (hlc := hlc)) :
-    Func1Spec (hlc := hlc) := by
+/-- Preserve the allocator policy through the actual reserve wrapper, including
+the request-specific witness on either allocator OOM branch. -/
+theorem func1_correct_of_policy [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy)
+    (hfunc0 : Func0Spec (hlc := hlc) policy) :
+    Func1Spec (hlc := hlc) policy := by
   unfold Func1Spec CallContract callExpr
   intro header length additional alignment elementSize totalBytes current
     remaining capacity ptr initialized shadow heapId storedCursor frontier
     history output raised callerLocals stack code arity remainder controls
     calls s E Φ
   dsimp only
-  iintro ⟨Hruntime, Hsp, Hreserve, Hvec, Hbump, Hstreams, %hfacts, Hcont⟩
+  iintro Hpre
+  ihave ⟨#Hpolicy, Hpre⟩ := withAllocationPolicy_open policy _ $$ Hpre
+  icases Hpre with
+    ⟨Hruntime, Hsp, Hreserve, Hvec, Hbump, Hstreams, %hfacts, Hcont⟩
   rcases hfacts with
     ⟨rfl, rfl, rfl, hlengthWord, hadditionalWord, hread, hcurrent,
       hcurrentAlign, hnotFits, htotal, hgeo, hsumBound, hnewBound,
@@ -310,7 +316,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       simp [hcmp, max_eq_right hn])
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
-  have Hfunc0 : Func0Spec (hlc := hlc) := hfunc0
+  have Hfunc0 : Func0Spec (hlc := hlc) policy := hfunc0
   unfold Func0Spec CallContract callExpr at Hfunc0
   dsimp only at Hfunc0
   simp only [List.cons_append, List.nil_append] at Hfunc0
@@ -328,6 +334,9 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         (5 - (0 + 1 + 1 + 1 + 1 + 1)) (.i32 reserveBase)
       values := [] })
     (stack := [])
+  iapply withAllocationPolicy_close policy _
+  isplitr
+  · iexact Hpolicy
   ihave HgrowBeforeAt := byteSlice_address_eq hgrowAddress $$ HgrowBefore
   isplitl [Hmodule Henv]
   · unfold RuntimeContext
@@ -392,6 +401,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       · unfold StackPointer
         iexact Hsp
       isimp only [ReserveContinuation, hdecisionCont] at Hcont
+      isimp only [hnewCapacityWord, newCapacityNat]
       iapply Hcont $$ Hsp' Hreserve Hvec Hbump Hstreams
   | success newPtr finish =>
       have hdecisionCont : classifyBump frontier
@@ -550,6 +560,12 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
           iexact Hsp
         isimp only [ReserveContinuation, hdecisionCont] at Hcont
         ihave Hoom := BI.and_elim_r $$ Hcont
+        isimp only [hnewCapacityWord, newCapacityNat]
         iapply Hoom $$ Hsp' Hreserve Hvec Hbump Hstreams
+
+theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
+    (hfunc0 : Func0Spec (hlc := hlc)) :
+    Func1Spec (hlc := hlc) :=
+  func1_correct_of_policy .unrestricted hfunc0
 
 end Project.Mergesort.Func1Proof

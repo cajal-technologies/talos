@@ -28,7 +28,8 @@ open Project.Mergesort.Contracts
 /-- The generated driver satisfies its authoritative call contract by
 composition of all reachable local-function correctness theorems. -/
 theorem func3_correct
-    {hlc : HasLC} [WasmSmallStepGS hlc Universal.State] :
+    {hlc : HasLC} [WasmSmallStepGS hlc Universal.State]
+    [WasmMemoryPagesLegacy Universal.State] :
     Func3Spec (hlc := hlc) := Project.Mergesort.DriverProof.func3_correct_of
     (Project.Mergesort.Func1Proof.func1_correct_of
       (Project.Mergesort.Func0Proof.func0_correct_of

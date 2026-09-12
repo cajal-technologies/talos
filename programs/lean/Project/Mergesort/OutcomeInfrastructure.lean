@@ -177,7 +177,7 @@ theorem acceptance_total (flag : Bool) :
   · exact heapAddressesInBounds_empty _
   · exact globalHeapAgrees_empty _
   · simp [acceptanceConfig]
-  · intro hlc gs
+  · intro hlc gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq, acceptanceConfig,
       acceptanceInstance, RuntimeEnv.currentModule_mk1,
       RuntimeEnv.currentHost_mk1]

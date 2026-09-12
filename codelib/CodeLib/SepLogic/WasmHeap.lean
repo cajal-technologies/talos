@@ -201,6 +201,7 @@ abbrev WasmElementSegmentMap := WasmInstanceIndexMap
 abbrev WasmRuntimeModuleMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmHostEnvMap := fun V => ExtTreeMap Nat V compare
 abbrev WasmExceptionMap := fun V => ExtTreeMap Nat V compare
+abbrev WasmMemoryCapMap := fun V => ExtTreeMap Nat V compare
 
 /-- Generic metadata carried by allocator ghost maps.  It intentionally
 contains only representation-independent allocation facts; project-specific
@@ -316,6 +317,8 @@ abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
       (HeapView Nat (Agree (DiscreteO AllocationMeta))
         WasmAllocationMap), by infer_instance⟩
   | 20 => ⟨MonoNatRF, by infer_instance⟩
+  | 21 => ⟨constOF
+      (HeapView Nat (Agree (DiscreteO Nat)) WasmMemoryCapMap), by infer_instance⟩
   | _ => ⟨constOF Unit, by infer_instance⟩
 -- Wire genHeapPreS (following HeapLang's instHeapLangGS_HeapLangS)
 instance instWasmHeapPreS (α : Type) :
@@ -343,6 +346,141 @@ class WasmGlobalGS (α : outParam Type) extends
   globalName : GName
 
 attribute [instance] WasmGlobalGS.toGhostMapG
+
+/-- Sparse, immutable facts about explicitly instantiated memory caps. Keys
+are physical storage slots, after resolving any module-local memory index. -/
+class WasmMemoryCapsGS (α : outParam Type) extends
+    GhostMapG (WasmHeapGF α) Nat Nat WasmMemoryCapMap where
+  memoryCapsName : GName
+
+attribute [instance] WasmMemoryCapsGS.toGhostMapG
+
+/-- Selected slots agree with the physical cap list. Selecting primary slot
+zero additionally bounds the actual primary-memory pages. Other slots constrain
+metadata only; missing slots do not assert a cap or a declaration fallback. -/
+def capHeapAgrees (σ : WasmMemoryCapMap Nat) (pages : Nat) (caps : List Nat) : Prop :=
+  (∀ index cap, get? σ index = some cap → caps[index]? = some cap) ∧
+    (∀ cap, get? σ 0 = some cap → pages ≤ cap)
+
+theorem capHeapAgrees_empty (pages : Nat) (caps : List Nat) :
+    capHeapAgrees ∅ pages caps := by
+  constructor
+  · intro index cap hget
+    simp only [get?_empty] at hget
+    cases hget
+  · intro cap hget
+    simp only [get?_empty] at hget
+    cases hget
+
+/-- Persistent knowledge of the cap stored at one physical memory slot. -/
+def memoryCapOwn {α : Type} [gs : WasmMemoryCapsGS α]
+    (index cap : Nat) : IProp (WasmHeapGF α) :=
+  ghost_map_elem gs.memoryCapsName DFrac.discard index cap
+
+instance {α : Type} [WasmMemoryCapsGS α] (index cap : Nat) :
+    BI.Persistent (memoryCapOwn index cap) := by
+  unfold memoryCapOwn; infer_instance
+
+instance {α : Type} [WasmMemoryCapsGS α] (index cap : Nat) :
+    BI.Timeless (memoryCapOwn index cap) := by
+  unfold memoryCapOwn; infer_instance
+
+/-- The hidden cap authority agrees with actual caps and validates the page
+bound for a selected primary slot. -/
+def memoryCapsInterp {α : Type} [gs : WasmMemoryCapsGS α]
+    (pages : Nat) (caps : List Nat) : IProp (WasmHeapGF α) :=
+  iprop(∃ σ : WasmMemoryCapMap Nat,
+    ghost_map_auth gs.memoryCapsName (DFrac.own 1) σ ∗ ⌜capHeapAgrees σ pages caps⌝)
+
+theorem memoryCapsInterp_lookup {α : Type} [WasmMemoryCapsGS α]
+    (pages : Nat) (caps : List Nat) (index cap : Nat) :
+    memoryCapsInterp (α := α) pages caps ∗ memoryCapOwn index cap ⊢
+      ⌜caps[index]? = some cap⌝ := by
+  unfold memoryCapsInterp memoryCapOwn
+  iintro ⟨⟨%σ, Hauth, %hagrees⟩, Hcap⟩
+  ihave %hlookup := ghost_map_lookup $$ Hauth Hcap
+  ipureexact hagrees.1 index cap hlookup
+
+theorem memoryCapsInterp_lookup_frame {α : Type} [WasmMemoryCapsGS α]
+    (pages : Nat) (caps : List Nat) (index cap : Nat) :
+    memoryCapsInterp (α := α) pages caps ∗ memoryCapOwn index cap ⊢
+      memoryCapsInterp pages caps ∗ memoryCapOwn index cap ∗
+        ⌜caps[index]? = some cap⌝ := by
+  iintro ⟨Hcaps, Hcap⟩
+  ihave %hlookup := memoryCapsInterp_lookup pages caps index cap $$ [Hcaps Hcap]
+  · iframe Hcaps Hcap
+  iframe Hcaps Hcap
+  ipureexact hlookup
+
+/-- Primary-cap ownership exposes both actual metadata and a physical page
+upper bound. The same page assertion is not made for other selected slots. -/
+theorem memoryCapsInterp_primary {α : Type} [WasmMemoryCapsGS α]
+    (pages : Nat) (caps : List Nat) (cap : Nat) :
+    memoryCapsInterp (α := α) pages caps ∗ memoryCapOwn 0 cap ⊢
+      ⌜caps[0]? = some cap ∧ pages ≤ cap⌝ := by
+  unfold memoryCapsInterp memoryCapOwn
+  iintro ⟨⟨%σ, Hauth, %hagrees⟩, Hcap⟩
+  ihave %hlookup := ghost_map_lookup $$ Hauth Hcap
+  ipureexact ⟨hagrees.1 0 cap hlookup, hagrees.2 cap hlookup⟩
+
+theorem memoryCapsInterp_primary_frame {α : Type} [WasmMemoryCapsGS α]
+    (pages : Nat) (caps : List Nat) (cap : Nat) :
+    memoryCapsInterp (α := α) pages caps ∗ memoryCapOwn 0 cap ⊢
+      memoryCapsInterp pages caps ∗ memoryCapOwn 0 cap ∗
+        ⌜caps[0]? = some cap ∧ pages ≤ cap⌝ := by
+  iintro ⟨Hcaps, Hcap⟩
+  ihave %hvalid := memoryCapsInterp_primary pages caps cap $$ [Hcaps Hcap]
+  · iframe Hcaps Hcap
+  iframe Hcaps Hcap
+  ipureexact hvalid
+
+/-- Whole-store replacement must preserve agreement for the cap authority.
+No arbitrary host function is assumed to preserve these facts. -/
+theorem memoryCapsInterp_mono {α : Type} [WasmMemoryCapsGS α]
+    {pages pages' : Nat}
+    {caps caps' : List Nat}
+    (h : ∀ σ, capHeapAgrees σ pages caps → capHeapAgrees σ pages' caps') :
+    memoryCapsInterp (α := α) pages caps ⊢ memoryCapsInterp pages' caps' := by
+  unfold memoryCapsInterp
+  iintro ⟨%σ, Hauth, %hagrees⟩
+  iexists σ
+  iframe_pureexact using [Hauth] => h σ hagrees
+
+/-- Allocate selected cap facts justified by the physical list and primary
+page validity. -/
+theorem memoryCaps_init_at {α : Type} (σ : WasmMemoryCapMap Nat)
+    (pages : Nat) (caps : List Nat) (hagrees : capHeapAgrees σ pages caps) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryCapsGS α,
+        @memoryCapsInterp α gs pages caps ∗
+          [∗map] index ↦ cap ∈ σ, @memoryCapOwn α gs index cap := by
+  letI capMapG : GhostMapG (WasmHeapGF α) Nat Nat WasmMemoryCapMap := by
+    constructor
+    exists 21
+  imod (ghost_map_alloc (GF := WasmHeapGF α) σ) with
+    ⟨%memoryCapsName, Hauth, Hcaps⟩
+  let gs : WasmMemoryCapsGS α := { toGhostMapG := capMapG, memoryCapsName }
+  iexists gs
+  isplitl [Hauth]
+  · imodintro
+    unfold memoryCapsInterp
+    iexists σ
+    iframe_pureexact using [Hauth] => hagrees
+  · unfold memoryCapOwn
+    iapply BigSepM.bigSepM_bupd
+    iapply BI.BigSepM.bigSepM_impl $$ Hcaps
+    iintro !> %index %cap %hget Hcap
+    iapply ghost_map_elem_persist $$ Hcap
+
+/-- Legacy frontends allocate no cap facts, hence constrain no physical slot. -/
+theorem memoryCaps_init_empty {α : Type} (pages : Nat) (caps : List Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryCapsGS α, @memoryCapsInterp α gs pages caps := by
+  imod memoryCaps_init_at (α := α) ∅ pages caps (capHeapAgrees_empty pages caps) with
+    ⟨%gs, Hcaps, -⟩
+  imodintro
+  iexists gs
+  iexact Hcaps
 
 /-- Passive data segments use their own named authoritative ghost map.  An
 entry remains present after `data.drop`, but its value changes from
@@ -438,12 +576,20 @@ attribute [reducible, instance] WasmHeapDomainGS.heapFrontierElem
 The authority records the exact physical page count held by `stateInterp`.
 Client snapshots are persistent lower bounds: they remain sound across an
 unobserved successful `memory.grow`, while `memory.size` and the tracked grow
-rules can issue a fresh snapshot at the exact current count. -/
+rules can issue a fresh snapshot at the exact current count. The default full
+fraction permits legacy updates. Retaining half instead supports an exact
+client permission or persistent frozen knowledge at the same ghost name. -/
 class WasmMemoryPagesGS (α : outParam Type) where
   memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF
   memoryPagesName : GName
+  /-- Fraction retained by `stateInterp`; full authority is the legacy mode. -/
+  stateFrac : Qp := 1
 
 attribute [reducible, instance] WasmMemoryPagesGS.memoryPagesElem
+
+/-- Legacy page authority can advance without a client permission token. -/
+class WasmMemoryPagesLegacy (α : outParam Type) [gs : WasmMemoryPagesGS α] : Prop where
+  stateFrac_eq_one : gs.stateFrac = 1
 
 /-- Authoritative ghost cell for the current module instance id (`runtime.entry`).
 Uses ExclAuth so it can be updated on cross-instance call/return. -/
@@ -806,11 +952,17 @@ theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
-/-- Exact authoritative primary-memory page count, held inside `stateInterp`. -/
+/-- Page authority at an explicit retained fraction of the existing ghost name. -/
+def pagesAuthorityFrac {α : Type} [gs : WasmMemoryPagesGS α]
+    (q : Qp) (pages : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
+    (MonoNat.auth (DFrac.own q) (MaxNat.ofNat pages))
+
+/-- Exact primary-memory page authority held by `stateInterp`. Its retained
+fraction determines which growth permissions a client must supply. -/
 def memoryPagesAuth {α : Type} [gs : WasmMemoryPagesGS α]
     (pages : Nat) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
-    (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
+  pagesAuthorityFrac gs.stateFrac pages
 
 /-- Persistent knowledge that the primary memory has at least `pages` pages. -/
 def memoryPagesOwn {α : Type} [gs : WasmMemoryPagesGS α]
@@ -818,9 +970,41 @@ def memoryPagesOwn {α : Type} [gs : WasmMemoryPagesGS α]
   iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
     (MonoNat.lb (MaxNat.ofNat pages))
 
+/-- Linear client half of the page authority, agreeing with its exact count. -/
+def memoryPagesHalf {α : Type} [WasmMemoryPagesGS α]
+    (pages : Nat) : IProp (WasmHeapGF α) :=
+  pagesAuthorityFrac (1 : Qp).half pages
+
+/-- Persistent discarded authority agreeing with every retained state fraction.
+A compatible state authority cannot subsequently change its page count. -/
+def memoryPagesFrozen {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
+    (MonoNat.auth DFrac.discard (MaxNat.ofNat pages))
+
+instance {α : Type} [WasmMemoryPagesGS α] (q : Qp) (pages : Nat) :
+    BI.Timeless (pagesAuthorityFrac (α := α) q pages) := by
+  unfold pagesAuthorityFrac
+  infer_instance
+
 instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
     BI.Timeless (memoryPagesAuth (α := α) pages) := by
   unfold memoryPagesAuth
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Timeless (memoryPagesHalf (α := α) pages) := by
+  unfold memoryPagesHalf
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Timeless (memoryPagesFrozen (α := α) pages) := by
+  unfold memoryPagesFrozen
+  infer_instance
+
+instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
+    BI.Persistent (memoryPagesFrozen (α := α) pages) := by
+  unfold memoryPagesFrozen
   infer_instance
 
 instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
@@ -833,32 +1017,100 @@ instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
   unfold memoryPagesOwn
   infer_instance
 
+/-- A lower-bound snapshot agrees with any retained authority fraction. -/
+theorem pagesAuthorityFrac_lb_agree {α : Type} [WasmMemoryPagesGS α]
+    (q : Qp) (actual expected : Nat) :
+    pagesAuthorityFrac (α := α) q actual ∗ memoryPagesOwn expected ⊢
+      iprop(⌜expected ≤ actual⌝) := by
+  unfold pagesAuthorityFrac memoryPagesOwn
+  iintro ⟨Hauth, Hsnapshot⟩
+  icombine Hauth Hsnapshot gives %Hvalid
+  ipureexact ((MonoNat.both_dfrac_valid _ _ _).mp Hvalid).2
+
 /-- A page snapshot is a lower bound on the exact authoritative count. -/
 theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
     (actual expected : Nat) :
     memoryPagesAuth (α := α) actual ∗ memoryPagesOwn expected ⊢
-      iprop(⌜expected ≤ actual⌝) := by
-  unfold memoryPagesAuth memoryPagesOwn
-  iintro ⟨Hauth, Hsnapshot⟩
-  icombine Hauth Hsnapshot gives %Hvalid
-  ipureexact (MonoNat.both_valid
-    (MaxNat.ofNat actual) (MaxNat.ofNat expected)).mp Hvalid
+      iprop(⌜expected ≤ actual⌝) :=
+  pagesAuthorityFrac_lb_agree gs.stateFrac actual expected
 
-/-- Obtain an exact persistent snapshot from the page-count authority. -/
-theorem memoryPagesOwn_snapshot {α : Type} [gs : WasmMemoryPagesGS α]
-    (pages : Nat) :
-    memoryPagesAuth (α := α) pages ⊢ memoryPagesOwn pages := by
-  unfold memoryPagesAuth memoryPagesOwn
+/-- Obtain a persistent lower-bound snapshot from any authority fraction. -/
+theorem pagesAuthorityFrac_snapshot {α : Type} [WasmMemoryPagesGS α]
+    (q : Qp) (pages : Nat) :
+    pagesAuthorityFrac (α := α) q pages ⊢ memoryPagesOwn pages := by
+  unfold pagesAuthorityFrac memoryPagesOwn
   iintro Hauth
   iapply iOwn_mono $$ Hauth
   exact MonoNat.included _ _
 
-/-- Advance the exact page-count authority and issue an exact new snapshot. -/
-theorem memoryPagesAuth_update {α : Type} [gs : WasmMemoryPagesGS α]
+/-- Snapshot the current exact authoritative count as a persistent lower bound. -/
+theorem memoryPagesOwn_snapshot {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) :
+    memoryPagesAuth (α := α) pages ⊢ memoryPagesOwn pages :=
+  pagesAuthorityFrac_snapshot gs.stateFrac pages
+
+/-- Frozen exact knowledge also supplies the existing lower-bound interface. -/
+theorem memoryPagesFrozen_snapshot {α : Type} [WasmMemoryPagesGS α]
+    (pages : Nat) :
+    memoryPagesFrozen (α := α) pages ⊢ memoryPagesOwn pages := by
+  unfold memoryPagesFrozen memoryPagesOwn
+  iintro Hfrozen
+  iapply iOwn_mono $$ Hfrozen
+  exact MonoNat.included _ _
+
+/-- A linear client half agrees exactly with any retained authority fraction. -/
+theorem pagesAuthorityFrac_half_agree {α : Type} [WasmMemoryPagesGS α]
+    (q : Qp) (actual expected : Nat) :
+    pagesAuthorityFrac (α := α) q actual ∗ memoryPagesHalf expected ⊢
+      iprop(⌜expected = actual⌝) := by
+  unfold memoryPagesHalf pagesAuthorityFrac
+  iintro ⟨Hauth, Hhalf⟩
+  icombine Hauth Hhalf gives %Hvalid
+  have h := ((MonoNat.auth_dfrac_op_valid _ _ _ _).mp Hvalid).2
+  ipureexact (congrArg MaxNat.toNat h).symm
+
+/-- Frozen knowledge agrees exactly with any retained authority fraction. -/
+theorem pagesAuthorityFrac_frozen_agree {α : Type} [WasmMemoryPagesGS α]
+    (q : Qp) (actual expected : Nat) :
+    pagesAuthorityFrac (α := α) q actual ∗ memoryPagesFrozen expected ⊢
+      iprop(⌜expected = actual⌝) := by
+  unfold pagesAuthorityFrac memoryPagesFrozen
+  iintro ⟨Hauth, Hfrozen⟩
+  icombine Hauth Hfrozen gives %Hvalid
+  have h := ((MonoNat.auth_dfrac_op_valid _ _ _ _).mp Hvalid).2
+  ipureexact (congrArg MaxNat.toNat h).symm
+
+theorem memoryPagesHalf_agree {α : Type} [gs : WasmMemoryPagesGS α]
+    (actual expected : Nat) :
+    memoryPagesAuth (α := α) actual ∗ memoryPagesHalf expected ⊢
+      iprop(⌜expected = actual⌝) :=
+  pagesAuthorityFrac_half_agree gs.stateFrac actual expected
+
+theorem memoryPagesFrozen_agree {α : Type} [gs : WasmMemoryPagesGS α]
+    (actual expected : Nat) :
+    memoryPagesAuth (α := α) actual ∗ memoryPagesFrozen expected ⊢
+      iprop(⌜expected = actual⌝) :=
+  pagesAuthorityFrac_frozen_agree gs.stateFrac actual expected
+
+private theorem pagesFraction_one_eq_halves :
+    DFrac.own (1 : Qp) = DFrac.own (1 : Qp).half • DFrac.own (1 : Qp).half := by
+  rw [DFrac.op_own, Qp.half_add_half]
+
+/-- Full authority splits into a retained state half and a client half. -/
+theorem pagesAuthorityFrac_full_split {α : Type} [WasmMemoryPagesGS α]
+    (pages : Nat) :
+    pagesAuthorityFrac (α := α) 1 pages ⊣⊢
+      pagesAuthorityFrac (1 : Qp).half pages ∗ memoryPagesHalf pages := by
+  unfold memoryPagesHalf pagesAuthorityFrac
+  rw [pagesFraction_one_eq_halves, MonoNat.auth_dfrac_op]
+  exact iOwn_op
+
+/-- Full authority advances monotonically and issues a fresh snapshot. -/
+theorem pagesAuthorityFrac_full_update {α : Type} [WasmMemoryPagesGS α]
     (old new' : Nat) (hmono : old ≤ new') :
-    memoryPagesAuth (α := α) old ==∗
-      memoryPagesAuth new' ∗ memoryPagesOwn new' := by
-  unfold memoryPagesAuth memoryPagesOwn
+    pagesAuthorityFrac (α := α) 1 old ==∗
+      pagesAuthorityFrac 1 new' ∗ memoryPagesOwn new' := by
+  unfold pagesAuthorityFrac memoryPagesOwn
   iintro Hauth
   imod iOwn_update $$ Hauth with Hauth
   · exact MonoNat.update (MaxNat.ofNat new') hmono
@@ -872,12 +1124,78 @@ theorem memoryPagesAuth_update {α : Type} [gs : WasmMemoryPagesGS α]
     iexact Hauth
   · iexact Hsnapshot
 
-/-- Allocate only the page-count authority.  Legacy adequacy frontends that
-do not expose page snapshots use this form. -/
-theorem memoryPages_init_authority {α : Type} (pages : Nat) :
+/-- Legacy growth requires full state authority. -/
+theorem memoryPagesAuth_update {α : Type} [gs : WasmMemoryPagesGS α]
+    [WasmMemoryPagesLegacy α] (old new' : Nat) (hmono : old ≤ new') :
+    memoryPagesAuth (α := α) old ==∗
+      memoryPagesAuth new' ∗ memoryPagesOwn new' := by
+  unfold memoryPagesAuth
+  rw [WasmMemoryPagesLegacy.stateFrac_eq_one (α := α)]
+  exact pagesAuthorityFrac_full_update old new' hmono
+
+/-- Exact growth reunites both halves and returns the updated client permission. -/
+theorem pagesAuthorityFrac_exact_update {α : Type} [WasmMemoryPagesGS α]
+    (old new' : Nat) (hmono : old ≤ new') :
+    pagesAuthorityFrac (α := α) (1 : Qp).half old ∗ memoryPagesHalf old ==∗
+      pagesAuthorityFrac (1 : Qp).half new' ∗ memoryPagesHalf new' ∗
+        memoryPagesOwn new' := by
+  iintro H
+  ihave Hfull := (pagesAuthorityFrac_full_split (α := α) old).mpr $$ H
+  imod (pagesAuthorityFrac_full_update old new' hmono) $$ Hfull with ⟨Hfull, Hsnapshot⟩
+  imodintro
+  ihave Hsplit := (pagesAuthorityFrac_full_split (α := α) new').mp $$ Hfull
+  icases Hsplit with ⟨Hstate, Hclient⟩
+  iframe Hstate Hclient Hsnapshot
+
+/-- Exact-mode state update with its explicit retained-half witness. -/
+theorem memoryPagesAuth_update_exact {α : Type} [gs : WasmMemoryPagesGS α]
+    (old new' : Nat) (hmode : gs.stateFrac = (1 : Qp).half) (hmono : old ≤ new') :
+    memoryPagesAuth (α := α) old ∗ memoryPagesHalf old ==∗
+      memoryPagesAuth new' ∗ memoryPagesHalf new' ∗ memoryPagesOwn new' := by
+  unfold memoryPagesAuth
+  rw [hmode]
+  exact pagesAuthorityFrac_exact_update old new' hmono
+
+/-- Full legacy authority excludes a simultaneous client half. -/
+theorem memoryPagesAuth_half_exclusive {α : Type} [gs : WasmMemoryPagesGS α]
+    [WasmMemoryPagesLegacy α] (actual expected : Nat) :
+    memoryPagesAuth (α := α) actual ∗ memoryPagesHalf expected ⊢ iprop(⌜False⌝) := by
+  unfold memoryPagesAuth memoryPagesHalf pagesAuthorityFrac
+  rw [WasmMemoryPagesLegacy.stateFrac_eq_one (α := α)]
+  iintro ⟨Hauth, Hhalf⟩
+  icombine Hauth Hhalf gives %Hvalid
+  have h := ((MonoNat.auth_dfrac_op_valid _ _ _ _).mp Hvalid).1
+  have hlt := DFrac.valid_own_op h
+  ipureexact (absurd hlt (by simp))
+
+/-- Full legacy authority excludes a simultaneous frozen token. -/
+theorem memoryPagesAuth_frozen_exclusive {α : Type} [gs : WasmMemoryPagesGS α]
+    [WasmMemoryPagesLegacy α] (actual expected : Nat) :
+    memoryPagesAuth (α := α) actual ∗ memoryPagesFrozen expected ⊢ iprop(⌜False⌝) := by
+  unfold memoryPagesAuth pagesAuthorityFrac memoryPagesFrozen
+  rw [WasmMemoryPagesLegacy.stateFrac_eq_one (α := α)]
+  iintro ⟨Hauth, Hfrozen⟩
+  icombine Hauth Hfrozen gives %Hvalid
+  have h := ((MonoNat.auth_dfrac_op_valid _ _ _ _).mp Hvalid).1
+  have hlt := DFrac.valid_own_op_discard.mp h
+  ipureexact (absurd hlt (by simp))
+
+/-- Persisting the client half freezes the page count. -/
+theorem memoryPagesHalf_freeze {α : Type} [gs : WasmMemoryPagesGS α]
+    (pages : Nat) :
+    memoryPagesHalf (α := α) pages ==∗ memoryPagesFrozen pages := by
+  unfold memoryPagesHalf pagesAuthorityFrac memoryPagesFrozen
+  iintro Hhalf
+  imod iOwn_update $$ Hhalf with Hfrozen
+  · exact MonoNat.auth_persist _ _
+  imodintro
+  iexact Hfrozen
+
+/-- Allocate full authority and expose the legacy mode witness. -/
+theorem memoryPages_init_authority_legacy {α : Type} (pages : Nat) :
     ⊢@{IProp (WasmHeapGF α)} |==>
       ∃ gs : WasmMemoryPagesGS α,
-        @memoryPagesAuth α gs pages := by
+        ⌜gs.stateFrac = 1⌝ ∗ @memoryPagesAuth α gs pages := by
   letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
     exists 20
   imod (iOwn_alloc (E := memoryPagesElem)
@@ -889,33 +1207,80 @@ theorem memoryPages_init_authority {α : Type} (pages : Nat) :
       memoryPagesName }
   imodintro
   iexists gs
-  unfold memoryPagesAuth
+  isplitr
+  · ipureintro
+    rfl
+  · unfold memoryPagesAuth pagesAuthorityFrac
+    iexact Hauth
+
+/-- Allocate full authority and its persistent snapshot with the legacy witness. -/
+theorem memoryPages_init_legacy {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        ⌜gs.stateFrac = 1⌝ ∗ @memoryPagesAuth α gs pages ∗
+          @memoryPagesOwn α gs pages := by
+  imod memoryPages_init_authority_legacy (α := α) pages with ⟨%gs, %hmode, Hauth⟩
+  letI : WasmMemoryPagesGS α := gs
+  letI : WasmMemoryPagesLegacy α := ⟨hmode⟩
+  imod memoryPagesAuth_update pages pages (Nat.le_refl _) $$ Hauth with ⟨Hauth, Hsnapshot⟩
+  imodintro
+  iexists gs
+  iframe Hauth Hsnapshot
+  ipureexact hmode
+
+/-- Compatibility initializer that does not expose its legacy mode witness. -/
+theorem memoryPages_init_authority {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        @memoryPagesAuth α gs pages := by
+  imod memoryPages_init_authority_legacy (α := α) pages with ⟨%gs, %hmode, Hauth⟩
+  imodintro
+  iexists gs
   iexact Hauth
 
-/-- Allocate page-count authority together with an exact persistent snapshot.
-Allocator-aware adequacy frontends expose the snapshot to their client proof. -/
+/-- Compatibility initializer exposing the existing lower-bound snapshot. -/
 theorem memoryPages_init {α : Type} (pages : Nat) :
     ⊢@{IProp (WasmHeapGF α)} |==>
       ∃ gs : WasmMemoryPagesGS α,
-        @memoryPagesAuth α gs pages ∗
-          @memoryPagesOwn α gs pages := by
-  letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
-    exists 20
-  imod (iOwn_alloc (E := memoryPagesElem)
-      (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages) •
-        MonoNat.lb (MaxNat.ofNat pages))
-      (by simpa using
-        (MonoNat.both_valid
-          (MaxNat.ofNat pages) (MaxNat.ofNat pages)).mpr (Nat.le_refl pages))) with
-    ⟨%memoryPagesName, Hboth⟩
-  icases iOwn_op $$ Hboth with ⟨Hauth, Hsnapshot⟩
-  let gs : WasmMemoryPagesGS α :=
-    { memoryPagesElem
-      memoryPagesName }
+        @memoryPagesAuth α gs pages ∗ @memoryPagesOwn α gs pages := by
+  imod memoryPages_init_legacy (α := α) pages with ⟨%gs, %hmode, Hauth, Hsnapshot⟩
   imodintro
   iexists gs
-  unfold memoryPagesAuth memoryPagesOwn
   iframe Hauth Hsnapshot
+
+/-- Allocate a retained state half and a linear client half at the same name. -/
+theorem memoryPages_init_exact {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        ⌜gs.stateFrac = (1 : Qp).half⌝ ∗ @memoryPagesAuth α gs pages ∗
+          @memoryPagesHalf α gs pages := by
+  imod memoryPages_init_authority_legacy (α := α) pages with ⟨%oldGS, %hmode, Hauth⟩
+  let gs : WasmMemoryPagesGS α := { oldGS with stateFrac := (1 : Qp).half }
+  letI : WasmMemoryPagesGS α := gs
+  isimp only [memoryPagesAuth, hmode] at Hauth
+  imodintro
+  iexists gs
+  isplitr
+  · ipureintro
+    rfl
+  · isimp only [memoryPagesAuth]
+    iapply (pagesAuthorityFrac_full_split (α := α) pages).mp
+    isimp only [pagesAuthorityFrac] at Hauth
+    isimp only [pagesAuthorityFrac]
+    iexact Hauth
+
+/-- Allocate a retained state half and persistent exact page knowledge. -/
+theorem memoryPages_init_frozen {α : Type} (pages : Nat) :
+    ⊢@{IProp (WasmHeapGF α)} |==>
+      ∃ gs : WasmMemoryPagesGS α,
+        ⌜gs.stateFrac = (1 : Qp).half⌝ ∗ @memoryPagesAuth α gs pages ∗
+          @memoryPagesFrozen α gs pages := by
+  imod memoryPages_init_exact (α := α) pages with ⟨%gs, %hmode, Hauth, Hhalf⟩
+  imod (memoryPagesHalf_freeze (α := α) (gs := gs) pages) $$ Hhalf with Hfrozen
+  imodintro
+  iexists gs
+  iframe Hauth Hfrozen
+  ipureexact hmode
 
 def currentInstanceAuthN {α : Type} [gs : WasmInstanceGS α] (n : Nat) :
     IProp (WasmHeapGF α) :=

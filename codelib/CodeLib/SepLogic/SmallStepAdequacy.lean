@@ -184,7 +184,7 @@ adequacy is layered on top by allocating the required physical footprint. -/
 theorem wasm_smallStep_adequacy
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       ⊢@{IProp (WasmHeapGF α)}
         (WP config.expr @ Stuckness.NotStuck; ⊤ {{ values, ⌜φ values⌝ }})) :
     adequate Stuckness.NotStuck config.expr config.store
@@ -238,7 +238,7 @@ caller-provided memory, global, or runtime ownership. -/
 theorem wasm_smallStep_partiallyMeets
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       ⊢@{IProp (WasmHeapGF α)}
         (WP config.expr @ Stuckness.NotStuck; ⊤
           {{ values, ⌜φ values⌝ }})) :
@@ -250,7 +250,7 @@ theorem wasm_smallStep_partiallyMeets
 macro "wasm_wp_partially_meets " gs:ident : tactic =>
   `(tactic|
     apply Wasm.SmallStep.wasm_smallStep_partiallyMeets <;>
-      intro $gs:ident)
+      intro $gs:ident legacyPages)
 
 /-- Close a concrete adequacy entry-bound premise and introduce the Iris
 instance in the remaining proof premise. -/
@@ -260,7 +260,7 @@ macro_rules
   | `(tactic| wasm_adequacy_intro $gs:ident => $proof:tacticSeq) =>
       `(tactic|
         (· decide
-         · intro $gs:ident
+         · intro $gs:ident legacyPages
            next => $proof))
 
 instance instWasmLanguageNoFork :
@@ -273,7 +273,7 @@ of `wasm_smallStep_adequacy`; both use the same `StateInterp`. -/
 theorem wasm_smallStep_stronglyNormalizing
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
-    (htwp : ∀ [WasmSmallStepGS .hasNoLC α],
+    (htwp : ∀ [WasmSmallStepGS .hasNoLC α] [WasmMemoryPagesLegacy α],
       ⊢@{IProp (WasmHeapGF α)}
         (WP config.expr @ Stuckness.NotStuck; ⊤
           [{ values, ⌜φ values⌝ }])) :
@@ -344,7 +344,7 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ [WasmSmallStepGS .hasNoLC α],
+    (htwp : ∀ [WasmSmallStepGS .hasNoLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -400,10 +400,11 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
       · iexact HtagTableOwn
       · ipureexact List.prefix_rfl -- The ordinary frontier is installed below.
   ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
+      config.store.wasm.memoryCaps
       config.store.wasm.exns config.store.wasm.tagIds $$
-      [HmemoryPagesAuth HheapDomain HexceptionInterp]
+      [HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp]
   · unfold machineAuxInterp
-    iframe HmemoryPagesAuth HheapDomain HexceptionInterp
+    iframe HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
@@ -447,7 +448,7 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ [WasmSmallStepGS .hasNoLC α],
+    (htwp : ∀ [WasmSmallStepGS .hasNoLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -462,7 +463,7 @@ theorem wasm_smallStep_heap_globals_runtime_stronglyNormalizing
       (config.expr, config.store) := by
   apply wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     config σ globalσ Φ hagree hinBounds hglobals hwf
-  intro gs
+  intro gs legacyPages
   iintro ⟨Hpoints, Hglobals, Hruntime, Htags⟩
   iclear Htags
   iapply htwp
@@ -555,7 +556,7 @@ postcondition. -/
 theorem wasm_smallStep_terminates
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       ⊢@{IProp (WasmHeapGF α)}
         (WP config.expr @ Stuckness.NotStuck; ⊤
           [{ values, ⌜φ values⌝ }])) :
@@ -565,7 +566,7 @@ theorem wasm_smallStep_terminates
     (wasm_smallStep_stronglyNormalizing config φ
       (htwp .hasNoLC))
   apply wasm_smallStep_adequacy config φ
-  intro gs
+  intro gs legacyPages
   iapply twp.to_wp
   exact htwp .hasLC
 
@@ -579,7 +580,7 @@ theorem wasm_smallStep_runtime_tags_adequacy
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
         config.store.runtime.currentModule ∗
         tagTableOwn config.store.wasm.tagIds ⊢
@@ -622,10 +623,11 @@ theorem wasm_smallStep_runtime_tags_adequacy
       · iexact HtagTableOwn
       · ipureexact List.prefix_rfl -- The ordinary frontier is installed below.
   ihave Hexc : machineAuxInterp _ config.store.wasm.mem.pages
+      config.store.wasm.memoryCaps
       config.store.wasm.exns config.store.wasm.tagIds $$
-      [HmemoryPagesAuth HheapDomain HexceptionInterp]
+      [HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp]
   · unfold machineAuxInterp
-    iframe HmemoryPagesAuth HheapDomain HexceptionInterp
+    iframe HmemoryPagesAuth HmemoryCapsInterp HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists (∅ : WasmHeapMap (Option UInt8))
@@ -662,7 +664,7 @@ theorem wasm_smallStep_runtime_adequacy
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
         config.store.runtime.currentModule ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤
@@ -670,7 +672,7 @@ theorem wasm_smallStep_runtime_adequacy
     adequate Stuckness.NotStuck config.expr config.store
       (fun values _ => φ values) := by
   apply wasm_smallStep_runtime_tags_adequacy config φ hwf
-  intro gs
+  intro gs legacyPages
   iintro ⟨Hruntime, Htags⟩
   iclear Htags
   iapply_exact hwp with Hruntime
@@ -680,7 +682,7 @@ theorem wasm_smallStep_runtime_partiallyMeets
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
         config.store.runtime.currentModule ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤
@@ -695,7 +697,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
           config.store.runtime.currentModule ∗
         runtimeInstancesOwn config.store.runtime.instances ⊢
@@ -775,7 +777,7 @@ theorem wasm_smallStep_runtime_instance_partiallyMeets
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
           config.store.runtime.currentModule ∗
         runtimeInstancesOwn config.store.runtime.instances ⊢
@@ -793,7 +795,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
           config.store.runtime.currentModule ∗
         hostEnvOwn config.store.runtime.entry.id config.store.runtime.currentHost ∗
@@ -875,7 +877,7 @@ theorem wasm_smallStep_instance_host_state_partiallyMeets
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
           config.store.runtime.currentModule ∗
         hostEnvOwn config.store.runtime.entry.id config.store.runtime.currentHost ∗
@@ -896,7 +898,7 @@ theorem wasm_smallStep_heap_adequacy
     (φ : List Value → Prop)
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       ([∗map] address ↦ value ∈ σ,
         pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
@@ -960,7 +962,7 @@ theorem wasm_smallStep_heap_globals_runtime_adequacy
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1035,7 +1037,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1117,7 +1119,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1143,10 +1145,12 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
     imod heapDomain_init (α := α) σ with
       ⟨%heapDomainGS, HheapDomain⟩
     letI _ : WasmHeapDomainGS α := heapDomainGS
-    imod memoryPages_init_authority (α := α)
+    imod memoryPages_init_authority_legacy (α := α)
         config.store.wasm.mem.pages with
-      ⟨%memoryPagesGS, HmemoryPagesAuth⟩
+      ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth⟩
     letI _ : WasmMemoryPagesGS α := memoryPagesGS
+    letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+    wasm_alloc_empty_memory_caps config
     letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
       GhostSlot.globalMap
     imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1304,7 +1308,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
           · unfold currentInstanceOwnN; iexact HinstanceFrag
   · apply wasm_smallStep_heap_globals_runtime_store_adequacy config σ globalσ post
       hagree hinBounds hglobals hwf
-    intro gs
+    intro gs legacyPages
     iintro ⟨Hpoints, Hglobals, HruntimeModule, _HhostEnv⟩
     iapply twp.to_wp
     iapply_splitl_exact htwp .hasLC with Hpoints
@@ -1323,7 +1327,7 @@ theorem wasm_smallStep_heap_globals_runtime_store_partiallyMeets
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1354,7 +1358,7 @@ theorem wasm_smallStep_heap_store_terminates
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1377,10 +1381,12 @@ theorem wasm_smallStep_heap_store_terminates
     imod heapDomain_init (α := α) σ with
       ⟨%heapDomainGS, HheapDomain⟩
     letI _ : WasmHeapDomainGS α := heapDomainGS
-    imod memoryPages_init_authority (α := α)
+    imod memoryPages_init_authority_legacy (α := α)
         config.store.wasm.mem.pages with
-      ⟨%memoryPagesGS, HmemoryPagesAuth⟩
+      ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth⟩
     letI _ : WasmMemoryPagesGS α := memoryPagesGS
+    letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+    wasm_alloc_empty_memory_caps config
     letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
       GhostSlot.globalMap
     imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := GlobalKey)
@@ -1534,7 +1540,7 @@ theorem wasm_smallStep_heap_store_terminates
         · unfold currentInstanceOwnN; iexact HinstanceFrag
   · apply wasm_smallStep_heap_globals_runtime_store_adequacy config σ ∅ post
       hagree hinBounds (globalHeapAgrees_empty _) hwf
-    intro gs
+    intro gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hpoints, _Hempty, HruntimeModule, _HhostEnv⟩
     iapply twp.to_wp
@@ -1548,7 +1554,7 @@ theorem wasm_smallStep_runtime_tags_terminates
     [WasmSmallStepGpreS α]
     (config : Config α) (φ : List Value → Prop)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       runtimeModuleOwn config.store.runtime.entry
           config.store.runtime.currentModule ∗
         tagTableOwn config.store.wasm.tagIds ⊢
@@ -1561,13 +1567,13 @@ theorem wasm_smallStep_runtime_tags_terminates
       config ∅ ∅ (fun values => iprop(⌜φ values⌝))
       (heapAgreesWithMem_empty _) (heapAddressesInBounds_empty _)
       (globalHeapAgrees_empty _) hwf
-    intro gs
+    intro gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨_Hheap, _Hglobals, Hruntime, Htags⟩
     iapply_splitl_exact htwp .hasNoLC with Hruntime
     · iexact Htags
   · apply wasm_smallStep_runtime_tags_adequacy config φ hwf
-    intro gs
+    intro gs legacyPages
     iintro Hboth
     iapply twp.to_wp
     iapply_exact htwp .hasLC with Hboth
@@ -1581,7 +1587,7 @@ theorem wasm_smallStep_heap_terminates
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       ([∗map] address ↦ value ∈ σ,
         pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
           address (DFrac.own 1) value) ⊢
@@ -1590,7 +1596,7 @@ theorem wasm_smallStep_heap_terminates
     TerminatesWith config (fun values _store => φ values) := by
   apply wasm_smallStep_heap_store_terminates config σ
     (fun values _store => φ values) hagree hinBounds hwf
-  intro hlc _
+  intro hlc _ legacyPages
   iintro ⟨Hpoints, Hruntime⟩
   iclear Hruntime
   iapply (twp.mono (Φ := fun values => iprop(⌜φ values⌝)) ?hmono)
@@ -1617,7 +1623,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
     (hsegments :
       dataSegmentHeapAgrees dataSegmentσ config.store.wasm.dataSegments)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1721,7 +1727,7 @@ theorem wasm_smallStep_heap_globals_segments_runtime_store_partiallyMeets
     (hsegments :
       dataSegmentHeapAgrees dataSegmentσ config.store.wasm.dataSegments)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1766,7 +1772,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
       elementSegmentHeapAgrees elementSegmentσ
         config.store.wasm.elementSegments)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1890,7 +1896,7 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
       elementSegmentHeapAgrees elementSegmentσ
         config.store.wasm.elementSegments)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1926,7 +1932,7 @@ theorem wasm_smallStep_heap_globals_adequacy
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1938,7 +1944,7 @@ theorem wasm_smallStep_heap_globals_adequacy
       (fun values _ => φ values) := by
   apply wasm_smallStep_heap_globals_runtime_adequacy config σ globalσ φ
     hagree hinBounds hglobals hwf
-  intro gs
+  intro gs legacyPages
   iintro ⟨Hheap, Hglobals, Hruntime⟩
   iclear Hruntime
   iapply_frame hwp
@@ -1957,7 +1963,7 @@ theorem wasm_smallStep_heap_globals_partiallyMeets
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -1982,7 +1988,7 @@ theorem wasm_smallStep_heap_globals_runtime_partiallyMeets
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -2007,7 +2013,7 @@ theorem wasm_smallStep_heap_runtime_instance_adequacy
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -2074,7 +2080,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -2157,7 +2163,7 @@ theorem wasm_smallStep_heap_runtime_instances_partiallyMeets
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -2179,7 +2185,7 @@ theorem wasm_smallStep_heap_runtime_instance_partiallyMeets
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗

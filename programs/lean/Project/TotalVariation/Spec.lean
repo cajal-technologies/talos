@@ -48,7 +48,7 @@ theorem total_variation_correct : TotalVariationSpec := by
   · simpa [totalVariationConfig, absDiffBodyConfig] using
       absDiffBodyGlobals_agree «module» «module».initialStore a b 0 rfl
   · simp only [totalVariationConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [totalVariationConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hscratch := absDiffHeap_pointsTo 0 $$ Hbytes

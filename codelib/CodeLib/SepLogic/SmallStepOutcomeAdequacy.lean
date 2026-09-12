@@ -101,19 +101,21 @@ identity, the client receives the concrete host environment and the exclusive
 host-state fragment, so host calls can update it.  The terminal continuation
 then consumes `stateInterp` to relate that fragment to the authoritative final
 `MachineStore`. -/
-theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
+theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at_caps
     [WasmSmallStepGpreS α]
     (config : Config α)
     (σ : WasmHeapMap (Option UInt8))
     (globalσ : WasmGlobalMap Value)
+    (capσ : WasmMemoryCapMap Nat)
     (frontier : Nat)
     (post : ObservableOutcome → MachineStore α → Prop)
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hbelow : HeapBelow σ frontier)
+    (hcaps : capHeapAgrees capσ config.store.wasm.mem.pages config.store.wasm.memoryCaps)
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -125,7 +127,8 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
             config.store.runtime.currentHost ∗
         hostStateOwn config.store.wasm.host ∗
         heapFrontierOwn frontier ∗
-        memoryPagesOwn config.store.wasm.mem.pages) ⊢
+        memoryPagesOwn config.store.wasm.mem.pages ∗
+        ([∗map] index ↦ cap ∈ capσ, memoryCapOwn index cap)) ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤
           {{ outcome,
             ∀ (store : MachineStore α) (_observations : List StepKind),
@@ -142,9 +145,13 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
   imod heapDomain_init_at (α := α) σ frontier hbelow with
     ⟨%heapDomainGS, HheapDomain, HheapFrontier⟩
   letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init (α := α) config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth, HmemoryPagesOwn⟩
+  imod memoryPages_init_legacy (α := α) config.store.wasm.mem.pages with
+    ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth, HmemoryPagesOwn⟩
   letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+  imod memoryCaps_init_at (α := α) capσ config.store.wasm.mem.pages config.store.wasm.memoryCaps hcaps with
+    ⟨%memoryCapsGS, HmemoryCapsInterp, HcapPoints⟩
+  letI _ : WasmMemoryCapsGS α := memoryCapsGS
   wasm_alloc_globals_and_empty_heap_maps globalσ
   wasm_install_heap_map_instances
   wasm_alloc_current_runtime_module config
@@ -197,7 +204,48 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
             · unfold hostStateOwn
               iexact HhostStateFrag
             · isplitl_exact HheapFrontier
-              · iexact HmemoryPagesOwn
+              · isplitl_exact HmemoryPagesOwn
+                · iexact HcapPoints
+
+/-- Compatibility frontend: initialize an empty cap map and expose the original resources. -/
+theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (frontier : Nat)
+    (post : ObservableOutcome → MachineStore α → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hbelow : HeapBelow σ frontier)
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+            config.store.runtime.currentModule ∗
+        hostEnvOwn config.store.runtime.entry.id
+            config.store.runtime.currentHost ∗
+        hostStateOwn config.store.wasm.host ∗
+        heapFrontierOwn frontier ∗
+        memoryPagesOwn config.store.wasm.mem.pages) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ outcome,
+            ∀ (store : MachineStore α) (_observations : List StepKind),
+              stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
+              ⌜post outcome store⌝ }}) :
+    adequate Stuckness.NotStuck config.expr config.store post := by
+  apply wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at_caps
+      config σ globalσ ∅ frontier post hagree hinBounds hbelow
+      (capHeapAgrees_empty _ _) hglobals hwf
+  intro gs legacyPages
+  iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages, _Hcaps⟩
+  iapply_frame hwp using
+    [Hheap Hglobals Hruntime Henv Hhost Hfrontier Hpages]
 
 /-- Backwards-compatible outcome adequacy with the maximally permissive heap
 frontier.  Allocator-aware clients should use the `_at` theorem and retain the
@@ -212,7 +260,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+    (hwp : ∀ [WasmSmallStepGS .hasLC α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -232,24 +280,26 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome
   apply wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
       config σ globalσ UInt32.size post hagree hinBounds
       (heapBelow_uint32Size σ) hglobals hwf
-  intro gs
+  intro gs legacyPages
   iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, _Hfrontier, _Hpages⟩
   iapply_frame hwp using [Hheap Hglobals Hruntime Henv Hhost]
 
 /-- Outcome-valued total-WP initialization at an explicit heap frontier. -/
-theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at
+theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at_caps
     [WasmSmallStepGpreS α]
     (config : Config α)
     (σ : WasmHeapMap (Option UInt8))
     (globalσ : WasmGlobalMap Value)
+    (capσ : WasmMemoryCapMap Nat)
     (frontier : Nat)
     (Φ : ObservableOutcome → IProp (WasmHeapGF α))
     (hagree : heapAgreesWithMem σ (storeResolve config.store))
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hbelow : HeapBelow σ frontier)
+    (hcaps : capHeapAgrees capσ config.store.wasm.mem.pages config.store.wasm.memoryCaps)
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -261,7 +311,8 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at
             config.store.runtime.currentHost ∗
         hostStateOwn config.store.wasm.host ∗
         heapFrontierOwn frontier ∗
-        memoryPagesOwn config.store.wasm.mem.pages) ⊢
+        memoryPagesOwn config.store.wasm.mem.pages ∗
+        ([∗map] index ↦ cap ∈ capσ, memoryCapOwn index cap)) ⊢
         WP config.expr @ Stuckness.NotStuck; ⊤ [{ Φ }]) :
     StronglyNormalizing
       (@ExprErasedStep (Expr α) (MachineStore α) StepKind
@@ -278,9 +329,13 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at
   imod heapDomain_init_at (α := α) σ frontier hbelow with
     ⟨%heapDomainGS, HheapDomain, HheapFrontier⟩
   letI _ : WasmHeapDomainGS α := heapDomainGS
-  imod memoryPages_init (α := α) config.store.wasm.mem.pages with
-    ⟨%memoryPagesGS, HmemoryPagesAuth, HmemoryPagesOwn⟩
+  imod memoryPages_init_legacy (α := α) config.store.wasm.mem.pages with
+    ⟨%memoryPagesGS, %hMemoryPagesLegacy, HmemoryPagesAuth, HmemoryPagesOwn⟩
   letI _ : WasmMemoryPagesGS α := memoryPagesGS
+  letI _ : WasmMemoryPagesLegacy α := ⟨hMemoryPagesLegacy⟩
+  imod memoryCaps_init_at (α := α) capσ config.store.wasm.mem.pages config.store.wasm.memoryCaps hcaps with
+    ⟨%memoryCapsGS, HmemoryCapsInterp, HcapPoints⟩
+  letI _ : WasmMemoryCapsGS α := memoryCapsGS
   wasm_alloc_globals_and_empty_heap_maps globalσ
   wasm_install_heap_map_instances
   wasm_alloc_current_runtime_module config
@@ -344,9 +399,100 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at
             · unfold hostStateOwn
               iexact HhostStateFrag
             · isplitl_exact HheapFrontier
-              · iexact HmemoryPagesOwn
+              · isplitl_exact HmemoryPagesOwn
+                · iexact HcapPoints
 
-/-- Frontier-aware store-sensitive total adequacy for outcome-valued Wasm proofs. -/
+/-- Compatibility frontend: initialize an empty cap map and expose the original resources. -/
+theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (frontier : Nat)
+    (Φ : ObservableOutcome → IProp (WasmHeapGF α))
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hbelow : HeapBelow σ frontier)
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+            config.store.runtime.currentModule ∗
+        hostEnvOwn config.store.runtime.entry.id
+            config.store.runtime.currentHost ∗
+        hostStateOwn config.store.wasm.host ∗
+        heapFrontierOwn frontier ∗
+        memoryPagesOwn config.store.wasm.mem.pages) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤ [{ Φ }]) :
+    StronglyNormalizing
+      (@ExprErasedStep (Expr α) (MachineStore α) StepKind
+        ObservableOutcome outcomeLanguage)
+      (config.expr, config.store) := by
+  apply wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at_caps
+      config σ globalσ ∅ frontier Φ hagree hinBounds hbelow
+      (capHeapAgrees_empty _ _) hglobals hwf
+  intro hlc gs legacyPages
+  iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages, _Hcaps⟩
+  iapply_frame htwp hlc using
+    [Hheap Hglobals Hruntime Henv Hhost Hfrontier Hpages]
+
+/-- Initialize cap ownership from actual physical metadata, and retain it through total adequacy. -/
+theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_at_caps
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (capσ : WasmMemoryCapMap Nat)
+    (frontier : Nat)
+    (post : ObservableOutcome → MachineStore α → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hbelow : HeapBelow σ frontier)
+    (hcaps : capHeapAgrees capσ config.store.wasm.mem.pages config.store.wasm.memoryCaps)
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+            config.store.runtime.currentModule ∗
+        hostEnvOwn config.store.runtime.entry.id
+            config.store.runtime.currentHost ∗
+        hostStateOwn config.store.wasm.host ∗
+        heapFrontierOwn frontier ∗
+        memoryPagesOwn config.store.wasm.mem.pages ∗
+        ([∗map] index ↦ cap ∈ capσ, memoryCapOwn index cap)) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          [{ outcome,
+            ∀ (store : MachineStore α) (_observations : List StepKind),
+              stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
+              ⌜post outcome store⌝ }]) :
+    TerminatesWithOutcome config post := by
+  apply stronglyNormalizing_adequate_outcome config post
+  · apply
+      wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at_caps
+        config σ globalσ capσ frontier (fun _outcome => iprop(True))
+        hagree hinBounds hbelow hcaps hglobals hwf
+    intro hlc gs legacyPages
+    iintro Hresources
+    iapply (twp.mono (fun _ => BI.true_intro))
+    iapply_exact htwp hlc with Hresources
+  · apply wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at_caps
+      config σ globalσ capσ frontier post hagree hinBounds hbelow hcaps hglobals hwf
+    intro gs legacyPages
+    iintro Hresources
+    iapply twp.to_wp
+    iapply_exact htwp .hasLC with Hresources
+
+/-- Compatibility total frontend with no cap ownership requested. -/
 theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_at
     [WasmSmallStepGpreS α]
     (config : Config α)
@@ -359,7 +505,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_at
     (hbelow : HeapBelow σ frontier)
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -383,13 +529,13 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_at
       wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at
         config σ globalσ frontier (fun _outcome => iprop(True))
         hagree hinBounds hbelow hglobals hwf
-    intro hlc gs
+    intro hlc gs legacyPages
     iintro Hresources
     iapply (twp.mono (fun _ => BI.true_intro))
     iapply_exact htwp hlc with Hresources
   · apply wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
       config σ globalσ frontier post hagree hinBounds hbelow hglobals hwf
-    intro gs
+    intro gs legacyPages
     iintro Hresources
     iapply twp.to_wp
     iapply_exact htwp .hasLC with Hresources
@@ -408,7 +554,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome
     (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
     (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
     (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α],
+    (htwp : ∀ (hlc : HasLC) [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α],
       (([∗map] address ↦ value ∈ σ,
           pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
             address (DFrac.own 1) value) ∗
@@ -428,7 +574,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome
   apply wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_at
       config σ globalσ UInt32.size post hagree hinBounds
       (heapBelow_uint32Size σ) hglobals hwf
-  intro hlc gs
+  intro hlc gs legacyPages
   iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, _, _⟩
   iapply_frame htwp hlc using [Hheap Hglobals Hruntime Henv Hhost]
 
