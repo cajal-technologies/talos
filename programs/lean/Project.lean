@@ -66,3 +66,4 @@ import Project.RustHashMap.CollectContract
 import Project.RustHashMap.DriverTail
 import Project.RustHashMap.DriverTailProof
 import Project.RustHashMap.DriverProof
+import Project.RustHashMap.DecoderDefs
