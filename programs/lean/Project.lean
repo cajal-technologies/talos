@@ -81,3 +81,4 @@ import Project.RustHashMap.Func36Proof
 import Project.RustHashMap.Func32Proof
 import Project.RustHashMap.Func31Proof
 import Project.RustHashMap.Func34Proof
+import Project.RustHashMap.Func33Proof
