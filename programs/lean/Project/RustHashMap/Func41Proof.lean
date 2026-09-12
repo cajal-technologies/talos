@@ -30,7 +30,7 @@ open scoped Wasm.SmallStep.Outcome
 
 /-- Read the non-null fact of a live block without giving up ownership.
 The null arm of the body at WAT line 9150 is dead because of it. -/
-private theorem LiveBlock_ptr_ne_zero [WasmSmallStepGS hlc Universal.State]
+theorem LiveBlock_ptr_ne_zero [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (blockId : Nat) (ptr : UInt32) (layout : AllocLayout)
     (bytes : List UInt8) :
     LiveBlock heapId blockId ptr layout bytes ⊢

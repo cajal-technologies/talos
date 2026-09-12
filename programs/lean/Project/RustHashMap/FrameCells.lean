@@ -146,6 +146,20 @@ theorem set_two (values : List UInt32) (first second : UInt32)
   · rfl
   · simp at hlength
 
+/-- The three-word output slot after the three stores that fill it. -/
+theorem set_three (values : List UInt32) (first second third : UInt32)
+    (hlength : values.length = 3) :
+    ((values.set 1 second).set 2 third).set 0 first = [first, second, third] := by
+  rcases values with _ | ⟨x, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨y, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨z, rest⟩
+  · simp at hlength
+  rcases rest with _ | ⟨w, rest⟩
+  · rfl
+  · simp at hlength
+
 /-- The four address facts that `twp_load32` and `twp_store32` ask for at
 one frame offset. -/
 theorem offset_facts (base offset : UInt32) (o : Nat)
@@ -304,5 +318,12 @@ theorem StackBelow_length [WasmHeapGS Universal.State]
   · isplitl_pureexact hlength
     iexact Hbytes
   · ipureexact hlength
+
+/-- Two offsets from the same base add. -/
+theorem frame_offset (base : UInt32) (lo hi total : Nat)
+    (htotal : lo + hi = total) :
+    base + UInt32.ofNat lo + UInt32.ofNat hi
+      = base + UInt32.ofNat total := by
+  rw [UInt32.add_assoc, ← UInt32.ofNat_add, htotal]
 
 end Project.RustHashMap.FrameCells
