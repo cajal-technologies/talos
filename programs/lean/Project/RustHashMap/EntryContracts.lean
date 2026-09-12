@@ -67,7 +67,7 @@ shadow stack.  `collect_entries` reads and writes those cells, and they sit
 above the stack top, so they are a separate resource. -/
 def EntrySpec [WasmSmallStepGS hlc Universal.State]
     (absoluteIndex : Nat) (expected : List UInt8 → List UInt8) : Prop :=
-  ∀ (heapId : GName) (input stackBytes randomState : List UInt8)
+  ∀ (heapId : GName) (input stackBytes dataBytes randomState : List UInt8)
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
@@ -78,10 +78,12 @@ def EntrySpec [WasmSmallStepGS hlc Universal.State]
         RuntimeContext ∗
         StackPointer entryStackTop ∗
         StackRegion 0 stackBytes ∗
+        StackRegion entryStackTop dataBytes ∗
         StackRegion randomStateCell randomState ∗
         BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
         Streams input [] false ∗
         ⌜stackBytes.length = stackSize ∧
+          dataBytes.length = dataSegmentSize ∧
           randomState.length = randomStateSize⌝ ∗
         (RuntimeContext -∗ ExportSuccess (expected input) -∗
           ResumeWP [] callerLocals stack code arity remainder controls calls

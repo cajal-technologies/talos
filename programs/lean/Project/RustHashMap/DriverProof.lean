@@ -130,11 +130,11 @@ theorem func19_correct_of [WasmSmallStepGS hlc Universal.State]
     (hfunc52 : Func52Spec (hlc := hlc)) :
     Func19Spec (hlc := hlc) := by
   unfold Func19Spec EntrySpec CallContract callExpr
-  intro heapId input stackBytes randomState callerLocals stack code arity
+  intro heapId input stackBytes dataBytes randomState callerLocals stack code arity
     remainder controls calls s E Φ
-  iintro ⟨Hruntime, Hsp, Hstack, Hrandom, Hbump, Hstreams, %hlens, Hcont,
+  iintro ⟨Hruntime, Hsp, Hstack, Hdata, Hrandom, Hbump, Hstreams, %hlens, Hcont,
     Hoom⟩
-  obtain ⟨hstack, hrandom⟩ := hlens
+  obtain ⟨hstack, hdata, hrandom⟩ := hlens
   -- the 544 bytes of the driver frame and the region below it
   icases (ByteSlice_split_at 0 1048032 stackBytes
     (by rw [hstack]; decide)).mp $$ Hstack with ⟨_Hlow, Hhigh⟩
@@ -239,9 +239,9 @@ theorem func28_correct_of [WasmSmallStepGS hlc Universal.State]
     (hfunc19 : Func19Spec (hlc := hlc)) :
     Func28Spec (hlc := hlc) := by
   unfold Func28Spec EntrySpec CallContract callExpr
-  intro heapId input stackBytes randomState callerLocals stack code arity
+  intro heapId input stackBytes dataBytes randomState callerLocals stack code arity
     remainder controls calls s E Φ
-  iintro ⟨Hruntime, Hsp, Hstack, Hrandom, Hbump, Hstreams, %hlens, Hcont,
+  iintro ⟨Hruntime, Hsp, Hstack, Hdata, Hrandom, Hbump, Hstreams, %hlens, Hcont,
     Hoom⟩
   iopen_map_runtime Hruntime with ⟨Hmodule, Henv⟩
   wasm_twp_bind Wasm.SmallStep.twp_call Project.RustHashMap.«module» 31
@@ -253,10 +253,11 @@ theorem func28_correct_of [WasmSmallStepGS hlc Universal.State]
   ihave Hruntime : RuntimeContext $$ [Hmodule Henv]
   · isimp only [RuntimeContext]
     iframe
-  iapply callContract_entails (hfunc19 heapId input stackBytes randomState
+  iapply callContract_entails (hfunc19 heapId input stackBytes dataBytes
+    randomState
     (callerLocals := (⟨[], [], []⟩ : Locals)) (stack := []) (code := [])
     (arity := 0) (remainder := []) (controls := []))
-  isplitl_exacts [Hruntime Hsp Hstack Hrandom Hbump Hstreams]
+  isplitl_exacts [Hruntime Hsp Hstack Hdata Hrandom Hbump Hstreams]
   isplitl_pureexact hlens
   isplitl [Hcont]
   · iintro Hruntime Hsuccess

@@ -126,11 +126,23 @@ private def entryCursorBytes : List UInt8 :=
 def entryRandomBytes : List UInt8 :=
   physicalBytes entryMemory randomStateCell randomStateSize
 
+/-- The initial bytes of the one data segment.  It starts at the stack top
+and ends at the allocator cursor.
+
+The compiled error paths pass pointers into this region, and a body proof
+that follows one of them needs the bytes as a resource.  Absolute function
+57 copies the message of an `io::Error` out of here with `memory.copy`. -/
+def entryDataBytes : List UInt8 :=
+  physicalBytes entryMemory entryStackTop dataSegmentSize
+
 private abbrev entryStackHeap : WasmHeapMap (Option UInt8) :=
   insertFreshBytes ∅ 0 entryStackBytes
 
+private abbrev entryDataHeap : WasmHeapMap (Option UInt8) :=
+  insertFreshBytes entryStackHeap entryStackTop entryDataBytes
+
 private abbrev entryCursorHeap : WasmHeapMap (Option UInt8) :=
-  insertFreshBytes entryStackHeap allocatorCursor entryCursorBytes
+  insertFreshBytes entryDataHeap allocatorCursor entryCursorBytes
 
 /-- The sealed initial heap.  The kernel must not evaluate the one mebibyte
 fold into the tree map, so the map lives behind an opaque constant and
@@ -141,8 +153,9 @@ private structure EntryHeapSeal where
 
 private opaque entryHeapSeal : EntryHeapSeal := ⟨_, rfl⟩
 
-/-- The initial owned heap: the whole shadow stack, the allocator cursor
-word, and the thread-local `RandomState` region. -/
+/-- The initial owned heap: the whole shadow stack, the data segment, the
+allocator cursor word, and the thread-local `RandomState` region.  Together
+they cover every address below `heapBase` that the module can touch. -/
 def entryHeap : WasmHeapMap (Option UInt8) := entryHeapSeal.heap
 
 theorem entryHeap_eq :
@@ -160,22 +173,33 @@ def entryGlobals : WasmGlobalMap Value :=
     entryRandomBytes.length = randomStateSize := by
   simp [entryRandomBytes]
 
+@[simp] theorem entryDataBytes_length :
+    entryDataBytes.length = dataSegmentSize := by
+  simp [entryDataBytes]
+
 private theorem empty_below_entryStack :
     HeapBelow (∅ : WasmHeapMap (Option UInt8)) (0 : UInt32).toNat := by
   intro key value hget
   rw [get?_empty] at hget; contradiction
 
-private theorem entryStackHeap_below_cursor :
-    HeapBelow entryStackHeap allocatorCursor.toNat := by
+private theorem entryStackHeap_below_data :
+    HeapBelow entryStackHeap entryStackTop.toNat := by
   have h := HeapBelow.insertFreshBytes
     (bytes := entryStackBytes) empty_below_entryStack (by
       rw [entryStackBytes_length]; decide)
   exact h.mono (by rw [entryStackBytes_length]; decide)
 
+private theorem entryDataHeap_below_cursor :
+    HeapBelow entryDataHeap allocatorCursor.toNat := by
+  have h := HeapBelow.insertFreshBytes
+    (bytes := entryDataBytes) entryStackHeap_below_data (by
+      rw [entryDataBytes_length]; decide)
+  exact h.mono (by rw [entryDataBytes_length]; decide)
+
 private theorem entryCursorHeap_below_random :
     HeapBelow entryCursorHeap randomStateCell.toNat := by
   have h := HeapBelow.insertFreshBytes
-    (bytes := entryCursorBytes) entryStackHeap_below_cursor (by
+    (bytes := entryCursorBytes) entryDataHeap_below_cursor (by
       change allocatorCursor.toNat + 4 < UInt32.size
       decide)
   exact h.mono (by decide)
@@ -216,9 +240,13 @@ theorem entryHeap_facts (index : Nat) (input : List UInt8) :
     (heapAgreesWithMem_empty _)
     (heapAddressesInBounds_empty _)
     (by decide) (by decide)
-  have hcursor := insertFreshPhysicalBytes_facts
+  have hdata := insertFreshPhysicalBytes_facts
     entryStackHeap (storeResolve (entryConfig index input).store)
-    entryMemory allocatorCursor 4 (by rfl) hstack.1 hstack.2
+    entryMemory entryStackTop dataSegmentSize (by rfl) hstack.1 hstack.2
+    (by decide) (by decide)
+  have hcursor := insertFreshPhysicalBytes_facts
+    entryDataHeap (storeResolve (entryConfig index input).store)
+    entryMemory allocatorCursor 4 (by rfl) hdata.1 hdata.2
     (by decide) (by decide)
   have hrandom := insertFreshPhysicalBytes_facts
     entryCursorHeap (storeResolve (entryConfig index input).store)
@@ -270,16 +298,21 @@ private theorem entryHeap_split [WasmSmallStepGS hlc Universal.State] :
           address (DFrac.own 1) value) ⊢
       pointsToBytes 0 randomStateCell entryRandomBytes ∗
         pointsToBytes 0 allocatorCursor entryCursorBytes ∗
+        pointsToBytes 0 entryStackTop entryDataBytes ∗
         pointsToBytes 0 0 entryStackBytes := by
   rw [entryHeap_eq]
   refine (insertFreshBytes_bigSep_pointsToBytes entryCursorHeap randomStateCell
     entryRandomBytes entryCursorHeap_below_random (by
       rw [entryRandomBytes_length]; decide)).trans ?_
   refine BI.sep_mono_right ?_
-  refine (insertFreshBytes_bigSep_pointsToBytes entryStackHeap allocatorCursor
-    entryCursorBytes entryStackHeap_below_cursor (by
+  refine (insertFreshBytes_bigSep_pointsToBytes entryDataHeap allocatorCursor
+    entryCursorBytes entryDataHeap_below_cursor (by
       change allocatorCursor.toNat + 4 < UInt32.size
       decide)).trans ?_
+  refine BI.sep_mono_right ?_
+  refine (insertFreshBytes_bigSep_pointsToBytes entryStackHeap entryStackTop
+    entryDataBytes entryStackHeap_below_data (by
+      rw [entryDataBytes_length]; decide)).trans ?_
   refine BI.sep_mono_right ?_
   refine (insertFreshBytes_bigSep_pointsToBytes
     (∅ : WasmHeapMap (Option UInt8)) 0 entryStackBytes
@@ -305,11 +338,13 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
         RuntimeContext ∗
         StackPointer entryStackTop ∗
         StackRegion 0 entryStackBytes ∗
+        StackRegion entryStackTop entryDataBytes ∗
         StackRegion randomStateCell entryRandomBytes ∗
         BumpHeap heapId 0 heapBase.toNat AllocationHistory.empty ∗
         Streams input [] false := by
   iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
-  ihave ⟨HrandomBytes, HcursorBytes, Hstack⟩ := entryHeap_split $$ Hheap
+  ihave ⟨HrandomBytes, HcursorBytes, HdataBytes, Hstack⟩ :=
+    entryHeap_split $$ Hheap
   ihave Hcursor : pointsTo_u32 0 allocatorCursor 0 $$ [HcursorBytes]
   · iapply (pointsTo_u32_as_bytes 0 allocatorCursor 0).mpr
     irw_exact [← entryCursorBytes_u32] with HcursorBytes
@@ -339,6 +374,10 @@ theorem initialResources [WasmSmallStepGS hlc Universal.State]
   · unfold StackRegion Slices.ByteSlice
     isplitr_pureexact (by rw [entryStackBytes_length]; decide)
     iexact Hstack
+  isplitl [HdataBytes]
+  · unfold StackRegion Slices.ByteSlice
+    isplitr_pureexact (by rw [entryDataBytes_length]; decide)
+    iexact HdataBytes
   isplitl [HrandomBytes]
   · unfold StackRegion Slices.ByteSlice
     isplitr_pureexact (by rw [entryRandomBytes_length]; decide)
@@ -401,14 +440,16 @@ theorem twp_entry_of_spec
         [{ irisEntryPost (expected input) }] := by
   iintro Hinitial
   imod initialResources input $$ Hinitial with
-    ⟨%heapId, Hruntime, Hsp, Hstack, Hrandom, Hbump, Hstreams⟩
-  have hcall := hspec heapId input entryStackBytes entryRandomBytes
+    ⟨%heapId, Hruntime, Hsp, Hstack, Hdata, Hrandom, Hbump, Hstreams⟩
+  have hcall := hspec heapId input entryStackBytes entryDataBytes
+    entryRandomBytes
     (callerLocals := {}) (stack := []) (code := []) (arity := 0)
     (remainder := []) (controls := []) (calls := [])
     (s := Stuckness.NotStuck) (E := ⊤) (Φ := irisEntryPost (expected input))
   unfold CallContract at hcall
-  iapply_frame hcall using [Hruntime Hsp Hstack Hrandom Hbump Hstreams]
-  isplitr_pureexact ⟨entryStackBytes_length, entryRandomBytes_length⟩
+  iapply_frame hcall using [Hruntime Hsp Hstack Hdata Hrandom Hbump Hstreams]
+  isplitr_pureexact
+    ⟨entryStackBytes_length, entryDataBytes_length, entryRandomBytes_length⟩
   isplitr
   · iintro _Hruntime Hsuccess
     unfold ResumeWP resumeExpr

@@ -54,6 +54,12 @@ def randomStateCell : UInt32 := 1049512
 seeds, the state byte, and seven bytes of padding. -/
 def randomStateSize : Nat := 24
 
+/-- The size of the one data segment.  It starts at `entryStackTop` and
+ends at `allocatorCursor`, so it is 1049496 minus 1048576 bytes.  It holds
+the static strings and the `Location` records that the compiled error
+paths pass by pointer. -/
+def dataSegmentSize : Nat := 920
+
 /-! ## Call-site shapes -/
 
 /-- A call site with its top-of-stack operands already in machine order. -/
