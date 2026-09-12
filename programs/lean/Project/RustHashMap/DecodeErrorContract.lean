@@ -16,17 +16,19 @@ contract as a hypothesis, in the same way that
 
 The body keeps a 16-byte frame.  It reads the `ErrorKind` tag of the error
 with `func 53`, compares the tag with the static byte at 1049136 with
-`func 54`, and then takes one of two arms.
+`func 54`, and then takes one of two arms.  `br_if` leaves the inner block
+when the comparison returns a non-zero value, which is when the two bytes
+are equal.
 
-* The tags are equal.  The body copies the sixteen bytes of the error into
-  the output slot and leaves the error alone.  WAT lines 9673 to 9684.
-* The tags differ.  The body builds a second `io::Error` into the output
+* The tags are equal.  The body builds a second `io::Error` into the output
   slot with `func 55`, from the 26-byte message at 1049137, and then drops
   the first error with `func 38`.  WAT lines 9686 to 9700.
+* The tags differ.  The body copies the sixteen bytes of the error into the
+  output slot and leaves the error alone.  WAT lines 9673 to 9684.
 
-Word 0 of the output is never `okTag`.  On the first arm it is word 0 of
-the input, which the caller promises is not `okTag`.  On the second arm it
-is the capacity of a 26-byte `String`, and `Func52Spec` promises that the
+Word 0 of the output is never `okTag`.  On the copy arm it is word 0 of the
+input, which the caller promises is not `okTag`.  On the other arm it is
+the capacity of a 26-byte `String`, and `Func52Spec` promises that the
 capacity is not `okTag`.
 
 ## The stack
