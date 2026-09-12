@@ -4,11 +4,12 @@ import CodeLib.SepLogic.SmallStepTotalLifting
 # Byte rules for every terminal view
 
 `CodeLib.SepLogic.SmallStepTotalLiftingBytes` states the byte rules
-`twp_load8U` and `twp_store8` for the normal-result adapter only.  A proof
-that opens `Wasm.SmallStep.Outcome` cannot apply them.  This module states
-the same four rules in the terminal-generic form of
-`CodeLib.SepLogic.SmallStepTotalLifting`, so they apply under every
-`TerminalView`.  The proofs follow `twp_load32` and `twp_store32`.
+`twp_load8U` and `twp_store8`, and the rule `twp_drop`, for the
+normal-result adapter only.  A proof that opens `Wasm.SmallStep.Outcome`
+cannot apply them.  This module states the same five rules in the
+terminal-generic form of `CodeLib.SepLogic.SmallStepTotalLifting`, so they
+apply under every `TerminalView`.  The proofs of the four byte rules follow
+`twp_load32` and `twp_store32`, and `twp_drop_gen` is one pure step.
 -/
 
 namespace Wasm.SmallStep
@@ -159,6 +160,19 @@ theorem twp_store8_addr_gen
       (params := params) (localValues := localValues) (values := values)
       (code := code) (arity := arity) (remainder := remainder)
       (controls := controls) (calls := calls) oldByte (by simp))
+
+/-- Total rule for `drop` under every terminal view. -/
+theorem twp_drop_gen
+    {params localValues values : List Value}
+    {value : Value} {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} :
+    WP (.running ⟨⟨params, localValues, values⟩,
+        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
+    WP (.running ⟨⟨params, localValues, value :: values⟩,
+        .drop :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
+      [{ Φ }] :=
+  twp_pureStep _ _ _ (fun _ => Step.drop)
 
 end terminalGenericBytes
 
