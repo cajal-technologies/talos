@@ -154,7 +154,8 @@ arms of `Project.RustHashMap.BodyContracts.Func1Spec`, in the same order
 and with the same binders.  The loop leaves through the first arm when the
 count runs out, and through the second when a step runs out of input. -/
 def DecoderPost [WasmSmallStepGS hlc Universal.State]
-    (sp out hdr ptr len : UInt32) (heapId : GName) (bytes : List UInt8)
+    (sp out hdr ptr len : UInt32) (heapId : GName)
+    (bytes dataBytes : List UInt8)
     (input output : List UInt8) (raised : Bool)
     (callerLocals : Locals) (stack : List Value) (code : Program)
     (arity : Nat) (remainder : List Value) (controls : List ControlFrame)
@@ -174,6 +175,7 @@ def DecoderPost [WasmSmallStepGS hlc Universal.State]
       pointsTo_u32 0 hdr (ptr + 4 + 8 * headerWord bytes) -∗
       pointsTo_u32 0 (hdr + 4) (len - 4 - 8 * headerWord bytes) -∗
       Slices.ByteSlice 0 ptr bytes -∗
+      Slices.ByteSlice 0 entryStackTop dataBytes -∗
       Slices.ByteSlice 0 buffer (payloadOut ++ spare) -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
@@ -196,6 +198,7 @@ def DecoderPost [WasmSmallStepGS hlc Universal.State]
       pointsTo_u32 0 hdr ptr' -∗
       pointsTo_u32 0 (hdr + 4) len' -∗
       Slices.ByteSlice 0 ptr bytes -∗
+      Slices.ByteSlice 0 entryStackTop dataBytes -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
       ⌜word0 ≠ okTag⌝ -∗
@@ -215,11 +218,14 @@ both are parameters.
 
 The facts are, in order: the buffer holds the pairs and the spare bytes;
 the index is below the declared count; the index is at most the capacity;
-the input holds every byte that the loop read; and the capacity fits the
-heap. -/
+the input holds every byte that the loop read; the capacity fits the heap;
+and the data segment has its full length.
+
+The loop holds the data segment, because the short-input arm of a step
+builds its message from it. -/
 def LoopInv [WasmSmallStepGS hlc Universal.State]
     (sp out hdr ptr len frame : UInt32) (heapId : GName)
-    (bytes outBefore below pad scratch : List UInt8)
+    (bytes outBefore below pad scratch dataBytes : List UInt8)
     (input output : List UInt8) (raised : Bool)
     (callerLocals : Locals) (stack : List Value) (code : Program)
     (arity : Nat) (remainder : List Value) (controls : List ControlFrame)
@@ -238,6 +244,7 @@ def LoopInv [WasmSmallStepGS hlc Universal.State]
   pointsTo_u32 0 hdr (ptr + 4 + UInt32.ofNat (8 * st.index)) ∗
   pointsTo_u32 0 (hdr + 4) (len - 4 - UInt32.ofNat (8 * st.index)) ∗
   Slices.ByteSlice 0 ptr bytes ∗
+  Slices.ByteSlice 0 entryStackTop dataBytes ∗
   Slices.ByteSlice 0 st.buffer (payload bytes st.index ++ st.spare) ∗
   BumpHeap heapId st.storedCursor st.frontier st.history ∗
   Streams input output raised ∗
@@ -245,8 +252,9 @@ def LoopInv [WasmSmallStepGS hlc Universal.State]
     st.index < (headerWord bytes).toNat ∧
     st.index ≤ st.capacity.toNat ∧
     4 + 8 * st.index ≤ bytes.length ∧
-    CapacityFits st.capacity st.frontier⌝ ∗
-  DecoderPost sp out hdr ptr len heapId bytes input output raised
+    CapacityFits st.capacity st.frontier ∧
+    dataBytes.length = dataSegmentSize⌝ ∗
+  DecoderPost sp out hdr ptr len heapId bytes dataBytes input output raised
     callerLocals stack code arity remainder controls calls s E Φ)
 
 end Project.RustHashMap.Decoder

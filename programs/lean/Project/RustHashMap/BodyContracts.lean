@@ -321,10 +321,33 @@ The body proof must carry two facts.  Write them as loop invariants.
   builds to be `okTag`.  That word is a `String` capacity, 27 at WAT line
   626 and 26 at WAT line 9689, so it is never `okTag`.
 
-`Project.RustHashMap.Decoder.LoopInv` carries both facts. -/
+`Project.RustHashMap.Decoder.LoopInv` carries both facts.
+
+## Why the data segment is a resource
+
+The error arm builds a message with `func 55` at WAT lines 487 to 493, and
+the loop builds the same one at WAT lines 621 to 627.  The message is 27
+bytes at 1049080, which is `entryStackTop + 504`.  `Func52Spec` above takes
+the message bytes as a resource, because the chain copies them.  The arm
+then calls `func 52`, whose own error arm builds a second message of 26
+bytes at 1049137.  Both sit in the data segment at [1048576, 1049496).
+
+So this contract lends the whole data segment and gives it back unchanged.
+An earlier version lent nothing, and no proof of it was possible, because
+the body reads memory that the contract does not own.
+`Project.RustHashMap.DriverTail.DriverTailSpec` carries the segment
+already, so the caller pays nothing new.
+
+## What is still open below the decoder
+
+The error arm calls absolute `func 52`, which turns the `io::Error` into
+the error that the output slot takes.  That call opens a subtree of 14
+bodies and 325 WAT lines that no contract covers yet: 34 to 41, 45 to 47,
+52, 53 and 54.  Each one is small, and the largest is 63 lines.  The
+accepting arm of the decoder reaches none of them. -/
 def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out hdr ptr len : UInt32)
-    (heapId : GName) (bytes outBefore below : List UInt8)
+    (heapId : GName) (bytes outBefore below dataBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (input output : List UInt8) (raised : Bool)
     {callerLocals : Locals} {stack : List Value}
@@ -341,11 +364,13 @@ def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         pointsTo_u32 0 hdr ptr ∗
         pointsTo_u32 0 (hdr + 4) len ∗
         Slices.ByteSlice 0 ptr bytes ∗
+        Slices.ByteSlice 0 entryStackTop dataBytes ∗
         BumpHeap heapId storedCursor frontier history ∗
         Streams input output raised ∗
         ⌜outBefore.length = 16 ∧ bytes.length = len.toNat ∧
           decoderDepth ≤ sp.toNat ∧ out.toNat + 16 < UInt32.size ∧
-          hdr.toNat + 8 < UInt32.size⌝ ∗
+          hdr.toNat + 8 < UInt32.size ∧
+          dataBytes.length = dataSegmentSize⌝ ∗
         (-- the accepting arm
          (∀ capacity : UInt32, ∀ buffer : UInt32, ∀ payload : List UInt8,
             ∀ spare : List UInt8, ∀ below' : List UInt8,
@@ -363,6 +388,7 @@ def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
             pointsTo_u32 0 (hdr + 4)
               (len - 4 - 8 * headerWord bytes) -∗
             Slices.ByteSlice 0 ptr bytes -∗
+            Slices.ByteSlice 0 entryStackTop dataBytes -∗
             Slices.ByteSlice 0 buffer (payload ++ spare) -∗
             BumpHeap heapId storedCursor' frontier' history' -∗
             Streams input output raised -∗
@@ -386,6 +412,7 @@ def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
             pointsTo_u32 0 hdr ptr' -∗
             pointsTo_u32 0 (hdr + 4) len' -∗
             Slices.ByteSlice 0 ptr bytes -∗
+            Slices.ByteSlice 0 entryStackTop dataBytes -∗
             BumpHeap heapId storedCursor' frontier' history' -∗
             Streams input output raised -∗
             ⌜word0 ≠ okTag⌝ -∗

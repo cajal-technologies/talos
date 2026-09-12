@@ -1372,18 +1372,12 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
     remainder controls calls s E Φ
   iintro ⟨HafterRead, Hextra, Hkeys, Hdata, %hsizes, Hcont, Hoom⟩
   obtain ⟨hextra, hkeys, hdata, hinput⟩ := hsizes
-  -- The static message sits at 1049107, which is `entryStackTop + 531`.  Cut
-  -- its eighteen bytes out of the data segment and lend them to the error
-  -- path, which is the only caller that reads them.
+  -- The static message sits at 1049107, which is `entryStackTop + 531`.  Its
+  -- eighteen bytes go to the error path, which is the only caller that reads
+  -- them.  The cut waits until the decoder gives the segment back, because
+  -- the decoder takes the whole segment.
   have hmsg : ((dataBytes.drop 531).take 18).length = 18 := by
     simp [hdata, dataSegmentSize]
-  icases (ByteSlice_split_at entryStackTop 531 dataBytes
-    (by simp [hdata, dataSegmentSize])).mp $$ Hdata with ⟨_Hbefore, Hmsg⟩
-  isimp only [UInt32.reduceToNat,
-    show entryStackTop + 531 = 1049107 by decide] at Hmsg
-  icases (ByteSlice_split_at 1049107 18 (dataBytes.drop 531)
-    (by simp [hdata, dataSegmentSize])).mp $$ Hmsg with ⟨Hmsg, _Hafter⟩
-  isimp only [UInt32.reduceToNat] at Hmsg
   isimp only [AfterRead] at HafterRead
   icases HafterRead with ⟨Hruntime, Hsp, Hreserve, Hhead, Hchunk, Hslice,
     Hvec, Htail, Hbump, Hstreams, %hshape⟩
@@ -1449,7 +1443,7 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
   · irw_exact [show func19Base + 280 + 4 = func19Base + 284 by decide] with Hs1
   have Hdecode := hfunc1 func19Base (func19Base + 288) (func19Base + 280) ptr
     (UInt32.ofNat input.length) heapId input
-    (vecHeaderBytes capacity ptr input ++ tail) (extra ++ reserve)
+    (vecHeaderBytes capacity ptr input ++ tail) (extra ++ reserve) dataBytes
     storedCursor frontier history [] output false
     (callerLocals :=
       ⟨[], [Value.i32 func19Base, .i32 (UInt32.ofNat input.length),
@@ -1461,14 +1455,22 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
   unfold CallContract callExpr at Hdecode
   simp only [List.cons_append, List.nil_append] at Hdecode
   iapply Hdecode
-  isplitl_exacts [Hruntime Hsp Hbelow Hout Hs0 Hs1 Hinput Hbump Hstreams]
+  isplitl_exacts
+    [Hruntime Hsp Hbelow Hout Hs0 Hs1 Hinput Hdata Hbump Hstreams]
   isplitl_pureexact ⟨by simp [htail], hlenNat.symm, by decide, by decide,
-    by decide⟩
+    by decide, hdata⟩
   isplit
   · iintro %cap' %buffer %payload %spare' %below' %storedCursor' %frontier'
-      %history' %haccept Hruntime Hsp Hbelow Hout Hs0 Hs1 Hbytes Hbuf Hbump
-      Hstreams %hfacts2
+      %history' %haccept Hruntime Hsp Hbelow Hout Hs0 Hs1 Hbytes Hdata Hbuf
+      Hbump Hstreams %hfacts2
     isimp only [ResumeWP, resumeExpr, List.nil_append]
+    icases (ByteSlice_split_at entryStackTop 531 dataBytes
+      (by simp [hdata, dataSegmentSize])).mp $$ Hdata with ⟨_Hbefore, Hmsg⟩
+    isimp only [UInt32.reduceToNat,
+      show entryStackTop + 531 = 1049107 by decide] at Hmsg
+    icases (ByteSlice_split_at 1049107 18 (dataBytes.drop 531)
+      (by simp [hdata, dataSegmentSize])).mp $$ Hmsg with ⟨Hmsg, _Hafter⟩
+    isimp only [UInt32.reduceToNat] at Hmsg
     obtain ⟨hpayloadEq, hcapBound, hspareLen, _hzero⟩ := hfacts2
     obtain ⟨hfour, hfits⟩ := haccept
     have hprefixLen : (input.take (4 + 8 * (headerWord input).toNat)).length
@@ -1568,7 +1570,7 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
   · isplit
     · iintro %word0 %word1 %word2 %word3 %ptr' %len' %below' %storedCursor'
         %frontier' %history' %hreject Hruntime Hsp Hbelow Hout Hs0 Hs1 Hbytes
-        Hbump Hstreams %hword0
+        Hdata Hbump Hstreams %hword0
       isimp only [ResumeWP, resumeExpr, List.nil_append]
       ihave ⟨H288, H292, H296, H300⟩ :=
         ByteSlice_four_words (func19Base + 288) word0 word1 word2 word3 $$ Hout
