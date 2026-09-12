@@ -1,4 +1,5 @@
 import Project.RustHashMap.BodyContracts
+import CodeLib.RustStd.HashMap.TableMem
 
 /-!
 # The frame of a body, read as word cells
@@ -368,5 +369,87 @@ theorem frame_offset (base : UInt32) (lo hi total : Nat)
     base + UInt32.ofNat lo + UInt32.ofNat hi
       = base + UInt32.ofNat total := by
   rw [UInt32.add_assoc, ← UInt32.ofNat_add, htotal]
+
+/-! ## Eight-byte block moves
+
+A compiled block move is two `local.get`s, one `i64.load`, and one
+`i64.store`.  The two memory rules take one owned `pointsTo_u64` at the
+address that each rule computes.  The bytes of a frame or of an output
+slot arrive as `Slices.ByteSlice`, so every move needs one wrap and one
+unwrap.
+
+The pair below does that.  It hides the bound that
+`Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64` returns beside the
+word, and it takes the address equation as an argument.  A rule with the
+offset 0 asks for the word at `base + 0` while the slice sits at `base`,
+so the caller passes `hbaseZero : base + 0 = base` there and `rfl`
+everywhere else. -/
+
+/-- Eight owned bytes as the group word that the `i64` rules take. -/
+theorem ByteSlice_as_word [WasmHeapGS Universal.State]
+    (addr target : UInt32) (bytes : List UInt8)
+    (haddr : target = addr) (hlength : bytes.length = 8) :
+    Slices.ByteSlice 0 addr bytes ⊢
+      pointsTo_u64 0 target (Wasm.RustStd.HashMap.Table.groupWord bytes) := by
+  subst haddr
+  iintro Hbytes
+  ihave ⟨%_hbound, Hword⟩ :=
+    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 target bytes
+      hlength).mp $$ Hbytes
+  iexact Hword
+
+/-- The group word back as eight owned bytes. -/
+theorem ByteSlice_of_word [WasmHeapGS Universal.State]
+    (addr target : UInt32) (bytes : List UInt8)
+    (haddr : target = addr) (hlength : bytes.length = 8)
+    (hbound : addr.toNat + 8 < UInt32.size) :
+    pointsTo_u64 0 target (Wasm.RustStd.HashMap.Table.groupWord bytes) ⊢
+      Slices.ByteSlice 0 addr bytes := by
+  subst haddr
+  iintro Hword
+  iapply (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 target bytes
+    hlength).mpr
+  isplitl_pureexact hbound
+  iexact Hword
+
+/-- Run one eight-byte block move.  The two address bundles come from
+`offset_facts64` and stay undestructured, so each move names two
+hypotheses instead of sixteen. -/
+macro "wasm_twp_block_move "
+    "(" src:term ", " soff:term ", " srcWord:term ", " hsrc:term ")"
+    "(" dst:term ", " doff:term ", " dstWord:term ", " hdst:term ")"
+    " with " srcRes:ident dstRes:ident : tactic =>
+  `(tactic|
+    (wasm_twp_pures [twp_localGet twp_localGet]
+     wasm_twp_rebind Wasm.SmallStep.twp_load64 (address := $src)
+       (offset := $soff) $srcWord
+       ($hsrc).1 ($hsrc).2.1 ($hsrc).2.2.1 ($hsrc).2.2.2.1
+       ($hsrc).2.2.2.2.1 ($hsrc).2.2.2.2.2.1 ($hsrc).2.2.2.2.2.2.1
+       ($hsrc).2.2.2.2.2.2.2 with $srcRes
+     wasm_twp_rebind Wasm.SmallStep.twp_store64 (address := $dst)
+       (offset := $doff) $dstWord
+       ($hdst).1 ($hdst).2.1 ($hdst).2.2.1 ($hdst).2.2.2.1
+       ($hdst).2.2.2.2.1 ($hdst).2.2.2.2.2.1 ($hdst).2.2.2.2.2.2.1
+       ($hdst).2.2.2.2.2.2.2 with $dstRes))
+
+/-! ## Word blocks of a record -/
+
+/-- Three encoded words, as a two-word block and a one-word block.  A
+precondition carries the record as three `encode` blocks, and the two
+`i64` moves of a pack take it as two `serialize` blocks. -/
+theorem encode_three_as_two_one (a b c : UInt32) :
+    WordCodec.u32le.encode a
+        ++ (WordCodec.u32le.encode b ++ WordCodec.u32le.encode c)
+      = WordCodec.u32le.serialize [a, b] ++ WordCodec.u32le.serialize [c] := by
+  simp [WordCodec.serialize_cons, WordCodec.serialize_nil, List.append_assoc]
+
+/-- Normalize the serialized word blocks of a slot that a body rebuilt.
+The blocks arrive as one `serialize` call for each `i64` or `i32` store,
+and a postcondition asks for one `serialize` call over the whole word
+list. -/
+macro "wasm_serialize_norm" " at " target:ident : tactic =>
+  `(tactic|
+    isimp only [WordCodec.serialize_cons, WordCodec.serialize_nil,
+      List.append_nil, List.append_assoc] at $target:ident)
 
 end Project.RustHashMap.FrameCells

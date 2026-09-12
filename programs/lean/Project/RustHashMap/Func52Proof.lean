@@ -216,8 +216,7 @@ theorem func52_correct [WasmSmallStepGS hlc Universal.State] :
     · unfold StackPointer
       iexact Hsp
     iclose_map_runtime Hruntime with Hmodule Henv
-    isimp only [WordCodec.serialize_cons, WordCodec.serialize_nil,
-      List.append_nil, List.append_assoc] at Hout
+    wasm_serialize_norm at Hout
     ihave Hnormal := BI.and_elim_l $$ Hcont
     ihave Hnormal := Hnormal $$ %msgLen %ptr %msgLen %word3
       %((deepBytes ++ below53')

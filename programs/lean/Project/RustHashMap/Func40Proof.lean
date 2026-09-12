@@ -15,8 +15,8 @@ The move is two instructions.  The third word goes through `i32.load`
 and `i32.store`.  The first two words go through `i64.load offset=4` and
 `i64.store`, and the proof treats that pair as an opaque eight-byte block
 move: the eight bytes become one owned `u64` through
-`Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64`, and the value of
-that word never enters a goal.
+`Project.RustHashMap.FrameCells.ByteSlice_as_word`, and the value of that
+word never enters a goal.
 
 The first four bytes of the frame are dead.  The body writes them never
 and reads them never.
@@ -142,12 +142,10 @@ theorem func40_correct [WasmSmallStepGS hlc Universal.State] :
     · irw_exact [← hsplit3] with Hslot
     isimp only [hlen8, haddr12] at Hframehigh
     -- the address facts
-    obtain ⟨hf4, hf4_1, hf4_2, hf4_3, hf4_4, hf4_5, hf4_6, hf4_7⟩ :=
-      offset_facts64 (sp - 16) 4 4 rfl (by omega)
+    have hfa4 := offset_facts64 (sp - 16) 4 4 rfl (by omega)
     obtain ⟨hf12, hf12_1, hf12_2, hf12_3⟩ :=
       offset_facts (sp - 16) 12 12 rfl (by omega)
-    obtain ⟨hout0, hout0_1, hout0_2, hout0_3, hout0_4, hout0_5, hout0_6,
-      hout0_7⟩ := offset_facts64 out 0 0 rfl (by omega)
+    have hoa0 := offset_facts64 out 0 0 rfl (by omega)
     obtain ⟨hout8, hout8_1, hout8_2, hout8_3⟩ :=
       offset_facts out 8 8 rfl (by omega)
     -- `[out + 8] := [frame + 12]`
@@ -171,31 +169,21 @@ theorem func40_correct [WasmSmallStepGS hlc Universal.State] :
     wasm_twp_rebind twp_store32 (address := out) (offset := 8) outWord3
       hout8 hout8_1 hout8_2 hout8_3 with Houthighcell
     -- `[out + 0 .. 8] := [frame + 4 .. 12]`, an opaque block move
-    ihave ⟨%_hlowBound, Hframeword⟩ :=
-      (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 16 + 4)
-        (WordCodec.u32le.serialize [msgLen, ptr]) hlen8).mp $$ Hframelow
     have houtZero : out + (0 : UInt32) = out := by
       simp
     have houtLow8 : (outBefore.take 8).length = 8 := by
       simp [houtLength]
-    ihave ⟨%_houtBound, Houtword⟩ :=
-      (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 out
-        (outBefore.take 8) houtLow8).mp $$ Houtlow
-    ihave Houtword :
-        pointsTo_u64 0 (out + 0)
-          (Wasm.RustStd.HashMap.Table.groupWord (outBefore.take 8)) $$
-        [Houtword]
-    · irw_exact [houtZero] with Houtword
-    wasm_twp_pures [twp_localGet twp_localGet]
-    wasm_twp_rebind twp_load64
-      (address := sp - 16) (offset := 4)
-      (Wasm.RustStd.HashMap.Table.groupWord
-        (WordCodec.u32le.serialize [msgLen, ptr]))
-      hf4 hf4_1 hf4_2 hf4_3 hf4_4 hf4_5 hf4_6 hf4_7 with Hframeword
-    wasm_twp_rebind twp_store64 (address := out) (offset := 0)
-      (Wasm.RustStd.HashMap.Table.groupWord (outBefore.take 8))
-      hout0 hout0_1 hout0_2 hout0_3 hout0_4 hout0_5 hout0_6 hout0_7
-      with Houtword
+    ihave Hframeword :=
+      ByteSlice_as_word (sp - 16 + 4) (sp - 16 + 4)
+        (WordCodec.u32le.serialize [msgLen, ptr]) rfl hlen8 $$ Hframelow
+    ihave Houtword :=
+      ByteSlice_as_word out (out + 0) (outBefore.take 8) houtZero
+        houtLow8 $$ Houtlow
+    wasm_twp_block_move
+      (sp - 16, 4, Wasm.RustStd.HashMap.Table.groupWord
+        (WordCodec.u32le.serialize [msgLen, ptr]), hfa4)
+      (out, 0, Wasm.RustStd.HashMap.Table.groupWord (outBefore.take 8), hoa0)
+      with Hframeword Houtword
     -- restore the stack pointer and return
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [show (16 : UInt32) + (sp - 16) = sp by
@@ -203,12 +191,10 @@ theorem func40_correct [WasmSmallStepGS hlc Universal.State] :
     wasm_twp_rebind twp_globalSet with Hsp
     wasm_twp_return_from_call Hmodule [List.take_zero, List.nil_append]
     -- put the caller's output slot back together
-    isimp only [houtZero] at Houtword
     ihave Houtlow :=
-      (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 out
-        (WordCodec.u32le.serialize [msgLen, ptr]) hlen8).mpr $$ [Houtword]
-    · isplitl_pureexact (by omega)
-      iexact Houtword
+      ByteSlice_of_word out (out + 0)
+        (WordCodec.u32le.serialize [msgLen, ptr]) houtZero hlen8
+        (by omega) $$ Houtword
     ihave Houthigharray : arrayAt 0 (out + 8) [msgLen] $$ [Houthighcell]
     · isimp only [arrayAt]
       iframe Houthighcell
@@ -224,14 +210,12 @@ theorem func40_correct [WasmSmallStepGS hlc Universal.State] :
         [Houtlow Houthigh]
     · isplitl_exact Houtlow
       · irw_exact [h8out] with Houthigh
-    isimp only [WordCodec.serialize_cons, WordCodec.serialize_nil,
-      List.append_nil, List.append_assoc] at Hout
+    wasm_serialize_norm at Hout
     -- put the frame back together
     ihave Hframelow :=
-      (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 16 + 4)
-        (WordCodec.u32le.serialize [msgLen, ptr]) hlen8).mpr $$ [Hframeword]
-    · isplitl_pureexact (by omega)
-      iexact Hframeword
+      ByteSlice_of_word (sp - 16 + 4) (sp - 16 + 4)
+        (WordCodec.u32le.serialize [msgLen, ptr]) rfl hlen8
+        (by omega) $$ Hframeword
     ihave Hframehigharray : arrayAt 0 (sp - 16 + 12) [msgLen] $$ [Hframecell]
     · isimp only [arrayAt]
       iframe Hframecell

@@ -24,8 +24,8 @@ the frame with `Slices.ByteSlice_singleton`, below the word view.
 
 The body then runs three `i64` shuffles.  Each one is an opaque
 eight-byte block move through
-`Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64`, so no bitvector
-tactic runs.
+`Project.RustHashMap.FrameCells.ByteSlice_as_word` and the
+`wasm_twp_block_move` macro, so no bitvector tactic runs.
 
 Word 3 of the output stays abstract.  The body reads the whole word back
 at `frame + 24`, and its top three bytes are red-zone bytes that the
@@ -117,12 +117,7 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
   -- the record splits into an eight-byte block and the third word
   have hrecLow8 : (WordCodec.u32le.serialize [word0, word1]).length = 8 := by simp
   have hw2Length : (WordCodec.u32le.serialize [word2]).length = 4 := by simp
-  have hrecSplit : WordCodec.u32le.encode word0
-      ++ (WordCodec.u32le.encode word1 ++ WordCodec.u32le.encode word2)
-      = WordCodec.u32le.serialize [word0, word1]
-        ++ WordCodec.u32le.serialize [word2] := by
-    simp [WordCodec.serialize_cons, WordCodec.serialize_nil,
-      List.append_assoc]
+  have hrecSplit := encode_three_as_two_one word0 word1 word2
   ihave ⟨Hreclow, Hrechigh⟩ :=
     (Slices.ByteSlice_append 0 record (WordCodec.u32le.serialize [word0, word1])
       (WordCodec.u32le.serialize [word2])).mp $$ [Hrecord]
@@ -225,24 +220,17 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
   have hboundO0 : out.toNat + 0 + 8 ≤ UInt32.size := by omega
   have hboundO8 : out.toNat + 8 + 8 ≤ UInt32.size := by omega
   -- the address facts of every access
-  obtain ⟨hf0a, hf0b, hf0c, hf0d, hf0e, hf0f, hf0g, hf0h⟩ :=
-    offset_facts64 (sp - 32) 0 0 rfl hboundF0
-  obtain ⟨hf8a, hf8b, hf8c, hf8d, hf8e, hf8f, hf8g, hf8h⟩ :=
-    offset_facts64 (sp - 32) 8 8 rfl hboundF8
-  obtain ⟨hf16a, hf16b, hf16c, hf16d, hf16e, hf16f, hf16g, hf16h⟩ :=
-    offset_facts64 (sp - 32) 16 16 rfl hboundF16
-  obtain ⟨hf24a, hf24b, hf24c, hf24d, hf24e, hf24f, hf24g, hf24h⟩ :=
-    offset_facts64 (sp - 32) 24 24 rfl hboundF24
+  have hfa0 := offset_facts64 (sp - 32) 0 0 rfl hboundF0
+  have hfa8 := offset_facts64 (sp - 32) 8 8 rfl hboundF8
+  have hfa16 := offset_facts64 (sp - 32) 16 16 rfl hboundF16
+  have hfa24 := offset_facts64 (sp - 32) 24 24 rfl hboundF24
   obtain ⟨hf24w, hf24w1, hf24w2, hf24w3⟩ :=
     offset_facts (sp - 32) 24 24 rfl hboundF24w
-  obtain ⟨hr0a, hr0b, hr0c, hr0d, hr0e, hr0f, hr0g, hr0h⟩ :=
-    offset_facts64 record 0 0 rfl hboundR0
+  have hra0 := offset_facts64 record 0 0 rfl hboundR0
   obtain ⟨hr8w, hr8w1, hr8w2, hr8w3⟩ :=
     offset_facts record 8 8 rfl hboundR8
-  obtain ⟨ho0a, ho0b, ho0c, ho0d, ho0e, ho0f, ho0g, ho0h⟩ :=
-    offset_facts64 out 0 0 rfl hboundO0
-  obtain ⟨ho8a, ho8b, ho8c, ho8d, ho8e, ho8f, ho8g, ho8h⟩ :=
-    offset_facts64 out 8 8 rfl hboundO8
+  have hoa0 := offset_facts64 out 0 0 rfl hboundO0
+  have hoa8 := offset_facts64 out 8 8 rfl hboundO8
   -- `local 3 := sp - 32`
   isimp only [StackPointer] at Hsp
   wasm_twp_rebind twp_globalGet with Hsp
@@ -268,25 +256,16 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_rebind twp_store32 (address := sp - 32) (offset := 24) oldWord6
     hf24w hf24w1 hf24w2 hf24w3 with Hb3lowcell
   -- `[frame + 16 .. 24] := [record + 0 .. 8]`, a block move
-  ihave ⟨%_hrecwordBound, Hrecword⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 record
-      (WordCodec.u32le.serialize [word0, word1]) hrecLow8).mp $$ Hreclow
-  ihave Hrecword :
-      pointsTo_u64 0 (record + 0)
-        (Wasm.RustStd.HashMap.Table.groupWord
-          (WordCodec.u32le.serialize [word0, word1])) $$ [Hrecword]
-  · irw_exact [hrecZero] with Hrecword
-  ihave ⟨%_hb2Bound, Hb2word⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32 + 16)
-      b2 hb2Length).mp $$ Hb2
-  wasm_twp_pures [twp_localGet twp_localGet]
-  wasm_twp_rebind twp_load64 (address := record) (offset := 0)
-    (Wasm.RustStd.HashMap.Table.groupWord
-      (WordCodec.u32le.serialize [word0, word1]))
-    hr0a hr0b hr0c hr0d hr0e hr0f hr0g hr0h with Hrecword
-  wasm_twp_rebind twp_store64 (address := sp - 32) (offset := 16)
-    (Wasm.RustStd.HashMap.Table.groupWord b2)
-    hf16a hf16b hf16c hf16d hf16e hf16f hf16g hf16h with Hb2word
+  ihave Hrecword :=
+    ByteSlice_as_word record (record + 0)
+      (WordCodec.u32le.serialize [word0, word1]) hrecZero hrecLow8 $$ Hreclow
+  ihave Hb2word :=
+    ByteSlice_as_word (sp - 32 + 16) (sp - 32 + 16) b2 rfl hb2Length $$ Hb2
+  wasm_twp_block_move
+    (record, 0, Wasm.RustStd.HashMap.Table.groupWord
+      (WordCodec.u32le.serialize [word0, word1]), hra0)
+    (sp - 32, 16, Wasm.RustStd.HashMap.Table.groupWord b2, hfa16)
+    with Hrecword Hb2word
   -- rebuild the fourth block: the word, the kind byte, and the padding
   ihave Hb3lowarray : arrayAt 0 (sp - 32 + 24) [word2] $$ [Hb3lowcell]
   · isimp only [arrayAt]
@@ -307,81 +286,52 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
       ([kind.toUInt8] ++ pad) 4 hw2Length $$ [Hb3low Hb3high]
   · isplitl_exact Hb3low
     · irw_exact [hf28] with Hb3high
-  ihave ⟨%_hb3Bound, Hb3word⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32 + 24)
+  ihave Hb3word :=
+    ByteSlice_as_word (sp - 32 + 24) (sp - 32 + 24)
       (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad))
-      hg3Length).mp $$ Hb3
+      rfl hg3Length $$ Hb3
   -- `[frame + 8 .. 16] := [frame + 24 .. 32]`, a block move
-  ihave ⟨%_hb1Bound, Hb1word⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32 + 8)
-      b1 hb1Length).mp $$ Hb1
-  wasm_twp_pures [twp_localGet twp_localGet]
-  wasm_twp_rebind twp_load64 (address := sp - 32) (offset := 24)
-    (Wasm.RustStd.HashMap.Table.groupWord
-      (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad)))
-    hf24a hf24b hf24c hf24d hf24e hf24f hf24g hf24h with Hb3word
-  wasm_twp_rebind twp_store64 (address := sp - 32) (offset := 8)
-    (Wasm.RustStd.HashMap.Table.groupWord b1)
-    hf8a hf8b hf8c hf8d hf8e hf8f hf8g hf8h with Hb1word
+  ihave Hb1word :=
+    ByteSlice_as_word (sp - 32 + 8) (sp - 32 + 8) b1 rfl hb1Length $$ Hb1
+  wasm_twp_block_move
+    (sp - 32, 24, Wasm.RustStd.HashMap.Table.groupWord
+      (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad)), hfa24)
+    (sp - 32, 8, Wasm.RustStd.HashMap.Table.groupWord b1, hfa8)
+    with Hb3word Hb1word
   -- `[frame + 0 .. 8] := [frame + 16 .. 24]`, a block move
-  ihave ⟨%_hb0Bound, Hb0word⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32)
-      b0 hb0Length).mp $$ Hb0
-  ihave Hb0word :
-      pointsTo_u64 0 (sp - 32 + 0)
-        (Wasm.RustStd.HashMap.Table.groupWord b0) $$ [Hb0word]
-  · irw_exact [hfZero] with Hb0word
-  wasm_twp_pures [twp_localGet twp_localGet]
-  wasm_twp_rebind twp_load64 (address := sp - 32) (offset := 16)
-    (Wasm.RustStd.HashMap.Table.groupWord
-      (WordCodec.u32le.serialize [word0, word1]))
-    hf16a hf16b hf16c hf16d hf16e hf16f hf16g hf16h with Hb2word
-  wasm_twp_rebind twp_store64 (address := sp - 32) (offset := 0)
-    (Wasm.RustStd.HashMap.Table.groupWord b0)
-    hf0a hf0b hf0c hf0d hf0e hf0f hf0g hf0h with Hb0word
+  ihave Hb0word :=
+    ByteSlice_as_word (sp - 32) (sp - 32 + 0) b0 hfZero hb0Length $$ Hb0
+  wasm_twp_block_move
+    (sp - 32, 16, Wasm.RustStd.HashMap.Table.groupWord
+      (WordCodec.u32le.serialize [word0, word1]), hfa16)
+    (sp - 32, 0, Wasm.RustStd.HashMap.Table.groupWord b0, hfa0)
+    with Hb2word Hb0word
   -- `[out + 8 .. 16] := [frame + 8 .. 16]`, a block move
-  ihave ⟨%_houthighBound, Houthighword⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (out + 8)
-      outhigh houtHigh8).mp $$ Houthigh
-  wasm_twp_pures [twp_localGet twp_localGet]
-  wasm_twp_rebind twp_load64 (address := sp - 32) (offset := 8)
-    (Wasm.RustStd.HashMap.Table.groupWord
-      (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad)))
-    hf8a hf8b hf8c hf8d hf8e hf8f hf8g hf8h with Hb1word
-  wasm_twp_rebind twp_store64 (address := out) (offset := 8)
-    (Wasm.RustStd.HashMap.Table.groupWord outhigh)
-    ho8a ho8b ho8c ho8d ho8e ho8f ho8g ho8h with Houthighword
+  ihave Houthighword :=
+    ByteSlice_as_word (out + 8) (out + 8) outhigh rfl houtHigh8 $$ Houthigh
+  wasm_twp_block_move
+    (sp - 32, 8, Wasm.RustStd.HashMap.Table.groupWord
+      (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad)), hfa8)
+    (out, 8, Wasm.RustStd.HashMap.Table.groupWord outhigh, hoa8)
+    with Hb1word Houthighword
   -- `[out + 0 .. 8] := [frame + 0 .. 8]`, a block move
-  ihave ⟨%_houtlowBound, Houtlowword⟩ :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 out
-      outlow houtLow8).mp $$ Houtlow
-  ihave Houtlowword :
-      pointsTo_u64 0 (out + 0)
-        (Wasm.RustStd.HashMap.Table.groupWord outlow) $$ [Houtlowword]
-  · irw_exact [houtZero] with Houtlowword
-  wasm_twp_pures [twp_localGet twp_localGet]
-  wasm_twp_rebind twp_load64 (address := sp - 32) (offset := 0)
-    (Wasm.RustStd.HashMap.Table.groupWord
-      (WordCodec.u32le.serialize [word0, word1]))
-    hf0a hf0b hf0c hf0d hf0e hf0f hf0g hf0h with Hb0word
-  wasm_twp_rebind twp_store64 (address := out) (offset := 0)
-    (Wasm.RustStd.HashMap.Table.groupWord outlow)
-    ho0a ho0b ho0c ho0d ho0e ho0f ho0g ho0h with Houtlowword
+  ihave Houtlowword :=
+    ByteSlice_as_word out (out + 0) outlow houtZero houtLow8 $$ Houtlow
+  wasm_twp_block_move
+    (sp - 32, 0, Wasm.RustStd.HashMap.Table.groupWord
+      (WordCodec.u32le.serialize [word0, word1]), hfa0)
+    (out, 0, Wasm.RustStd.HashMap.Table.groupWord outlow, hoa0)
+    with Hb0word Houtlowword
   wasm_twp_return_from_call Hmodule [List.take_zero, List.nil_append]
   -- the caller's output slot, as bytes again
-  isimp only [houtZero] at Houtlowword
   ihave Houtlow :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 out
-      (WordCodec.u32le.serialize [word0, word1]) hrecLow8).mpr $$
-      [Houtlowword]
-  · isplitl_pureexact hwordO0
-    iexact Houtlowword
+    ByteSlice_of_word out (out + 0)
+      (WordCodec.u32le.serialize [word0, word1]) houtZero hrecLow8
+      hwordO0 $$ Houtlowword
   ihave Houthigh :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (out + 8)
+    ByteSlice_of_word (out + 8) (out + 8)
       (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad))
-      hg3Length).mpr $$ [Houthighword]
-  · isplitl_pureexact hwordO8
-    iexact Houthighword
+      rfl hg3Length hwordO8 $$ Houthighword
   -- the fourth word of the output is the kind byte and three red-zone bytes
   ihave ⟨Houtw2, Houtw3⟩ :=
     (Slices.ByteSlice_append 0 (out + 8) (WordCodec.u32le.serialize [word2])
@@ -405,15 +355,12 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
       8 hrecLow8 $$ [Houtlow Houthigh]
   · isplitl_exact Houtlow
     · irw_exact [hout8] with Houthigh
-  isimp only [WordCodec.serialize_cons, WordCodec.serialize_nil,
-    List.append_nil, List.append_assoc] at Hout
+  wasm_serialize_norm at Hout
   -- the record, unchanged
-  isimp only [hrecZero] at Hrecword
   ihave Hreclow :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 record
-      (WordCodec.u32le.serialize [word0, word1]) hrecLow8).mpr $$ [Hrecword]
-  · isplitl_pureexact hwordR0
-    iexact Hrecword
+    ByteSlice_of_word record (record + 0)
+      (WordCodec.u32le.serialize [word0, word1]) hrecZero hrecLow8
+      hwordR0 $$ Hrecword
   ihave Hrechigharray : arrayAt 0 (record + 8) [word2] $$ [Hreccell]
   · isimp only [arrayAt]
     iframe Hreccell
@@ -424,32 +371,24 @@ theorem func53_correct [WasmSmallStepGS hlc Universal.State] :
       (WordCodec.u32le.serialize [word2]) 8 hrecLow8 $$ [Hreclow Hrechigh]
   · isplitl_exact Hreclow
     · irw_exact [hrec8] with Hrechigh
-  isimp only [WordCodec.serialize_cons, WordCodec.serialize_nil,
-    List.append_nil, List.append_assoc] at Hrecord
+  wasm_serialize_norm at Hrecord
   -- the red zone, as bytes again
-  isimp only [hfZero] at Hb0word
   ihave Hb0 :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32)
-      (WordCodec.u32le.serialize [word0, word1]) hrecLow8).mpr $$ [Hb0word]
-  · isplitl_pureexact hwordF0
-    iexact Hb0word
+    ByteSlice_of_word (sp - 32) (sp - 32 + 0)
+      (WordCodec.u32le.serialize [word0, word1]) hfZero hrecLow8
+      hwordF0 $$ Hb0word
   ihave Hb1 :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32 + 8)
+    ByteSlice_of_word (sp - 32 + 8) (sp - 32 + 8)
       (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad))
-      hg3Length).mpr $$ [Hb1word]
-  · isplitl_pureexact hwordF8
-    iexact Hb1word
+      rfl hg3Length hwordF8 $$ Hb1word
   ihave Hb2 :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32 + 16)
-      (WordCodec.u32le.serialize [word0, word1]) hrecLow8).mpr $$ [Hb2word]
-  · isplitl_pureexact hwordF16
-    iexact Hb2word
+    ByteSlice_of_word (sp - 32 + 16) (sp - 32 + 16)
+      (WordCodec.u32le.serialize [word0, word1]) rfl hrecLow8
+      hwordF16 $$ Hb2word
   ihave Hb3 :=
-    (Wasm.RustStd.HashMap.Table.ByteSlice_eight_as_u64 0 (sp - 32 + 24)
+    ByteSlice_of_word (sp - 32 + 24) (sp - 32 + 24)
       (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad))
-      hg3Length).mpr $$ [Hb3word]
-  · isplitl_pureexact hwordF24
-    iexact Hb3word
+      rfl hg3Length hwordF24 $$ Hb3word
   ihave Hupper :=
     ByteSlice_glue (sp - 32 + 16) (WordCodec.u32le.serialize [word0, word1])
       (WordCodec.u32le.serialize [word2] ++ ([kind.toUInt8] ++ pad))
