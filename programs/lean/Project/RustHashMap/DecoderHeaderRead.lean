@@ -36,7 +36,7 @@ open scoped Wasm.SmallStep.Outcome
 
 /-- `.const 4294967292` is minus four.  The compiled body adds it where the
 source subtracts four. -/
-private theorem sub_four (x : UInt32) : x + 4294967292 = x - 4 := by
+theorem sub_four (x : UInt32) : x + 4294967292 = x - 4 := by
   have hmax : (4294967292 : UInt32) = 0 - 4 := by decide
   calc x + 4294967292 = (x - 4 + 4) + (0 - 4) := by
         rw [UInt32.sub_add_cancel, hmax]
