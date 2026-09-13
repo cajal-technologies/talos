@@ -1,32 +1,25 @@
-import Project.RustHashMap.DecoderKeyRead
+import Project.RustHashMap.DecoderShortPair
 
 /-!
-# The borsh decoder: the short-input arm of one loop step
+# The borsh decoder: the short-input arm of the value read
 
-One loop step reads eight input bytes.  Fewer than four bytes left is the
-"unexpected end of input" error, at WAT lines 617 to 666.
-`Project.RustHashMap.Decoder.shortPairError` is that arm.
+A loop step reads the key first and the value second.  Fewer than four
+bytes left after the key is the same "unexpected end of input" error, at
+WAT lines 696 to 743.  `Project.RustHashMap.Decoder.shortValueError` is
+that arm.
 
-The arm is the arm of the header read with three changes:
+The arm is `Project.RustHashMap.Decoder.shortPairError` with four changes:
 
-1. The guard reads local 5, the number of unread bytes, instead of the
-   length word of the slice header.
-2. It reaches the tail of the `io::Error` slot through local 4, which
-   holds `frame + 52`, instead of through an offset on the frame base.
-3. It writes no output slot.  The four words of the decode error stay in
-   the frame at `frame + 16`, and the error return of the decoder reads
-   them.
+1. It has no guard.  The key read branches here.
+2. It sets local 12, the value, to zero.
+3. It keeps word 0 of the `io::Error` in local 11 and not in local 10.
+4. It tests word 0 of the decode error with `i32.ne` and not with
+   `i32.eq`.  The test is true, so the `br_if 4` after it leaves the whole
+   loop through the error return, and the `br 1` after that is dead.
 
-The two `okTag` tests are dead arms.  Word 0 of a built `io::Error` is the
-capacity of a `String`, and both `Func52Spec` and `Func49Spec` promise that
-the capacity is not `okTag`.  So both tests take the fall-through.
-
-The lemma takes the 48 frame bytes above the three vector words, and not
-the whole frame.  The arm writes none of the 16 bytes below them, so the
-caller keeps the vector words while the arm runs.
-
-`shortPairBuild` below is the arm without its final `.br 7`, so the lemma
-holds for any control stack.
+`shortValueBuild` below stops at the `i32.ne`, so the lemma holds for any
+control stack.  It leaves the answer 1 on the stack, and the caller takes
+the branch.
 -/
 
 namespace Project.RustHashMap.Decoder
@@ -42,141 +35,38 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DecodeErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
-/-! ## Word blocks of a four-word record -/
+/-- The short-input arm of the value read, without the branch that leaves
+the loop and the dead branch after it. -/
+def shortValueBuild : Program :=
+  [.localGet 2, .const 48, .add, .const 17, .const 1049080, .const 27,
+    .call 55, .localGet 2, .localGet 4, .load64 0, .store64 32, .localGet 2,
+    .localGet 4, .load32 8, .store32 40, .const 0, .localSet 12,
+    .localGet 2, .load32 48, .localTee 11, .const 2147483649, .eq, .br_if 1,
+    .localGet 4, .localGet 2, .load64 32, .store64 0, .localGet 4,
+    .localGet 2, .load32 40, .store32 8, .localGet 2, .localGet 11,
+    .store32 48, .localGet 2, .const 16, .add, .localGet 2, .const 48, .add,
+    .call 52, .localGet 2, .load32 16, .localTee 11, .const 2147483649, .ne]
 
-/-- The 1, 2, 1 split of the `io::Error` record. -/
-theorem ser4_split121 (w0 w1 w2 w3 : UInt32) :
-    WordCodec.u32le.serialize [w0, w1, w2, w3] =
-      WordCodec.u32le.serialize [w0] ++
-        (WordCodec.u32le.serialize [w1, w2] ++
-          WordCodec.u32le.serialize [w3]) := by
-  simp [WordCodec.serialize_cons, WordCodec.serialize_nil, List.append_assoc]
-
-/-- The 1, 3 split of the decode error.  The arm reads word 0 only. -/
-theorem ser4_split13 (w0 w1 w2 w3 : UInt32) :
-    WordCodec.u32le.serialize [w0, w1, w2, w3] =
-      WordCodec.u32le.serialize [w0] ++
-        WordCodec.u32le.serialize [w1, w2, w3] := by
-  simp [WordCodec.serialize_cons, WordCodec.serialize_nil]
-
-theorem ser_one_length (w : UInt32) :
-    (WordCodec.u32le.serialize [w]).length = 4 := by
-  simp [WordCodec.serialize_cons, WordCodec.serialize_nil]
-
-theorem ser_two_length (a b : UInt32) :
-    (WordCodec.u32le.serialize [a, b]).length = 8 := by
-  simp [WordCodec.serialize_cons, WordCodec.serialize_nil]
-
-theorem ser_four_length (a b c d : UInt32) :
-    (WordCodec.u32le.serialize [a, b, c, d]).length = 16 := by
-  simp [WordCodec.serialize_cons, WordCodec.serialize_nil]
-
-theorem one_pos (w : UInt32) : 0 < ([w] : List UInt32).length := by
-  simp
-
-theorem cells_nowrap_one (base w : UInt32)
-    (hbound : base.toNat + 4 < UInt32.size) :
-    base.toNat + (WordCodec.u32le.serialize [w]).length < UInt32.size := by
-  rw [ser_one_length]; exact hbound
-
-/-! ## The bounds -/
-
-/-- Every address bound of the 48 frame bytes that the arm uses.  The
-first group is what `offset_facts` and `offset_facts64` ask for, and the
-second is what `ByteSlice_of_cells` and `ByteSlice_of_word` ask for. -/
-theorem pair_bounds (base : UInt32)
-    (h : base.toNat + 64 < UInt32.size) :
-    ((base + 52).toNat + 0 + 8 ≤ UInt32.size ∧
-        base.toNat + 32 + 8 ≤ UInt32.size ∧
-        (base + 52).toNat + 8 + 4 ≤ UInt32.size ∧
-        base.toNat + 40 + 4 ≤ UInt32.size ∧
-        base.toNat + 48 + 4 ≤ UInt32.size ∧
-        base.toNat + 16 + 4 ≤ UInt32.size) ∧
-      ((base + 16).toNat + 16 < UInt32.size ∧
-        (base + 16).toNat + 4 < UInt32.size ∧
-        (base + 32).toNat + 8 < UInt32.size ∧
-        (base + 40).toNat + 4 < UInt32.size ∧
-        (base + 48).toNat + 16 < UInt32.size ∧
-        (base + 48).toNat + 4 < UInt32.size ∧
-        (base + 52).toNat + 8 < UInt32.size ∧
-        (base + 60).toNat + 4 < UInt32.size) := by
-  have h16 : (base + (16 : UInt32)).toNat = base.toNat + 16 :=
-    Slices.byteOffset_toNat base 16 (by omega)
-  have h32 : (base + (32 : UInt32)).toNat = base.toNat + 32 :=
-    Slices.byteOffset_toNat base 32 (by omega)
-  have h40 : (base + (40 : UInt32)).toNat = base.toNat + 40 :=
-    Slices.byteOffset_toNat base 40 (by omega)
-  have h48 : (base + (48 : UInt32)).toNat = base.toNat + 48 :=
-    Slices.byteOffset_toNat base 48 (by omega)
-  have h52 : (base + (52 : UInt32)).toNat = base.toNat + 52 :=
-    Slices.byteOffset_toNat base 52 (by omega)
-  have h60 : (base + (60 : UInt32)).toNat = base.toNat + 60 :=
-    Slices.byteOffset_toNat base 60 (by omega)
-  refine ⟨⟨?_, ?_, ?_, ?_, ?_, ?_⟩,
-    ?_, ?_, ?_, ?_, ?_, ?_, ?_, ?_⟩ <;> omega
-
-/-! ## The pieces of the two byte regions -/
-
-/-- The 48 frame bytes above the vector words, as the five pieces that the
-arm uses.  They are the output slot of absolute `func 52`, the eight
-scratch bytes, the four scratch bytes, the gap, and the `io::Error`
-slot. -/
-theorem scratch_pieces (bytes : List UInt8)
-    (hlength : bytes.length = 48) :
-    ∃ b c1 c2 c3 d : List UInt8,
-      bytes = b ++ (c1 ++ (c2 ++ (c3 ++ d))) ∧
-      b.length = 16 ∧ c1.length = 8 ∧ c2.length = 4 ∧ c3.length = 4 ∧
-      d.length = 16 := by
-  refine ⟨bytes.take 16, (bytes.drop 16).take 8,
-    ((bytes.drop 16).drop 8).take 4,
-    (((bytes.drop 16).drop 8).drop 4).take 4,
-    (((bytes.drop 16).drop 8).drop 4).drop 4,
-    by simp only [List.take_append_drop], ?_, ?_, ?_, ?_, ?_⟩ <;>
-    simp only [List.length_take, List.length_drop, hlength] <;> omega
-
-/-- The data segment, as the message of this arm and what is around it.
-The message is 27 bytes at 1049080, which is `entryStackTop + 504`. -/
-theorem data_pieces (bytes : List UInt8) (hlength : bytes.length = 920) :
-    ∃ a b c : List UInt8,
-      bytes = a ++ (b ++ c) ∧ a.length = 504 ∧ b.length = 27 ∧
-      c.length = 389 := by
-  refine ⟨bytes.take 504, (bytes.drop 504).take 27, (bytes.drop 504).drop 27,
-    by simp only [List.take_append_drop], ?_, ?_, ?_⟩ <;>
-    simp only [List.length_take, List.length_drop, hlength] <;> omega
-
-/-! ## The arm -/
-
-/-- The short-input arm of one loop step, without its final branch. -/
-def shortPairBuild : Program :=
-  [.localGet 5, .const 3, .gtU, .br_if 0, .localGet 2, .const 48, .add,
-    .const 17, .const 1049080, .const 27, .call 55, .localGet 2,
-    .localGet 4, .load64 0, .store64 32, .localGet 2, .localGet 4,
-    .load32 8, .store32 40, .localGet 2, .load32 48, .localTee 10,
-    .const 2147483649, .eq, .br_if 1, .localGet 4, .localGet 2, .load64 32,
-    .store64 0, .localGet 4, .localGet 2, .load32 40, .store32 8,
-    .localGet 2, .localGet 10, .store32 48, .localGet 2, .const 16, .add,
-    .localGet 2, .const 48, .add, .call 52, .localGet 2, .load32 16,
-    .localTee 11, .const 2147483649, .eq, .br_if 1]
-
-/-- The arm is the build and the branch out of the whole loop. -/
-theorem shortPairError_shape :
-    shortPairError = shortPairBuild ++ [.br 7] := by rfl
+/-- The arm is the build, the branch out of the loop, and the dead
+branch. -/
+theorem shortValueError_shape :
+    shortValueError = shortValueBuild ++ [.br_if 4, .br 1] := by rfl
 
 set_option maxHeartbeats 2000000 in
-/-- The short-input arm of one loop step leaves a decode error in the frame
-at `frame + 16`.  Word 0 of that error is never `okTag`, and the 16 frame
-bytes below the slot stay with the caller. -/
-theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
-    (out hdr frame remaining : UInt32) (heapId : GName)
+/-- The short-input arm of the value read leaves a decode error in the
+frame at `frame + 16` and the answer 1 on the stack.  Word 0 of that error
+is never `okTag`, and the 16 frame bytes below the slot stay with the
+caller. -/
+theorem twp_short_value_error [WasmSmallStepGS hlc Universal.State]
+    (out hdr frame : UInt32) (heapId : GName)
     (scratch below dataBytes : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
     (input output : List UInt8) (raised : Bool)
-    (l3 l6 l7 l8 l9 l10 l11 l12 : Value)
+    (l3 l5 l6 l7 l8 l9 l10 l11 l12 : Value)
     {stack : List Value} {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp}
-    (hshort : ¬ (remaining > (3 : UInt32)))
     (hscratchLength : scratch.length = 48)
     (hdataLength : dataBytes.length = dataSegmentSize)
     (hframeLow : func49Depth ≤ frame.toNat)
@@ -189,8 +79,8 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 entryStackTop dataBytes ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams input output raised ∗
-      ((∀ errWord0 : UInt32, ∀ word0 : UInt32, ∀ word1 : UInt32,
-          ∀ word2 : UInt32, ∀ word3 : UInt32, ∀ scratchAfter : List UInt8,
+      ((∀ word0 : UInt32, ∀ word1 : UInt32, ∀ word2 : UInt32,
+          ∀ word3 : UInt32, ∀ scratchAfter : List UInt8,
           ∀ below' : List UInt8, ∀ storedCursor' : UInt32,
           ∀ frontier' : Nat, ∀ history' : AllocationHistory,
           RuntimeContext -∗
@@ -205,8 +95,8 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
           ⌜word0 ≠ okTag ∧ scratchAfter.length = 32⌝ -∗
           WP (.running
               ⟨⟨[.i32 out, .i32 hdr],
-                  [.i32 frame, l3, .i32 (frame + 52), .i32 remaining, l6, l7,
-                    l8, l9, .i32 errWord0, .i32 word0, l12], stack⟩,
+                  [.i32 frame, l3, .i32 (frame + 52), l5, l6, l7, l8, l9,
+                    l10, .i32 word0, .i32 0], .i32 1 :: stack⟩,
                 code, arity, remainder, controls, calls⟩
               : Expr Universal.State) @ s; E [{ Φ }]) ∧
         (∀ remaining' : List UInt8,
@@ -214,9 +104,9 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
             Φ (.trapped (.host OOM.trapMessage))))) ⊢
       WP (.running
           ⟨⟨[.i32 out, .i32 hdr],
-              [.i32 frame, l3, .i32 (frame + 52), .i32 remaining, l6, l7, l8,
-                l9, l10, l11, l12], stack⟩,
-            shortPairBuild ++ code, arity, remainder, controls, calls⟩
+              [.i32 frame, l3, .i32 (frame + 52), l5, l6, l7, l8, l9, l10,
+                l11, l12], stack⟩,
+            shortValueBuild ++ code, arity, remainder, controls, calls⟩
           : Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hbelow, Hscratch, Hdata, Hbump, Hstreams, Hcont⟩
   -- the arithmetic, named before the context grows
@@ -298,12 +188,8 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
     omega
   ihave ⟨Hdeep, Herrzone⟩ :=
     frame_split frame func49Depth errorNewDepth below (by decide) $$ Hbelow
-  -- the guard: fewer than four bytes are left
-  simp only [shortPairBuild, List.cons_append, List.nil_append]
-  wasm_twp_pures [twp_localGet twp_const]
-  iapply twp_gtU (result := 0) (by rw [if_neg hshort])
-  iapply twp_brIfZero
   -- absolute `func 55` builds the `io::Error` at `frame + 48`
+  simp only [shortValueBuild, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_add]
   rw [show (48 : UInt32) + frame = frame + 48 from UInt32.add_comm _ _]
   wasm_twp_pures [twp_const twp_const twp_const]
@@ -318,8 +204,8 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
     (input := input) (output := output) (raised := raised)
     (callerLocals :=
       { params := [.i32 out, .i32 hdr],
-        locals := [.i32 frame, l3, .i32 (frame + 52), .i32 remaining, l6, l7,
-          l8, l9, l10, l11, l12], values := [] })
+        locals := [.i32 frame, l3, .i32 (frame + 52), l5, l6, l7, l8, l9,
+          l10, l11, l12], values := [] })
     (stack := stack)
   isplitl_exacts [Hruntime Hsp Herrzone HfD Hdmsg Hbump Hstreams]
   isplitl_pureexact
@@ -376,6 +262,9 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
     ihave Hc2arr := Hclose2 $$ Hx2
     isimp only [List.set] at Hc2arr
     ihave Herr3arr := Hclose3 $$ Hw3
+    -- the value of the step is zero
+    wasm_twp_pures [twp_const]
+    wasm_twp_localSet
     -- the dead `okTag` test of the `io::Error`
     wasm_twp_pures [twp_localGet]
     ihave Herr0arr := cells_of_ByteSlice (frame + 48) [w0] $$ Herr0
@@ -487,8 +376,8 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
       (output := output) (raised := raised)
       (callerLocals :=
         { params := [.i32 out, .i32 hdr],
-          locals := [.i32 frame, l3, .i32 (frame + 52), .i32 remaining, l6,
-            l7, l8, l9, .i32 w0, l11, l12], values := [] })
+          locals := [.i32 frame, l3, .i32 (frame + 52), l5, l6, l7, l8, l9,
+            l10, .i32 w0, .i32 0], values := [] })
       (stack := stack)
     isplitl_exacts [Hruntime Hsp Hbelow HfB Herr Hdata Hbump Hstreams]
     isplitl_pureexact
@@ -500,7 +389,7 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
       obtain ⟨hv0, hafterLength⟩ := hvFacts
       isimp only [ResumeWP, resumeExpr, List.nil_append]
       have hv0' : v0 ≠ (2147483649 : UInt32) := by rw [← hokTag]; exact hv0
-      -- the dead `okTag` test of the decode error
+      -- the live test of the decode error
       isimp only [ser4_split13] at Hslot
       ihave ⟨Hv0s, Hv123⟩ :=
         (Slices.ByteSlice_append 0 (frame + 16)
@@ -518,8 +407,7 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
       wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       wasm_twp_pures [twp_const]
-      iapply twp_eq (result := 0) (by rw [if_neg hv0'])
-      iapply twp_brIfZero
+      iapply twp_ne (result := 1) (by rw [if_pos hv0'])
       ihave Hv0arr := Hclosev0 $$ Hv0
       ihave Hv0s :=
         ByteSlice_of_cells (frame + 16) [v0] (cells_nowrap_one _ v0 hbf16) $$
@@ -574,7 +462,7 @@ theorem twp_short_pair_error [WasmSmallStepGS hlc Universal.State]
         simp only [List.length_append, ser_one_length, ser_two_length,
           hc3, hafterLength, Nat.reduceAdd]
       ihave Hnormal := BI.and_elim_l $$ Hcont
-      ihave Hnormal := Hnormal $$ %w0 %v0 %v1 %v2 %v3 %scratchAfter %belowB
+      ihave Hnormal := Hnormal $$ %v0 %v1 %v2 %v3 %scratchAfter %belowB
         %storedCursorB %frontierB %historyB
       iapply Hnormal $$ Hruntime Hsp Hbelow Hscratch Hdata Hbump Hstreams
         %⟨hv0, hscratchAfterLength⟩
