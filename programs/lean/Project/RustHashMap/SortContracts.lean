@@ -275,11 +275,18 @@ def Func20Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
 in source order are the buffer, its length and the comparison closure, so
 local 0 is the buffer, local 1 the length and local 2 the closure.
 
-The body picks one of three kernels by length.  Below 2 entries it
-returns at once.  Below 21 entries it runs the small sort in place and
-then `call 15` with the offset 1.  Otherwise it ends with `call 24` at
-WAT 2847.  It commits no frame, so `sortDepth` is the depth of that one
-call.
+The body makes exactly one call.  Below 2 entries it returns at once
+(WAT 2639 to 2642).  It scans for an ascending run (WAT 2666 to 2687)
+and for a descending run (WAT 2701 to 2722), and reverses a full
+descending run in place (WAT 2758 to 2831).  Otherwise it ends with
+`call 24` at WAT 2847, with the ancestor 0 and the limit
+`((len ||| 1).clz <<< 1) ^^^ 62`.  Absolute `func 7` does the
+`len < 21` dispatch and the `call 15`.  It commits no frame, so
+`sortDepth` is the depth of that one call.
+
+The precondition needs `HashMap.NodupKeys pairs` because the `call 24`
+is `Func21Spec`, whose own precondition has that conjunct.  The caller
+`Func4Spec` gets it from `Layout.nodupKeys_toList`.
 
 The length bound `2 ^ 27` is the bound that every caller has: absolute
 `func 7` sorts one entry per table bucket and the table has at most
@@ -298,7 +305,8 @@ def Func11Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         StackPointer sp ∗
         StackBelow sp (sortDepth len.toNat) below ∗
         HashMap.Table.PairSlice 0 v pairs ∗
-        ⌜pairs.length = len.toNat ∧ len.toNat ≤ 2 ^ 27 ∧
+        ⌜pairs.length = len.toNat ∧ HashMap.NodupKeys pairs ∧
+          len.toNat ≤ 2 ^ 27 ∧
           v.toNat + 8 * len.toNat < UInt32.size ∧
           sortDepth len.toNat ≤ sp.toNat⌝ ∗
         SortPost v pairs sp (sortDepth len.toNat) iprop(emp) callerLocals
