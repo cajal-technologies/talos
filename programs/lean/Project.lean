@@ -128,3 +128,4 @@ import Project.RustHashMap.LookupTailDefs
 import Project.RustHashMap.LookupTailContracts
 import Project.RustHashMap.ContainsKeyTailProof
 import Project.RustHashMap.GetTailProof
+import Project.RustHashMap.ContainsKeyDriverProof
