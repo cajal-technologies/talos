@@ -321,7 +321,9 @@ theorem func2_copy_out :
 
 set_option maxHeartbeats 2000000 in
 /-- WAT 954 to 969.  The frame holds the map value at offset 16 and the
-caller slot takes it at offset 0. -/
+caller slot takes it at offset 0.  The copy reads the frame, it does not
+move it, so the rule hands the four source cells back.  The caller still
+owns the 32 frame bytes and can rebuild the stack region that it lent. -/
 theorem twp_copy_out
     (mapSlot cap frame cur ptr endAddr : UInt32) (seed : UInt64)
     (k0 k1 : UInt64) (t : HashMap.Table UInt32 UInt32)
@@ -335,6 +337,10 @@ theorem twp_copy_out
     iprop(Slices.ByteSlice 0 mapSlot mapBefore ∗
       HashMap.Table.HashMapAt 0 (frame + 16) k0 k1 t ∗
       (HashMap.Table.HashMapAt 0 mapSlot k0 k1 t -∗
+        (∃ v0 : UInt64, ∃ v1 : UInt64,
+            pointsTo_u64 0 (frame + 16) v0 ∗ pointsTo_u64 0 (frame + 24) v1 ∗
+            pointsTo_u64 0 (frame + 32) k0 ∗
+            pointsTo_u64 0 (frame + 40) k1) -∗
         WP (Expr.running
             ⟨collectLocals mapSlot cap frame cur ptr endAddr seed, contCode,
               arity, remainder, controls, calls⟩ :
@@ -375,8 +381,15 @@ theorem twp_copy_out
     with Hs0 Hd0
   isimp only [a0] at Hd0
   ihave Hmap := Hback $$ Hd0 Hd1 Hd2 Hd3
-  iapply Hcont
-  iexact Hmap
+  ihave Hsrc :
+      iprop(∃ v0 : UInt64, ∃ v1 : UInt64,
+        pointsTo_u64 0 (frame + 16) v0 ∗ pointsTo_u64 0 (frame + 24) v1 ∗
+        pointsTo_u64 0 (frame + 32) k0 ∗ pointsTo_u64 0 (frame + 40) k1)
+      $$ [Hs0 Hs1 Hsk0 Hsk1]
+  · iexists v0, v1
+    iframe Hs0 Hs1 Hsk0 Hsk1
+  ihave Hexit := Hcont $$ Hmap Hsrc
+  iexact Hexit
 
 /-! ## The epilogue -/
 
