@@ -121,3 +121,4 @@ import Project.RustHashMap.GetRead
 import Project.RustHashMap.LookupPures
 import Project.RustHashMap.LookupContracts
 import Project.RustHashMap.LookupHash
+import Project.RustHashMap.LookupProbe
