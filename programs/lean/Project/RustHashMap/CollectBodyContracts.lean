@@ -361,6 +361,24 @@ contract allocates nothing, touches no stream and has one arm.  It still
 takes the stack, because the compiled body commits a frame at WAT 4133 to
 4137.
 
+The guard at WAT 4302 to 4304 reads the header word, not the model
+counter, so `1 ≤ t.growthLeft` alone does not make the call dead:
+`Table.Layout` puts no bound on `growthLeft`, and a multiple of
+`UInt32.size` stores as the word 0.  The precondition therefore also takes
+`t.growthLeft < UInt32.size`.  Every caller has it, because `growthLeft`
+starts at `bucketMaskToCapacity (buckets - 1)` and only falls.
+
+The precondition takes `Table.WF` and `Table.Clean`, not `Table.Layout`.
+The compiled probe loop stops at the first group with an `EMPTY` byte, so
+a proof of termination needs one `EMPTY` bucket.  `Table.Layout` does not
+give one: it relates the control bytes to the slots but says nothing about
+`growthLeft`.  `Table.WF.exists_empty` gives one from `Table.WF`,
+`Table.Clean` and `1 ≤ t.growthLeft`, because `Clean` ties
+`growthLeft + items` to the capacity and `WF` ties `items` to the entry
+list.  Every caller has both: `Func14Spec` returns `Table.withCapacity`,
+which is `wf_newEmpty` and `clean_newEmpty`, and each later insert keeps
+them by `Table.WF.insert_of_growth`.
+
 The result is the model pair `Table.insert`: the old value when the key
 was present, and the new table.  `Table.insert` starts with
 `Table.reserve hash t 1`, which returns `t` unchanged under the same
@@ -383,8 +401,9 @@ def Func15Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         HashMap.Table.HashMapAt 0 mapBase k0 k1 t ∗
         ⌜outBefore.length = 8 ∧ insertDepth ≤ sp.toNat ∧
           out.toNat + 8 < UInt32.size ∧ mapBase.toNat + 32 < UInt32.size ∧
-          HashMap.Table.Layout (HashMap.SipHash.hashU32 k0 k1) t ∧
-          1 ≤ t.growthLeft⌝ ∗
+          HashMap.Table.WF (HashMap.SipHash.hashU32 k0 k1) t ∧
+          HashMap.Table.Clean t ∧
+          1 ≤ t.growthLeft ∧ t.growthLeft < UInt32.size⌝ ∗
         (∀ below' : List UInt8,
             RuntimeContext -∗
             StackPointer sp -∗
