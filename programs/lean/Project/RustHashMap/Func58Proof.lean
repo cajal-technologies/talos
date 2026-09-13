@@ -62,6 +62,24 @@ private theorem func58_shape :
       [.block 0 0 (func58ArithmeticPrefix ++ func58PostArithmetic),
         .call 59, .unreachable] := by rfl
 
+/-- A failed classification whose padding sum does not overflow must have
+failed on the checked end.  This is the exact converse the generated body
+needs on its out-of-memory path. -/
+private theorem classifyBump_oom_end
+    (frontier : Nat) (layout : AllocLayout)
+    (hsum : frontier + (layout.alignment - 1) < UInt32.size)
+    (hoom : classifyBump frontier layout = .oom) :
+    ¬ ((UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
+          ((0 : UInt32) - UInt32.ofNat layout.alignment)).toNat + layout.size <
+            UInt32.size ∧
+        (UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
+          ((0 : UInt32) - UInt32.ofNat layout.alignment)).toNat + layout.size <
+            2147483648) := by
+  intro hend
+  unfold classifyBump at hoom
+  rw [dif_pos hsum, if_pos hend] at hoom
+  exact BumpDecision.noConfusion hoom
+
 /-- The post-commit tail copies the whole old allocation, retires it, and
 returns the new pointer.  All allocation arithmetic and memory growth have
 already completed before this lemma starts. -/
@@ -80,10 +98,11 @@ private theorem twp_func58_copy_and_return
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
     (Φ : ObservableOutcome → HeapIProp)
-    (hlayout : oldLayout.Matches oldSize 1 ∧
-      newLayout.Matches newSize 1 ∧
+    (hlayout : oldSize.toNat = oldLayout.size ∧
+      newSize.toNat = newLayout.size ∧
       oldLayout.Valid ∧ newLayout.Valid ∧
-      oldLayout.alignment = 1 ∧ oldLayout.size < newLayout.size) :
+      (newLayout.alignment = 1 ∨ newLayout.alignment = 4) ∧
+      oldLayout.size < newLayout.size) :
     iprop(
       RuntimeContext ∗
       BumpHeap heapId finish finish.toNat
@@ -112,8 +131,8 @@ private theorem twp_func58_copy_and_return
             control := controls
             returningInstance := ⟨0⟩ } :: calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
-  have holdSize : oldSize.toNat = oldLayout.size := hlayout.1.1
-  have hnewSize : newSize.toNat = newLayout.size := hlayout.2.1.1
+  have holdSize : oldSize.toNat = oldLayout.size := hlayout.1
+  have hnewSize : newSize.toNat = newLayout.size := hlayout.2.1
   have holdLt : oldSize < newSize := by
     simpa only [UInt32.lt_iff_toNat_lt, holdSize, hnewSize] using hlayout.2.2.2.2.2
   have holdPositive : 0 < oldSize.toNat := by simpa only [holdSize] using hlayout.2.2.1.1
@@ -241,10 +260,11 @@ private theorem twp_func58_commit_copy_and_return
     (Φ : ObservableOutcome → HeapIProp)
     (hfrontierLow : heapBase.toNat ≤ frontier)
     (hwf : HistoryWellFormed frontier history)
-    (hlayout : oldLayout.Matches oldSize 1 ∧
-      newLayout.Matches newSize 1 ∧
+    (hlayout : oldSize.toNat = oldLayout.size ∧
+      newSize.toNat = newLayout.size ∧
       oldLayout.Valid ∧ newLayout.Valid ∧
-      oldLayout.alignment = 1 ∧ oldLayout.size < newLayout.size)
+      (newLayout.alignment = 1 ∨ newLayout.alignment = 4) ∧
+      oldLayout.size < newLayout.size)
     (hclassify : classifyBump frontier newLayout = .success newPtr finish)
     (hbytesLength : newBytes.length = newLayout.size)
     (hphysical : finish.toNat ≤ ownedPages * 65536) :
@@ -291,9 +311,10 @@ private theorem twp_func58_commit_copy_and_return
   wasm_twp_bind twp_store32 (address := 0) (offset := allocatorCursor) storedCursor
       (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   isimp only [UInt32.zero_add] at Hcursor
-  have hnewAlignment : newLayout.alignment = 1 := by simpa using hlayout.2.1.2.symm
+  have hnewAlignment : newLayout.alignment = 1 ∨ newLayout.alignment = 4 :=
+    hlayout.2.2.2.2.1
   imod BumpHeap_commit heapId frontier history newPtr finish newLayout newBytes
-      ownedPages hfrontierLow hwf hlayout.2.2.2.1 (Or.inl hnewAlignment)
+      ownedPages hfrontierLow hwf hlayout.2.2.2.1 hnewAlignment
       hclassify hbytesLength hphysical $$
       [Hcursor Hfrontier Hauth Hretired Hpages Hbytes] with
       ⟨Hbump, HnewBlock⟩
@@ -323,10 +344,11 @@ private theorem twp_func58_claim_commit_copy_and_return
     (Φ : ObservableOutcome → HeapIProp)
     (hfrontierLow : heapBase.toNat ≤ frontier)
     (hwf : HistoryWellFormed frontier history)
-    (hlayout : oldLayout.Matches oldSize 1 ∧
-      newLayout.Matches newSize 1 ∧
+    (hlayout : oldSize.toNat = oldLayout.size ∧
+      newSize.toNat = newLayout.size ∧
       oldLayout.Valid ∧ newLayout.Valid ∧
-      oldLayout.alignment = 1 ∧ oldLayout.size < newLayout.size)
+      (newLayout.alignment = 1 ∨ newLayout.alignment = 4) ∧
+      oldLayout.size < newLayout.size)
     (hclassify : classifyBump frontier newLayout = .success newPtr finish)
     (hstart : frontier ≤ newPtr.toNat)
     (hendWord : newPtr.toNat + newLayout.size < UInt32.size)
@@ -476,32 +498,65 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
   cases hdecision : classifyBump frontier newLayout with
   | success newPtr finish =>
       isimp only [ReallocContinuation, hdecision] at Hcont
-      have halignmentNat : alignment.toNat = 1 := by
-        rw [hlayout.1.2, hlayout.2.2.2.2.1]
-      have halignment : alignment = 1 :=
-        UInt32.toNat_inj.mp (by simpa using halignmentNat)
-      have hnewAlignment : newLayout.alignment = 1 := by
-        rw [← hlayout.2.1.2, halignmentNat]
-      have hnewLayoutShape :
-          newLayout = { size := newLayout.size, alignment := 1 } := by
-        cases newLayout
-        simp_all
-      have hclassify' :
-          classifyBump frontier { size := newLayout.size, alignment := 1 } =
-            .success newPtr finish := by simpa only [← hnewLayoutShape] using hdecision
-      rcases classifyBump_success_align1 frontier newLayout.size newPtr finish
-          hclassify' with
-        ⟨hfrontierBound, hbase, hbaseNat, hendWord, hendSigned,
-          hfinishNat⟩
+      have hsizeLit : UInt32.size = 4294967296 := by norm_num [UInt32.size]
+      have halignNat : alignment.toNat = newLayout.alignment := hlayout.2.1.2
+      have hnewAlignment :
+          newLayout.alignment = 1 ∨ newLayout.alignment = 4 := by
+        rw [← hlayout.2.1.2, hlayout.1.2]; exact hlayout.2.2.2.2.1
+      have haRange : 1 ≤ newLayout.alignment ∧ newLayout.alignment ≤ 4 := by
+        rcases hnewAlignment with h | h <;> omega
+      have hlayout' : oldSize.toNat = oldLayout.size ∧
+          newSize.toNat = newLayout.size ∧
+          oldLayout.Valid ∧ newLayout.Valid ∧
+          (newLayout.alignment = 1 ∨ newLayout.alignment = 4) ∧
+          oldLayout.size < newLayout.size :=
+        ⟨hlayout.1.1, hlayout.2.1.1, hlayout.2.2.1, hlayout.2.2.2.1,
+          hnewAlignment, hlayout.2.2.2.2.2⟩
+      have halignWord : UInt32.ofNat newLayout.alignment = alignment := by
+        apply UInt32.toNat_inj.mp
+        rw [UInt32.toNat_ofNat_of_lt' (by omega), halignNat]
+      have halignMinus :
+          (0xFFFFFFFF : UInt32) + alignment =
+            UInt32.ofNat (newLayout.alignment - 1) := by
+        apply UInt32.toNat_inj.mp
+        rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' (by omega), halignNat,
+          show (0xFFFFFFFF : UInt32).toNat = 4294967295 from rfl]
+        omega
+      have hraw :=
+        classifyBump_success_facts frontier newLayout newPtr finish hdecision
+      dsimp only at hraw
+      rcases hraw with ⟨hsumBound, hbase, hendWord, hendSigned, hfinishNat⟩
+      have hfrontierBound : frontier < UInt32.size := by omega
+      have hpadBound : newLayout.alignment - 1 < UInt32.size := by omega
+      have hsumNat :
+          (UInt32.ofNat (frontier + (newLayout.alignment - 1))).toNat =
+            frontier + (newLayout.alignment - 1) :=
+        UInt32.toNat_ofNat_of_lt' hsumBound
+      have hbaseEq :
+          UInt32.ofNat (frontier + (newLayout.alignment - 1)) &&&
+              ((0 : UInt32) - alignment) = newPtr := by
+        rw [← halignWord]; exact hbase.symm
+      have hsumWordEq :
+          UInt32.ofNat frontier + UInt32.ofNat (newLayout.alignment - 1) =
+            UInt32.ofNat (frontier + (newLayout.alignment - 1)) := by
+        apply UInt32.toNat_inj.mp
+        rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hfrontierBound,
+          UInt32.toNat_ofNat_of_lt' hpadBound, hsumNat]
+        omega
+      have hnoUnderflow :
+          ¬ (UInt32.ofNat (frontier + (newLayout.alignment - 1)) <
+              UInt32.ofNat (newLayout.alignment - 1)) := by
+        rw [UInt32.not_lt, UInt32.le_iff_toNat_le_toNat, hsumNat,
+          UInt32.toNat_ofNat_of_lt' hpadBound]
+        omega
       have hfinishPtrNat :
-          finish.toNat = newPtr.toNat + newLayout.size := by
-        rw [hfinishNat, hbaseNat]
+          finish.toNat = newPtr.toNat + newLayout.size := hfinishNat
       have hnewSizeNat : newSize.toNat = newLayout.size := hlayout.2.1.1
       have hfinishWord : newPtr + newSize = finish := by
         apply UInt32.toNat_inj.mp
         rw [UInt32.toNat_add, hnewSizeNat]
         norm_num [UInt32.size] at hendWord ⊢
-        rw [Nat.mod_eq_of_lt hendWord, hfinishNat, hbaseNat]
+        rw [Nat.mod_eq_of_lt hendWord, hfinishNat]
       have hbaseLeFinish : newPtr ≤ finish := by
         rw [UInt32.le_iff_toNat_le_toNat, hfinishNat]; omega
       have hfinishSigned : finish.toNat < 2147483648 := by
@@ -513,9 +568,12 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       rcases hheap with
         ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
           hphysicalFrontier⟩
+      have hstart : frontier ≤ newPtr.toNat :=
+        (classifyBump_success_reachable frontier newLayout newPtr finish
+          hfrontierLow hlayout.2.2.2.1 hnewAlignment hdecision).1
       have hfrontierWord :
-          (if storedCursor ≠ 0 then storedCursor else heapBase) = newPtr := by
-        rw [hbase]
+          (if storedCursor ≠ 0 then storedCursor else heapBase) =
+            UInt32.ofNat frontier := by
         split
         · rename_i hnonzero
           apply UInt32.toNat_inj.mp
@@ -528,9 +586,8 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
           simpa only [UInt32.toNat_ofNat_of_lt' hfrontierBound] using hfrontierEq.symm
       wasm_twp_pures [twp_block] using [func58PostArithmetic, func58GrowthBody, func58CopyBody,
         List.drop_zero]
-      subst alignment
       wasm_twp_pures [twp_localGet twp_const twp_add]
-      simp only [show (0xFFFFFFFF : UInt32) + 1 = 0 by decide]
+      rw [halignMinus]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_const]
       ihave HcursorAt : pointsTo_u32 0 (0 + allocatorCursor) storedCursor $$
@@ -542,19 +599,18 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       isimp only [UInt32.zero_add] at Hcursor
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_const twp_localGet]
-      iapply twp_select (selected := .i32 newPtr) (by
+      iapply twp_select (selected := .i32 (UInt32.ofNat frontier)) (by
         by_cases hzero : storedCursor = 0
         · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm
         · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm)
-      wasm_twp_pures [twp_add] using [UInt32.add_zero]
+      wasm_twp_pures [twp_add]
+      rw [hsumWordEq]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
-      iapply twp_ltU (result := 0) (by simp)
+      iapply twp_ltU (result := 0) (by rw [if_neg hnoUnderflow])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet twp_sub]
-      simp only [show (0 : UInt32) - 1 = 0xFFFFFFFF by decide]
       wasm_twp_pures [twp_and]
-      rw [show newPtr &&& (0xFFFFFFFF : UInt32) = newPtr by
-        exact UInt32.and_neg_one]
+      rw [hbaseEq]
       wasm_twp_localTee [List.set]
       wasm_twp_pures [twp_localGet twp_add] rewriting [UInt32.add_comm newSize newPtr, hfinishWord]
       wasm_twp_localTee [List.length]
@@ -638,7 +694,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
             (UInt32.ofNat pages) storedCursor oldLayout newLayout heapId oldId
             oldBytes frontier pages history input output raised
             callerLocals stack code arity remainder controls calls s E Φ
-            hfrontierLow hwf hlayout hdecision (by omega) hendWord hfinishPtrNat
+            hfrontierLow hwf hlayout' hdecision hstart hendWord hfinishPtrNat
             hphysical
         iframe Hruntime Hcursor Hfrontier Hauth Hretired Hpages Hblock Hstreams
           Hnormal
@@ -759,51 +815,103 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
                     heapId oldId oldBytes frontier newPages history input output
                     raised
                     callerLocals stack code arity remainder controls calls s E
-                    Φ hfrontierLow hwf hlayout hdecision (by omega) hendWord
+                    Φ hfrontierLow hwf hlayout' hdecision hstart hendWord
                     hfinishPtrNat hphysical
                 iframe Hruntime Hcursor Hfrontier Hauth Hretired HnewPages
                   Hblock Hstreams Hnormal)
             $$ HgrowFrame Hmodule Hpages
   | oom =>
       isimp only [ReallocContinuation, hdecision] at Hcont
-      have halignmentNat : alignment.toNat = 1 := by
-        rw [hlayout.1.2, hlayout.2.2.2.2.1]
-      have halignment : alignment = 1 :=
-        UInt32.toNat_inj.mp (by simpa using halignmentNat)
-      have hnewAlignment : newLayout.alignment = 1 := by
-        rw [← hlayout.2.1.2, halignmentNat]
+      have hsizeLit : UInt32.size = 4294967296 := by norm_num [UInt32.size]
+      have halignNat : alignment.toNat = newLayout.alignment := hlayout.2.1.2
+      have hnewAlignment :
+          newLayout.alignment = 1 ∨ newLayout.alignment = 4 := by
+        rw [← hlayout.2.1.2, hlayout.1.2]; exact hlayout.2.2.2.2.1
+      have haRange : 1 ≤ newLayout.alignment ∧ newLayout.alignment ≤ 4 := by
+        rcases hnewAlignment with h | h <;> omega
+      have hpadBound : newLayout.alignment - 1 < UInt32.size := by omega
+      have halignWord : UInt32.ofNat newLayout.alignment = alignment := by
+        apply UInt32.toNat_inj.mp
+        rw [UInt32.toNat_ofNat_of_lt' (by omega), halignNat]
+      have halignMinus :
+          (0xFFFFFFFF : UInt32) + alignment =
+            UInt32.ofNat (newLayout.alignment - 1) := by
+        apply UInt32.toNat_inj.mp
+        rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hpadBound, halignNat,
+          show (0xFFFFFFFF : UInt32).toNat = 4294967295 from rfl]
+        omega
       have hnewSizeNat : newSize.toNat = newLayout.size := hlayout.2.1.1
+      have hsizeUpper : newLayout.size ≤ 2147483648 - newLayout.alignment :=
+        hlayout.2.2.2.1.2.2.2.2.1
       isimp only [BumpHeap] at Hbump
       icases Hbump with
         ⟨Hcursor, Hfrontier, Hauth, Hretired, %ownedPages, Hpages, %hheap⟩
       rcases hheap with
         ⟨hfrontierLow, hfrontierSigned, hcursorZero, hcursorNat, hwf,
           hphysicalFrontier⟩
-      have hfrontierBound : frontier < UInt32.size := by
-        norm_num [UInt32.size] at hfrontierSigned ⊢; omega
-      let base : UInt32 := UInt32.ofNat frontier
-      have hbaseNat : base.toNat = frontier :=
-        UInt32.toNat_ofNat_of_lt' hfrontierBound
+      have hfrontierBound : frontier < UInt32.size := by omega
+      have hsumBound :
+          frontier + (newLayout.alignment - 1) < UInt32.size := by omega
+      have hsumNat :
+          (UInt32.ofNat (frontier + (newLayout.alignment - 1))).toNat =
+            frontier + (newLayout.alignment - 1) :=
+        UInt32.toNat_ofNat_of_lt' hsumBound
+      obtain ⟨base, hbaseDef⟩ :
+          ∃ b : UInt32,
+            b = UInt32.ofNat (frontier + (newLayout.alignment - 1)) &&&
+              ((0 : UInt32) - alignment) := ⟨_, rfl⟩
+      have hbaseLe : base.toNat ≤ frontier + (newLayout.alignment - 1) := by
+        rw [hbaseDef, UInt32.toNat_and, hsumNat]
+        exact Nat.and_le_left
+      have hend : base.toNat + newLayout.size < UInt32.size := by omega
+      have hnotEnd :=
+        classifyBump_oom_end frontier newLayout hsumBound hdecision
+      rw [halignWord, ← hbaseDef] at hnotEnd
+      have hnotSigned : ¬ (base.toNat + newLayout.size < 2147483648) :=
+        fun hsigned => hnotEnd ⟨hend, hsigned⟩
+      have hfinishNat :
+          (base + newSize).toNat = base.toNat + newLayout.size := by
+        rw [UInt32.toNat_add, hnewSizeNat, Nat.mod_eq_of_lt hend]
+      have hbaseLeFinish : base ≤ base + newSize := by
+        rw [UInt32.le_iff_toNat_le_toNat, hfinishNat]; omega
+      have hfinishNegative :
+          (base + newSize).toInt32 < (0 : UInt32).toInt32 := by
+        simp only [UInt32.toInt32, LT.lt, Int32.lt, Int32.toBitVec]
+        rw [BitVec.slt_iff_toInt_lt]
+        simp only [BitVec.toInt, Nat.reducePow]
+        change (if 2 * (base + newSize).toNat < 4294967296 then
+          ((base + newSize).toNat : Int)
+          else ((base + newSize).toNat : Int) - 4294967296) < 0
+        rw [if_neg (by rw [hfinishNat]; omega)]; omega
       have hfrontierWord :
-          (if storedCursor ≠ 0 then storedCursor else heapBase) = base := by
+          (if storedCursor ≠ 0 then storedCursor else heapBase) =
+            UInt32.ofNat frontier := by
         split
         · rename_i hnonzero
           apply UInt32.toNat_inj.mp
-          rw [hcursorNat hnonzero, hbaseNat]
+          rw [hcursorNat hnonzero, UInt32.toNat_ofNat_of_lt' hfrontierBound]
         · rename_i hzero
           simp only [ne_eq, Decidable.not_not] at hzero
           have hfrontierEq := (hcursorZero.mp hzero).2
-          exact UInt32.toNat_inj.mp (by simpa only [hbaseNat] using hfrontierEq.symm)
-      let finishWord : UInt32 := base + newSize
-      have hfinishWordNat : finishWord.toNat =
-          (frontier + newLayout.size) % UInt32.size := by
-        dsimp only [finishWord]
-        rw [UInt32.toNat_add, hbaseNat, hnewSizeNat]
+          apply UInt32.toNat_inj.mp
+          simpa only [UInt32.toNat_ofNat_of_lt' hfrontierBound] using hfrontierEq.symm
+      have hsumWordEq :
+          UInt32.ofNat frontier + UInt32.ofNat (newLayout.alignment - 1) =
+            UInt32.ofNat (frontier + (newLayout.alignment - 1)) := by
+        apply UInt32.toNat_inj.mp
+        rw [UInt32.toNat_add, UInt32.toNat_ofNat_of_lt' hfrontierBound,
+          UInt32.toNat_ofNat_of_lt' hpadBound, hsumNat]
+        omega
+      have hnoUnderflow :
+          ¬ (UInt32.ofNat (frontier + (newLayout.alignment - 1)) <
+              UInt32.ofNat (newLayout.alignment - 1)) := by
+        rw [UInt32.not_lt, UInt32.le_iff_toNat_le_toNat, hsumNat,
+          UInt32.toNat_ofNat_of_lt' hpadBound]
+        omega
       wasm_twp_pures [twp_block] using [func58PostArithmetic, func58GrowthBody, func58CopyBody,
         List.drop_zero]
-      subst alignment
       wasm_twp_pures [twp_localGet twp_const twp_add]
-      simp only [show (0xFFFFFFFF : UInt32) + 1 = 0 by decide]
+      rw [halignMinus]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_const]
       ihave HcursorAt : pointsTo_u32 0 (0 + allocatorCursor) storedCursor $$
@@ -815,64 +923,25 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       isimp only [UInt32.zero_add] at Hcursor
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_const twp_localGet]
-      iapply twp_select (selected := .i32 base) (by
+      iapply twp_select (selected := .i32 (UInt32.ofNat frontier)) (by
         by_cases hzero : storedCursor = 0
         · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm
         · simp [hzero] at hfrontierWord ⊢; exact hfrontierWord.symm)
-      wasm_twp_pures [twp_add] using [UInt32.add_zero]
+      wasm_twp_pures [twp_add]
+      rw [hsumWordEq]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
-      iapply twp_ltU (result := 0) (by simp)
+      iapply twp_ltU (result := 0) (by rw [if_neg hnoUnderflow])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet twp_sub]
-      simp only [show (0 : UInt32) - 1 = 0xFFFFFFFF by decide]
       wasm_twp_pures [twp_and]
-      rw [show base &&& (0xFFFFFFFF : UInt32) = base by
-        exact UInt32.and_neg_one]
+      rw [← hbaseDef]
       wasm_twp_localTee [List.set]
       wasm_twp_pures [twp_localGet twp_add] rewriting [UInt32.add_comm newSize base]
-      rw [show base + newSize = finishWord by rfl]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
-      have hsizeUpper : newLayout.size ≤ 2147483647 := by
-        simpa [hnewAlignment] using hlayout.2.2.2.1.2.2.2.2.1
-      have hend : frontier + newLayout.size < UInt32.size := by
-        norm_num [UInt32.size] at hfrontierSigned ⊢; omega
-      have hfinishNat : finishWord.toNat = frontier + newLayout.size := by
-        rw [hfinishWordNat, Nat.mod_eq_of_lt hend]
-      have hbaseLeFinish : base ≤ finishWord := by
-        rw [UInt32.le_iff_toNat_le_toNat, hbaseNat, hfinishNat]; omega
       iapply twp_ltU (result := 0) (by
         rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
-      have hnotSigned : ¬ frontier + newLayout.size < 2147483648 := by
-        intro hsigned
-        have hrawBase :
-            UInt32.ofNat frontier &&& (0 - UInt32.ofNat 1) = base := by
-          simp [base]
-        have hrawFinish :
-            UInt32.ofNat (base.toNat + newLayout.size) = finishWord := by
-          apply UInt32.toNat_inj.mp
-          rw [UInt32.toNat_ofNat_of_lt' (by simpa [hbaseNat] using hend),
-            hfinishNat, hbaseNat]
-        have hsuccess : classifyBump frontier newLayout =
-            .success base finishWord := by
-          unfold classifyBump
-          simp only [hnewAlignment, Nat.reduceSubDiff, Nat.add_zero]
-          rw [dif_pos hfrontierBound]
-          rw [hrawBase]
-          rw [if_pos ⟨by simpa [hbaseNat] using hend,
-            by simpa [hbaseNat] using hsigned⟩]
-          rw [hrawFinish]
-        rw [hdecision] at hsuccess; contradiction
-      have hfinishNegative :
-          finishWord.toInt32 < (0 : UInt32).toInt32 := by
-        simp only [UInt32.toInt32, LT.lt, Int32.lt, Int32.toBitVec]
-        rw [BitVec.slt_iff_toInt_lt]
-        simp only [BitVec.toInt, Nat.reducePow]
-        change (if 2 * finishWord.toNat < 4294967296 then
-          (finishWord.toNat : Int)
-          else (finishWord.toNat : Int) - 4294967296) < 0
-        rw [if_neg (by rw [hfinishNat]; omega)]; omega
       iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.nil_append]
@@ -885,7 +954,9 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       simp only [Nat.reduceAdd, Nat.reduceSub, List.set, ValueType.zero]
       iapply twp_func58_oom oldPtr oldSize base newSize heapId oldId oldLayout
           oldBytes storedCursor frontier history input output raised
-          finishWord base 0 callerLocals stack code arity remainder controls
+          (base + newSize)
+          (UInt32.ofNat (frontier + (newLayout.alignment - 1))) 0
+          callerLocals stack code arity remainder controls
           calls s E Φ
       iframe Hruntime Hbump Hblock Hstreams Hcont
 

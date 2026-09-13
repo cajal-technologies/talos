@@ -539,7 +539,8 @@ theorem func97_correct_of [WasmSmallStepGS hlc Universal.State]
       · unfold RuntimeContext
         iframe Hmodule Henv
       isplitl_exacts [Hbump Hblock Hstreams]
-      isplitl_pureexact ⟨holdMatches, hnewMatches, holdValid, hnewValid, rfl,
+      isplitl_pureexact ⟨holdMatches, hnewMatches, holdValid, hnewValid,
+          Or.inl rfl,
           holdNew⟩
       cases hdecision : classifyBump frontier newLayout with
       | oom =>

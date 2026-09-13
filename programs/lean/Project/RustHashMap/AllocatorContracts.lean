@@ -135,7 +135,7 @@ def Func58Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         ⌜oldLayout.Matches oldSize alignment ∧
           newLayout.Matches newSize alignment ∧
           oldLayout.Valid ∧ newLayout.Valid ∧
-          oldLayout.alignment = 1 ∧
+          (oldLayout.alignment = 1 ∨ oldLayout.alignment = 4) ∧
           oldLayout.size < newLayout.size⌝ ∗
         ReallocContinuation heapId storedCursor frontier history oldId oldPtr
           oldLayout oldBytes newLayout input output raised callerLocals stack
