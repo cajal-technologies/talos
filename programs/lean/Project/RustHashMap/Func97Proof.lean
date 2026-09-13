@@ -40,7 +40,7 @@ private theorem toInt32_nonneg (n : UInt32) (h : n.toNat < 2 ^ 31) :
 /-- Expose a twelve-byte result slot as three writable words, with an exact
 close operation for the grow result.  Wasm scalar stores need no
 alignment. -/
-private theorem ByteSlice_twelve_storeFocus
+theorem ByteSlice_twelve_storeFocus
     [WasmSmallStepGS hlc Universal.State]
     (ptr : UInt32) (bytes : List UInt8) (hlength : bytes.length = 12) :
     Slices.ByteSlice 0 ptr bytes ⊢
