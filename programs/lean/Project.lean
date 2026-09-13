@@ -92,3 +92,4 @@ import Project.RustHashMap.DecoderOkReturn
 import Project.RustHashMap.DecoderPairRead
 import Project.RustHashMap.DecoderAppend
 import Project.RustHashMap.DecoderKeyRead
+import Project.RustHashMap.DecoderShortPair
