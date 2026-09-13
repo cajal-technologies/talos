@@ -122,4 +122,14 @@ theorem shrU32Wasm3 (x : UInt32) : x >>> ((3 : UInt32) % 32) = x >>> 3 := rfl
 /-- `i32.shl` at 3. -/
 theorem shl32Wasm3 (x : UInt32) : x <<< ((3 : UInt32) % 32) = x <<< 3 := rfl
 
+/-- `i32.wrap_i64` as `twp_wrapI64` states it, as the model writes it.  The
+bridges of `CodeLib.RustStd.HashMap.ProbeWasm` all take `toUInt32`. -/
+theorem wrapWasm (x : UInt64) : UInt32.ofNat (x.toNat % 2 ^ 32) = x.toUInt32 := by
+  apply UInt32.toNat_inj.mp
+  rw [UInt64.toNat_toUInt32,
+    UInt32.toNat_ofNat_of_lt' (by
+      have h : x.toNat % 2 ^ 32 < 2 ^ 32 := Nat.mod_lt _ (Nat.two_pow_pos 32)
+      change x.toNat % 2 ^ 32 < 4294967296
+      omega)]
+
 end Project.RustHashMap.BitPures
