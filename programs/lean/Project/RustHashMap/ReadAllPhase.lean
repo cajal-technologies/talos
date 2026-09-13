@@ -8,8 +8,11 @@ This file proves the frame setup, the first chunk read, the read loop, and
 the reload of the vector registers, up to the exit of the read block.  The
 frame base is concrete, so every address fact is decidable.
 
-See `Project.RustHashMap.ReadAllDefs` for the fragments and the loop
-invariant.
+The core is parameterised by a `FrameMap`.  This file is the instance of
+the core at `lenMap`, the frame map of absolute function 22.
+
+See `Project.RustHashMap.ReadAllDefs` for the fragments, the frame map,
+and the loop invariant.
 -/
 
 namespace Project.RustHashMap.ReadAll
@@ -25,18 +28,6 @@ open Project.RustHashMap.VecGrow
 open scoped Wasm.SmallStep.Outcome
 
 /-! ## Slices of the frame -/
-
-/-- Cut a slice at a word offset. -/
-theorem ByteSlice_split_at [WasmHeapGS Universal.State]
-    (ptr k : UInt32) (bytes : List UInt8) (hk : k.toNat ≤ bytes.length) :
-    Slices.ByteSlice 0 ptr bytes ⊣⊢
-      iprop(Slices.ByteSlice 0 ptr (bytes.take k.toNat) ∗
-        Slices.ByteSlice 0 (ptr + k) (bytes.drop k.toNat)) := by
-  have h := Slices.ByteSlice_append (α := Universal.State) 0 ptr
-    (bytes.take k.toNat) (bytes.drop k.toNat)
-  rw [List.take_append_drop, List.length_take, Nat.min_eq_left hk,
-    UInt32.ofNat_toNat] at h
-  exact h
 
 /-- The five regions of the 304-byte driver frame: the head, the chunk
 buffer, the eight-byte slice, the vector header, and the tail. -/
@@ -75,38 +66,6 @@ theorem ByteSlice_frame304 [WasmHeapGS Universal.State]
   isplitl_pureexact (by simp [hlen])
   iframe
 
-/-- Twelve raw bytes as three words. -/
-theorem ByteSlice_header_as_words [WasmHeapGS Universal.State]
-    (ptr : UInt32) (bytes : List UInt8) (hlen : bytes.length = 12)
-    (hnowrap : ptr.toNat + 12 < UInt32.size) :
-    Slices.ByteSlice 0 ptr bytes ⊢
-      iprop(∃ a b c : UInt32,
-        pointsTo_u32 0 ptr a ∗ pointsTo_u32 0 (ptr + 4) b ∗
-          pointsTo_u32 0 (ptr + 8) c) := by
-  iintro Hbytes
-  have hb4 : (ptr + 4).toNat = ptr.toNat + 4 := by
-    simpa using Slices.byteOffset_toNat ptr 4 (by omega)
-  have hb8 : (ptr + 8).toNat = ptr.toNat + 8 := by
-    simpa using Slices.byteOffset_toNat ptr 8 (by omega)
-  icases (ByteSlice_split_at ptr 4 bytes (by simp [hlen])).mp $$ Hbytes
-    with ⟨H0, Hrest⟩
-  isimp only [UInt32.reduceToNat] at H0
-  isimp only [UInt32.reduceToNat] at Hrest
-  icases (ByteSlice_split_at (ptr + 4) 4 (bytes.drop 4) (by simp [hlen])).mp
-    $$ Hrest with ⟨H1, H2⟩
-  isimp only [UInt32.reduceToNat] at H1
-  isimp only [UInt32.reduceToNat, UInt32.add_assoc, UInt32.reduceAdd] at H2
-  ihave H0 := (Slices.ByteSlice_four_as_word 0 ptr (bytes.take 4)
-    (by simp [hlen]) (by omega)).mp $$ H0
-  ihave H1 := (Slices.ByteSlice_four_as_word 0 (ptr + 4) ((bytes.drop 4).take 4)
-    (by simp [hlen]) (by omega)).mp $$ H1
-  ihave H2 := (Slices.ByteSlice_four_as_word 0 (ptr + 8) ((bytes.drop 4).drop 4)
-    (by simp [hlen]) (by omega)).mp $$ H2
-  iexists (WordCodec.decodeU32 (bytes.take 4)),
-    (WordCodec.decodeU32 ((bytes.drop 4).take 4)),
-    (WordCodec.decodeU32 ((bytes.drop 4).drop 4))
-  iframe
-
 /-! ## The frame of `map_len` -/
 
 /-- The frame base of the `map_len` driver: 304 bytes below the entry
@@ -143,8 +102,8 @@ def AfterRead [WasmSmallStepGS hlc Universal.State]
 /-- The control frame of the read block. -/
 def phaseFrame (afterRead : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0,
-    body := .block 0 0 firstReadBody :: .const 0 :: .localSet 1 ::
-      .loop 0 0 readLoopBody :: reloadVec,
+    body := .block 0 0 (firstReadBody lenMap) :: .const 0 :: .localSet 1 ::
+      .loop 0 0 (readLoopBody lenMap) :: reloadVec lenMap,
     continuation := afterRead, belowStack := [] }
 
 private theorem func19_initialLocals :
@@ -209,25 +168,29 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
     (by simp [hframe]) $$ Hframe
   icases Hframe with ⟨%head, %chunk, %slice, %header, %tail, %hlens,
     Hhead, Hchunk, Hslice, Hheader, Htail⟩
+  isimp only [show func19Base + 24 = func19Base + lenMap.chunkOff by decide]
+    at Hchunk
+  isimp only [show func19Base + 288 = func19Base + lenMap.vecOff by decide]
+    at Hheader
   ihave Hreserve : StackReserve (func19Base - 16) (frameBytes.take 16) $$
       [Hreserve]
   · unfold StackReserve
     isplitl_pureexact (by simp [hframe])
     iexact Hreserve
-  ihave Hwords := ByteSlice_header_as_words (func19Base + 288) header
-    hlens.2.2.2.1 (by decide) $$ Hheader
+  ihave Hwords := ByteSlice_header_as_words (func19Base + lenMap.vecOff)
+    header hlens.2.2.2.1 (by decide) $$ Hheader
   icases Hwords with ⟨%oldCapacity, %oldPtr, %oldLength, HoldCapacity,
     HoldPtr, HoldLength⟩
-  ihave HoldPair := (pointsTo_u32_pair_as_u64 (func19Base + 288)
+  ihave HoldPair := (pointsTo_u32_pair_as_u64 (func19Base + lenMap.vecOff)
     oldCapacity oldPtr).mp $$ [HoldCapacity HoldPtr]
   · iframe
-  isimp only [UInt32.add_assoc, UInt32.reduceAdd] at HoldLength
+  isimp only [UInt32.add_assoc] at HoldLength
   -- the frame setup
   isimp only [StackPointer] at Hsp
   simp only [readPrologue, List.cons_append, List.nil_append]
   wasm_twp_rebind twp_globalGet with Hsp
   wasm_twp_pures [twp_const twp_sub]
-    rewriting [show entryStackTop - 304 = func19Base by decide]
+    rewriting [show entryStackTop - lenMap.frame = func19Base by decide]
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_rebind twp_globalSet with Hsp
@@ -238,40 +201,43 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_const]
-  wasm_twp_rebind twp_store32 (address := func19Base) (offset := 296)
-    oldLength (by decide) (by decide) (by decide) (by decide) with HoldLength
+  wasm_twp_rebind twp_store32 (address := func19Base)
+    (offset := lenMap.vecOff + 8) oldLength (by decide) (by decide)
+    (by decide) (by decide) with HoldLength
   wasm_twp_pures [twp_localGet]
   iapply twp_pureStep _ _ _ (fun _ => Step.constI64)
-  wasm_twp_bind twp_store64 (address := func19Base) (offset := 288)
+  wasm_twp_bind twp_store64 (address := func19Base) (offset := lenMap.vecOff)
     (oldCapacity.toUInt64 ||| (oldPtr.toUInt64 <<< 32))
     (by decide) (by decide) (by decide) (by decide) (by decide) (by decide)
     (by decide) (by decide) with HoldPair => Hpair
   wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [show 24 + func19Base = func19Base + 24 by decide]
+  rw [show lenMap.chunkOff + func19Base = func19Base + lenMap.chunkOff
+    by decide]
   wasm_twp_pures [twp_const twp_const]
   isimp only [Slices.ByteSlice] at Hchunk
   icases Hchunk with ⟨%_hchunkNowrap, HchunkBytes⟩
   iapply twp_memoryFill32 chunk (by simp [hlens.2.1]) (by decide)
-    (by simp only [UInt32.reduceToNat]; decide) $$ HchunkBytes
+    (by decide) $$ HchunkBytes
   iintro HchunkBytes
   isimp only [hlens.2.1, show (0 : UInt32).toUInt8 = 0 from rfl] at HchunkBytes
-  ihave Hchunk : Slices.ByteSlice 0 (func19Base + 24) (List.replicate 256 0) $$
-      [HchunkBytes]
+  ihave Hchunk : Slices.ByteSlice 0 (func19Base + lenMap.chunkOff)
+      (List.replicate 256 0) $$ [HchunkBytes]
   · unfold Slices.ByteSlice
     isplitl_pureexact (by simp only [List.length_replicate]; decide)
     iexact HchunkBytes
-  ihave HpairWords : iprop(pointsTo_u32 0 (func19Base + 288) 0 ∗
-      pointsTo_u32 0 (func19Base + 288 + 4) 1) $$ [Hpair]
-  · iapply (pointsTo_u32_pair_as_u64 (func19Base + 288) 0 1).mpr
+  ihave HpairWords : iprop(pointsTo_u32 0 (func19Base + lenMap.vecOff) 0 ∗
+      pointsTo_u32 0 (func19Base + lenMap.vecOff + 4) 1) $$ [Hpair]
+  · iapply (pointsTo_u32_pair_as_u64 (func19Base + lenMap.vecOff) 0 1).mpr
     rw [show (0 : UInt32).toUInt64 ||| ((1 : UInt32).toUInt64 <<< 32) =
       (4294967296 : UInt64) by decide]
     iexact Hpair
   icases HpairWords with ⟨Hcapacity, Hptr⟩
-  isimp only [UInt32.add_assoc, UInt32.reduceAdd] at Hptr
-  ihave Hvec : VecU8 heapId (func19Base + 288) 0 1 [] $$
+  ihave HoldLength := pointsTo_u32_address_eq
+    (vec_addr lenMap func19Base 8).symm $$ HoldLength
+  ihave Hvec : VecU8 heapId (func19Base + lenMap.vecOff) 0 1 [] $$
       [Hcapacity Hptr HoldLength]
   · unfold VecU8 RawVecHeader VecStorage
-    isimp only [UInt32.add_assoc, UInt32.reduceAdd, List.length_nil,
+    isimp only [List.length_nil,
       show UInt32.ofNat 0 = (0 : UInt32) from rfl]
     isplitl [Hcapacity Hptr]
     · isplitl [Hcapacity]
@@ -289,7 +255,8 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_block]
   simp only [List.drop_zero]
   unfold firstReadBody
-  iapply twp_read_chunk func19Base (List.replicate 256 0) input output []
+  iapply twp_read_chunk lenMap func19Base (List.replicate 256 0) input
+    output []
     [.i32 func19Base, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0, .i32 0,
       .i32 0]
     (stack := []) (code := [.localTee 2, .br_if 0, .const 1, .localSet 3,
@@ -319,6 +286,10 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
     ihave Hnormal := BI.and_elim_l $$ Hcont
     iapply Hnormal $$ %0 %1 %storedCursor %frontier %history
       %(frameBytes.take 16) %head %(List.replicate 256 0) %slice %tail %0
+    isimp only [show func19Base + lenMap.chunkOff = func19Base + 24
+      by decide] at Hchunk
+    isimp only [show func19Base + lenMap.vecOff = func19Base + 288
+      by decide] at Hvec
     unfold AfterRead
     isplitl_exacts [Hruntime Hsp Hreserve Hhead Hchunk Hslice Hvec Htail
       Hbump Hstreams]
@@ -353,9 +324,10 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
         min 256 input.length := by
       simp only [List.length_take, Nat.sub_zero]
       exact Nat.min_eq_left hcountLe
-    have Hloop := twp_read_loop hfunc98 func19Base heapId input output 0 0 0 0
-      reloadVec arity remainder (phaseFrame afterRead :: controls) calls s E Φ
-      (by decide) initial
+    have Hloop := twp_read_loop hfunc98 lenMap func19Base heapId input output
+      0 0 0 0 (reloadVec lenMap) arity remainder
+      (phaseFrame afterRead :: controls) calls s E Φ (by decide) lenMap_wf
+      initial
     simp only [loopLocals, initial, htakeLen, phaseFrame, firstReadBody,
       show UInt32.ofNat 0 = (0 : UInt32) from rfl] at Hloop
     iapply Hloop
@@ -376,30 +348,33 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
       unfold reloadVec
       isimp only [VecU8, RawVecHeader] at Hvec
       icases Hvec with ⟨⟨Hcapacity, Hptr⟩, Hlength, Hstorage⟩
-      isimp only [UInt32.add_assoc, UInt32.reduceAdd] at Hptr
-      isimp only [UInt32.add_assoc, UInt32.reduceAdd] at Hlength
+      isimp only [UInt32.add_assoc] at Hptr
+      isimp only [UInt32.add_assoc] at Hlength
       wasm_twp_pures [twp_localGet]
-      wasm_twp_rebind twp_load32 (address := func19Base) (offset := 296)
+      wasm_twp_rebind twp_load32 (address := func19Base)
+        (offset := lenMap.vecOff + 8)
         (UInt32.ofNat input.length) (by decide) (by decide) (by decide)
         (by decide) with Hlength
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       wasm_twp_pures [twp_localGet]
-      wasm_twp_rebind twp_load32 (address := func19Base) (offset := 292)
+      wasm_twp_rebind twp_load32 (address := func19Base)
+        (offset := lenMap.vecOff + 4)
         finalPtr (by decide) (by decide) (by decide) (by decide) with Hptr
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       wasm_twp_pures [twp_localGet]
-      wasm_twp_rebind twp_load32 (address := func19Base) (offset := 288)
+      wasm_twp_rebind twp_load32 (address := func19Base)
+        (offset := lenMap.vecOff)
         finalCapacity (by decide) (by decide) (by decide) (by decide)
         with Hcapacity
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append]
-      ihave Hvec : VecU8 heapId (func19Base + 288) finalCapacity finalPtr
-          input $$ [Hcapacity Hptr Hlength Hstorage]
+      ihave Hvec : VecU8 heapId (func19Base + lenMap.vecOff) finalCapacity
+          finalPtr input $$ [Hcapacity Hptr Hlength Hstorage]
       · unfold VecU8 RawVecHeader
-        isimp only [UInt32.add_assoc, UInt32.reduceAdd]
+        isimp only [UInt32.add_assoc]
         isplitl [Hcapacity Hptr]
         · isplitl [Hcapacity]
           · iexact Hcapacity
@@ -412,6 +387,10 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
       iapply Hnormal $$ %finalCapacity %finalPtr %finalStoredCursor
         %finalFrontier %finalHistory %finalShadow %head %finalChunk %slice
         %tail %aux4
+      isimp only [show func19Base + lenMap.chunkOff = func19Base + 24
+        by decide] at Hchunk
+      isimp only [show func19Base + lenMap.vecOff = func19Base + 288
+        by decide] at Hvec
       unfold AfterRead
       isplitl_exacts [Hruntime Hsp Hreserve Hhead Hchunk Hslice Hvec Htail
         Hbump Hstreams]

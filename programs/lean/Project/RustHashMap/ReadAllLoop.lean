@@ -3,6 +3,9 @@ import Project.RustHashMap.ReadAllPush
 /-!
 # The input loop of the hash map drivers: the loop
 
+The core is parameterised by a `FrameMap`.  The `map_len` driver, absolute
+function 22, uses the instance `lenMap`.
+
 See `Project.RustHashMap.ReadAllDefs` for the fragments and the loop
 invariant.
 -/
@@ -47,25 +50,26 @@ private theorem ofNat_ne_zero (n : Nat) (h : 0 < n) (hlt : n < 4294967296) :
 /-- One iteration of the read loop: one push, then either the branch back,
 or the next read and its classification. -/
 theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
-    (hfunc98 : Func98Spec (hlc := hlc))
+    (hfunc98 : Func98Spec (hlc := hlc)) (fm : FrameMap)
     (base : UInt32) (heapId : GName) (input output : List UInt8)
     (aux5 aux6 aux7 aux8 : UInt32)
     (afterLoop : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset) (Φ : ObservableOutcome → HeapIProp)
-    (hbase : 16 ≤ base.toNat ∧ base.toNat + 300 < UInt32.size)
+    (hbase : 16 ≤ base.toNat ∧ base.toNat + fm.frame.toNat < UInt32.size)
+    (hwf : fm.WF)
     (st : LoopState) :
     iprop(
-      LoopInv base heapId input output aux5 aux6 aux7 aux8 afterLoop arity
+      LoopInv fm base heapId input output aux5 aux6 aux7 aux8 afterLoop arity
         remainder controls calls s E Φ st ∗
       (∀ j : LoopState, ⌜loopMeasure j < loopMeasure st⌝ -∗
-        LoopInv base heapId input output aux5 aux6 aux7 aux8 afterLoop arity
-          remainder controls calls s E Φ j -∗
+        LoopInv fm base heapId input output aux5 aux6 aux7 aux8 afterLoop
+          arity remainder controls calls s E Φ j -∗
         WP (loopBodyExpr (α := Universal.State)
-          (loopLocals base aux5 aux6 aux7 aux8 j) 0 0 arity readLoopBody
+          (loopLocals base aux5 aux6 aux7 aux8 j) 0 0 arity (readLoopBody fm)
           afterLoop remainder [] controls calls) @ s; E [{ Φ }])) ⊢
       WP (loopBodyExpr (α := Universal.State)
-        (loopLocals base aux5 aux6 aux7 aux8 st) 0 0 arity readLoopBody
+        (loopLocals base aux5 aux6 aux7 aux8 st) 0 0 arity (readLoopBody fm)
         afterLoop remainder [] controls calls) @ s; E [{ Φ }] := by
   iintro ⟨Hinv, Hrec⟩
   isimp only [LoopInv] at Hinv
@@ -87,10 +91,10 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
   iapply twp_eq (result := 0) (by rw [if_neg (ofNat_ne_256 st.index hindexLt)])
   iapply twp_brIfZero
   wasm_twp_pures [twp_localGet twp_const twp_add]
-    rewriting [UInt32.add_comm 24 base]
+    rewriting [UInt32.add_comm fm.chunkOff base]
   wasm_twp_pures [twp_localGet twp_add]
-    rewriting [UInt32.add_comm (UInt32.ofNat st.index) (base + 24)]
-  ihave ⟨Hbyte, Hclose⟩ := ByteSlice_byteFocus (base + 24)
+    rewriting [UInt32.add_comm (UInt32.ofNat st.index) (base + fm.chunkOff)]
+  ihave ⟨Hbyte, Hclose⟩ := ByteSlice_byteFocus (base + fm.chunkOff)
     (st.chunk ++ st.chunkTail) st.index hbufferIndex $$ Hchunk
   wasm_twp_rebind twp_load8U_addr_gen ((st.chunk ++ st.chunkTail)[st.index])
     with Hbyte
@@ -98,11 +102,11 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
   rw [hbyte]
   wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
-  iapply twp_push_byte hfunc98 base (UInt32.ofNat st.index)
+  iapply twp_push_byte hfunc98 fm base (UInt32.ofNat st.index)
     (UInt32.ofNat (st.chunk.length - st.index)) (st.chunk[st.index])
     st.aux3 aux5 aux6 aux7 aux8 heapId st.capacity st.ptr
     (st.pushed ++ st.chunk.take st.index) st.shadow st.remaining output
-    st.storedCursor st.frontier st.history hbase hpush
+    st.storedCursor st.frontier st.history hbase hwf hpush
   isplitl_exacts [Hruntime Hsp Hreserve Hvec Hbump Hstreams]
   unfold PushContinuation
   isplit
@@ -119,7 +123,8 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
     rw [hcount']
     wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
-    have hvecStep : st.pushed ++ st.chunk.take st.index ++ [st.chunk[st.index]] =
+    have hvecStep : st.pushed ++ st.chunk.take st.index ++
+        [st.chunk[st.index]] =
         st.pushed ++ st.chunk.take (st.index + 1) := by
       rw [List.take_succ_eq_append_getElem hindex, List.append_assoc]
     by_cases hlast : st.index + 1 = st.chunk.length
@@ -133,10 +138,12 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_const]
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
-      have hvecFull : st.pushed ++ st.chunk.take st.index ++ [st.chunk[st.index]] =
+      have hvecFull : st.pushed ++ st.chunk.take st.index ++
+          [st.chunk[st.index]] =
           st.pushed ++ st.chunk := by
         rw [hvecStep, hlast, List.take_length]
-      iapply twp_read_chunk base (st.chunk ++ st.chunkTail) st.remaining output
+      iapply twp_read_chunk fm base (st.chunk ++ st.chunkTail) st.remaining
+        output
         []
         [.i32 base, .i32 0, .i32 0,
           .i32 (UInt32.ofNat (st.pushed ++ st.chunk.take st.index).length),
@@ -254,35 +261,36 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
 
 /-- The read loop, closed by well-founded recursion on the measure. -/
 theorem twp_read_loop [WasmSmallStepGS hlc Universal.State]
-    (hfunc98 : Func98Spec (hlc := hlc))
+    (hfunc98 : Func98Spec (hlc := hlc)) (fm : FrameMap)
     (base : UInt32) (heapId : GName) (input output : List UInt8)
     (aux5 aux6 aux7 aux8 : UInt32)
     (afterLoop : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset) (Φ : ObservableOutcome → HeapIProp)
-    (hbase : 16 ≤ base.toNat ∧ base.toNat + 300 < UInt32.size)
+    (hbase : 16 ≤ base.toNat ∧ base.toNat + fm.frame.toNat < UInt32.size)
+    (hwf : fm.WF)
     (initial : LoopState) :
-    LoopInv base heapId input output aux5 aux6 aux7 aux8 afterLoop arity
+    LoopInv fm base heapId input output aux5 aux6 aux7 aux8 afterLoop arity
         remainder controls calls s E Φ initial ⊢
       WP (.running
         ⟨loopLocals base aux5 aux6 aux7 aux8 initial,
-          .loop 0 0 readLoopBody :: afterLoop, arity, remainder, controls,
-          calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
+          .loop 0 0 (readLoopBody fm) :: afterLoop, arity, remainder,
+          controls, calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
   iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := LoopState) (measure := loopMeasure)
     (locals := loopLocals base aux5 aux6 aux7 aux8)
-    (I := LoopInv base heapId input output aux5 aux6 aux7 aux8 afterLoop
+    (I := LoopInv fm base heapId input output aux5 aux6 aux7 aux8 afterLoop
       arity remainder controls calls s E Φ)
     (initial := initial)
     (initialLocals := loopLocals base aux5 aux6 aux7 aux8 initial)
-    (body := readLoopBody) (code := afterLoop)
+    (body := readLoopBody fm) (code := afterLoop)
     (paramArity := 0) (resultArity := 0)
     (arity := arity) (remainder := remainder)
     (controls := controls) (calls := calls) (belowStack := []) rfl rfl
   · intro st
     iintro Hrec Hinv
-    iapply twp_loop_iteration hfunc98 base heapId input output aux5 aux6 aux7
-      aux8 afterLoop arity remainder controls calls s E Φ hbase st
+    iapply twp_loop_iteration hfunc98 fm base heapId input output aux5 aux6
+      aux7 aux8 afterLoop arity remainder controls calls s E Φ hbase hwf st
     isplitl [Hinv]
     · iexact Hinv
     · iexact Hrec

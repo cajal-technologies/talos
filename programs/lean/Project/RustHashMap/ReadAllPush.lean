@@ -4,6 +4,9 @@ import CodeLib.SepLogic.SmallStepTotalLiftingBytesTerminal
 /-!
 # The input loop of the hash map drivers: one push
 
+The core is parameterised by a `FrameMap`.  The `map_len` driver, absolute
+function 22, uses the instance `lenMap`.
+
 See `Project.RustHashMap.ReadAllDefs` for the fragments and the loop
 invariant.
 -/
@@ -25,18 +28,18 @@ open scoped Wasm.SmallStep.Outcome
 /-- The store of one byte into a vector with room, then the length update.
 Local 3 holds the length and local 4 the byte. -/
 theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
-    (base index count : UInt32) (byte : UInt8)
+    (fm : FrameMap) (base index count : UInt32) (byte : UInt8)
     (aux5 aux6 aux7 aux8 : UInt32)
     (heapId : GName) (capacity ptr : UInt32) (initialized : List UInt8)
     {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp}
-    (hbase : base.toNat + 300 < UInt32.size)
+    (hbase : base.toNat + fm.frame.toNat < UInt32.size) (hwf : fm.WF)
     (hroom : initialized.length < capacity.toNat) :
     iprop(
-      VecU8 heapId (base + 288) capacity ptr initialized ∗
-      (VecU8 heapId (base + 288) capacity ptr (initialized ++ [byte]) -∗
+      VecU8 heapId (base + fm.vecOff) capacity ptr initialized ∗
+      (VecU8 heapId (base + fm.vecOff) capacity ptr (initialized ++ [byte]) -∗
         WP (.running
           ⟨⟨[], [.i32 base, .i32 (index + 1), .i32 count,
               .i32 (UInt32.ofNat initialized.length), .i32 byte.toUInt32,
@@ -47,31 +50,23 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
         ⟨⟨[], [.i32 base, .i32 index, .i32 count,
             .i32 (UInt32.ofNat initialized.length), .i32 byte.toUInt32,
             .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8], []⟩,
-          storeTail ++ code, arity, remainder, controls, calls⟩ :
+          storeTail fm ++ code, arity, remainder, controls, calls⟩ :
             Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro ⟨Hvec, Hcont⟩
   have hsize : UInt32.size = 4294967296 := rfl
-  have h292 : base + 288 + 4 = base + 292 := by
-    simp only [UInt32.add_assoc, UInt32.reduceAdd]
-  have h296 : base + 288 + 8 = base + 296 := by
-    simp only [UInt32.add_assoc, UInt32.reduceAdd]
-  have hb292 : (base + 292).toNat = base.toNat + 292 := by
-    simpa using Slices.byteOffset_toNat base 292 (by omega)
-  have hb292_1 : (base + 292 + 1).toNat = (base + 292).toNat + 1 := by
-    simpa using Slices.byteOffset_toNat (base + 292) 1 (by omega)
-  have hb292_2 : (base + 292 + 2).toNat = (base + 292).toNat + 2 := by
-    simpa using Slices.byteOffset_toNat (base + 292) 2 (by omega)
-  have hb292_3 : (base + 292 + 3).toNat = (base + 292).toNat + 3 := by
-    simpa using Slices.byteOffset_toNat (base + 292) 3 (by omega)
-  have hb296 : (base + 296).toNat = base.toNat + 296 := by
-    simpa using Slices.byteOffset_toNat base 296 (by omega)
-  have hb296_1 : (base + 296 + 1).toNat = (base + 296).toNat + 1 := by
-    simpa using Slices.byteOffset_toNat (base + 296) 1 (by omega)
-  have hb296_2 : (base + 296 + 2).toNat = (base + 296).toNat + 2 := by
-    simpa using Slices.byteOffset_toNat (base + 296) 2 (by omega)
-  have hb296_3 : (base + 296 + 3).toNat = (base + 296).toNat + 3 := by
-    simpa using Slices.byteOffset_toNat (base + 296) 3 (by omega)
+  have hbounds := hwf
+  unfold FrameMap.WF at hbounds
+  obtain ⟨_, hvecFits, hframeLe, _⟩ := hbounds
+  obtain ⟨hq4, hq8⟩ := vec_facts fm hwf
+  have h292 : base + fm.vecOff + 4 = base + (fm.vecOff + 4) :=
+    vec_addr fm base 4
+  have h296 : base + fm.vecOff + 8 = base + (fm.vecOff + 8) :=
+    vec_addr fm base 8
+  obtain ⟨hb292, hb292_1, hb292_2, hb292_3⟩ :=
+    cell_facts base (fm.vecOff + 4) (by omega)
+  obtain ⟨hb296, hb296_1, hb296_2, hb296_3⟩ :=
+    cell_facts base (fm.vecOff + 8) (by omega)
   isimp only [VecU8, RawVecHeader] at Hvec
   icases Hvec with ⟨⟨Hcapacity, Hptr⟩, Hlength, Hstorage⟩
   ihave Hptr := pointsTo_u32_address_eq h292 $$ Hptr
@@ -83,8 +78,8 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind twp_load32 (address := base) (offset := 292) ptr
-    (by simpa using hb292) hb292_1 hb292_2 hb292_3 with Hptr
+  wasm_twp_rebind twp_load32 (address := base) (offset := fm.vecOff + 4) ptr
+    hb292 hb292_1 hb292_2 hb292_3 with Hptr
   wasm_twp_pures [twp_localGet twp_add]
     rewriting [UInt32.add_comm (UInt32.ofNat initialized.length) ptr]
   wasm_twp_pures [twp_localGet]
@@ -102,8 +97,8 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
   wasm_twp_rebind twp_store8_addr_gen old with Hold
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
     rewriting [UInt32.add_comm 1 (UInt32.ofNat initialized.length)]
-  wasm_twp_rebind twp_store32 (address := base) (offset := 296)
-    (UInt32.ofNat initialized.length) (by simpa using hb296) hb296_1
+  wasm_twp_rebind twp_store32 (address := base) (offset := fm.vecOff + 8)
+    (UInt32.ofNat initialized.length) hb296 hb296_1
     hb296_2 hb296_3 with Hlength
   ihave Hstorage : VecStorage heapId capacity ptr (initialized ++ [byte]) $$
       [Hold Hclose]
@@ -115,7 +110,8 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
     · simp only [UInt8.toUInt8_toUInt32]
       iexact Hold
     · itrivial
-  ihave Hvec : VecU8 heapId (base + 288) capacity ptr (initialized ++ [byte]) $$
+  ihave Hvec : VecU8 heapId (base + fm.vecOff) capacity ptr
+      (initialized ++ [byte]) $$
       [Hcapacity Hptr Hlength Hstorage]
   · unfold VecU8 RawVecHeader
     isplitl [Hcapacity Hptr]
@@ -133,7 +129,7 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
 /-- The continuation of one push: the normal arm runs `code` with the
 byte appended and with local 1 stepped, the OOM arm is the trap. -/
 def PushContinuation [WasmSmallStepGS hlc Universal.State]
-    (base index count : UInt32) (byte : UInt8)
+    (fm : FrameMap) (base index count : UInt32) (byte : UInt8)
     (aux5 aux6 aux7 aux8 : UInt32)
     (heapId : GName) (initialized remaining output : List UInt8)
     (code : Program) (arity : Nat) (remainder : List Value)
@@ -146,7 +142,7 @@ def PushContinuation [WasmSmallStepGS hlc Universal.State]
       RuntimeContext -∗
       StackPointer base -∗
       StackReserve (base - 16) shadow' -∗
-      VecU8 heapId (base + 288) capacity' ptr' (initialized ++ [byte]) -∗
+      VecU8 heapId (base + fm.vecOff) capacity' ptr' (initialized ++ [byte]) -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams remaining output false -∗
       ⌜PushVecFacts capacity' ptr' frontier'⌝ -∗
@@ -164,7 +160,7 @@ def PushContinuation [WasmSmallStepGS hlc Universal.State]
 Local 4 holds the byte. -/
 theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
     (hfunc98 : Func98Spec (hlc := hlc))
-    (base index count : UInt32) (byte : UInt8)
+    (fm : FrameMap) (base index count : UInt32) (byte : UInt8)
     (aux3 aux5 aux6 aux7 aux8 : UInt32)
     (heapId : GName) (capacity ptr : UInt32)
     (initialized shadow remaining output : List UInt8)
@@ -173,46 +169,39 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame} {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp}
-    (hbase : 16 ≤ base.toNat ∧ base.toNat + 300 < UInt32.size)
+    (hbase : 16 ≤ base.toNat ∧ base.toNat + fm.frame.toNat < UInt32.size)
+    (hwf : fm.WF)
     (hpush : PushVecFacts capacity ptr frontier) :
     iprop(
       RuntimeContext ∗
       StackPointer base ∗
       StackReserve (base - 16) shadow ∗
-      VecU8 heapId (base + 288) capacity ptr initialized ∗
+      VecU8 heapId (base + fm.vecOff) capacity ptr initialized ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams remaining output false ∗
-      PushContinuation base index count byte aux5 aux6 aux7 aux8 heapId
+      PushContinuation fm base index count byte aux5 aux6 aux7 aux8 heapId
         initialized remaining output code arity remainder controls calls
         s E Φ) ⊢
       WP (.running
         ⟨⟨[], [.i32 base, .i32 index, .i32 count, .i32 aux3,
             .i32 byte.toUInt32, .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8],
             []⟩,
-          .block 0 0 growBody :: (storeTail ++ code), arity, remainder,
-          controls, calls⟩ : Expr Universal.State)
+          .block 0 0 (growBody fm) :: (storeTail fm ++ code), arity,
+          remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hreserve, Hvec, Hbump, Hstreams, Hcont⟩
   isimp only [PushContinuation] at Hcont
   have hsize : UInt32.size = 4294967296 := rfl
-  have h296 : base + 288 + 8 = base + 296 := by
-    simp only [UInt32.add_assoc, UInt32.reduceAdd]
-  have hb288 : (base + 288).toNat = base.toNat + 288 := by
-    simpa using Slices.byteOffset_toNat base 288 (by omega)
-  have hb288_1 : (base + 288 + 1).toNat = (base + 288).toNat + 1 := by
-    simpa using Slices.byteOffset_toNat (base + 288) 1 (by omega)
-  have hb288_2 : (base + 288 + 2).toNat = (base + 288).toNat + 2 := by
-    simpa using Slices.byteOffset_toNat (base + 288) 2 (by omega)
-  have hb288_3 : (base + 288 + 3).toNat = (base + 288).toNat + 3 := by
-    simpa using Slices.byteOffset_toNat (base + 288) 3 (by omega)
-  have hb296 : (base + 296).toNat = base.toNat + 296 := by
-    simpa using Slices.byteOffset_toNat base 296 (by omega)
-  have hb296_1 : (base + 296 + 1).toNat = (base + 296).toNat + 1 := by
-    simpa using Slices.byteOffset_toNat (base + 296) 1 (by omega)
-  have hb296_2 : (base + 296 + 2).toNat = (base + 296).toNat + 2 := by
-    simpa using Slices.byteOffset_toNat (base + 296) 2 (by omega)
-  have hb296_3 : (base + 296 + 3).toNat = (base + 296).toNat + 3 := by
-    simpa using Slices.byteOffset_toNat (base + 296) 3 (by omega)
+  have hbounds := hwf
+  unfold FrameMap.WF at hbounds
+  obtain ⟨_, hvecFits, hframeLe, _⟩ := hbounds
+  obtain ⟨hq4, hq8⟩ := vec_facts fm hwf
+  have h296 : base + fm.vecOff + 8 = base + (fm.vecOff + 8) :=
+    vec_addr fm base 8
+  obtain ⟨hb288, hb288_1, hb288_2, hb288_3⟩ :=
+    cell_facts base fm.vecOff (by omega)
+  obtain ⟨hb296, hb296_1, hb296_2, hb296_3⟩ :=
+    cell_facts base (fm.vecOff + 8) (by omega)
   isimp only [VecU8, RawVecHeader] at Hvec
   icases Hvec with ⟨⟨Hcapacity, Hptr⟩, Hlength, Hstorage⟩
   ihave ⟨Hstorage, %hfits⟩ := VecStorage_length_le heapId capacity ptr
@@ -222,15 +211,15 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
   simp only [List.drop_zero]
   unfold growBody
   wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind twp_load32 (address := base) (offset := 296)
-    (UInt32.ofNat initialized.length) (by simpa using hb296) hb296_1
+  wasm_twp_rebind twp_load32 (address := base) (offset := fm.vecOff + 8)
+    (UInt32.ofNat initialized.length) hb296 hb296_1
     hb296_2 hb296_3 with Hlength
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind twp_load32 (address := base) (offset := 288) capacity
-    (by simpa using hb288) hb288_1 hb288_2 hb288_3 with Hcapacity
-  ihave Hvec : VecU8 heapId (base + 288) capacity ptr initialized $$
+  wasm_twp_rebind twp_load32 (address := base) (offset := fm.vecOff) capacity
+    hb288 hb288_1 hb288_2 hb288_3 with Hcapacity
+  ihave Hvec : VecU8 heapId (base + fm.vecOff) capacity ptr initialized $$
       [Hcapacity Hptr Hlength Hstorage]
   · unfold VecU8 RawVecHeader
     isplitl [Hcapacity Hptr]
@@ -245,8 +234,9 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
     iapply twp_ne (result := 0) (by simp [hfull])
     iapply twp_brIfZero
     wasm_twp_pures [twp_localGet twp_const twp_add]
-      rewriting [UInt32.add_comm 288 base]
-    have Hgrow := hfunc98 (base + 288) base capacity ptr initialized shadow
+      rewriting [UInt32.add_comm fm.vecOff base]
+    have Hgrow := hfunc98 (base + fm.vecOff) base capacity ptr initialized
+      shadow
       heapId storedCursor frontier history remaining output false
       (callerLocals :=
         ⟨[], [.i32 base, .i32 index, .i32 count,
@@ -255,7 +245,7 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
       (stack := []) (code := []) (arity := arity) (remainder := remainder)
       (controls :=
         { kind := .block, paramArity := 0, resultArity := 0,
-          body := growBody, continuation := storeTail ++ code,
+          body := growBody fm, continuation := storeTail fm ++ code,
           belowStack := [] } :: controls)
       (calls := calls) (s := s) (E := E) (Φ := Φ)
     unfold CallContract callExpr at Hgrow
@@ -285,9 +275,9 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
               (UInt32.ofNat (pushCapacity capacity.toNat)).toNat := by
             rw [UInt32.toNat_ofNat_of_lt' hnewBound]
             omega
-          iapply twp_store_tail base index count byte aux5 aux6 aux7 aux8
+          iapply twp_store_tail fm base index count byte aux5 aux6 aux7 aux8
             heapId (UInt32.ofNat (pushCapacity capacity.toNat)) newPtr
-            initialized hbase.2 hroom
+            initialized hbase.2 hwf hroom
           isplitl_exacts [Hvec]
           iintro Hvec
           ihave Hnormal := BI.and_elim_l $$ Hcont
@@ -308,8 +298,8 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
       rcases Nat.lt_or_eq_of_le hfits with hlt | heq
       · exact hlt
       · exact absurd (by rw [heq]; exact UInt32.ofNat_toNat) hfull
-    iapply twp_store_tail base index count byte aux5 aux6 aux7 aux8
-      heapId capacity ptr initialized hbase.2 hroom
+    iapply twp_store_tail fm base index count byte aux5 aux6 aux7 aux8
+      heapId capacity ptr initialized hbase.2 hwf hroom
     isplitl_exacts [Hvec]
     iintro Hvec
     ihave Hnormal := BI.and_elim_l $$ Hcont
