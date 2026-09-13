@@ -58,7 +58,7 @@ private theorem ByteSlice_nowrap [WasmHeapGS Universal.State]
   · ipureexact hnowrap
 
 /-- Move an owned word between two names of one address. -/
-private theorem word_move [WasmHeapGS Universal.State]
+theorem word_move [WasmHeapGS Universal.State]
     (addr target word : UInt32) (haddr : target = addr) :
     pointsTo_u32 0 addr word ⊢ pointsTo_u32 0 target word := by
   subst haddr
