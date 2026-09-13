@@ -119,3 +119,4 @@ import Project.RustHashMap.Func7Proof
 import Project.RustHashMap.ContainsKeyRead
 import Project.RustHashMap.GetRead
 import Project.RustHashMap.LookupPures
+import Project.RustHashMap.LookupContracts
