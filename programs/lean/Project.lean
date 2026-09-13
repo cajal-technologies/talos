@@ -87,3 +87,4 @@ import Project.RustHashMap.Func50Proof
 import Project.RustHashMap.Func49Proof
 import Project.RustHashMap.DecoderHeader
 import Project.RustHashMap.DecoderHeaderRead
+import Project.RustHashMap.DecoderAlloc
