@@ -114,3 +114,4 @@ import Project.RustHashMap.DecoderBody
 import Project.RustHashMap.Func1Proof
 import Project.RustHashMap.MapLenOfCollect
 import Project.RustHashMap.ExportWrappers
+import Project.RustHashMap.KeyDecoderContract
