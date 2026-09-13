@@ -115,3 +115,4 @@ import Project.RustHashMap.Func1Proof
 import Project.RustHashMap.MapLenOfCollect
 import Project.RustHashMap.ExportWrappers
 import Project.RustHashMap.KeyDecoderContract
+import Project.RustHashMap.Func7Proof
