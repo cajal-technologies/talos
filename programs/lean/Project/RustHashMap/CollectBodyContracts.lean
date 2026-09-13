@@ -69,6 +69,15 @@ decoder: strengthen the accepting arm of `Func1Spec` with a heap tie on
 `capacity`, then pass it down.  Do that edit in one window, because both
 contracts are imported by `DriverProof` and `DriverTailProof`.
 
+`Func2Spec` misses a second conjunct for the same reason.  `Func13Spec`
+needs `keysBefore[16]? != some 2`, because the guard at WAT 2993 to 2997
+panics when the thread-local state byte is 2.  `Func2Spec` lends
+`keysBefore` with a length equation only, and the guard at WAT 867 to 872
+in `func 5` gives just "not 1", so the fact has to come from the entry.
+It holds there: the one data segment runs from 1048576 to 1049496 and the
+state byte is at 1049528, so it starts at 0.  Add both conjuncts in the
+same window.
+
 ## The stack constants
 
 `collectDepth` is 192 and the audit that measured it gives the path
@@ -212,7 +221,15 @@ bytes, because that is the shape every caller reads.
 The state byte is in the trailing bytes and the contract says it is 1.  No
 caller of `func 16` reads it again inside one run of `map_len`, but the
 guard at WAT 867 to 872 in `func 5` reads it before the call, so a second
-call would see 1 and skip. -/
+call would see 1 and skip.
+
+CAUTION.  The precondition needs `keysBefore[16]? != some 2`, because the
+guard at WAT 2993 to 2997 panics when the state byte is 2, through
+`call 104` and then `unreachable`, which is neither arm.  The guard in
+`func 5` gives only "not 1", so the fact comes from the entry: the one
+data segment ends at 1049496 and the state byte is at 1049528, so it
+starts at 0 and the module only ever stores 1 there.  `Func2Spec` does not
+carry that conjunct today; see the module docstring. -/
 def Func13Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp : UInt32) (keysBefore below : List UInt8)
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
@@ -232,7 +249,8 @@ def Func13Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         BumpHeap heapId storedCursor frontier history ∗
         Streams input output raised ∗
         ⌜keysBefore.length = randomStateSize ∧
-          randomStateDepth ≤ sp.toNat⌝ ∗
+          randomStateDepth ≤ sp.toNat ∧
+          keysBefore[16]? ≠ some 2⌝ ∗
         (-- the normal arm
          (∀ k0 : UInt64, ∀ k1 : UInt64, ∀ tail : List UInt8,
             ∀ below' : List UInt8, ∀ storedCursor' : UInt32,
