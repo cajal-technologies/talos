@@ -134,3 +134,4 @@ import Project.RustHashMap.SortModels
 import Project.RustHashMap.SortContracts
 import Project.RustHashMap.GrowContract
 import Project.RustHashMap.EntriesContracts
+import Project.RustHashMap.MapOpContracts
