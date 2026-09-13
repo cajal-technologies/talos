@@ -196,6 +196,16 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
     obtain ⟨hfit8, hkey, hvalue⟩ := hpair
     have hindexNat : (UInt32.ofNat st.index).toNat = st.index :=
       UInt32.toNat_ofNat_of_lt' (by omega)
+    have hcapPos : 0 < st.capacity.toNat := by
+      rcases hcap2 with h | h <;> omega
+    have hgrowable : UInt32.ofNat st.index = st.capacity →
+        2 ≤ st.capacity.toNat := by
+      intro heq
+      have hindexEq : st.index = st.capacity.toNat := by
+        rw [← heq, hindexNat]
+      rcases hcap2 with h | h
+      · omega
+      · exact h
     have hdeepLow : (16 : Nat) ≤ func49Depth := by
       simp only [func49Depth, errorNewDepth]
       omega
@@ -217,7 +227,7 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
       (.i32 (ptr + UInt32.ofNat (4 + 8 * st.index) + 8)) (.i32 count)
       (.i32 (UInt32.ofNat (8 * st.index + 4))) (.i32 key)
       (.i32 (ptr + UInt32.ofNat (4 + 8 * st.index) + 8)) (.i32 value)
-      (by omega) hframeNowrap hcap2 (by omega) hfits
+      (by omega) hframeNowrap hcapPos hgrowable (by omega) hfits
     isplitl_exacts [Hruntime Hsp Hshadow Hcapacity Hbuffer Hblock Hbump
       Hstreams]
     isplit
@@ -298,7 +308,7 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
           %(Value.i32 value)
         iapply Hnormal $$ Hruntime Hsp Hbelow Hpad Hcapacity Hbuffer Hlength
           Hscratch Hout Hhdr Hlen Hinput Hdata Hblock Hbump Hstreams
-          %⟨by omega, by omega, by omega,
+          %⟨by omega, by omega,
             by rw [← hlast]; exact hpayloadNext⟩
       · -- more pairs remain: take the back edge
         have hnextNat : (UInt32.ofNat (st.index + 1)).toNat = st.index + 1 :=
@@ -329,8 +339,10 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
         isimp only [LoopInv, LoopCont, loopLocals]
         isplitl_exacts [Hruntime Hsp Hbelow Hpad Hcapacity Hbuffer Hlength
           Hscratch Hout Hhdr Hlen Hinput Hdata Hblock Hbump Hstreams]
-        isplitl_pureexact ⟨by omega, by omega, by omega, by omega,
-          hpayloadNext, hfitsNew⟩
+        isplitl_pureexact ⟨by omega, by omega,
+          (by rcases hcap2 with h | h
+              exacts [Or.inl (by omega), Or.inr (by omega)]),
+          by omega, hpayloadNext, hfitsNew⟩
         iexact Hcont
     · -- the grow asked the allocator and it failed
       iintro %remaining' Hstreams

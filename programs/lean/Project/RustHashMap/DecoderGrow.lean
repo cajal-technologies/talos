@@ -18,12 +18,14 @@ room for the pair that the append writes next.
 
 The capacity bound of `Func23Spec` comes from
 `Project.RustHashMap.Decoder.grow_no_overflow`, which the allocator fact
-`CapacityFits` gives.  The lemma asks for `2 <= capacity`, because
-`CapacityFits` does not survive a grow of a buffer of one pair: the new
-block is four pairs, and the bound charges sixteen bytes for each pair of
-the new capacity.  The decoder never reaches that case.  The first
-allocation is `min(count, 512)` pairs, and a grow needs the index to reach
-the capacity, so the capacity is 512 or more at every grow.
+`CapacityFits` gives.  The lemma asks for `2 <= capacity` only when the
+buffer is full, because `CapacityFits` does not survive a grow of a buffer
+of one pair: the new block is four pairs, and the bound charges sixteen
+bytes for each pair of the new capacity.  The decoder never reaches that
+case.  The first allocation is `min(count, 512)` pairs, and a grow needs
+the index to reach the capacity, so the capacity is 512 or more at every
+grow.  A buffer that is not full takes no bound above `0 < capacity`,
+which is what a count of one needs.
 -/
 
 namespace Project.RustHashMap.Decoder
@@ -98,7 +100,8 @@ theorem twp_grow_body [WasmSmallStepGS hlc Universal.State]
     {Φ : ObservableOutcome → HeapIProp}
     (hframeLow : 16 ≤ frame.toNat)
     (hframeNowrap : frame.toNat + 64 < UInt32.size)
-    (hcapacity : 2 ≤ capacity.toNat)
+    (hcapacity : 0 < capacity.toNat)
+    (hgrowable : written = capacity → 2 ≤ capacity.toNat)
     (hwritten : written.toNat ≤ capacity.toNat)
     (hfits : CapacityFits capacity frontier) :
     iprop(
@@ -159,12 +162,6 @@ theorem twp_grow_body [WasmSmallStepGS hlc Universal.State]
   have holdSize : allBytes.length = 8 * capacity.toNat := hallBytes
   have hbound : 8 * max 4 (2 * capacity.toNat) ≤ 2147483644 :=
     grow_no_overflow hfits hfrontier.2
-  have hdouble : 8 * (2 * capacity.toNat) ≤ 2147483644 := by
-    have : 4 ≤ 2 * capacity.toNat := by omega
-    rw [Nat.max_eq_right this] at hbound
-    exact hbound
-  have hpush : pairPushCapacity capacity.toNat = 2 * capacity.toNat :=
-    pairPushCapacity_double capacity.toNat hcapacity
   have hsize : UInt32.size = 4294967296 := rfl
   have holdValid : (pairBlock capacity.toNat).Valid := by
     refine ⟨?_, ?_, ⟨2, ?_⟩, ?_, ?_, ?_, ?_⟩
@@ -188,6 +185,13 @@ theorem twp_grow_body [WasmSmallStepGS hlc Universal.State]
     hf4 hf4a hf4b hf4c with Hcapacity
   by_cases hfull : written = capacity
   · -- the buffer is full, so the body calls `grow_one`
+    have hcapacity2 : 2 ≤ capacity.toNat := hgrowable hfull
+    have hdouble : 8 * (2 * capacity.toNat) ≤ 2147483644 := by
+      have : 4 ≤ 2 * capacity.toNat := by omega
+      rw [Nat.max_eq_right this] at hbound
+      exact hbound
+    have hpush : pairPushCapacity capacity.toNat = 2 * capacity.toNat :=
+      pairPushCapacity_double capacity.toNat hcapacity2
     iapply twp_ne (result := 0) (by rw [if_neg (by simp [hfull])])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_add]
     rw [hheadAddr]

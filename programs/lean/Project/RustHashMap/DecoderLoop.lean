@@ -61,6 +61,16 @@ needs 2147483645.  The margin is 1045469 bytes.
 The fact is about the allocator alone.  It says nothing about the input, so
 the decoder needs no bound on the input length.  `grow_no_overflow` below
 is the whole argument.
+
+## Why the capacity fact of the loop is a disjunction
+
+The first allocation asks for `min(count, 512)` pairs, so a count of one
+gives a capacity of one.  `twp_grow_body` asks for `2 <= capacity` when
+the buffer is full, because the grow of a buffer of one pair goes to four
+pairs and breaks `CapacityFits`.  The loop therefore carries
+`count <= capacity or 2 <= capacity`.  A full buffer has `index =
+capacity`, and `index < count` then rules the first disjunct out, so the
+second one holds and the grow has what it asks for.
 -/
 
 namespace Project.RustHashMap.Decoder
@@ -271,7 +281,7 @@ def LoopCont [WasmSmallStepGS hlc Universal.State]
         blockBytes -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
-      ⌜count.toNat ≤ capacity.toNat ∧ 2 ≤ capacity.toNat ∧
+      ⌜count.toNat ≤ capacity.toNat ∧
         4 + 8 * count.toNat ≤ bytes.length ∧
         blockBytes.take (8 * count.toNat) = payload bytes count.toNat⌝ -∗
       WP (.running
@@ -365,7 +375,7 @@ def LoopInv [WasmSmallStepGS hlc Universal.State]
   Streams input output raised ∗
   ⌜st.index < count.toNat ∧
     st.index ≤ st.capacity.toNat ∧
-    2 ≤ st.capacity.toNat ∧
+    (count.toNat ≤ st.capacity.toNat ∨ 2 ≤ st.capacity.toNat) ∧
     4 + 8 * st.index ≤ bytes.length ∧
     st.blockBytes.take (8 * st.index) = payload bytes st.index ∧
     CapacityFits st.capacity st.frontier⌝ ∗
