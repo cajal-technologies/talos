@@ -56,6 +56,7 @@ import CodeLib.RustStd.HashMap.BorshBridge
 import CodeLib.RustStd.HashMap.PairSlice
 import CodeLib.RustStd.HashMap.SortedByKey
 import CodeLib.RustStd.HashMap.SortingNetwork
+import CodeLib.RustStd.HashMap.EraseWasm
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
