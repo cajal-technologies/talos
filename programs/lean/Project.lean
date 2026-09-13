@@ -122,3 +122,4 @@ import Project.RustHashMap.LookupPures
 import Project.RustHashMap.LookupContracts
 import Project.RustHashMap.LookupHash
 import Project.RustHashMap.LookupProbe
+import Project.RustHashMap.Func9Proof
