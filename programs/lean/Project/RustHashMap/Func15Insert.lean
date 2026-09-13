@@ -482,9 +482,10 @@ theorem outWords {α : Type} [WasmHeapGS α] (memId : Nat) (ptr : UInt32)
 
 /-- The two result stores and the stack-pointer restore, WAT 4520 to 4529.
 The `return` at WAT 4530 is not here, because it pops the call frame. -/
-@[reducible] def optionReturn : Program :=
-  [Instruction.localGet 0, .localGet 1, .store32 4, .localGet 0, .localGet 12,
-    .store32 0, .localGet 4, .const 16, .add, .globalSet 0]
+@[reducible] def optionReturn (contCode : Program) : Program :=
+  Instruction.localGet 0 :: .localGet 1 :: .store32 4 :: .localGet 0 ::
+    .localGet 12 :: .store32 0 :: .localGet 4 :: .const 16 :: .add ::
+    .globalSet 0 :: contCode
 
 set_option maxHeartbeats 2000000 in
 /-- WAT 4520 to 4529.  Both terminating arms of func 18 reach it.  Local 12
@@ -509,7 +510,7 @@ theorem twp_option_return [WasmSmallStepGS hlc Universal.State]
           Expr Universal.State) @ s; E [{ Φ }])) ⊢
     WP (.running ⟨walkLocals out payload key value (sp - 16) w5 w6 w7 w8 w9 w10
           l11 l12 l13 l14 l15 l16 l17,
-        optionReturn ++ contCode, arity, remainder, controls, calls⟩ :
+        optionReturn contCode, arity, remainder, controls, calls⟩ :
       Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hout, Hsp, Hcont⟩
   subst htag
@@ -519,7 +520,7 @@ theorem twp_option_return [WasmSmallStepGS hlc Universal.State]
   have hf0 := FrameCells.offset_facts out 0 0 rfl (by omega)
   have hzero : out + 0 = out := UInt32.add_zero out
   icases outWords 0 out outBefore hlength hout $$ Hout with ⟨%w0, %w1, Hw0, Hw1⟩
-  simp only [optionReturn, List.cons_append, List.nil_append]
+  simp only [optionReturn]
   -- the payload word
   wasm_twp_pures [twp_localGet twp_localGet]
   wasm_twp_rebind twp_store32 (address := out) (offset := 4) w1
