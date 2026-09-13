@@ -106,3 +106,4 @@ import Project.RustHashMap.DecoderStep
 import Project.RustHashMap.DecoderPairLoop
 import Project.RustHashMap.DecoderDecodeStage
 import Project.RustHashMap.DecoderOkBranch
+import Project.RustHashMap.DecoderAllocStage
