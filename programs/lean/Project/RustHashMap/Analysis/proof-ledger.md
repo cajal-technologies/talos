@@ -31,20 +31,21 @@ hypothesis. The evidence column names the hypothesis.
 | `map_len` | adequate (`Func2Spec`) | note E |
 | collect_entries absolute 5 | proved (two premises) | note F |
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
-| absolute 17 (`Func14Spec`) | draft contract | note G |
+| absolute 17 (`Func14Spec`) | proved | note G |
 | absolute 18 (`Func15Spec`) | proved (one arm) | note H |
 | absolute 83 | proved | `Func80Proof.lean`; note L |
-| key decoder absolute 10 (`Func7Spec`) | draft contract | note I |
-| lookup absolute 12 (`Func9Spec`) | discovered | no file |
-| lookup absolute 20 (`Func17Spec`) | discovered | no file |
-| remove kernel absolute 11 (`Func8Spec`) | discovered | no file |
-| insert shim absolute 6 (`Func3Spec`) | discovered | no file |
-| sort group absolute 14, 15, 23, 24, 25 | discovered | note J |
-| sorted entries absolute 7 (`Func4Spec`) | discovered | no file |
-| grow absolute 13 (`Func10Spec`) | discovered | no file |
-| reply writer absolute 8 (`Func5Spec`) | discovered | no file |
+| key decoder absolute 10 (`Func7Spec`) | proved | note I |
+| lookup absolute 12 (`Func9Spec`) | proved | `Func9Proof.lean` |
+| lookup absolute 20 (`Func17Spec`) | proved | `Func17Proof.lean` |
+| remove kernel absolute 11 (`Func8Spec`) | draft contract | note O |
+| insert shim absolute 6 (`Func3Spec`) | draft contract | note O |
+| sort group absolute 14, 15, 23, 24, 25 | draft contract | note J |
+| sorted entries absolute 7 (`Func4Spec`) | draft contract | note P |
+| grow absolute 13 (`Func10Spec`) | draft contract | note Q |
+| reply writer absolute 8 (`Func5Spec`) | draft contract | note P |
 | absolute 107 (`panic_on_ord_violation`) | discovered | note K |
-| drivers absolute 3, 9, 19, 21 | discovered | note M |
+| drivers absolute 19, 21 | proved (`Func2Spec`) | note M |
+| drivers absolute 3, 9 | discovered | read phases next; note M |
 | wrappers absolute 28, 29, 30, 32 | proved (drivers) | note N |
 | adequacy bridge | proved | `Adequacy.lean` |
 
@@ -73,26 +74,51 @@ hypothesis. The evidence column names the hypothesis.
   needs the `SingletonBody` repair in the codelib file `TableMem.lean`.
   `Func2Spec` must become `Func2SpecStrong`, which is Part A of this
   lane. See note L.
-- Note G. `Func14Capacity.lean` (`3ab957f`) states the capacity
-  arithmetic. The resize path stays open. See note L.
+- Note G. `Func14Proof.lean` (`8c78c4e`, the other lane) proves
+  absolute 17 for the collect path. `Func14Capacity.lean` (`3ab957f`)
+  states the capacity arithmetic. The resize path is stated as
+  `Func14ResizeSpec` in `MapOpContracts.lean` and stays open. See
+  note L.
 - Note H. `Func15Proof.lean` proves one arm. The resize arm
   (`growth_left == 0`, WAT line 4314) stays open, and it is live for
   `map_insert`. See note L.
-- Note I. `89f0a6a` adds `KeyDecoderContract.lean`, which states
-  `Func7Spec`.
+- Note I. `Func7Proof.lean` (`7ea932c`) proves `Func7Spec`. `89f0a6a`
+  adds `KeyDecoderContract.lean`, which states the contract.
 - Note J. The group is `Func11Spec` (absolute 14), `Func12Spec`
   (absolute 15), `Func20Spec` (absolute 23), `Func21Spec` (absolute 24)
-  and `Func22Spec` (absolute 25).
+  and `Func22Spec` (absolute 25). `SortContracts.lean` (`2ca62d8`)
+  states the five contracts. `SortModels.lean` (`cf35aa7`) holds the
+  pure models of the sort.
 - Note K. The only caller of absolute 107 is the dead pointer check of
   absolute 24. Absolute 107 therefore needs no proof file.
 - Note L. `Project.lean` does not import this file, and no imported
   file reaches it. The unimported set is `CollectBodyContracts.lean`,
   `CollectPrologue.lean`, `CollectLoop.lean`, `CollectTail.lean`,
   `CollectReserve.lean`, `CollectAssembly.lean`, `Func14Capacity.lean`,
-  `Func13Proof.lean`, `Func15Proof.lean` and `Func80Proof.lean`.
+  `Func14Proof.lean`, `AlignPow2.lean`, `Func13Proof.lean`,
+  `Func15Proof.lean` and `Func80Proof.lean`.
 - Note M. The drivers are `Func0Spec` (absolute 3), `Func6Spec`
   (absolute 9), `Func16Spec` (absolute 19) and `Func18Spec`
-  (absolute 21).
+  (absolute 21). `ContainsKeyDriverProof.lean` (`7540f5b`) and
+  `GetDriverProof.lean` (`522e26b`) prove absolute 19 and absolute 21
+  under `Func2Spec` alone, as `map_len` does. Absolute 3 and absolute 9
+  stay open. Their read phases come next.
 - Note N. `b9d6d86` adds `ExportWrappers.lean`. Each wrapper theorem
   takes its driver contract as a named hypothesis, so no theorem there
   carries `@[proves]`.
+- Note O. `MapOpContracts.lean` (`c185345`) states `Func8Spec` and
+  `Func3Spec`. It also states `Func15InsertSpec` and
+  `Func14ResizeSpec` for the other lane.
+- Note P. `EntriesContracts.lean` (`616b136`) states `Func4Spec` and
+  `Func5Spec`.
+- Note Q. `GrowContract.lean` (`9475e8f`) states `Func10Spec`.
+- Note R. The lookup group adds `LookupPures.lean`,
+  `LookupContracts.lean`, `LookupHash.lean`, `LookupProbe.lean`,
+  `Func9Proof.lean` (`243f525`), `Func17Proof.lean` (`6603fd0`),
+  `LookupTailDefs.lean`, `LookupTailContracts.lean`,
+  `ContainsKeyTailProof.lean`, `GetTailProof.lean`,
+  `ContainsKeyDriverProof.lean` and `GetDriverProof.lean`. It also adds
+  the read phases `ContainsKeyRead.lean` and `GetRead.lean`.
+  `Project.lean` imports all fourteen files. The lane also adds
+  `PairSlice.lean`, `SortedByKey.lean`, `SortingNetwork.lean` and
+  `EraseWasm.lean` in `codelib/CodeLib/RustStd/HashMap/`.
