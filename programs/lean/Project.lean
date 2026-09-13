@@ -109,3 +109,4 @@ import Project.RustHashMap.DecoderOkBranch
 import Project.RustHashMap.DecoderAllocStage
 import Project.RustHashMap.DecoderErrorReturn
 import Project.RustHashMap.DecoderHeaderStage
+import Project.RustHashMap.DecoderAllocPhase

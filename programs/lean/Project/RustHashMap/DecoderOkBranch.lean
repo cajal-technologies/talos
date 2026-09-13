@@ -44,7 +44,7 @@ private theorem frame_words_nowrap (frame : UInt32)
   omega
 
 /-- Three frame words are the twelve bytes above the frame base. -/
-private theorem frame_words_join [WasmHeapGS Universal.State]
+theorem frame_words_join [WasmHeapGS Universal.State]
     (frame capacity buffer length : UInt32)
     (hframeNowrap : frame.toNat + 64 < UInt32.size) :
     iprop(pointsTo_u32 0 (frame + 4) capacity ∗
@@ -60,7 +60,7 @@ private theorem frame_words_join [WasmHeapGS Universal.State]
   iframe Hcapacity Hbuffer Hlength
 
 /-- The twelve bytes above the frame base are three frame words. -/
-private theorem frame_words_split [WasmHeapGS Universal.State]
+theorem frame_words_split [WasmHeapGS Universal.State]
     (frame capacity buffer length : UInt32) :
     Slices.ByteSlice 0 (frame + 4)
         (WordCodec.u32le.serialize [capacity, buffer, length]) ⊢
