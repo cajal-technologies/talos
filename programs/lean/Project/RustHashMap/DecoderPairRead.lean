@@ -39,16 +39,6 @@ private theorem sub_eight (x : UInt32) : x + 4294967288 = x - 8 := by
     _ = (x - 8) + ((0 - 8) + 8) := by ac_rfl
     _ = x - 8 := by rw [UInt32.sub_add_cancel, UInt32.add_zero]
 
-/-- The three address facts that the offset-free load rule asks for. -/
-private theorem addr_facts (base : UInt32)
-    (hbound : base.toNat + 4 ≤ UInt32.size) :
-    (base + 1).toNat = base.toNat + 1 ∧
-      (base + 2).toNat = base.toNat + 2 ∧
-      (base + 3).toNat = base.toNat + 3 :=
-  ⟨Slices.byteOffset_toNat base 1 (by omega),
-    Slices.byteOffset_toNat base 2 (by omega),
-    Slices.byteOffset_toNat base 3 (by omega)⟩
-
 set_option maxHeartbeats 2000000 in
 /-- The pair read takes eight bytes off the slice and loads the value. -/
 theorem twp_pair_read [WasmSmallStepGS hlc Universal.State]

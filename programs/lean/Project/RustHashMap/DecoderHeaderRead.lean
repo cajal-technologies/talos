@@ -66,7 +66,7 @@ theorem word_move [WasmHeapGS Universal.State]
   iexact Hword
 
 /-- The three address facts that the offset-free load rule asks for. -/
-private theorem addr_facts (base : UInt32)
+theorem addr_facts (base : UInt32)
     (hbound : base.toNat + 4 ≤ UInt32.size) :
     (base + 1).toNat = base.toNat + 1 ∧
       (base + 2).toNat = base.toNat + 2 ∧
