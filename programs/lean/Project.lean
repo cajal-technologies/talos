@@ -127,3 +127,4 @@ import Project.RustHashMap.Func17Proof
 import Project.RustHashMap.LookupTailDefs
 import Project.RustHashMap.LookupTailContracts
 import Project.RustHashMap.ContainsKeyTailProof
+import Project.RustHashMap.GetTailProof
