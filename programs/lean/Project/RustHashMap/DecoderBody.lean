@@ -129,7 +129,7 @@ rejecting exit, and it carries the fact that the input does not hold
 every pair that the header announces.  The third arm is the
 out-of-memory trap.
 
-Both arms leave the locals open, because the four exits of the two
+Both arms leave locals 3 to 12 open, because the four exits of the two
 stages do not agree on them.  The epilogue reads local 2 alone. -/
 def BodyCont [WasmSmallStepGS hlc Universal.State]
     (out hdr ptr len frame : UInt32) (heapId : GName)
@@ -144,7 +144,9 @@ def BodyCont [WasmSmallStepGS hlc Universal.State]
       ∀ payloadBytes : List UInt8, ∀ spareBytes : List UInt8,
       ∀ frameAfter : List UInt8, ∀ below' : List UInt8,
       ∀ storedCursor' : UInt32, ∀ frontier' : Nat,
-      ∀ history' : AllocationHistory, ∀ rest : List Value,
+      ∀ history' : AllocationHistory, ∀ r3 : Value, ∀ r4 : Value,
+      ∀ r5 : Value, ∀ r6 : Value, ∀ r7 : Value, ∀ r8 : Value,
+      ∀ r9 : Value, ∀ r10 : Value, ∀ r11 : Value, ∀ r12 : Value,
       RuntimeContext -∗ StackPointer frame -∗
       StackBelow frame func49Depth below' -∗
       Slices.ByteSlice 0 frame frameAfter -∗
@@ -165,14 +167,18 @@ def BodyCont [WasmSmallStepGS hlc Universal.State]
           8 * (capacity.toNat - (headerWord bytes).toNat) ∧
         ((headerWord bytes).toNat = 0 → capacity = 0)⌝ -∗
       WP (.running
-          ⟨⟨[.i32 out, .i32 hdr], .i32 frame :: rest, belowStack⟩,
+          ⟨⟨[.i32 out, .i32 hdr],
+              [.i32 frame, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12],
+            belowStack⟩,
             afterBlock, arity, remainder, controls, calls⟩
           : Expr Universal.State) @ s; E [{ Φ }]) ∧
   ((∀ word0 : UInt32, ∀ word1 : UInt32, ∀ word2 : UInt32,
       ∀ word3 : UInt32, ∀ hdrPtr : UInt32, ∀ hdrLen : UInt32,
       ∀ frameAfter : List UInt8, ∀ below' : List UInt8,
       ∀ storedCursor' : UInt32, ∀ frontier' : Nat,
-      ∀ history' : AllocationHistory, ∀ rest : List Value,
+      ∀ history' : AllocationHistory, ∀ r3 : Value, ∀ r4 : Value,
+      ∀ r5 : Value, ∀ r6 : Value, ∀ r7 : Value, ∀ r8 : Value,
+      ∀ r9 : Value, ∀ r10 : Value, ∀ r11 : Value, ∀ r12 : Value,
       RuntimeContext -∗ StackPointer frame -∗
       StackBelow frame func49Depth below' -∗
       Slices.ByteSlice 0 frame frameAfter -∗
@@ -187,7 +193,9 @@ def BodyCont [WasmSmallStepGS hlc Universal.State]
       ⌜¬ DecodeAccepts bytes ∧ word0 ≠ okTag ∧
         frameAfter.length = 64⌝ -∗
       WP (.running
-          ⟨⟨[.i32 out, .i32 hdr], .i32 frame :: rest, belowStack⟩,
+          ⟨⟨[.i32 out, .i32 hdr],
+              [.i32 frame, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12],
+            belowStack⟩,
             afterBlock, arity, remainder, controls, calls⟩
           : Expr Universal.State) @ s; E [{ Φ }]) ∧
     (∀ remaining' : List UInt8,
@@ -294,8 +302,8 @@ theorem twp_outer_body [WasmSmallStepGS hlc Universal.State]
     ihave Hbad := BI.and_elim_l $$ Htail
     ihave Hbad := Hbad $$ %word0 %word1 %word2 %word3 %ptr %len %frameAfter
       %below' %storedCursor' %frontier' %history'
-      %([.i32 word0, .i32 word1, l5, l6, l7, l8, l9, .i32 aux10,
-        .i32 aux11, .i32 aux12])
+      %(.i32 word0) %(.i32 word1) %l5 %l6 %l7 %l8 %l9 %(.i32 aux10)
+      %(.i32 aux11) %(.i32 aux12)
     iapply Hbad $$ Hruntime Hsp Hbelow Hframe Hout Hptr Hlen Hinput Hdata
       Hbump Hstreams %⟨hreject, hfacts.1, hfacts.2.1⟩
   · isplit
@@ -310,8 +318,8 @@ theorem twp_outer_body [WasmSmallStepGS hlc Universal.State]
       ihave Hok := Hok $$ %(0 : UInt32) %(4 : UInt32) %([] : List UInt8)
         %([] : List UInt8) %frameBytes %below %storedCursor %frontier
         %history
-        %([.i32 ptr, l4, .i32 (len - 4), .i32 (ptr + 4), .i32 0, l8, l9,
-          .i32 aux10, .i32 aux11, .i32 aux12])
+        %(.i32 ptr) %l4 %(.i32 (len - 4)) %(.i32 (ptr + 4)) %(.i32 0)
+        %l8 %l9 %(.i32 aux10) %(.i32 aux11) %(.i32 aux12)
       isimp only [List.nil_append] at Hok
       have haccept : DecodeAccepts bytes := by
         refine ⟨hfacts.2, ?_⟩
@@ -369,12 +377,14 @@ theorem twp_outer_body [WasmSmallStepGS hlc Universal.State]
           ihave Hok := BI.and_elim_l $$ Hcont
           ihave Hok := Hok $$ %capacity %buffer %payloadBytes %spareBytes
             %frameAfter %below' %storedCursor' %frontier' %history'
-            %([.i32 (headerWord bytes), .i32 (frame + 52),
-              .i32 (len - UInt32.ofNat (4 + 8 * (headerWord bytes).toNat)),
-              .i32 (ptr + UInt32.ofNat (4 + 8 * (headerWord bytes).toNat)),
-              .i32 (headerWord bytes), .i32 buffer,
-              .i32 (UInt32.ofNat (8 * (headerWord bytes).toNat + 4)),
-              l10', l11', l12'])
+            %(.i32 (headerWord bytes)) %(.i32 (frame + 52))
+            %(.i32 (len -
+              UInt32.ofNat (4 + 8 * (headerWord bytes).toNat)))
+            %(.i32 (ptr +
+              UInt32.ofNat (4 + 8 * (headerWord bytes).toNat)))
+            %(.i32 (headerWord bytes)) %(.i32 buffer)
+            %(.i32 (UInt32.ofNat (8 * (headerWord bytes).toNat + 4)))
+            %l10' %l11' %l12'
           iapply Hok $$ Hruntime Hsp Hbelow Hframe Hout Hhdr Hlen Hinput
             Hdata Hbuf Hbump Hstreams
             %⟨haccept, hfacts2.2.2.2, hpayload, hfacts2.1, hspareLen,
@@ -396,8 +406,8 @@ theorem twp_outer_body [WasmSmallStepGS hlc Universal.State]
             ihave Hbad := Hbad $$ %word0 %word1 %word2 %word3 %hdrPtr
               %hdrLen %frameAfter %below' %storedCursor' %frontier'
               %history'
-              %([.i32 capacity, l4', l5', l6', l7', .i32 buffer, l9', l10',
-                .i32 word0, l12'])
+              %(.i32 capacity) %l4' %l5' %l6' %l7' %(.i32 buffer) %l9'
+              %l10' %(.i32 word0) %l12'
             iapply Hbad $$ Hruntime Hsp Hbelow Hframe Hout Hhdr Hlen Hinput
               Hdata Hbump Hstreams
               %⟨hreject, hfacts2.1, hfacts2.2.1⟩
