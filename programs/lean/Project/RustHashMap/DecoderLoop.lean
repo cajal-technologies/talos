@@ -340,9 +340,10 @@ def LoopCont [WasmSmallStepGS hlc Universal.State]
 both are parameters.
 
 The facts are, in order: the index is below the declared count; the index
-is at most the capacity; the capacity is two pairs or more, which the grow
-asks for; the input holds every byte that the loop read; the written part
-of the buffer is the payload of the input; and the capacity fits the heap.
+is at most the capacity; the count is not more than the capacity or the
+capacity is two pairs or more; the input holds every byte that the loop
+read; the written part of the buffer is the payload of the input; and the
+capacity fits the heap.
 
 The loop holds the data segment, because the short-input arm of a step
 builds its message from it. -/
