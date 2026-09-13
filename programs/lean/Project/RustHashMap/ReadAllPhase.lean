@@ -325,7 +325,7 @@ theorem twp_read_phase [WasmSmallStepGS hlc Universal.State]
       simp only [List.length_take, Nat.sub_zero]
       exact Nat.min_eq_left hcountLe
     have Hloop := twp_read_loop hfunc98 lenMap func19Base heapId input output
-      0 0 0 0 (reloadVec lenMap) arity remainder
+      [.i32 0, .i32 0, .i32 0, .i32 0] (reloadVec lenMap) arity remainder
       (phaseFrame afterRead :: controls) calls s E Φ (by decide) lenMap_wf
       initial
     simp only [loopLocals, initial, htakeLen, phaseFrame, firstReadBody,

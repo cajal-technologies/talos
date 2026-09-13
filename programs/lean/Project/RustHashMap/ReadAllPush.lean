@@ -29,7 +29,7 @@ open scoped Wasm.SmallStep.Outcome
 Local 3 holds the length and local 4 the byte. -/
 theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
     (fm : FrameMap) (base index count : UInt32) (byte : UInt8)
-    (aux5 aux6 aux7 aux8 : UInt32)
+    (auxTail : List Value)
     (heapId : GName) (capacity ptr : UInt32) (initialized : List UInt8)
     {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
@@ -41,15 +41,15 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
       VecU8 heapId (base + fm.vecOff) capacity ptr initialized ∗
       (VecU8 heapId (base + fm.vecOff) capacity ptr (initialized ++ [byte]) -∗
         WP (.running
-          ⟨⟨[], [.i32 base, .i32 (index + 1), .i32 count,
-              .i32 (UInt32.ofNat initialized.length), .i32 byte.toUInt32,
-              .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8], []⟩,
+          ⟨⟨[], .i32 base :: .i32 (index + 1) :: .i32 count ::
+              .i32 (UInt32.ofNat initialized.length) ::
+              .i32 byte.toUInt32 :: auxTail, []⟩,
             code, arity, remainder, controls, calls⟩ : Expr Universal.State)
           @ s; E [{ Φ }])) ⊢
       WP (.running
-        ⟨⟨[], [.i32 base, .i32 index, .i32 count,
-            .i32 (UInt32.ofNat initialized.length), .i32 byte.toUInt32,
-            .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8], []⟩,
+        ⟨⟨[], .i32 base :: .i32 index :: .i32 count ::
+            .i32 (UInt32.ofNat initialized.length) ::
+            .i32 byte.toUInt32 :: auxTail, []⟩,
           storeTail fm ++ code, arity, remainder, controls, calls⟩ :
             Expr Universal.State)
         @ s; E [{ Φ }] := by
@@ -130,7 +130,7 @@ theorem twp_store_tail [WasmSmallStepGS hlc Universal.State]
 byte appended and with local 1 stepped, the OOM arm is the trap. -/
 def PushContinuation [WasmSmallStepGS hlc Universal.State]
     (fm : FrameMap) (base index count : UInt32) (byte : UInt8)
-    (aux5 aux6 aux7 aux8 : UInt32)
+    (auxTail : List Value)
     (heapId : GName) (initialized remaining output : List UInt8)
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
@@ -147,9 +147,9 @@ def PushContinuation [WasmSmallStepGS hlc Universal.State]
       Streams remaining output false -∗
       ⌜PushVecFacts capacity' ptr' frontier'⌝ -∗
       WP (.running
-        ⟨⟨[], [.i32 base, .i32 (index + 1), .i32 count,
-            .i32 (UInt32.ofNat initialized.length), .i32 byte.toUInt32,
-            .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8], []⟩,
+        ⟨⟨[], .i32 base :: .i32 (index + 1) :: .i32 count ::
+            .i32 (UInt32.ofNat initialized.length) ::
+            .i32 byte.toUInt32 :: auxTail, []⟩,
           code, arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }]) ∧
   (∀ remaining' : List UInt8,
@@ -161,7 +161,7 @@ Local 4 holds the byte. -/
 theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
     (hfunc98 : Func98Spec (hlc := hlc))
     (fm : FrameMap) (base index count : UInt32) (byte : UInt8)
-    (aux3 aux5 aux6 aux7 aux8 : UInt32)
+    (aux3 : UInt32) (auxTail : List Value)
     (heapId : GName) (capacity ptr : UInt32)
     (initialized shadow remaining output : List UInt8)
     (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
@@ -179,13 +179,12 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
       VecU8 heapId (base + fm.vecOff) capacity ptr initialized ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams remaining output false ∗
-      PushContinuation fm base index count byte aux5 aux6 aux7 aux8 heapId
+      PushContinuation fm base index count byte auxTail heapId
         initialized remaining output code arity remainder controls calls
         s E Φ) ⊢
       WP (.running
-        ⟨⟨[], [.i32 base, .i32 index, .i32 count, .i32 aux3,
-            .i32 byte.toUInt32, .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8],
-            []⟩,
+        ⟨⟨[], .i32 base :: .i32 index :: .i32 count :: .i32 aux3 ::
+            .i32 byte.toUInt32 :: auxTail, []⟩,
           .block 0 0 (growBody fm) :: (storeTail fm ++ code), arity,
           remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
@@ -239,9 +238,9 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
       shadow
       heapId storedCursor frontier history remaining output false
       (callerLocals :=
-        ⟨[], [.i32 base, .i32 index, .i32 count,
-          .i32 (UInt32.ofNat initialized.length), .i32 byte.toUInt32,
-          .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8], []⟩)
+        ⟨[], .i32 base :: .i32 index :: .i32 count ::
+          .i32 (UInt32.ofNat initialized.length) ::
+          .i32 byte.toUInt32 :: auxTail, []⟩)
       (stack := []) (code := []) (arity := arity) (remainder := remainder)
       (controls :=
         { kind := .block, paramArity := 0, resultArity := 0,
@@ -275,7 +274,7 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
               (UInt32.ofNat (pushCapacity capacity.toNat)).toNat := by
             rw [UInt32.toNat_ofNat_of_lt' hnewBound]
             omega
-          iapply twp_store_tail fm base index count byte aux5 aux6 aux7 aux8
+          iapply twp_store_tail fm base index count byte auxTail
             heapId (UInt32.ofNat (pushCapacity capacity.toNat)) newPtr
             initialized hbase.2 hwf hroom
           isplitl_exacts [Hvec]
@@ -298,7 +297,7 @@ theorem twp_push_byte [WasmSmallStepGS hlc Universal.State]
       rcases Nat.lt_or_eq_of_le hfits with hlt | heq
       · exact hlt
       · exact absurd (by rw [heq]; exact UInt32.ofNat_toNat) hfull
-    iapply twp_store_tail fm base index count byte aux5 aux6 aux7 aux8
+    iapply twp_store_tail fm base index count byte auxTail
       heapId capacity ptr initialized hbase.2 hwf hroom
     isplitl_exacts [Hvec]
     iintro Hvec

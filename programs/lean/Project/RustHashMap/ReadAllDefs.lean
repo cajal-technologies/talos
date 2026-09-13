@@ -366,18 +366,21 @@ structure LoopState where
   aux4 : UInt32
 
 /-- The locals at the loop head.  Local 1 is the chunk index, local 2 the
-count of chunk bytes still to push. -/
-def loopLocals (base aux5 aux6 aux7 aux8 : UInt32) (st : LoopState) :
+count of chunk bytes still to push.  The read loop uses locals 0 to 4 only.
+`auxTail` holds the locals above them, which the driver declares but the
+read phase does not touch.  Each driver gives its own tail. -/
+def loopLocals (base : UInt32) (auxTail : List Value) (st : LoopState) :
     Locals :=
-  ⟨[], [.i32 base, .i32 (UInt32.ofNat st.index),
-    .i32 (UInt32.ofNat (st.chunk.length - st.index)), .i32 st.aux3,
-    .i32 st.aux4, .i32 aux5, .i32 aux6, .i32 aux7, .i32 aux8], []⟩
+  ⟨[], .i32 base :: .i32 (UInt32.ofNat st.index) ::
+    .i32 (UInt32.ofNat (st.chunk.length - st.index)) :: .i32 st.aux3 ::
+    .i32 st.aux4 :: auxTail, []⟩
 
-/-- The locals after the loop: the index and the count are zero. -/
-def afterLoopLocals (base aux3 aux4 aux5 aux6 aux7 aux8 : UInt32) :
+/-- The locals after the loop: the index and the count are zero.  The tail
+is the same one that `loopLocals` carries. -/
+def afterLoopLocals (base aux3 aux4 : UInt32) (auxTail : List Value) :
     Locals :=
-  ⟨[], [.i32 base, .i32 0, .i32 0, .i32 aux3, .i32 aux4, .i32 aux5,
-    .i32 aux6, .i32 aux7, .i32 aux8], []⟩
+  ⟨[], .i32 base :: .i32 0 :: .i32 0 :: .i32 aux3 :: .i32 aux4 :: auxTail,
+    []⟩
 
 /-- The loop measure: each push and each read makes it smaller. -/
 def loopMeasure (st : LoopState) : Nat :=
@@ -388,7 +391,7 @@ the loop with the whole input in the vector.  The OOM arm is the trap. -/
 def LoopContinuation [WasmSmallStepGS hlc Universal.State]
     (fm : FrameMap) (base : UInt32)
     (heapId : GName) (input output : List UInt8)
-    (aux5 aux6 aux7 aux8 : UInt32)
+    (auxTail : List Value)
     (afterLoop : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
@@ -408,7 +411,7 @@ def LoopContinuation [WasmSmallStepGS hlc Universal.State]
       ⌜finalChunk.length = 256 ∧
         PushVecFacts finalCapacity finalPtr finalFrontier⌝ -∗
       WP (.running
-        ⟨afterLoopLocals base aux3 aux4 aux5 aux6 aux7 aux8, afterLoop,
+        ⟨afterLoopLocals base aux3 aux4 auxTail, afterLoop,
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }]) ∧
   (∀ remaining' : List UInt8,
@@ -419,7 +422,7 @@ def LoopContinuation [WasmSmallStepGS hlc Universal.State]
 def LoopInv [WasmSmallStepGS hlc Universal.State]
     (fm : FrameMap) (base : UInt32)
     (heapId : GName) (input output : List UInt8)
-    (aux5 aux6 aux7 aux8 : UInt32)
+    (auxTail : List Value)
     (afterLoop : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
@@ -437,7 +440,7 @@ def LoopInv [WasmSmallStepGS hlc Universal.State]
     st.index < st.chunk.length ∧
     st.chunk.length + st.chunkTail.length = 256 ∧
     PushVecFacts st.capacity st.ptr st.frontier⌝ ∗
-  LoopContinuation fm base heapId input output aux5 aux6 aux7 aux8 afterLoop
+  LoopContinuation fm base heapId input output auxTail afterLoop
     arity remainder controls calls s E Φ)
 
 /-! ## One chunk read -/
