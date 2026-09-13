@@ -249,8 +249,9 @@ def loopMeasure (count : Nat) (st : LoopState) : Nat :=
 /-- The continuation of the loop.  The first arm is the fall-through of the
 last step, with the loop frame gone and the machine at `okReturn`.  The
 second arm is the branch that both error paths of a step take, which lands
-at the continuation of the allocation block.  The third arm is the
-out-of-memory trap of the grow. -/
+at the continuation of the allocation block.  It carries the fact that the
+input is too short for the pairs that the header announces.  The third arm
+is the out-of-memory trap of the grow. -/
 def LoopCont [WasmSmallStepGS hlc Universal.State]
     (out hdr ptr len frame count : UInt32) (heapId : GName)
     (bytes outBefore pad scratch dataBytes : List UInt8)
@@ -319,7 +320,8 @@ def LoopCont [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 entryStackTop dataBytes -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
-      ⌜word0 ≠ okTag ∧ scratchAfter.length = 32⌝ -∗
+      ⌜word0 ≠ okTag ∧ scratchAfter.length = 32 ∧
+        bytes.length < 4 + 8 * count.toNat⌝ -∗
       WP (.running
           ⟨⟨[.i32 out, .i32 hdr],
               [.i32 frame, l3', .i32 (frame + 52), l5', l6', .i32 count,

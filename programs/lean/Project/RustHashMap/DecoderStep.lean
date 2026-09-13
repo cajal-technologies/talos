@@ -365,7 +365,7 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
       isimp only [← hdepth] at Hbelow
       iapply Herror $$ Hruntime Hsp Hbelow Hpad Hcapacity Hbuffer Hlength
         Hscratch Hout Hhdr Hlen Hinput Hdata Hbump Hstreams
-        %⟨hshort.2.1, hshort.2.2⟩
+        %⟨hshort.2.1, hshort.2.2, by omega⟩
     · -- the allocator failed
       iintro %remaining' Hstreams
       ihave Htail := BI.and_elim_r $$ Hcont

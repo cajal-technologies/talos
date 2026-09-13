@@ -128,9 +128,10 @@ private theorem allocFrame_shape :
 
 /-- The continuation of the allocation phase.  The first arm is the
 accepting exit, where the output slot holds the tag and the three vector
-words.  The second arm is the error exit.  Both are at the continuation
-of the block that holds the body of the decoder.  The third arm is the
-out-of-memory trap of the allocation. -/
+words.  The second arm is the error exit, and it carries the fact that
+the input is too short for the pairs that the header announces.  Both are
+at the continuation of the block that holds the body of the decoder.  The
+third arm is the out-of-memory trap of the allocation. -/
 def PhaseCont [WasmSmallStepGS hlc Universal.State]
     (out hdr ptr len frame count : UInt32) (heapId : GName)
     (bytes dataBytes : List UInt8)
@@ -191,7 +192,8 @@ def PhaseCont [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 entryStackTop dataBytes -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
-      ⌜word0 ≠ okTag ∧ frameAfter.length = 64⌝ -∗
+      ⌜word0 ≠ okTag ∧ frameAfter.length = 64 ∧
+        bytes.length < 4 + 8 * count.toNat⌝ -∗
       WP (.running
           ⟨⟨[.i32 out, .i32 hdr],
               [.i32 frame, .i32 capacity, l4', l5', l6', l7', .i32 buffer,
@@ -347,7 +349,7 @@ theorem twp_alloc_phase [WasmSmallStepGS hlc Universal.State]
                   [capacity, buffer, length] ++
                 (WordCodec.u32le.serialize [word0, word1, word2, word3] ++
                   scratchAfter)) ∧ after.length = 64 :=
-          ⟨_, rfl, by simp [hpadLen, hfacts.2]⟩
+          ⟨_, rfl, by simp [hpadLen, hfacts.2.1]⟩
         isimp only [← hafterEq] at Hframe
         ihave Htail := BI.and_elim_r $$ Hcont
         ihave Herror := BI.and_elim_l $$ Htail
@@ -356,7 +358,7 @@ theorem twp_alloc_phase [WasmSmallStepGS hlc Universal.State]
           %history' %(.i32 (frame + 52)) %l5' %l6' %(.i32 count) %l9' %l10'
           %l12'
         iapply Herror $$ Hruntime Hsp Hbelow Hframe Hout Hhdr Hlen Hbytes
-          Hdata Hbump Hstreams %⟨hfacts.1, hafterLen⟩
+          Hdata Hbump Hstreams %⟨hfacts.1, hafterLen, hfacts.2.2⟩
       · -- the out-of-memory trap
         iintro %remaining' Hstreams
         ihave Htail := BI.and_elim_r $$ Hcont

@@ -38,7 +38,9 @@ open scoped Wasm.SmallStep.Outcome
 /-- The continuation of the allocation stage.  The first arm is the
 accepting exit, where the output slot holds the tag and the three vector
 words.  The second arm is the error exit, which both error paths of the
-loop take.  The third arm is the out-of-memory trap of the allocation. -/
+loop take, and it carries the fact that the input is too short for the
+pairs that the header announces.  The third arm is the out-of-memory trap
+of the allocation. -/
 def AllocCont [WasmSmallStepGS hlc Universal.State]
     (out hdr ptr len frame count : UInt32) (heapId : GName)
     (bytes outBefore pad scratch dataBytes : List UInt8)
@@ -110,7 +112,8 @@ def AllocCont [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 entryStackTop dataBytes -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
-      ⌜word0 ≠ okTag ∧ scratchAfter.length = 32⌝ -∗
+      ⌜word0 ≠ okTag ∧ scratchAfter.length = 32 ∧
+        bytes.length < 4 + 8 * count.toNat⌝ -∗
       WP (.running
           ⟨⟨[.i32 out, .i32 hdr],
               [.i32 frame, l3', .i32 (frame + 52), l5', l6', .i32 count,

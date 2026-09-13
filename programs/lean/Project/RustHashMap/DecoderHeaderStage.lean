@@ -46,7 +46,8 @@ private theorem branchTarget_succ (arity depth : Nat) (frame : ControlFrame)
       = branchTarget? arity depth controls values := rfl
 
 /-- The continuation of the header stage.  The first arm is the
-short-input error, the second the empty vector, the third the count that
+short-input error, which carries the fact that the input holds fewer than
+four bytes.  The second arm is the empty vector, the third the count that
 is not zero, and the fourth the out-of-memory trap of the error build. -/
 def HeaderCont [WasmSmallStepGS hlc Universal.State]
     (out hdr ptr len frame : UInt32) (heapId : GName)
@@ -77,7 +78,7 @@ def HeaderCont [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 entryStackTop dataBytes -∗
       BumpHeap heapId storedCursor' frontier' history' -∗
       Streams input output raised -∗
-      ⌜word0 ≠ okTag ∧ frameAfter.length = 64⌝ -∗
+      ⌜word0 ≠ okTag ∧ frameAfter.length = 64 ∧ bytes.length < 4⌝ -∗
       WP (.running
           ⟨⟨[.i32 out, .i32 hdr],
               [.i32 frame, .i32 word0, .i32 word1, l5, l6, l7, l8, l9, l10,
@@ -236,6 +237,11 @@ theorem twp_header_stage [WasmSmallStepGS hlc Universal.State]
       iapply Hnonzero $$ Hruntime Hsp Hbelow Hframe Hout Hptr Hlen Hbytes
         Hdata Hbump Hstreams %⟨hzero, hfour⟩
   · -- fewer than four bytes: the error arm
+    have hshort : bytes.length < 4 := by
+      have hlen3 : ¬ ((3 : UInt32).toNat < len.toNat) := fun hcontra =>
+        hlong (UInt32.lt_iff_toNat_lt.mpr hcontra)
+      have h3 : (3 : UInt32).toNat = 3 := rfl
+      omega
     iapply twp_header_error out hdr frame len heapId frameBytes outBefore
       below dataBytes storedCursor frontier history input output raised
       l3 l4 l5 l6 l7 l8 l9 l10 l11 l12 hlong hframeLength houtLength
@@ -253,7 +259,7 @@ theorem twp_header_stage [WasmSmallStepGS hlc Universal.State]
       ihave Herror := Herror $$ %word0 %word1 %word2 %word3 %frameAfter
         %below' %storedCursor' %frontier' %history'
       iapply Herror $$ Hruntime Hsp Hbelow Hframe Hout Hptr Hlen Hbytes Hdata
-        Hbump Hstreams %hfacts
+        Hbump Hstreams %⟨hfacts.1, hfacts.2, hshort⟩
     · iintro %remaining' Hstreams
       ihave Htail := BI.and_elim_r $$ Hcont
       ihave Htail := BI.and_elim_r $$ Htail
