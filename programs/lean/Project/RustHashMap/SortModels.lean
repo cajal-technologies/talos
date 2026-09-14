@@ -281,26 +281,35 @@ def mergeDown (n : Nat) (l r : List (UInt32 × UInt32)) :
   let step := mergeTake keyGt n l.reverse r.reverse
   (step.1.reverse, step.2.1.reverse, step.2.2.reverse)
 
-/-- The bidirectional merge of two runs that are each in key order.  Each
-half writes `(l.length + r.length) / 2` entries, which is why the callers
-merge runs of even total length. -/
+/-- The bidirectional merge of two runs that are each in key order.  The
+forward half writes `(l.length + r.length + 1) / 2` entries and the
+backward half writes `(l.length + r.length) / 2` entries.  An odd total
+therefore gives the extra entry to the forward half, which is what the
+compiled code does: the merge loop makes `(l.length + r.length) / 2`
+turns, and the odd middle of WAT 8601 to 8630 makes one more forward
+step. -/
 def bimerge (l r : List (UInt32 × UInt32)) : List (UInt32 × UInt32) :=
-  (mergeUp ((l.length + r.length) / 2) l r).1 ++
+  (mergeUp ((l.length + r.length + 1) / 2) l r).1 ++
     (mergeDown ((l.length + r.length) / 2) l r).1
 
 /-- The check that absolute `func 24` makes after a bidirectional merge:
 the forward half and the backward half meet exactly, so together they take
-every entry of both runs and neither half runs past the other.
+every entry of both runs and neither half runs past the other.  The
+forward half takes `(l.length + r.length + 1) / 2` entries and the
+backward half `(l.length + r.length) / 2`, so an odd total gives the extra
+entry to the forward half.
 
 A comparison that is not a strict total order breaks this, and the
 compiled code answers with `call 107` and `unreachable`, which is the dead
-arm X-F24-ORDER of `Analysis/scope-and-exclusions.md`.  The body proof of
-absolute `func 24` must show this property from the strict key order and
-`NodupKeys`.  It is stated here and not proved here. -/
+arm X-F24-ORDER of `Analysis/scope-and-exclusions.md`.
+`Func21Merge.bimerge_exhausts` proves it from the key order and
+`NodupKeys`. -/
 def BimergeExhausts (l r : List (UInt32 × UInt32)) : Prop :=
-  ((mergeUp ((l.length + r.length) / 2) l r).2.1).length +
-      ((mergeDown ((l.length + r.length) / 2) l r).2.1).length = l.length ∧
-    ((mergeUp ((l.length + r.length) / 2) l r).2.2).length +
-      ((mergeDown ((l.length + r.length) / 2) l r).2.2).length = r.length
+  ((mergeUp ((l.length + r.length + 1) / 2) l r).2.1).length +
+      ((mergeDown ((l.length + r.length) / 2) l r).2.1).length
+        = l.length ∧
+    ((mergeUp ((l.length + r.length + 1) / 2) l r).2.2).length +
+      ((mergeDown ((l.length + r.length) / 2) l r).2.2).length
+        = r.length
 
 end Project.RustHashMap.SortModels
