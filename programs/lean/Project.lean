@@ -145,3 +145,4 @@ import Project.RustHashMap.HeapModel
 import Project.RustHashMap.Func22Proof
 import Project.RustHashMap.Func11Proof
 import Project.RustHashMap.Func21Defs
+import Project.RustHashMap.Func21Partition
