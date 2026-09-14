@@ -68,6 +68,7 @@ import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
+import CodeLib.SepLogic.ByteSliceCopy
 import CodeLib.SepLogic.SmallStepTotalLiftingBits
 import CodeLib.SepLogic.SmallStepTotalLiftingBytesTerminal
 import CodeLib.SepLogic.SmallStepOutcomeLanguage
