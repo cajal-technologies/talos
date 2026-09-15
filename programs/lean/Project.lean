@@ -156,6 +156,7 @@ import Project.RustHashMap.Func4Proof
 import Project.RustHashMap.Func5Proof
 import Project.RustHashMap.Func8Proof
 import Project.RustHashMap.RemovePures
+import Project.RustHashMap.TailShared
 import Project.RustHashMap.RemoveTailDefs
 import Project.RustHashMap.RemoveTailContracts
 import Project.RustHashMap.RemoveTailProof

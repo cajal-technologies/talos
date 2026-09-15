@@ -1,4 +1,5 @@
 import Project.RustHashMap.LookupHash
+import Project.RustHashMap.Func15Insert
 
 /-!
 # The probe loops of the two lookup kernels
@@ -99,29 +100,6 @@ private def lookupInv (t : Table UInt32 UInt32) (h : UInt64) (key : UInt32)
     (Table.matchTag (Table.h2 h) (Table.window t h m)).find?
         (fun j => t.keyIs (Table.probeIdx t h m j) key) = none
 
-/-- Move an owned double word between two names of one address.  Copy of
-`Func15Insert.lean:639`. -/
-private theorem wordMove64 [WasmSmallStepGS hlc Universal.State]
-    {address address' : UInt32} {value : UInt64}
-    (haddress : address = address') :
-    pointsTo_u64 0 address value ⊢ pointsTo_u64 0 address' value := by
-  rw [haddress]
-
-/-- The three address facts that the offset-free `twp_load32_addr` asks
-for.  Copy of `Func15Proof.lean:104`. -/
-private theorem addr_facts (addr : UInt32)
-    (h : addr.toNat + 4 ≤ UInt32.size) :
-    (addr + 1).toNat = addr.toNat + 1 ∧ (addr + 2).toNat = addr.toNat + 2 ∧
-      (addr + 3).toNat = addr.toNat + 3 :=
-  ⟨by simpa using Slices.byteOffset_toNat addr 1 (by omega),
-    by simpa using Slices.byteOffset_toNat addr 2 (by omega),
-    by simpa using Slices.byteOffset_toNat addr 3 (by omega)⟩
-
-/-- `Group::match_empty` in the operand order of the compiled test. -/
-private theorem swarMatchEmpty_wasm (x : UInt64) :
-    (x &&& (x <<< 1)) &&& 9259542123273814144 = Table.swarMatchEmpty x :=
-  rfl
-
 /-- The loop stops at the first window with an `EMPTY` byte, so the walk
 that the invariant records covers every window up to `N`. -/
 private theorem find_none_of_inv {t : Table UInt32 UInt32} {h : UInt64}
@@ -146,16 +124,6 @@ private theorem find_none_of_inv {t : Table UInt32 UInt32} {h : UInt64}
   · have hme : m = i.step := by omega
     subst hme
     exact hfind
-
-/-- The next stride register, as a number. -/
-private theorem stride_step (n : Nat) (hn : 8 * n < UInt32.size) :
-    (8 : UInt32) + UInt32.ofNat (8 * n) = UInt32.ofNat (8 * (n + 1)) := by
-  apply UInt32.toNat_inj.mp
-  simp only [UInt32.toNat_add, UInt32.toNat_ofNat',
-    show (8 : UInt32).toNat = 8 from rfl]
-  have hlt : 8 * n % UInt32.size = 8 * n := Nat.mod_eq_of_lt hn
-  change (8 + 8 * n % 4294967296) % 4294967296 = 8 * (n + 1) % 4294967296
-  omega
 
 /-! ## Absolute `func 12`, local `func9`: `contains_key` -/
 
@@ -342,7 +310,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
         UInt32.toNat_ofNat_of_lt'
           (by omega : (P + ctz64 64 q / 8) % t.buckets < UInt32.size)]
       rfl
-    obtain ⟨ha1, ha2, ha3⟩ := addr_facts
+    obtain ⟨ha1, ha2, ha3⟩ := addr3
       (Table.bucketAddr ctrl ((P + ctz64 64 q / 8) % t.buckets)) (by omega)
     wasm_twp_pures [twp_block twp_localGet twp_localGet twp_localGet
       twp_ctzI64 twp_wrapI64 twp_const twp_shrU twp_localGet twp_add
@@ -582,7 +550,7 @@ theorem twp_func9_probe [WasmSmallStepGS hlc Universal.State]
       rw [UInt32.add_zero, hipos, UInt32.add_comm]
     have hgf := FrameCells.offset_facts64 (i.pos + ctrl) 0 0 rfl
       (by rw [← UInt32.add_zero (i.pos + ctrl), ← hgroupAddr]; omega)
-    ihave Hgroup := wordMove64 hgroupAddr $$ Hgroup
+    ihave Hgroup := Func15Insert.wordMove64 hgroupAddr $$ Hgroup
     wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add]
     wasm_twp_rebind Wasm.SmallStep.twp_load64 (address := i.pos + ctrl)
       (offset := 0)
@@ -632,7 +600,7 @@ theorem twp_func9_probe [WasmSmallStepGS hlc Universal.State]
       · iexact Hpre
       · isplitl [Hgroup]
         · isplitl_pureexact hgbound
-          iapply wordMove64 hgroupAddr.symm
+          iapply Func15Insert.wordMove64 hgroupAddr.symm
           iexact Hgroup
         · iexact Hpost
     ihave Hbody : Table.TableBody 0 map ctrl t $$
@@ -985,7 +953,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
         UInt32.toNat_ofNat_of_lt'
           (by omega : (P + ctz64 64 p.1 / 8) % t.buckets < UInt32.size)]
       rfl
-    obtain ⟨ha1, ha2, ha3⟩ := addr_facts
+    obtain ⟨ha1, ha2, ha3⟩ := addr3
       (Table.bucketAddr ctrl ((P + ctz64 64 p.1 / 8) % t.buckets))
       (by omega)
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_ctzI64
@@ -1274,7 +1242,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
       rw [UInt32.add_zero, hipos, UInt32.add_comm]
     have hgf := FrameCells.offset_facts64 (i.1.pos + ctrl) 0 0 rfl
       (by rw [← UInt32.add_zero (i.1.pos + ctrl), ← hgroupAddr]; omega)
-    ihave Hgroup := wordMove64 hgroupAddr $$ Hgroup
+    ihave Hgroup := Func15Insert.wordMove64 hgroupAddr $$ Hgroup
     wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add]
     wasm_twp_rebind Wasm.SmallStep.twp_load64 (address := i.1.pos + ctrl)
       (offset := 0)
@@ -1368,7 +1336,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
         simpa using Slices.byteOffset_toNat (Table.bucketAddr ctrl
           (((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.1.step).pos + j)
             % t.buckets)) 4 (by omega)
-      obtain ⟨ha1, ha2, ha3⟩ := addr_facts
+      obtain ⟨ha1, ha2, ha3⟩ := addr3
         (Table.bucketAddr ctrl
           (((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.1.step).pos + j)
             % t.buckets) + 4) (by omega)
@@ -1398,7 +1366,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
         · iexact Hpre
         · isplitl [Hgroup]
           · isplitl_pureexact hgbound
-            iapply wordMove64 hgroupAddr.symm
+            iapply Func15Insert.wordMove64 hgroupAddr.symm
             iexact Hgroup
           · iexact Hpost
       ihave Hbody : Table.TableBody 0 map ctrl t $$
@@ -1433,7 +1401,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
         · iexact Hpre
         · isplitl [Hgroup]
           · isplitl_pureexact hgbound
-            iapply wordMove64 hgroupAddr.symm
+            iapply Func15Insert.wordMove64 hgroupAddr.symm
             iexact Hgroup
           · iexact Hpost
       ihave Hbody : Table.TableBody 0 map ctrl t $$

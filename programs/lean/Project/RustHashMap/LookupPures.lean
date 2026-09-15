@@ -361,6 +361,23 @@ theorem addr3 (addr : UInt32) (h : addr.toNat + 4 ≤ UInt32.size) :
     by simpa using Slices.byteOffset_toNat addr 2 (by omega),
     by simpa using Slices.byteOffset_toNat addr 3 (by omega)⟩
 
+/-- `Group::match_empty` in the operand order of the compiled test.
+Moved out of `Project.RustHashMap.LookupProbe`. -/
+theorem swarMatchEmpty_wasm (x : UInt64) :
+    (x &&& (x <<< 1)) &&& 9259542123273814144 = Table.swarMatchEmpty x :=
+  rfl
+
+/-- The next stride register, as a number.  Moved out of
+`Project.RustHashMap.LookupProbe`. -/
+theorem stride_step (n : Nat) (hn : 8 * n < UInt32.size) :
+    (8 : UInt32) + UInt32.ofNat (8 * n) = UInt32.ofNat (8 * (n + 1)) := by
+  apply UInt32.toNat_inj.mp
+  simp only [UInt32.toNat_add, UInt32.toNat_ofNat',
+    show (8 : UInt32).toNat = 8 from rfl]
+  have hlt : 8 * n % UInt32.size = 8 * n := Nat.mod_eq_of_lt hn
+  change (8 + 8 * n % 4294967296) % 4294967296 = 8 * (n + 1) % 4294967296
+  omega
+
 /-! ## One owned range as words
 
 Copies of `Func15Insert.lean:457` and of `CollectTail.lean:65`; delete when
