@@ -95,7 +95,7 @@ theorem func6_correct_of [WasmSmallStepGS hlc Universal.State]
     code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hsp, Hstack, Hdata, Hrandom, Hbump, Hstreams, %hlens,
     Hcont, Hoom⟩
-  obtain ⟨hstack, hdata, hrandom⟩ := hlens
+  obtain ⟨hstack, hdata, hrandom, hstate, hstatic⟩ := hlens
   -- the 14416 bytes of the driver frame and the region below it
   icases (ByteSlice_split_at 0 1034160 stackBytes
     (by rw [hstack]; decide)).mp $$ Hstack with ⟨_Hlow, Hhigh⟩
@@ -140,7 +140,7 @@ theorem func6_correct_of [WasmSmallStepGS hlc Universal.State]
       reserve head chunk ((stackBytes.drop 1034160).take 14080) randomState
       dataBytes storedCursor' frontier' history' []
     isplitl_exacts [Hafter Hextra Hrandom Hdata]
-    isplitl_pureexact ⟨hextra, hrandom, hdata, hinput⟩
+    isplitl_pureexact ⟨hextra, hrandom, hdata, hstate, hstatic, hinput⟩
     isplitl [Hcont]
     · -- the driver falls off the end of its body and returns
       isimp only [DriverTailProof.TailDone]

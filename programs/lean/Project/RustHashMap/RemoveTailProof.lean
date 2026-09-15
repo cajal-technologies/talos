@@ -1190,7 +1190,9 @@ theorem twp_rm_collect [WasmSmallStepGS hlc Universal.State]
       CollectContract.entryCodec.serialize (acceptedEntries input))
     (hentries : (acceptedEntries input).length = len.toNat)
     (hcap : len.toNat ≤ cap.toNat)
-    (hspare : spare.length = 8 * (cap.toNat - len.toNat)) :
+    (hspare : spare.length = 8 * (cap.toNat - len.toNat))
+    (hstate : keysBefore[16]? ≠ some 2)
+    (halign : bufPtr.toNat % 4 = 0) :
     iprop(RuntimeContext ∗ StackPointer func6Base ∗
       StackBelow func6Base removeCalleeDepth below ∗
       Slices.ByteSlice 0 (func6Base + 16) mapBefore ∗
@@ -1199,6 +1201,7 @@ theorem twp_rm_collect [WasmSmallStepGS hlc Universal.State]
       pointsTo_u32 0 (func6Base + 8) len ∗
       Slices.ByteSlice 0 bufPtr (payload ++ spare) ∗
       Slices.ByteSlice 0 randomStateCell keysBefore ∗
+      Slices.ByteSlice 0 entryStackTop staticTableBytes ∗
       Slices.ByteSlice 0 (func6Base + 64) outBefore ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams [] output false ∗
@@ -1212,7 +1215,12 @@ theorem twp_rm_collect [WasmSmallStepGS hlc Universal.State]
             rmOkFrame :: rmOuterFrame afterTail :: controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hbelow, Hmap, Hcap, Hptr, Hlen, Hbuf, Hkeys,
-    Hout, Hbump, Hstreams, Hcont, Hoom⟩
+    Hstatic, Hout, Hbump, Hstreams, Hcont, Hoom⟩
+  have hmaxLen : len.toNat ≤ maxTableCapacity := by
+    rw [maxTableCapacity_eq, ← hentries]
+    exact hmax
+  ihave ⟨Hctrl, Hhdr, Hzero⟩ :=
+    CollectContract.staticTable_resources $$ Hstatic
   ihave ⟨%low, Hbelow, Hrestore⟩ :=
     StackBelow_reshape func6Base removeCalleeDepth
       CollectContract.collectDepth below collectDepth_le_remove $$ Hbelow
@@ -1233,15 +1241,16 @@ theorem twp_rm_collect [WasmSmallStepGS hlc Universal.State]
   unfold CallContract callExpr at Hcollect
   simp only [List.append_nil] at Hcollect
   iapply Hcollect
-  isplitl_exacts [Hruntime Hsp Hbelow Hmap Hcap Hptr Hlen Hbuf Hkeys Hbump
-    Hstreams]
-  isplitl_pureexact ⟨hmapBefore, hkeys, hpayload, hentries, hcap, hspare,
-    by decide, by decide, by decide⟩
+  isplitl_exacts [Hruntime Hsp Hbelow Hmap Hcap Hptr Hlen Hbuf Hkeys Hctrl
+    Hhdr Hzero Hbump Hstreams]
+  isplitl_pureexact ⟨hmapBefore, hkeys, hstate, hpayload, hentries, hcap,
+    hmaxLen, hspare, halign, by decide, by decide, by decide⟩
   isplit
   · iintro %k0 %k1 %below' %keysAfter %storedCursor' %frontier' %history'
-      Hruntime Hsp Hbelow Hmapv Hcap Hptr Hlen Hkeys Hbump Hstreams
+      Hruntime Hsp Hbelow Hmapv Hcap Hptr Hlen Hkeys Hhdr Hzero Hbump Hstreams
       %hfacts
     isimp only [ResumeWP, resumeExpr, List.nil_append]
+    iclear Hhdr Hzero
     ihave ⟨%b, Hbelow⟩ := Hrestore $$ %below' Hbelow
     have hshape : output ++ Project.RustHashMap.Spec.removeOutput input =
         output ++ Borsh.option Borsh.u32
@@ -1293,7 +1302,9 @@ theorem twp_rm_free_input [WasmSmallStepGS hlc Universal.State]
       CollectContract.entryCodec.serialize (acceptedEntries input))
     (hentries : (acceptedEntries input).length = len.toNat)
     (hcap : len.toNat ≤ cap.toNat)
-    (hspare : spare.length = 8 * (cap.toNat - len.toNat)) :
+    (hspare : spare.length = 8 * (cap.toNat - len.toNat))
+    (hstate : keysBefore[16]? ≠ some 2)
+    (halign : bufPtr.toNat % 4 = 0) :
     iprop(RuntimeContext ∗ StackPointer func6Base ∗
       StackBelow func6Base removeCalleeDepth below ∗
       Slices.ByteSlice 0 (func6Base + 16) mapBefore ∗
@@ -1302,6 +1313,7 @@ theorem twp_rm_free_input [WasmSmallStepGS hlc Universal.State]
       pointsTo_u32 0 (func6Base + 8) len ∗
       Slices.ByteSlice 0 bufPtr (payload ++ spare) ∗
       Slices.ByteSlice 0 randomStateCell keysBefore ∗
+      Slices.ByteSlice 0 entryStackTop staticTableBytes ∗
       Slices.ByteSlice 0 (func6Base + 64) outBefore ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams [] output false ∗
@@ -1315,7 +1327,7 @@ theorem twp_rm_free_input [WasmSmallStepGS hlc Universal.State]
             rmFreeInputFrame :: rmOkFrame :: rmOuterFrame afterTail ::
               controls, calls⟩ : Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hbelow, Hmap, Hcap, Hptr, Hlen, Hbuf, Hkeys,
-    Hout, Hbump, Hstreams, Hcont, Hoom⟩
+    Hstatic, Hout, Hbump, Hstreams, Hcont, Hoom⟩
   simp only [rmFreeInput]
   by_cases hcapacity : l2 = 0
   · wasm_twp_pures [twp_localGet]
@@ -1325,7 +1337,7 @@ theorem twp_rm_free_input [WasmSmallStepGS hlc Universal.State]
     iapply twp_rm_collect hfunc2 heapId cap bufPtr len input payload spare
       mapBefore outBefore keysBefore below storedCursor frontier history
       output haccept hn hmax hmapBefore hslot hkeys hpayload hentries hcap
-      hspare
+      hspare hstate halign
     iframe
   · wasm_twp_pures [twp_localGet]
     iapply twp_eqz (result := 0) (by simp [hcapacity])
@@ -1350,7 +1362,7 @@ theorem twp_rm_free_input [WasmSmallStepGS hlc Universal.State]
       iapply twp_rm_collect hfunc2 heapId cap bufPtr len input payload
         spare mapBefore outBefore keysBefore below storedCursor frontier
         history output haccept hn hmax hmapBefore hslot hkeys hpayload
-        hentries hcap hspare
+        hentries hcap hspare hstate halign
       iframe
 
 /-! ## The header copy of the accept arm -/
@@ -1383,7 +1395,9 @@ theorem twp_rm_accept_copy [WasmSmallStepGS hlc Universal.State]
       CollectContract.entryCodec.serialize (acceptedEntries input))
     (hcap : (pairCount input).toNat ≤ cap.toNat)
     (hspare : spare.length =
-      8 * (cap.toNat - (pairCount input).toNat)) :
+      8 * (cap.toNat - (pairCount input).toNat))
+    (hstate : keysBefore[16]? ≠ some 2)
+    (halign : bufPtr.toNat % 4 = 0) :
     iprop(RuntimeContext ∗ StackPointer func6Base ∗
       StackBelow func6Base removeCalleeDepth below ∗
       pointsTo_u64 0 (func6Base + 0) oldPair ∗
@@ -1394,6 +1408,7 @@ theorem twp_rm_accept_copy [WasmSmallStepGS hlc Universal.State]
       Slices.ByteSlice 0 (func6Base + 36) raw12 ∗
       Slices.ByteSlice 0 bufPtr (payload ++ spare) ∗
       Slices.ByteSlice 0 randomStateCell keysBefore ∗
+      Slices.ByteSlice 0 entryStackTop staticTableBytes ∗
       Slices.ByteSlice 0 (func6Base + 64) outBefore ∗
       BumpHeap heapId storedCursor frontier history ∗
       Streams [] output false ∗
@@ -1407,7 +1422,7 @@ theorem twp_rm_accept_copy [WasmSmallStepGS hlc Universal.State]
             rmOkFrame :: rmOuterFrame afterTail :: controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Hsp, Hbelow, Hpair0, Hlen0, Hdec, Hraw, Hbuf, Hkeys,
-    Hout, Hbump, Hstreams, Hcont, Hoom⟩
+    Hstatic, Hout, Hbump, Hstreams, Hcont, Hoom⟩
   have h0 := offset_facts64 func6Base 0 0 rfl (by decide)
   have h24 := offset_facts64 func6Base 24 24 rfl (by decide)
   have h8 := offset_facts func6Base 8 8 rfl (by decide)
@@ -1493,7 +1508,7 @@ theorem twp_rm_accept_copy [WasmSmallStepGS hlc Universal.State]
       [0, leadingKey input, cap, bufPtr, pairCount input] ++ raw12)
     outBefore keysBefore below storedCursor frontier history output
     haccept hn hmax (by rw [List.length_append, hraw]; rfl) hslot hkeys
-    hpayload (acceptedEntries_length input) hcap hspare
+    hpayload (acceptedEntries_length input) hcap hspare hstate halign
   iframe
 
 /-! ## The whole tail -/
@@ -1510,7 +1525,7 @@ theorem twp_remove_tail [WasmSmallStepGS hlc Universal.State]
     keysBefore dataBytes storedCursor frontier history afterTail arity
     remainder controls calls s E Φ
   iintro ⟨HafterRead, Hextra, Hkeys, Hdata, %hsizes, Hcont, Hoom⟩
-  obtain ⟨hextra, hkeys, hdata, hinput⟩ := hsizes
+  obtain ⟨hextra, hkeys, hdata, hstate, hstatic, hinput⟩ := hsizes
   isimp only [AfterReadRm] at HafterRead
   icases HafterRead with ⟨Hruntime, Hsp, Hreserve, Hhead, Hvec, Hchunk,
     Hbump, Hstreams, %hshape⟩
@@ -1594,12 +1609,16 @@ theorem twp_remove_tail [WasmSmallStepGS hlc Universal.State]
       %history' %haccept Hruntime Hsp Hbelow Hslot Hbytes Hdata Hbuf Hbump
       Hstreams %hfacts
     isimp only [ResumeWP, resumeExpr, List.nil_append]
-    obtain ⟨hcapBound, hspareLen, _hzero, _halign⟩ := hfacts
+    obtain ⟨hcapBound, hspareLen, _hzero, halign⟩ := hfacts
     have hn := acceptedEntries_bound input haccept hinput
     have hmaxEntries := acceptedEntries_le_max input capacity ptr frontier
       haccept hpush hfits
     ihave ⟨%b, Hbelow⟩ := Hrestore $$ %below' Hbelow
-    iclear Hbytes Hdata
+    -- the static singleton table is the first 24 bytes of the segment
+    icases (ByteSlice_split_at entryStackTop 24 dataBytes
+      (by simp [hdata, dataSegmentSize])).mp $$ Hdata with ⟨Hstatic, _Hgap⟩
+    isimp only [UInt32.reduceToNat, hstatic] at Hstatic
+    iclear Hbytes
     ihave ⟨H16, H20, H24, H28, H32⟩ :=
       ByteSlice_five_words (func6Base + 16) 0 (leadingKey input) cap'
         buffer (pairCount input) $$ Hslot
@@ -1625,7 +1644,8 @@ theorem twp_remove_tail [WasmSmallStepGS hlc Universal.State]
       ((head.drop 36).take 12) (chunk.take 40) keysBefore b
       storedCursor' frontier' history' output haccept hn
       (by omega) (by simp [hhead]) (by simp [hchunk]) hkeys
-      (keyPayload_serialize input haccept).symm hcapBound hspareLen
+      (keyPayload_serialize input haccept).symm hcapBound hspareLen hstate
+      halign
     iframe
   · isplit
     · -- the reject arm

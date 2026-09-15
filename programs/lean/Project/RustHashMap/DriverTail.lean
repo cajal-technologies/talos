@@ -130,7 +130,11 @@ The tail takes four things beyond `AfterRead`:
 * the `RandomState` cells, which `collect_entries` reads and writes;
 * the whole data segment, out of which the tail cuts the eighteen bytes of
   the static message `Not all bytes read` at 1049107 and lends them to
-  `borsh::io::Error::new`;
+  `borsh::io::Error::new`, and the first 24 bytes, which are the static
+  singleton table that `collect_entries` copies;
+* the two facts of the initial state that `collect_entries` needs: the
+  thread-local state byte is not the drop marker 2, and the first 24 bytes
+  of the data segment are `staticTableBytes`;
 * the bound on the input length, so that the stored length word reads back
   as the number of input bytes.
 
@@ -162,6 +166,8 @@ def DriverTailSpec [WasmSmallStepGS hlc Universal.State] : Prop :=
       Slices.ByteSlice 0 entryStackTop dataBytes ∗
       ⌜extra.length = 224 ∧ keysBefore.length = randomStateSize ∧
         dataBytes.length = dataSegmentSize ∧
+        keysBefore[16]? ≠ some 2 ∧
+        dataBytes.take 24 = staticTableBytes ∧
         input.length < UInt32.size⌝ ∗
       ((∀ finalLocals : Locals,
           RuntimeContext -∗

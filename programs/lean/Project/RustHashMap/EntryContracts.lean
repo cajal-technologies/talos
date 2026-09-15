@@ -54,6 +54,11 @@ def maxTableCapacity : Nat := 117440512
 
 theorem maxTableCapacity_eq : maxTableCapacity = 117440512 := rfl
 
+/-- The first 24 bytes of the data segment: the eight `EMPTY` control
+bytes of the static singleton table and its 16-byte header. -/
+def staticTableBytes : List UInt8 :=
+  List.replicate 8 0xFF ++ [0x00, 0x00, 0x10, 0x00] ++ List.replicate 12 0
+
 /-- Ownership of mutable Wasm global zero, the Rust shadow stack pointer. -/
 def StackPointer [WasmGlobalGS Universal.State]
     (sp : UInt32) : HeapIProp :=
@@ -86,7 +91,13 @@ function `expected` gives the output bytes for each input.
 
 The wrapper takes the thread-local `RandomState` region as well as the
 shadow stack.  `collect_entries` reads and writes those cells, and they sit
-above the stack top, so they are a separate resource. -/
+above the stack top, so they are a separate resource.
+
+Two facts of the initial state travel with the two regions.  The state byte
+of the thread-local is not 2, which is the value that marks a drop in
+progress.  The first 24 bytes of the data segment are the static singleton
+table.  `collect_entries` needs both, and only the entry point knows
+them. -/
 def EntrySpec [WasmSmallStepGS hlc Universal.State]
     (absoluteIndex : Nat) (expected : List UInt8 → List UInt8) : Prop :=
   ∀ (heapId : GName) (input stackBytes dataBytes randomState : List UInt8)
@@ -106,7 +117,9 @@ def EntrySpec [WasmSmallStepGS hlc Universal.State]
         Streams input [] false ∗
         ⌜stackBytes.length = stackSize ∧
           dataBytes.length = dataSegmentSize ∧
-          randomState.length = randomStateSize⌝ ∗
+          randomState.length = randomStateSize ∧
+          randomState[16]? ≠ some 2 ∧
+          dataBytes.take 24 = staticTableBytes⌝ ∗
         (RuntimeContext -∗ ExportSuccess (expected input) -∗
           ResumeWP [] callerLocals stack code arity remainder controls calls
             s E Φ) ∗

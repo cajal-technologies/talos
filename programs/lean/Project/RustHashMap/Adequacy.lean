@@ -216,6 +216,24 @@ theorem entryHeap_below_heapBase : HeapBelow entryHeap heapBase.toNat := by
 private theorem entryCursorBytes_zero :
     entryCursorBytes = [0, 0, 0, 0] := by decide
 
+/-- The thread-local state byte of the initial memory.  The cell is `.bss`,
+so every byte of it is zero. -/
+private theorem entryRandomBytes_state : entryRandomBytes[16]? = some 0 := by
+  decide
+
+/-- The state byte is not the drop marker.  `collect_entries` panics on
+that value, and the entry contract rules the panic out. -/
+private theorem entryRandomBytes_not_dropping :
+    entryRandomBytes[16]? ≠ some 2 := by
+  rw [entryRandomBytes_state]
+  decide
+
+/-- The first 24 bytes of the data segment are the static singleton table:
+eight `EMPTY` control bytes, then the control pointer 1048576, the bucket
+mask 0, the growth 0 and the item count 0. -/
+private theorem entryDataBytes_table :
+    entryDataBytes.take 24 = staticTableBytes := by decide
+
 private theorem entryCursorBytes_u32 :
   entryCursorBytes =
       [u32Byte 0 0, u32Byte 0 1, u32Byte 0 2, u32Byte 0 3] := by
@@ -449,7 +467,8 @@ theorem twp_entry_of_spec
   unfold CallContract at hcall
   iapply_frame hcall using [Hruntime Hsp Hstack Hdata Hrandom Hbump Hstreams]
   isplitr_pureexact
-    ⟨entryStackBytes_length, entryDataBytes_length, entryRandomBytes_length⟩
+    ⟨entryStackBytes_length, entryDataBytes_length, entryRandomBytes_length,
+      entryRandomBytes_not_dropping, entryDataBytes_table⟩
   isplitr
   · iintro _Hruntime Hsuccess
     unfold ResumeWP resumeExpr

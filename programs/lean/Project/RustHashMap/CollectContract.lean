@@ -101,6 +101,64 @@ order. -/
 def entryCodec : WordCodec (UInt32 × UInt32) :=
   HashMap.pairCodec WordCodec.u32le WordCodec.u32le
 
+/-! ## The static table of the data segment -/
+
+/-- The first 24 bytes of the data segment, cut into the three pieces that
+`Func2Spec` asks for. -/
+private theorem staticTableBytes_split :
+    staticTableBytes =
+      List.replicate 8 (0xFF : UInt8) ++
+        ([0, 0, 16, 0, 0, 0, 0, 0] ++ List.replicate 8 (0 : UInt8)) := by
+  decide
+
+/-- The control pointer word of the static table. -/
+private theorem groupWord_static_ctrl :
+    HashMap.Table.groupWord [0, 0, 16, 0, 0, 0, 0, 0] = 1048576 := by decide
+
+/-- The growth and item word of the static table. -/
+private theorem groupWord_static_zero :
+    HashMap.Table.groupWord (List.replicate 8 (0 : UInt8)) = 0 := by decide
+
+/-- Cut the static table of the data segment into the three resources that
+`Func2Spec` takes.  Every caller of `collect_entries` owns the whole data
+segment, and this lemma is the only step it needs. -/
+theorem staticTable_resources [WasmHeapGS Universal.State] :
+    Slices.ByteSlice (α := Universal.State) 0 entryStackTop
+        staticTableBytes ⊢
+      iprop(Slices.ByteSlice 0 entryStackTop (List.replicate 8 0xFF) ∗
+        pointsTo_u64 0 (entryStackTop + 8) 1048576 ∗
+        pointsTo_u64 0 (entryStackTop + 16) 0) := by
+  iintro Hbytes
+  ihave ⟨Hctrl, Hrest⟩ :=
+    (Slices.ByteSlice_append 0 entryStackTop (List.replicate 8 (0xFF : UInt8))
+      ([0, 0, 16, 0, 0, 0, 0, 0] ++ List.replicate 8 (0 : UInt8))).mp $$
+    [Hbytes]
+  · irw_exact [← staticTableBytes_split] with Hbytes
+  isimp only [show entryStackTop
+      + UInt32.ofNat (List.replicate 8 (0xFF : UInt8)).length
+      = entryStackTop + 8 by decide] at Hrest
+  ihave ⟨Hhdr, Hzero⟩ :=
+    (Slices.ByteSlice_append 0 (entryStackTop + 8)
+      ([0, 0, 16, 0, 0, 0, 0, 0] : List UInt8)
+      (List.replicate 8 (0 : UInt8))).mp $$ [Hrest]
+  · iexact Hrest
+  isimp only [show entryStackTop + 8
+      + UInt32.ofNat ([0, 0, 16, 0, 0, 0, 0, 0] : List UInt8).length
+      = entryStackTop + 16 by decide] at Hzero
+  isplitl_exact Hctrl
+  · ihave Hhdr :=
+      (HashMap.Table.ByteSlice_eight_as_u64 0 (entryStackTop + 8)
+        [0, 0, 16, 0, 0, 0, 0, 0] rfl).mp $$ Hhdr
+    icases Hhdr with ⟨%_hb0, Hhdr⟩
+    ihave Hzero :=
+      (HashMap.Table.ByteSlice_eight_as_u64 0 (entryStackTop + 16)
+        (List.replicate 8 (0 : UInt8)) rfl).mp $$ Hzero
+    icases Hzero with ⟨%_hb1, Hzero⟩
+    isimp only [groupWord_static_ctrl] at Hhdr
+    isimp only [groupWord_static_zero] at Hzero
+    isplitl_exact Hhdr
+    · iexact Hzero
+
 /-! ## `collect_entries` -/
 
 /-- Absolute `func 5`, local `func2`: `collect_entries`.
@@ -122,7 +180,29 @@ replaces the earlier one, and the two counts differ from `entries.length`
 together.
 
 The out-of-memory arm is the terminal `talos.oom` host trap.  It consumes
-every resource, as in `Func1Spec`. -/
+every resource, as in `Func1Spec`.
+
+## The three static resources
+
+The body copies the static empty table out of the first 24 bytes of the
+data segment, so the caller lends all three pieces of it.
+
+* The eight `EMPTY` control bytes at `entryStackTop`.  The contract does
+  not give them back.  They become part of the returned `MapAt`, because
+  `Table.SingletonBody` claims them for the empty table.
+* The control pointer word at `entryStackTop + 8`, which holds the
+  address 1048576 in its low half and the bucket mask 0 in its high half.
+  The contract gives it back unchanged.
+* The growth and item word at `entryStackTop + 16`, which is zero.  The
+  contract gives it back unchanged.
+
+## The three static facts
+
+Three pure conjuncts cut three exits of the compiled code that are neither
+arm of this contract.  The state byte of the thread-local is not the drop
+marker 2.  The entry count stays below `maxTableCapacity`, which kills the
+four capacity-overflow guards of absolute `func 17`.  The pair buffer is
+four-byte aligned, because the insert loop reads it with `i32.load`. -/
 def Func2Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp mapSlot vecHeader cap ptr len : UInt32)
     (heapId : GName) (entries : RustStd.HashMap.Map UInt32 UInt32)
@@ -145,12 +225,18 @@ def Func2Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         pointsTo_u32 0 (vecHeader + 8) len ∗
         Slices.ByteSlice 0 ptr (payload ++ spare) ∗
         Slices.ByteSlice 0 randomStateCell keysBefore ∗
+        Slices.ByteSlice 0 entryStackTop (List.replicate 8 0xFF) ∗
+        pointsTo_u64 0 (entryStackTop + 8) 1048576 ∗
+        pointsTo_u64 0 (entryStackTop + 16) 0 ∗
         BumpHeap heapId storedCursor frontier history ∗
         Streams input output raised ∗
         ⌜mapBefore.length = 32 ∧ keysBefore.length = randomStateSize ∧
+          keysBefore[16]? ≠ some 2 ∧
           payload = entryCodec.serialize entries ∧
           entries.length = len.toNat ∧ len.toNat ≤ cap.toNat ∧
+          len.toNat ≤ maxTableCapacity ∧
           spare.length = 8 * (cap.toNat - len.toNat) ∧
+          ptr.toNat % 4 = 0 ∧
           collectDepth ≤ sp.toNat ∧ mapSlot.toNat + 32 < UInt32.size ∧
           vecHeader.toNat + 12 < UInt32.size⌝ ∗
         (-- the normal arm
@@ -165,6 +251,8 @@ def Func2Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
             pointsTo_u32 0 (vecHeader + 4) ptr -∗
             pointsTo_u32 0 (vecHeader + 8) len -∗
             Slices.ByteSlice 0 randomStateCell keysAfter -∗
+            pointsTo_u64 0 (entryStackTop + 8) 1048576 -∗
+            pointsTo_u64 0 (entryStackTop + 16) 0 -∗
             BumpHeap heapId storedCursor' frontier' history' -∗
             Streams input output raised -∗
             ⌜keysAfter.length = randomStateSize ∧

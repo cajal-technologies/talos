@@ -95,6 +95,8 @@ def RemoveTailSpec [WasmSmallStepGS hlc Universal.State] : Prop :=
       Slices.ByteSlice 0 entryStackTop dataBytes ∗
       ⌜extra.length = 14080 ∧ keysBefore.length = randomStateSize ∧
         dataBytes.length = dataSegmentSize ∧
+        keysBefore[16]? ≠ some 2 ∧
+        dataBytes.take 24 = staticTableBytes ∧
         input.length < UInt32.size⌝ ∗
       (DriverTailProof.TailDone
           (output ++ Project.RustHashMap.Spec.removeOutput input)

@@ -31,7 +31,7 @@ hypothesis. The evidence column names the hypothesis.
 | `map_len` | adequate (`Func2Spec`) | note E |
 | `map_contains_key` | adequate (`Func2Spec`) | note M |
 | `map_get` | adequate (`Func2Spec`) | note M |
-| collect_entries absolute 5 | proved (two premises) | note F |
+| collect_entries absolute 5 | proved (`Func14Spec`) | note F |
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
 | absolute 17 (`Func14Spec`) | proved | note G |
 | absolute 18 (`Func15Spec`) | proved (one arm) | note H |
@@ -84,9 +84,10 @@ hypothesis. The evidence column names the hypothesis.
   the static singleton claims `t.ctrl.take 8` now, and
   `CollectAssembly.TableAt_static_empty` proves the former `hsingleton`
   premise. `Func2SpecStrong` lends the eight `EMPTY` bytes at
-  `entryStackTop` for it. One blocker stays open: `Func2Spec` must become
-  `Func2SpecStrong`, which is Part A of this lane. `Func14Spec` is
-  discharged by `Func14Proof.func14_correct_of
+  `entryStackTop` for it. Part A of this lane is done: `Func2Spec` and
+  `Func2SpecStrong` are equal by statement now, so the next step proves
+  `func2_correct : Func2Spec` and closes the five exports. `Func14Spec`
+  is discharged by `Func14Proof.func14_correct_of
   Func55Proof.func55_correct_pow2` in a later step. See note L.
 - Note G. `Func14Proof.lean` (`8c78c4e`, the other lane) proves
   absolute 17 for the collect path. `Func14Capacity.lean` (`3ab957f`)
@@ -129,9 +130,9 @@ hypothesis. The evidence column names the hypothesis.
   `CollectLoop.lean`, `CollectTail.lean`, `CollectPrologue.lean`,
   `CollectReserve.lean`, `CollectAssembly.lean` and `Func14Proof.lean`.
   `Func2Spec` is still discharged nowhere. `CollectAssembly.lean` proves
-  `func2_correct_of` under `Func14Spec`, and it states
-  `Func2SpecStrong`, which no theorem ties to `Func2Spec` yet. A later
-  step closes that gap.
+  `func2_correct_of` under `Func14Spec`. It states `Func2SpecStrong`,
+  which now has the same statement as `Func2Spec`. The next step states
+  `func2_correct : Func2Spec` and closes that gap.
 - Note M. The drivers are `Func0Spec` (absolute 3), `Func6Spec`
   (absolute 9), `Func16Spec` (absolute 19) and `Func18Spec`
   (absolute 21). `ContainsKeyDriverProof.lean` (`7540f5b`) and
