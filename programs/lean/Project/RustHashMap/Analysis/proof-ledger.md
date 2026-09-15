@@ -34,6 +34,7 @@ hypothesis. The evidence column names the hypothesis.
 | collect_entries absolute 5 | proved | `CollectProof.lean`; note F |
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
 | absolute 17 (`Func14Spec`) | proved | `Func14Proof.lean`; note G |
+| absolute 17 (`Func14ResizeSpec`) | first pass | note S |
 | absolute 18 (`Func15Spec`) | proved (one arm) | note H |
 | absolute 83 | proved | `Func80Proof.lean`; note L |
 | key decoder absolute 10 (`Func7Spec`) | proved | note I |
@@ -101,7 +102,7 @@ hypothesis. The evidence column names the hypothesis.
   of absolute 17 is unconditional now. `Func14Capacity.lean` (`3ab957f`)
   states the capacity arithmetic. The resize path is stated as
   `Func14ResizeSpec` in `MapOpContracts.lean` and stays open. See
-  note L.
+  note L and note S.
 - Note H. `Func15Proof.lean` proves one arm. The resize arm
   (`growth_left == 0`, WAT line 4314) stays open, and it is live for
   `map_insert`. See note L.
@@ -194,3 +195,12 @@ hypothesis. The evidence column names the hypothesis.
   `Project.lean` imports all fourteen files. The lane also adds
   `PairSlice.lean`, `SortedByKey.lean`, `SortingNetwork.lean` and
   `EraseWasm.lean` in `codelib/CodeLib/RustStd/HashMap/`.
+- Note S. The resize path of absolute 17 is `Func14ResizeSpec`. The body
+  proof is open. `ResizePures.lean` holds the model side of it. It shows
+  that a clean table with no growth left takes the resize arm and not the
+  rehash-in-place arm (`reserve_one_eq`), it reads the answer off
+  `Table.WF.resize` (`resize_spec`), and it names the state of the walk
+  loop of WAT 3746 to 4083 (`walkFrom`, `walkRem` and the five step
+  lemmas). `moveStep_spec` gives the insert index of one turn and the
+  `EMPTY` byte at it. `and_xor_self` and `swarMatchFull_eq_zero_iff` read
+  the group mask that the compiled advance loop keeps.

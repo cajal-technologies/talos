@@ -181,6 +181,7 @@ import Project.RustHashMap.CollectTail
 import Project.RustHashMap.CollectPrologue
 import Project.RustHashMap.CollectReserve
 import Project.RustHashMap.CollectAssembly
+import Project.RustHashMap.ResizePures
 import Project.RustHashMap.Func14Proof
 import Project.RustHashMap.CollectProof
 import Project.RustHashMap.MapLen
