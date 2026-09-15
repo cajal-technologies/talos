@@ -34,7 +34,7 @@ hypothesis. The evidence column names the hypothesis.
 | collect_entries absolute 5 | proved | `CollectProof.lean`; note F |
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
 | absolute 17 (`Func14Spec`) | proved | `Func14Proof.lean`; note G |
-| absolute 17 (`Func14ResizeSpec`) | first pass | note S |
+| absolute 17 (`Func14ResizeSpec`) | proved | `Func14Resize.lean`; note S |
 | absolute 18 (`Func15Spec`) | proved (one arm) | note H |
 | absolute 83 | proved | `Func80Proof.lean`; note L |
 | key decoder absolute 10 (`Func7Spec`) | proved | note I |
@@ -216,3 +216,16 @@ hypothesis. The evidence column names the hypothesis.
   program.  The fresh table has no counters while the walk runs, so the
   probe and the fix take `Table.Layout` plus a short entry list in place
   of `Table.WF` and `Table.Clean`.
+  `Func14Resize.lean` closes the contract. `func14_resize_correct` proves
+  `Func14ResizeSpec` with no open argument. It reuses the block split and
+  the phase names of `Func14Proof.lean`, which lost the `private` marker
+  on every one of them for that reason. Three stage lemmas carry it:
+  `twp_resize_epilogue` (WAT 4119 to 4129), `twp_resize_tail` (WAT 4085
+  to 4129, with the free of the old control array) and
+  `twp_resize_commit` (WAT 3665 to 4129, which plugs in the walk).
+  `TableAt_open` reads the four header words out of either physical form
+  of the old table. The static singleton has no bucket area, and it has
+  no items, so the walk is skipped on it and the free is skipped too.
+  The free of WAT 4098 to 4117 goes through `DeallocNoop.Func57NoopSpec`,
+  because this proof does not hold an allocation token for the old
+  control array.

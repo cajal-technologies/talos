@@ -48,59 +48,59 @@ no name of their own: `blockAt` reads a block body straight off the
 compiled program, and every shape theorem below closes by `rfl`. -/
 
 /-- The body of the `block` instruction at index `i` of `p`. -/
-private def blockAt (p : Program) (i : Nat) : Program :=
+def blockAt (p : Program) (i : Nat) : Program :=
   match p[i]? with
   | some (.block _ _ body) => body
   | _ => []
 
-private def blockOne : Program := blockAt Project.RustHashMap.func14 5
-private def blockTwo : Program := blockAt blockOne 0
-private def blockThree : Program := blockAt blockTwo 0
-private def blockFour : Program := blockAt blockThree 0
-private def blockFive : Program := blockAt blockFour 0
-private def blockSix : Program := blockAt blockFive 0
-private def blockSeven : Program := blockAt blockSix 0
-private def blockCapacity : Program := blockAt blockSeven 9
-private def blockClz : Program := blockAt blockCapacity 35
-private def commitTail : Program := blockTwo.drop 1
-private def blockFill : Program := blockAt commitTail 4
-private def commitMid : Program := commitTail.drop 5
-private def blockResize : Program := blockAt commitMid 17
-private def commitEnd : Program := commitMid.drop 18
+def blockOne : Program := blockAt Project.RustHashMap.func14 5
+def blockTwo : Program := blockAt blockOne 0
+def blockThree : Program := blockAt blockTwo 0
+def blockFour : Program := blockAt blockThree 0
+def blockFive : Program := blockAt blockFour 0
+def blockSix : Program := blockAt blockFive 0
+def blockSeven : Program := blockAt blockSix 0
+def blockCapacity : Program := blockAt blockSeven 9
+def blockClz : Program := blockAt blockCapacity 35
+def commitTail : Program := blockTwo.drop 1
+def blockFill : Program := blockAt commitTail 4
+def commitMid : Program := commitTail.drop 5
+def blockResize : Program := blockAt commitMid 17
+def commitEnd : Program := commitMid.drop 18
 
 /-- The dead tail of block seven: `rehash_in_place`, WAT 3116 to 3640. -/
-private def rehashTail : Program := blockSeven.drop 10
+def rehashTail : Program := blockSeven.drop 10
 
 /-- The dead capacity-overflow arms, WAT 3101 to 3113, 3642 to 3651 and
 3703 to 3713. -/
-private def overflowTailC : Program := blockCapacity.drop 36
-private def overflowTailA : Program := blockSix.drop 1
-private def overflowTailB : Program := blockThree.drop 1
+def overflowTailC : Program := blockCapacity.drop 36
+def overflowTailA : Program := blockSix.drop 1
+def overflowTailB : Program := blockThree.drop 1
 
 /-- The dead resize walk, WAT 3750 to 4084, and the dead free of the static
 singleton, WAT 4098 to 4117. -/
-private def resizeTail : Program := blockResize.drop 3
-private def freeTail : Program := commitEnd.drop 16
+def resizeTail : Program := blockResize.drop 3
+def freeTail : Program := commitEnd.drop 16
 
 /-! ## The live phases -/
 
 /-- WAT 3021 to 3025: the 32-byte frame. -/
-@[reducible] private def framePhase (contCode : Program) : Program :=
+@[reducible] def framePhase (contCode : Program) : Program :=
   .globalGet 0 :: .const 32 :: .sub :: .localTee 5 :: .globalSet 0 :: contCode
 
 /-- WAT 4119 to 4129: the result slot and the stack pointer. -/
-@[reducible] private def epiloguePhase : Program :=
+@[reducible] def epiloguePhase : Program :=
   [.localGet 0, .localGet 2, .store32 4, .localGet 0, .localGet 4,
     .store32 0, .localGet 5, .const 32, .add, .globalSet 0]
 
 /-- WAT 3027 to 3041: `new_items = items + additional` and the wrap guard. -/
-@[reducible] private def itemsPhase (contCode : Program) : Program :=
+@[reducible] def itemsPhase (contCode : Program) : Program :=
   .localGet 1 :: .load32 12 :: .localTee 6 :: .localGet 2 :: .add ::
     .localTee 2 :: .localGet 6 :: .ltU :: .br_if 0 :: contCode
 
 /-- WAT 3043 to 3077: the full capacity, the rehash test and
 `cap = max(new_items, full_cap + 1)`. -/
-@[reducible] private def capacityPhase (contCode : Program) : Program :=
+@[reducible] def capacityPhase (contCode : Program) : Program :=
   .localGet 2 :: .localGet 1 :: .load32 4 :: .localTee 7 ::
     .localGet 7 :: .const 1 :: .add :: .localTee 8 :: .const 3 :: .shrU ::
     .localTee 9 :: .const 7 :: .mul :: .localGet 7 :: .const 8 ::
@@ -110,20 +110,20 @@ private def freeTail : Program := commitEnd.drop 16
     .localTee 2 :: .const 15 :: .ltU :: .br_if 2 :: contCode
 
 /-- WAT 3079 to 3100: `buckets = (0xFFFFFFFF >>> clz (cap * 8 / 7 - 1)) + 1`. -/
-@[reducible] private def clzPhase : Program :=
+@[reducible] def clzPhase : Program :=
   [.localGet 2, .const 536870911, .gtU, .br_if 0, .const 4294967295,
     .localGet 2, .const 3, .shl, .const 7, .divU, .const 4294967295,
     .add, .clz, .shrU, .localTee 2, .const 536870910, .gtU, .br_if 5,
     .localGet 2, .const 1, .add, .localSet 2, .br 4]
 
 /-- WAT 3653 to 3663: `buckets = if cap < 4 then 4 else (cap &&& 8) + 8`. -/
-@[reducible] private def smallPhase : Program :=
+@[reducible] def smallPhase : Program :=
   [.const 4, .localGet 2, .const 8, .and, .const 8, .add, .localGet 2,
     .const 4, .ltU, .select, .localSet 2]
 
 /-- WAT 3665 to 3701: the two allocation guards, the allocation itself and
 the dead null arm. -/
-@[reducible] private def allocPhase : Program :=
+@[reducible] def allocPhase : Program :=
   [.localGet 2, .const 8, .add, .localTee 12, .localGet 2, .const 3,
     .shl, .localTee 11, .add, .localTee 9, .localGet 12, .ltU, .br_if 0,
     .localGet 9, .const 2147483640, .gtU, .br_if 0, .call 33,
@@ -133,16 +133,16 @@ the dead null arm. -/
     .load32 16, .localSet 4, .br 3]
 
 /-- WAT 3716 to 3719: `new_ctrl = base + 8 * buckets`. -/
-@[reducible] private def commitHead (contCode : Program) : Program :=
+@[reducible] def commitHead (contCode : Program) : Program :=
   .localGet 22 :: .localGet 11 :: .add :: .localSet 9 :: contCode
 
 /-- WAT 3720 to 3728: the guarded `memory.fill` of the control bytes. -/
-@[reducible] private def fillPhase : Program :=
+@[reducible] def fillPhase : Program :=
   [.localGet 12, .eqz, .br_if 0, .localGet 9, .const 255, .localGet 12,
     .memoryFill]
 
 /-- WAT 3729 to 3745: the new growth counter and the old control pointer. -/
-@[reducible] private def fullCapPhase (contCode : Program) : Program :=
+@[reducible] def fullCapPhase (contCode : Program) : Program :=
   .localGet 2 :: .const 4294967295 :: .add :: .localTee 11 ::
     .localGet 2 :: .const 3 :: .shrU :: .const 7 :: .mul :: .localGet 2 ::
     .const 9 :: .ltU :: .select :: .localSet 25 :: .localGet 1 ::
@@ -150,7 +150,7 @@ the dead null arm. -/
 
 /-- WAT 4085 to 4097: the three header writes, the `Ok` tag and the guard
 of the dead free. -/
-@[reducible] private def storePhase (contCode : Program) : Program :=
+@[reducible] def storePhase (contCode : Program) : Program :=
   .localGet 1 :: .localGet 11 :: .store32 4 :: .localGet 1 ::
     .localGet 9 :: .store32 0 :: .localGet 1 :: .localGet 25 ::
     .localGet 6 :: .sub :: .store32 8 :: .const 2147483649 ::
@@ -158,45 +158,45 @@ of the dead free. -/
 
 /-! ## The split, closed by `rfl` -/
 
-private theorem func14_shape :
+theorem func14_shape :
     Project.RustHashMap.func14
       = framePhase (.block 0 0 blockOne :: epiloguePhase) := by rfl
 
-private theorem shape_one : blockOne = [.block 0 0 blockTwo] := by rfl
+theorem shape_one : blockOne = [.block 0 0 blockTwo] := by rfl
 
-private theorem shape_two : blockTwo = .block 0 0 blockThree :: commitTail := by rfl
+theorem shape_two : blockTwo = .block 0 0 blockThree :: commitTail := by rfl
 
-private theorem shape_three :
+theorem shape_three :
     blockThree = .block 0 0 blockFour :: overflowTailB := by rfl
 
-private theorem shape_four : blockFour = .block 0 0 blockFive :: allocPhase := by rfl
+theorem shape_four : blockFour = .block 0 0 blockFive :: allocPhase := by rfl
 
-private theorem shape_five : blockFive = .block 0 0 blockSix :: smallPhase := by rfl
+theorem shape_five : blockFive = .block 0 0 blockSix :: smallPhase := by rfl
 
-private theorem shape_six :
+theorem shape_six :
     blockSix = .block 0 0 blockSeven :: overflowTailA := by rfl
 
-private theorem shape_seven :
+theorem shape_seven :
     blockSeven = itemsPhase (.block 0 0 blockCapacity :: rehashTail) := by rfl
 
-private theorem shape_capacity :
+theorem shape_capacity :
     blockCapacity = capacityPhase (.block 0 0 blockClz :: overflowTailC) := by
   rfl
 
-private theorem shape_clz : blockClz = clzPhase := by rfl
+theorem shape_clz : blockClz = clzPhase := by rfl
 
-private theorem shape_commit_head :
+theorem shape_commit_head :
     commitTail = commitHead (.block 0 0 blockFill :: commitMid) := by rfl
 
-private theorem shape_fill : blockFill = fillPhase := by rfl
+theorem shape_fill : blockFill = fillPhase := by rfl
 
-private theorem shape_commit_mid :
+theorem shape_commit_mid :
     commitMid = fullCapPhase (.block 0 0 blockResize :: commitEnd) := by rfl
 
-private theorem shape_resize :
+theorem shape_resize :
     blockResize = .localGet 6 :: .eqz :: .br_if 0 :: resizeTail := by rfl
 
-private theorem shape_commit_end : commitEnd = storePhase freeTail := by rfl
+theorem shape_commit_end : commitEnd = storePhase freeTail := by rfl
 
 /-! ## The allocator at alignment 8
 
@@ -208,13 +208,13 @@ file takes it as a hypothesis, because it does not import
 `Func55Proof.lean`. -/
 
 /-- WAT 3665 to 3686: the slots and the control bytes in one block. -/
-private def resizeLayout (buckets : Nat) : AllocLayout :=
+def resizeLayout (buckets : Nat) : AllocLayout :=
   { size := 9 * buckets + 8, alignment := 8 }
 
-private theorem resizeLayout_size (buckets : Nat) :
+theorem resizeLayout_size (buckets : Nat) :
     (resizeLayout buckets).size = 9 * buckets + 8 := rfl
 
-private theorem resizeLayout_valid {buckets : Nat} (hhigh : buckets ≤ 2 ^ 27) :
+theorem resizeLayout_valid {buckets : Nat} (hhigh : buckets ≤ 2 ^ 27) :
     (resizeLayout buckets).Valid := by
   have hsz : UInt32.size = 4294967296 := rfl
   have h27 : (2 : Nat) ^ 27 = 134217728 := by norm_num
@@ -224,22 +224,22 @@ private theorem resizeLayout_valid {buckets : Nat} (hhigh : buckets ≤ 2 ^ 27) 
 
 /-- A block frame of the compiled body.  Every block of `func 17` takes no
 parameter and returns no value, and the stack is empty at each one. -/
-@[reducible] private def blockFrame (body cont : Program) : ControlFrame :=
+@[reducible] def blockFrame (body cont : Program) : ControlFrame :=
   { kind := .block, paramArity := 0, resultArity := 0, body := body,
     continuation := cont, belowStack := [] }
 
-private theorem func14_index :
+theorem func14_index :
     Project.RustHashMap.«module».funcs[14]? =
       some Project.RustHashMap.func14Def := by rfl
 
 /-- The shift amount of `i32.shr_u` is already read modulo 32. -/
-private theorem shrU_mod (x y : UInt32) : x >>> (y % 32) = x >>> y := by
+theorem shrU_mod (x y : UInt32) : x >>> (y % 32) = x >>> y := by
   apply UInt32.toNat_inj.mp
   rw [UInt32.toNat_shiftRight, UInt32.toNat_shiftRight, UInt32.toNat_mod]
   simp
 
 /-- No positive word is at or below zero. -/
-private theorem not_le_zero {x : UInt32} (h : 1 ≤ x.toNat) :
+theorem not_le_zero {x : UInt32} (h : 1 ≤ x.toNat) :
     ¬ (x ≤ (0 : UInt32)) := by
   intro hle
   have h' := UInt32.le_iff_toNat_le.mp hle
@@ -247,7 +247,7 @@ private theorem not_le_zero {x : UInt32} (h : 1 ≤ x.toNat) :
   omega
 
 /-- A sum that does not wrap. -/
-private theorem toNat_add_nowrap {x y : UInt32}
+theorem toNat_add_nowrap {x y : UInt32}
     (h : x.toNat + y.toNat < 4294967296) :
     (x + y).toNat = x.toNat + y.toNat := by
   rw [UInt32.toNat_add]
@@ -255,7 +255,7 @@ private theorem toNat_add_nowrap {x y : UInt32}
   omega
 
 /-- No word is below zero. -/
-private theorem not_lt_zero (x : UInt32) : ¬ (x < (0 : UInt32)) := by
+theorem not_lt_zero (x : UInt32) : ¬ (x < (0 : UInt32)) := by
   intro h
   have h' : x.toNat < (0 : UInt32).toNat := UInt32.lt_iff_toNat_lt.mp h
   have h0 : (0 : UInt32).toNat = 0 := rfl
@@ -263,7 +263,7 @@ private theorem not_lt_zero (x : UInt32) : ¬ (x < (0 : UInt32)) := by
 
 
 /-- Move a word cell to an equal address that is written differently. -/
-private theorem pointsTo_u32_at [WasmHeapGS Universal.State]
+theorem pointsTo_u32_at [WasmHeapGS Universal.State]
     {a b w : UInt32} (h : b = a) :
     pointsTo_u32 0 a w ⊢ pointsTo_u32 0 b w := by
   subst h
@@ -294,7 +294,7 @@ theorem TableAt_empty_open [WasmHeapGS Universal.State] (base : UInt32) :
 /-- The locals at the allocation, WAT 3665.  The two capacity branches
 reach this point with the same machine state: the bucket count is in local
 2, and every other live slot holds the value that phase A left there. -/
-@[reducible] private def allocLocals (out table buckets hasher frame : UInt32) :
+@[reducible] def allocLocals (out table buckets hasher frame : UInt32) :
     Locals :=
   { params := [.i32 out, .i32 table, .i32 buckets, .i32 hasher, .i32 1],
     locals :=
@@ -306,7 +306,7 @@ reach this point with the same machine state: the bucket count is in local
 /-- The locals at the two calls of WAT 3681 to 3686.  Phase B has filled
 local 9 with the byte count, local 11 with the bucket area and local 12
 with the control area. -/
-@[reducible] private def callLocals
+@[reducible] def callLocals
     (out table buckets hasher frame total slots ctrlSize : UInt32) : Locals :=
   { params := [.i32 out, .i32 table, .i32 buckets, .i32 hasher, .i32 1],
     locals :=
@@ -316,7 +316,7 @@ with the control area. -/
     values := [] }
 
 /-- The call frame that `Wasm.SmallStep.twp_call` pushes for the caller. -/
-@[reducible] private def callerFrame (callerLocals : Locals) (stack : List Value)
+@[reducible] def callerFrame (callerLocals : Locals) (stack : List Value)
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) : CallFrame :=
   { locals :=
@@ -333,7 +333,7 @@ variable [WasmSmallStepGS hlc Universal.State]
 /-- Enter a block and keep the name of its body.  `Wasm.SmallStep.twp_block`
 puts the body of the block into the new control frame, so a rewrite that
 opens the body also rewrites the frame.  This rule opens the code alone. -/
-private theorem twp_blockOf {params localValues : List Value}
+theorem twp_blockOf {params localValues : List Value}
     {body body' cont : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {s : Stuckness} {E : CoPset} {Φ : ObservableOutcome → HeapIProp}
@@ -359,7 +359,7 @@ set_option maxHeartbeats 2000000 in
 /-- WAT 3665 to 4129: the allocation, the control fill, the header writes
 and the epilogue.  Both capacity branches end here with the same locals, so
 the tail is written once. -/
-private theorem twp_commit
+theorem twp_commit
     (halloc : Func55SpecPow2 (hlc := hlc))
     (sp out table hasher additional bucketsWord ctrlOld : UInt32)
     (k0 k1 : UInt64) (outBefore below : List UInt8)

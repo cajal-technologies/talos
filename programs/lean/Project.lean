@@ -184,6 +184,7 @@ import Project.RustHashMap.CollectAssembly
 import Project.RustHashMap.ResizePures
 import Project.RustHashMap.Func14ResizeWalk
 import Project.RustHashMap.Func14Proof
+import Project.RustHashMap.Func14Resize
 import Project.RustHashMap.CollectProof
 import Project.RustHashMap.MapLen
 import Project.RustHashMap.MapContainsKey
