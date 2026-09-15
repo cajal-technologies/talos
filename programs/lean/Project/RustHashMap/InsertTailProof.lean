@@ -1908,7 +1908,8 @@ theorem twp_ins_decode_call [WasmSmallStepGS hlc Universal.State]
       %frontier' %history' %haccept Hruntime Hsp Hbelow Hdec Hptrw
       Hlenw Hbytes Hdata Hbuf Hbump Hstreams %hfacts
     isimp only [ResumeWP, resumeExpr, List.nil_append]
-    obtain ⟨hpayloadEq, hcapBound, hspareLen, _hzero⟩ := hfacts
+    obtain ⟨hpayloadEq, hcapBound, hspareLen, _hzero, _halign⟩ :=
+      hfacts
     have hiff :=
       DriverTailProof.remaining_eq_zero_iff (insertMapBytes input)
         dataLen hlen haccept

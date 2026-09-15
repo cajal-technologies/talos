@@ -1018,7 +1018,7 @@ theorem twp_contains_key_tail [WasmSmallStepGS hlc Universal.State]
       %haccept Hruntime Hsp Hbelow Hslot Hbytes Hdata Hbuf Hbump Hstreams
       %hfacts
     isimp only [ResumeWP, resumeExpr, List.nil_append]
-    obtain ⟨hcapBound, hspareLen, _hzero⟩ := hfacts
+    obtain ⟨hcapBound, hspareLen, _hzero, _halign⟩ := hfacts
     have hn := acceptedEntries_bound input haccept hinput
     ihave ⟨H16, H20, H24, H28, H32⟩ :=
       ByteSlice_five_words (func16Base + 16) 0 (leadingKey input) cap' buffer

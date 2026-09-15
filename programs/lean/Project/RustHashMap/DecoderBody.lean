@@ -165,7 +165,8 @@ def BodyCont [WasmSmallStepGS hlc Universal.State]
         (headerWord bytes).toNat ≤ capacity.toNat ∧
         spareBytes.length =
           8 * (capacity.toNat - (headerWord bytes).toNat) ∧
-        ((headerWord bytes).toNat = 0 → capacity = 0)⌝ -∗
+        ((headerWord bytes).toNat = 0 → capacity = 0) ∧
+        buffer.toNat % 4 = 0⌝ -∗
       WP (.running
           ⟨⟨[.i32 out, .i32 hdr],
               [.i32 frame, r3, r4, r5, r6, r7, r8, r9, r10, r11, r12],
@@ -328,7 +329,7 @@ theorem twp_outer_body [WasmSmallStepGS hlc Universal.State]
       iapply Hok $$ Hruntime Hsp Hbelow Hframe Hout Hptr Hlen Hinput Hdata
         Hbuf Hbump Hstreams
         %⟨haccept, hframeLength, (payload_zero bytes).symm,
-          Nat.le_refl _, by simp, fun _ => trivial⟩
+          Nat.le_refl _, by simp, fun _ => trivial, by decide⟩
     · isplit
       · -- the count that is not zero: the allocation phase
         iintro Hruntime Hsp Hbelow Hframe Hout Hptr Hlen Hinput Hdata Hbump
@@ -388,7 +389,7 @@ theorem twp_outer_body [WasmSmallStepGS hlc Universal.State]
           iapply Hok $$ Hruntime Hsp Hbelow Hframe Hout Hhdr Hlen Hinput
             Hdata Hbuf Hbump Hstreams
             %⟨haccept, hfacts2.2.2.2, hpayload, hfacts2.1, hspareLen,
-              fun h => absurd h hnz⟩
+              fun h => absurd h hnz, hblock.2.2⟩
         · isplit
           · -- the error exit of the allocation phase
             iintro %word0 %word1 %word2 %word3 %hdrPtr %hdrLen %capacity

@@ -1471,7 +1471,8 @@ theorem twp_driver_tail [WasmSmallStepGS hlc Universal.State]
     icases (ByteSlice_split_at 1049107 18 (dataBytes.drop 531)
       (by simp [hdata, dataSegmentSize])).mp $$ Hmsg with ⟨Hmsg, _Hafter⟩
     isimp only [UInt32.reduceToNat] at Hmsg
-    obtain ⟨hpayloadEq, hcapBound, hspareLen, _hzero⟩ := hfacts2
+    obtain ⟨hpayloadEq, hcapBound, hspareLen, _hzero, _halign⟩ :=
+      hfacts2
     obtain ⟨hfour, hfits⟩ := haccept
     have hprefixLen : (input.take (4 + 8 * (headerWord input).toNat)).length
         = 4 + 8 * (headerWord input).toNat := by

@@ -158,7 +158,7 @@ theorem func1_correct [WasmSmallStepGS hlc Universal.State] :
     iapply Hok $$ %(hfacts2.1) [Hmodule Henv] Hsp Hbelow Hout Hhdr Hlen
       Hbytes Hdata Hbuf Hbump Hstreams
       %⟨hfacts2.2.2.1, hfacts2.2.2.2.1, hfacts2.2.2.2.2.1,
-        hfacts2.2.2.2.2.2⟩
+        hfacts2.2.2.2.2.2.1, hfacts2.2.2.2.2.2.2⟩
     · isplitl_exact Hmodule
       · iexact Henv
   · isplit

@@ -39,6 +39,8 @@ The map decoder returns, and the body takes one of three exits.
 * The decoder accepted the rest and consumed all of it.  The body writes
   the tag 0, the key, the capacity, the buffer pointer and the pair count.
   WAT lines 1902 to 1918.
+  The buffer pointer has a four-byte alignment, because the map decoder
+  promises it.
 
 So word 0 of the output slot is the tag: 0 on success and 1 on failure.
 The four words behind it are the answer on success and the decode error on
@@ -148,7 +150,8 @@ def Func7Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
             ⌜(pairCount bytes).toNat ≤ capacity.toNat ∧
               spare.length =
                 8 * (capacity.toNat - (pairCount bytes).toNat) ∧
-              ((pairCount bytes).toNat = 0 → capacity = 0)⌝ -∗
+              ((pairCount bytes).toNat = 0 → capacity = 0) ∧
+              buffer.toNat % 4 = 0⌝ -∗
             ResumeWP [] callerLocals stack code arity remainder controls
               calls s E Φ) ∧
          -- the rejecting arm

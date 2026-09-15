@@ -246,6 +246,8 @@ buffer pointer and the entry count.  The buffer holds the payload bytes
 unchanged, because the compiled loop stores each key at `buffer + 8 i` and
 each value at `buffer + 8 i + 4`, which is the wire order.  An empty vector
 allocates nothing and reports capacity 0 with the dangling pointer 4.
+The buffer pointer has a four-byte alignment, because the pair block
+asks for that alignment.
 
 On failure the output slot holds a 16-byte `io::Error`, and word 0 is a
 `String` capacity, so it is never `okTag`.  The failure arm leaves the
@@ -395,7 +397,8 @@ def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
             ⌜payload = (bytes.drop 4).take (8 * (headerWord bytes).toNat) ∧
               (headerWord bytes).toNat ≤ capacity.toNat ∧
               spare.length = 8 * (capacity.toNat - (headerWord bytes).toNat) ∧
-              ((headerWord bytes).toNat = 0 → capacity = 0)⌝ -∗
+              ((headerWord bytes).toNat = 0 → capacity = 0) ∧
+              buffer.toNat % 4 = 0⌝ -∗
             ResumeWP [] callerLocals stack code arity remainder controls
               calls s E Φ) ∧
          -- the rejecting arm

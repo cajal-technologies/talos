@@ -1594,7 +1594,7 @@ theorem twp_remove_tail [WasmSmallStepGS hlc Universal.State]
       %history' %haccept Hruntime Hsp Hbelow Hslot Hbytes Hdata Hbuf Hbump
       Hstreams %hfacts
     isimp only [ResumeWP, resumeExpr, List.nil_append]
-    obtain ⟨hcapBound, hspareLen, _hzero⟩ := hfacts
+    obtain ⟨hcapBound, hspareLen, _hzero, _halign⟩ := hfacts
     have hn := acceptedEntries_bound input haccept hinput
     have hmaxEntries := acceptedEntries_le_max input capacity ptr frontier
       haccept hpush hfits

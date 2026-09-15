@@ -1961,7 +1961,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
         %historyD
       iintro %hAccept Hruntime Hsp Hlower Hq4 Hq1 Hq2 Hmap Hdata Hbuf
         Hbump Hstreams %hpFacts
-      obtain ⟨hpayload, hcapLe, hspareLen, hcapZero⟩ := hpFacts
+      obtain ⟨hpayload, hcapLe, hspareLen, hcapZero, halign⟩ := hpFacts
       have hkp : keyPayload bytes = payload := by rw [hpayload]; rfl
       isimp only [← hkp] at Hbuf
       isimp only [ResumeWP, resumeExpr, List.nil_append]
@@ -2091,7 +2091,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
         ihave Hok := Hok $$ %capacity %buffer %spare %below' %cursorD
           %frontierD %historyD
         iapply Hok $$ %hacc Hruntime Hsp Hbelow Hout Hbytes Hdata Hbuf
-          Hbump Hstreams %⟨hcapLe, hspareLen, hcapZero⟩
+          Hbump Hstreams %⟨hcapLe, hspareLen, hcapZero, halign⟩
       · -- the input holds bytes after the map
         have hnotAccept : ¬ KeyDecodeAccepts bytes := by
           intro hacc

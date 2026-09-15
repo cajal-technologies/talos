@@ -98,6 +98,8 @@ hypothesis. The evidence column names the hypothesis.
   `map_insert`. See note L.
 - Note I. `Func7Proof.lean` (`7ea932c`) proves `Func7Spec`. `89f0a6a`
   adds `KeyDecoderContract.lean`, which states the contract.
+  The accepting arm of `Func7Spec` and the accepting arm of
+  `Func1Spec` state that the pair buffer has a four-byte alignment.
 - Note J. The group is `Func11Spec` (absolute 14), `Func12Spec`
   (absolute 15), `Func20Spec` (absolute 23), `Func21Spec` (absolute 24)
   and `Func22Spec` (absolute 25). `SortContracts.lean` (`2ca62d8`)
