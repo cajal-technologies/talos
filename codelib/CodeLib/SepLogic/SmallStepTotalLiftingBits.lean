@@ -32,8 +32,10 @@ therefore a prerequisite of `collect_entries` alone.
 still closes the rule.  `twp_wrapI64` and `twp_extendUI32` state their
 results the same way.
 
-`clz32` at `Interpreter/Wasm/Semantics.lean:12` is public, so `twp_clz`
-names it directly, as `twp_ctzI64` names `ctz64`.
+`clz32` at `Interpreter/Wasm/Semantics.lean:12` and `clz64` at
+`Interpreter/Wasm/Semantics.lean:27` are public.  `twp_clz` names `clz32`
+directly and `twp_clzI64` names `clz64` directly, as `twp_ctzI64` names
+`ctz64`.
 
 ## Why there is no rule for `unreachable`
 
@@ -121,6 +123,21 @@ wasm_twp_pure_rule twp_xor {lhs rhs : UInt32} :
 wasm_twp_pure_rule twp_clz {value : UInt32} :
   .clz, .i32 value :: values =>
     .i32 (UInt32.ofNat (clz32 32 value)) :: values := Step.clz
+
+wasm_twp_pure_rule twp_clzI64 {value : UInt64} :
+  .clzI64, .i64 value :: values =>
+    .i64 (UInt64.ofNat (clz64 64 value)) :: values := Step.clzI64
+
+/-! ## The `wasm_twp_pures` case of the 64-bit count of leading zeros
+
+The macro at `CodeLib/SepLogic/SmallStepTotalLifting.lean:1662` predates
+this rule, so it has no case for it.  The case below adds one.  The other
+rules of this file get their cases downstream.
+-/
+
+macro_rules
+  | `(tactic| wasm_twp_pures [twp_clzI64 $rest:ident*]) =>
+      `(tactic| iapply twp_clzI64; wasm_twp_pures [$rest:ident*])
 
 wasm_twp_pure_rule twp_divU {dividend divisor : UInt32}
     (hdivisor : divisor ≠ 0) :
