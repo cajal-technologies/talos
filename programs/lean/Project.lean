@@ -152,3 +152,4 @@ import Project.RustHashMap.Func21Region
 import Project.RustHashMap.Func21Merge
 import Project.RustHashMap.Func21Proof
 import Project.RustHashMap.Func10Proof
+import Project.RustHashMap.Func4Proof
