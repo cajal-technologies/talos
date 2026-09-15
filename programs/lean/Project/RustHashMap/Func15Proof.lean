@@ -4,6 +4,7 @@ import Project.RustHashMap.Func15Hash
 import Project.RustHashMap.BitPures
 import Project.RustHashMap.ProbeStop
 import Project.RustHashMap.Func15Insert
+import Project.RustHashMap.Func14Resize
 
 /-!
 # Proof of the insert of `collect_entries`
@@ -380,33 +381,156 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
   · isplitl_pureexact ⟨hmsk, hmne, fun _ h => h, rfl⟩
     iframe Hslots Hexit
 
+
+/-- The `growth_left` word of the header, taken out of `TableAt` and given
+back by a wand.  Both physical forms of a table hold the four header
+words.  The singleton holds the literal zero there, and its own model
+`growthLeft` is zero, so one statement covers both forms. -/
+private theorem growth_cell [WasmHeapGS Universal.State]
+    (mapBase : UInt32) (t : Table UInt32 UInt32) :
+    Table.TableAt (α := Universal.State) 0 mapBase t ⊢
+      iprop(pointsTo_u32 0 (mapBase + 8) (UInt32.ofNat t.growthLeft) ∗
+        (pointsTo_u32 0 (mapBase + 8) (UInt32.ofNat t.growthLeft) -∗
+          Table.TableAt 0 mapBase t)) := by
+  iintro Htable
+  isimp only [Table.TableAt] at Htable
+  icases Htable with ⟨%ctrl, Hform⟩
+  icases Hform with (Hsingleton | ⟨%hbuckets, Hallocated⟩)
+  · isimp only [Table.SingletonBody, Table.tableHeader] at Hsingleton
+    icases Hsingleton with ⟨%hfacts, ⟨H0, H4, H8, H12⟩, Hctrl⟩
+    rw [hfacts.2.2, show UInt32.ofNat 0 = (0 : UInt32) from rfl]
+    isplitl_exact H8
+    · iintro H8
+      isimp only [Table.TableAt]
+      iexists ctrl
+      ileft
+      isimp only [Table.SingletonBody, Table.tableHeader]
+      isplitl_pureexact hfacts
+      · iframe H0 H4 H8 H12 Hctrl
+  · isimp only [Table.TableBody, Table.tableHeader] at Hallocated
+    icases Hallocated with
+      ⟨%hctrlBound, ⟨H0, H4, H8, H12⟩, Hctrl, Hslots⟩
+    isplitl_exact H8
+    · iintro H8
+      isimp only [Table.TableAt]
+      iexists ctrl
+      iright
+      isplitl_pureexact hbuckets
+      · isimp only [Table.TableBody, Table.tableHeader]
+        isplitl_pureexact hctrlBound
+        · iframe H0 H4 H8 H12 Hctrl Hslots
+
+
 set_option maxRecDepth 1048576 in
 set_option maxHeartbeats 2000000 in
-theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
-    Func15Spec (hlc := hlc) := by
-  unfold Func15Spec CallContract callExpr
-  intro sp out mapBase key value k0 k1 t outBefore below
-    callerLocals stack code arity remainder controls
-    calls s E Φ
-  iintro ⟨Hruntime, Hsp, Hbelow, Hout, Hmap, %hfacts, Hcont⟩
-  obtain ⟨houtLength, hspLow, houtBound, hmapBound, hwf, hclean, hgrowth,
-    hgrowthWord⟩ := hfacts
-  have hlayout : Table.Layout (SipHash.hashU32 k0 k1) t := hwf.toLayout
+/-- The frame and the inlined hash, WAT 4131 to 4300.  Both contracts of
+absolute `func 18` share this part.  The body commits its 16-byte frame,
+reads the two seeds of the map record and leaves the hash of the key in
+local 5.  Locals 6 to 10 keep scratch words of the hash, and no later
+instruction reads them before it writes them, so the continuation takes
+them as five opaque values. -/
+private theorem twp_insert_prologue [WasmSmallStepGS hlc Universal.State]
+    {sp out mapBase key value : UInt32} {k0 k1 : UInt64}
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset} {Φ : ObservableOutcome → HeapIProp}
+    (hmapBound : mapBase.toNat + 32 < UInt32.size) :
+    iprop(
+      RuntimeContext ∗
+      StackPointer sp ∗
+      pointsTo_u64 0 (mapBase + 16) k0 ∗
+      pointsTo_u64 0 (mapBase + 24) k1 ∗
+      (∀ (w6 w7 w8 w9 w10 : UInt64),
+          RuntimeContext -∗ StackPointer (sp - 16) -∗
+          pointsTo_u64 0 (mapBase + 16) k0 -∗
+          pointsTo_u64 0 (mapBase + 24) k1 -∗
+          WP (.running
+              ⟨{ params := [.i32 out, .i32 mapBase, .i32 key, .i32 value],
+                  locals :=
+                    [.i32 (sp - 16), .i64 (SipHash.hashU32Low k0 k1 key),
+                      .i64 w6, .i64 w7, .i64 w8, .i64 w9, .i64 w10,
+                      ValueType.i32.zero, ValueType.i32.zero,
+                      ValueType.i32.zero, ValueType.i32.zero,
+                      ValueType.i32.zero, ValueType.i32.zero,
+                      ValueType.i32.zero],
+                  values := [] },
+            .block 0 0 (.localGet 1 :: .load32 8 :: .br_if 0 :: .localGet 4 ::
+              .const 8 :: .add :: .localGet 1 :: .const 1 :: .localGet 1 ::
+              .const 16 :: .add :: .const 1 :: .call 17 :: []) :: .localGet
+              1 :: .load32 4 :: .localTee 11 :: .localGet 5 :: .wrapI64 ::
+              .and :: .localSet 12 :: .localGet 5 :: .constI64 25 ::
+              .shrUI64 :: .localTee 8 :: .constI64 127 :: .andI64 :: .constI64
+              72340172838076673 :: .mulI64 :: .localSet 6 :: .localGet 1 ::
+              .load32 0 :: .localSet 13 :: .const 0 :: .localSet 14 :: .const
+              0 :: .localSet 15 :: .loop 0 0 (.block 0 0 (.block 0 0 (.block 0
+              0 (.block 0 0 (.block 0 0 (.localGet 13 :: .localGet 12 ::
+              .add :: .load64 0 :: .localTee 7 :: .localGet 6 :: .xorI64 ::
+              .localTee 5 :: .constI64 18446744073709551615 :: .xorI64 ::
+              .localGet 5 :: .constI64 18374403900871474943 :: .addI64 ::
+              .andI64 :: .constI64 9259542123273814144 :: .andI64 :: .localTee
+              5 :: .eqzI64 :: .br_if 0 :: .loop 0 0 (.localGet 2 :: .localGet
+              13 :: .localGet 5 :: .ctzI64 :: .wrapI64 :: .const 3 :: .shrU ::
+              .localGet 12 :: .add :: .localGet 11 :: .and :: .const 3 ::
+              .shl :: .sub :: .localTee 16 :: .const 4294967288 :: .add ::
+              .load32 0 :: .eq :: .br_if 2 :: .localGet 5 :: .constI64
+              18446744073709551615 :: .addI64 :: .localGet 5 :: .andI64 ::
+              .localTee 5 :: .eqzI64 :: .eqz :: .br_if 0 :: []) :: []) ::
+              .localGet 7 :: .constI64 9259542123273814144 :: .andI64 ::
+              .localSet 5 :: .block 0 0 (.localGet 14 :: .const 1 :: .eq ::
+              .br_if 0 :: .localGet 5 :: .eqzI64 :: .br_if 3 :: .localGet 5 ::
+              .ctzI64 :: .wrapI64 :: .const 3 :: .shrU :: .localGet 12 ::
+              .add :: .localGet 11 :: .and :: .localSet 17 :: []) :: .block 0 0
+              (.localGet 5 :: .localGet 7 :: .constI64 1 :: .shlI64 ::
+              .andI64 :: .constI64 0 :: .neI64 :: .br_if 0 :: .const 1 ::
+              .localSet 14 :: .br 4 :: []) :: .const 0 :: .localSet 12 ::
+              .block 0 0 (.localGet 13 :: .localGet 17 :: .add :: .load8S 0 ::
+              .localTee 14 :: .const 0 :: .ltS :: .br_if 0 :: .localGet 13 ::
+              .localGet 13 :: .load64 0 :: .constI64 9259542123273814144 ::
+              .andI64 :: .ctzI64 :: .wrapI64 :: .const 3 :: .shrU :: .localTee
+              17 :: .add :: .load8U 0 :: .localSet 14 :: []) :: .localGet 13 ::
+              .localGet 17 :: .add :: .localGet 8 :: .wrapI64 :: .const 127 ::
+              .and :: .localTee 16 :: .store8 0 :: .localGet 13 :: .localGet
+              17 :: .const 4294967288 :: .add :: .localGet 11 :: .and ::
+              .add :: .const 8 :: .add :: .localGet 16 :: .store8 0 ::
+              .localGet 1 :: .localGet 1 :: .load32 8 :: .localGet 14 :: .const
+              1 :: .and :: .sub :: .store32 8 :: .localGet 1 :: .localGet 1 ::
+              .load32 12 :: .const 1 :: .add :: .store32 12 :: .localGet 13 ::
+              .localGet 17 :: .const 3 :: .shl :: .sub :: .localTee 1 :: .const
+              4294967288 :: .add :: .localGet 2 :: .store32 0 :: .localGet 1 ::
+              .const 4294967292 :: .add :: .localGet 3 :: .store32 0 :: .br
+              1 :: []) :: .localGet 16 :: .const 4294967292 :: .add ::
+              .localTee 13 :: .load32 0 :: .localSet 1 :: .localGet 13 ::
+              .localGet 3 :: .store32 0 :: .const 1 :: .localSet 12 :: []) ::
+              .localGet 0 :: .localGet 1 :: .store32 4 :: .localGet 0 ::
+              .localGet 12 :: .store32 0 :: .localGet 4 :: .const 16 :: .add ::
+              .globalSet 0 :: .ret :: []) :: .const 0 :: .localSet 14 :: []) ::
+              .localGet 15 :: .const 8 :: .add :: .localTee 15 :: .localGet
+              12 :: .add :: .localGet 11 :: .and :: .localSet 12 :: .br 0 ::
+              []) :: [],
+                0, [], [],
+                { locals :=
+                    { params := callerLocals.params,
+                      locals := callerLocals.locals, values := stack },
+                    continuation := code, resultArity := arity,
+                    callerRemainder := remainder, control := controls,
+                    returningInstance := ⟨0⟩ } :: calls⟩
+              : Expr Universal.State) @ s; E [{ Φ }])) ⊢
+      WP (callExpr 18 [.i32 value, .i32 key, .i32 mapBase, .i32 out]
+          callerLocals stack code arity remainder controls calls)
+        @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hsp, Hk0, Hk1, Hcont⟩
+  unfold callExpr
+  have hsize32 : UInt32.size = 4294967296 := rfl
+  have hmapNat : mapBase.toNat + 32 < 4294967296 := hmapBound
+  have hka0 := offset_facts64 mapBase 16 16 rfl (by omega)
+  have hka1 := offset_facts64 mapBase 24 24 rfl (by omega)
   iopen_map_runtime Hruntime with ⟨Hmodule, Henv⟩
   simp only [List.cons_append, List.nil_append]
   wasm_twp_rebind Wasm.SmallStep.twp_call Project.RustHashMap.«module» 18
       Project.RustHashMap.func15Def (by decide) func15_index with Hmodule
   simp [Project.RustHashMap.func15Def, Project.RustHashMap.func15,
     Function.toLocals, Function.numParams]
-  -- arithmetic on the frame base and on the map value
-  have hsize32 : UInt32.size = 4294967296 := rfl
-  have hspLt : sp.toNat < 4294967296 := sp.toBitVec.isLt
-  have hdepth : insertDepth = 144 := rfl
-  have hspNat : (144 : Nat) ≤ sp.toNat := by
-    rw [hdepth] at hspLow; exact hspLow
-  have hmapNat : mapBase.toNat + 32 < 4294967296 := hmapBound
-  have hka0 := offset_facts64 mapBase 16 16 rfl (by omega)
-  have hka1 := offset_facts64 mapBase 24 24 rfl (by omega)
   -- the frame, committed
   isimp only [StackPointer] at Hsp
   wasm_twp_rebind twp_globalGet with Hsp
@@ -414,9 +538,6 @@ theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_rebind twp_globalSet with Hsp
-  -- the table and the two seeds
-  isimp only [Table.HashMapAt] at Hmap
-  icases Hmap with ⟨Htable, Hk0, Hk1⟩
   -- `local 5 := k1`, the start of the inlined hash
   wasm_twp_pures [twp_localGet]
   wasm_twp_rebind Wasm.SmallStep.twp_load64 (address := mapBase)
@@ -430,73 +551,103 @@ theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
     (offset := 16) k0
     hka0.1 hka0.2.1 hka0.2.2.1 hka0.2.2.2.1 hka0.2.2.2.2.1
     hka0.2.2.2.2.2.1 hka0.2.2.2.2.2.2.1 hka0.2.2.2.2.2.2.2 with Hk0
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_xorI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_xorI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_rotlI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_orI64 twp_xorI64 twp_localGet
     twp_constI64 twp_rotlI64 twp_localGet twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_constI64 twp_xorI64
     twp_localGet twp_constI64 twp_rotlI64 twp_localGet twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_rotlI64 twp_localGet twp_localGet
     twp_localGet twp_constI64 twp_rotlI64 twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_rotlI64 twp_localGet twp_localGet
     twp_constI64 twp_rotlI64 twp_localGet twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_rotlI64 twp_localGet twp_localGet
     twp_constI64 twp_rotlI64 twp_localGet twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_rotlI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_addI64 twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
-  wasm_twp_pures [twp_constI64 twp_rotlI64 twp_localGet twp_constI64 twp_rotlI64
-    twp_localGet twp_xorI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_pures [twp_constI64 twp_rotlI64 twp_localGet twp_constI64
+    twp_rotlI64 twp_localGet twp_xorI64]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_rotlI64 twp_localGet twp_localGet
     twp_constI64 twp_rotlI64 twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_xorI64 twp_constI64 twp_rotlI64 twp_xorI64 twp_localGet
     twp_localGet twp_addI64]
-  wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_shrUI64 twp_xorI64 twp_localGet twp_xorI64]
-  wasm_twp_localSet [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+  wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
 
   -- the flat hash term is the model hash of the key
   have hflat : SipHash.hashU32Low k0 k1 key
@@ -509,25 +660,135 @@ theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
     Project.RustHashMap.Func15Hash.finalWasm] at hflat
   isimp only [ofNat_toNat_toUInt64, rotlWasm13, rotlWasm16, rotlWasm17,
     rotlWasm21, rotlWasm32, shrU64Wasm32, ← hflat]
-  -- the table is allocated, because the static singleton has no growth left
+  clear hflat
+  iclose_map_runtime Hruntime with Hmodule Henv
+  ihave Hsp2 : StackPointer (sp - 16) $$ [Hsp]
+  · unfold StackPointer
+    iexact Hsp
+  iapply Hcont $$ Hruntime Hsp2 Hk0 Hk1
+set_option maxRecDepth 1048576 in
+set_option maxHeartbeats 2000000 in
+/-- Everything from WAT 4316 on, for a table that has room.  Both arms of
+absolute `func 18` reach this point with the same locals and the same
+code.  The arm with room comes here with the table it was given.  The arm
+that resizes comes here with `Table.reserve hash t 1`, the table that
+`call 17` left behind.
+
+Local 5 holds the hash of the key.  Locals 6 to 10 hold scratch words of
+the inlined SipHash and locals 11 to 17 hold whatever the entry left, so
+the statement quantifies over all of them.  The code writes each one
+before it reads it. -/
+private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
+    {sp out mapBase key value : UInt32} {k0 k1 : UInt64}
+    {t : Table UInt32 UInt32} {outBefore below : List UInt8}
+    {w6 w7 w8 w9 w10 : UInt64}
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset} {Φ : ObservableOutcome → HeapIProp}
+    (houtLength : outBefore.length = 8)
+    (houtBound : out.toNat + 8 < UInt32.size)
+    (hmapBound : mapBase.toNat + 32 < UInt32.size)
+    (hwf : Table.WF (SipHash.hashU32 k0 k1) t) (hclean : Table.Clean t)
+    (hgrowth : 1 ≤ t.growthLeft) :
+    iprop(
+      RuntimeContext ∗
+      StackPointer (sp - 16) ∗
+      StackBelow sp insertDepth below ∗
+      Slices.ByteSlice 0 out outBefore ∗
+      Table.TableAt 0 mapBase t ∗
+      pointsTo_u64 0 (mapBase + 16) k0 ∗
+      pointsTo_u64 0 (mapBase + 24) k1 ∗
+      (∀ below' : List UInt8,
+          RuntimeContext -∗ StackPointer sp -∗
+          StackBelow sp insertDepth below' -∗
+          Table.optionU32At 0 out
+            (Table.insert (SipHash.hashU32 k0 k1) t key value).1 -∗
+          Table.HashMapAt 0 mapBase k0 k1
+            (Table.insert (SipHash.hashU32 k0 k1) t key value).2 -∗
+          ResumeWP [] callerLocals stack code arity remainder controls calls
+            s E Φ)) ⊢
+      WP (.running
+          ⟨{ params := [.i32 out, .i32 mapBase, .i32 key, .i32 value],
+              locals :=
+                [.i32 (sp - 16), .i64 (SipHash.hashU32Low k0 k1 key),
+                  .i64 w6, .i64 w7, .i64 w8, .i64 w9, .i64 w10,
+                  ValueType.i32.zero, ValueType.i32.zero,
+                  ValueType.i32.zero, ValueType.i32.zero,
+                  ValueType.i32.zero, ValueType.i32.zero,
+                  ValueType.i32.zero],
+              values := [] },
+            .localGet 1 :: .load32 4 :: .localTee 11 :: .localGet 5 ::
+              .wrapI64 :: .and :: .localSet 12 :: .localGet 5 :: .constI64
+              25 :: .shrUI64 :: .localTee 8 :: .constI64 127 :: .andI64 ::
+              .constI64 72340172838076673 :: .mulI64 :: .localSet 6 ::
+              .localGet 1 :: .load32 0 :: .localSet 13 :: .const 0 :: .localSet
+              14 :: .const 0 :: .localSet 15 :: .loop 0 0 (.block 0 0 (.block 0
+              0 (.block 0 0 (.block 0 0 (.block 0 0 (.localGet 13 :: .localGet
+              12 :: .add :: .load64 0 :: .localTee 7 :: .localGet 6 ::
+              .xorI64 :: .localTee 5 :: .constI64 18446744073709551615 ::
+              .xorI64 :: .localGet 5 :: .constI64 18374403900871474943 ::
+              .addI64 :: .andI64 :: .constI64 9259542123273814144 :: .andI64 ::
+              .localTee 5 :: .eqzI64 :: .br_if 0 :: .loop 0 0 (.localGet 2 ::
+              .localGet 13 :: .localGet 5 :: .ctzI64 :: .wrapI64 :: .const 3 ::
+              .shrU :: .localGet 12 :: .add :: .localGet 11 :: .and :: .const
+              3 :: .shl :: .sub :: .localTee 16 :: .const 4294967288 :: .add ::
+              .load32 0 :: .eq :: .br_if 2 :: .localGet 5 :: .constI64
+              18446744073709551615 :: .addI64 :: .localGet 5 :: .andI64 ::
+              .localTee 5 :: .eqzI64 :: .eqz :: .br_if 0 :: []) :: []) ::
+              .localGet 7 :: .constI64 9259542123273814144 :: .andI64 ::
+              .localSet 5 :: .block 0 0 (.localGet 14 :: .const 1 :: .eq ::
+              .br_if 0 :: .localGet 5 :: .eqzI64 :: .br_if 3 :: .localGet 5 ::
+              .ctzI64 :: .wrapI64 :: .const 3 :: .shrU :: .localGet 12 ::
+              .add :: .localGet 11 :: .and :: .localSet 17 :: []) :: .block 0 0
+              (.localGet 5 :: .localGet 7 :: .constI64 1 :: .shlI64 ::
+              .andI64 :: .constI64 0 :: .neI64 :: .br_if 0 :: .const 1 ::
+              .localSet 14 :: .br 4 :: []) :: .const 0 :: .localSet 12 ::
+              .block 0 0 (.localGet 13 :: .localGet 17 :: .add :: .load8S 0 ::
+              .localTee 14 :: .const 0 :: .ltS :: .br_if 0 :: .localGet 13 ::
+              .localGet 13 :: .load64 0 :: .constI64 9259542123273814144 ::
+              .andI64 :: .ctzI64 :: .wrapI64 :: .const 3 :: .shrU :: .localTee
+              17 :: .add :: .load8U 0 :: .localSet 14 :: []) :: .localGet 13 ::
+              .localGet 17 :: .add :: .localGet 8 :: .wrapI64 :: .const 127 ::
+              .and :: .localTee 16 :: .store8 0 :: .localGet 13 :: .localGet
+              17 :: .const 4294967288 :: .add :: .localGet 11 :: .and ::
+              .add :: .const 8 :: .add :: .localGet 16 :: .store8 0 ::
+              .localGet 1 :: .localGet 1 :: .load32 8 :: .localGet 14 :: .const
+              1 :: .and :: .sub :: .store32 8 :: .localGet 1 :: .localGet 1 ::
+              .load32 12 :: .const 1 :: .add :: .store32 12 :: .localGet 13 ::
+              .localGet 17 :: .const 3 :: .shl :: .sub :: .localTee 1 :: .const
+              4294967288 :: .add :: .localGet 2 :: .store32 0 :: .localGet 1 ::
+              .const 4294967292 :: .add :: .localGet 3 :: .store32 0 :: .br
+              1 :: []) :: .localGet 16 :: .const 4294967292 :: .add ::
+              .localTee 13 :: .load32 0 :: .localSet 1 :: .localGet 13 ::
+              .localGet 3 :: .store32 0 :: .const 1 :: .localSet 12 :: []) ::
+              .localGet 0 :: .localGet 1 :: .store32 4 :: .localGet 0 ::
+              .localGet 12 :: .store32 0 :: .localGet 4 :: .const 16 :: .add ::
+              .globalSet 0 :: .ret :: []) :: .const 0 :: .localSet 14 :: []) ::
+              .localGet 15 :: .const 8 :: .add :: .localTee 15 :: .localGet
+              12 :: .add :: .localGet 11 :: .and :: .localSet 12 :: .br 0 ::
+              []) :: [],
+            0, [], [],
+            { locals :=
+                { params := callerLocals.params,
+                  locals := callerLocals.locals, values := stack },
+                continuation := code, resultArity := arity,
+                callerRemainder := remainder, control := controls,
+                returningInstance := ⟨0⟩ } :: calls⟩
+          : Expr Universal.State) @ s; E [{ Φ }] := by
+  iintro ⟨Hruntime, Hsp2, Hbelow, Hout, Htable, Hk0, Hk1, Hcont⟩
+  have hlayout : Table.Layout (SipHash.hashU32 k0 k1) t := hwf.toLayout
+  have hsize32 : UInt32.size = 4294967296 := rfl
+  have hmapNat : mapBase.toNat + 32 < 4294967296 := hmapBound
   have hh4 := offset_facts mapBase 4 4 rfl (by omega)
-  have hh8 := offset_facts mapBase 8 8 rfl (by omega)
-  have hh12 := offset_facts mapBase 12 12 rfl (by omega)
   isimp only [Table.TableAt] at Htable
-  icases Htable with ⟨%ctrl, Hbody⟩
-  icases Hbody with (Hsingleton | ⟨%hbuckets, Hbody⟩)
+  icases Htable with ⟨%ctrl, Hform⟩
+  icases Hform with (Hsingleton | ⟨%hbuckets, Hbody⟩)
   · isimp only [Table.SingletonBody] at Hsingleton
     icases Hsingleton with ⟨%hsing, Hheader, Hctrl⟩
     exact absurd hsing.2.2 (by omega)
   isimp only [Table.TableBody, Table.tableHeader] at Hbody
   icases Hbody with ⟨%hctrlBound, ⟨H0, H4, H8, H12⟩, Hctrl, Hslots⟩
-  -- the `call 17` is dead: `growth_left` is not zero
-  wasm_twp_pures [twp_block twp_localGet]
-  wasm_twp_rebind twp_load32 (address := mapBase) (offset := 8)
-    (UInt32.ofNat t.growthLeft) hh8.1 hh8.2.1 hh8.2.2.1 hh8.2.2.2 with H8
-  iapply twp_brIf (ofNat_ne_zero hgrowth hgrowthWord) (by rfl)
-  simp only [List.take_zero, List.drop_zero, List.nil_append]
-  clear hflat
   have hc1 : (mapBase + 1 : UInt32).toNat = mapBase.toNat + 1 := by
     simpa using Slices.byteOffset_toNat mapBase 1 (by omega)
   have hc2 : (mapBase + 2 : UInt32).toNat = mapBase.toNat + 2 := by
@@ -575,10 +836,6 @@ theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
       Table.repeatByte_h2_of_wasm, Table.h2_hashU32Low]
   isimp only [wrapWasm, hprobe, shrU64Wasm25, htag]
   -- the loop of WAT 4339 to 4545
-  iclose_map_runtime Hruntime with Hmodule Henv
-  ihave Hsp2 : StackPointer (sp - 16) $$ [Hsp]
-  · unfold StackPointer
-    iexact Hsp
   ihave Hbody : Table.TableBody 0 mapBase ctrl t $$ [H0 H4 H8 H12 Hctrl Hslots]
   · unfold Table.TableBody Table.tableHeader
     isplitl_pureexact hctrlBound
@@ -650,12 +907,15 @@ theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
         (Table.groupAt t (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos))
       hgf.1 hgf.2.1 hgf.2.2.1 hgf.2.2.2.1 hgf.2.2.2.2.1
       hgf.2.2.2.2.2.1 hgf.2.2.2.2.2.2.1 hgf.2.2.2.2.2.2.2 with Hgroup
-    wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+    wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_localGet twp_xorI64]
-    wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+    wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_constI64 twp_xorI64 twp_localGet twp_constI64 twp_addI64
       twp_andI64 twp_constI64 twp_andI64]
-    wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub]
+    wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
+    Nat.reduceAdd, Nat.reduceSub]
     isimp only [ProbeStop.swarMatchTag_wasm, hipos]
     iapply twp_tag_walk (hashf := SipHash.hashU32 k0 k1) (m := m)
     case hlayout => exact hlayout
@@ -1261,3 +1521,286 @@ theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
             (Table.probeSeq t (SipHash.hashU32 k0 k1 key) 0) none =
           Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key)
     iframe Hruntime Hsp2 Hbelow Hout Hbody Hk0 Hk1 Hcont
+
+set_option maxRecDepth 1048576 in
+
+set_option maxHeartbeats 2000000 in
+/-- Absolute `func 18` for a table that has room.  The guard at WAT 4302
+sees a `growth_left` word that is not zero, so the `call 17` at WAT 4314
+is dead and the body allocates nothing. -/
+theorem func15_correct [WasmSmallStepGS hlc Universal.State] :
+    Func15Spec (hlc := hlc) := by
+  unfold Func15Spec CallContract
+  intro sp out mapBase key value k0 k1 t outBefore below
+    callerLocals stack code arity remainder controls calls s E Φ
+  iintro ⟨Hruntime, Hsp, Hbelow, Hout, Hmap, %hfacts, Hcont⟩
+  obtain ⟨houtLength, -, houtBound, hmapBound, hwf, hclean, hgrowth,
+    hgrowthWord⟩ := hfacts
+  have hsize32 : UInt32.size = 4294967296 := rfl
+  have hmapNat : mapBase.toNat + 32 < 4294967296 := hmapBound
+  have hh8 := offset_facts mapBase 8 8 rfl (by omega)
+  isimp only [Table.HashMapAt] at Hmap
+  icases Hmap with ⟨Htable, Hk0, Hk1⟩
+  iapply twp_insert_prologue hmapBound
+  isplitl_exacts [Hruntime Hsp Hk0 Hk1]
+  iintro %w6 %w7 %w8 %w9 %w10 Hruntime Hsp Hk0 Hk1
+  -- the `call 17` is dead, because `growth_left` is not zero
+  ihave ⟨H8, Hclose⟩ := growth_cell mapBase t $$ Htable
+  wasm_twp_pures [twp_block twp_localGet]
+  wasm_twp_rebind twp_load32 (address := mapBase) (offset := 8)
+    (UInt32.ofNat t.growthLeft) hh8.1 hh8.2.1 hh8.2.2.1 hh8.2.2.2 with H8
+  iapply twp_brIf (ofNat_ne_zero hgrowth hgrowthWord) (by rfl)
+  simp only [List.take_zero, List.drop_zero, List.nil_append]
+  ihave Htable := Hclose $$ H8
+  iapply twp_insert_after_reserve houtLength houtBound hmapBound hwf hclean
+    hgrowth
+  iframe Hruntime Hsp Hbelow Hout Htable Hk0 Hk1 Hcont
+
+/-! ## The general contract of absolute `func 18` -/
+
+/-- Split a byte slice at a byte boundary.  Copy of
+`Project.RustHashMap.Func3Proof.slice_split`, which is private there. -/
+private theorem slice_split [WasmHeapGS Universal.State]
+    (ptr : UInt32) (k : Nat) (bytes : List UInt8) (hk : k ≤ bytes.length) :
+    Slices.ByteSlice (α := Universal.State) 0 ptr bytes ⊣⊢
+      iprop(Slices.ByteSlice 0 ptr (bytes.take k) ∗
+        Slices.ByteSlice 0 (ptr + UInt32.ofNat k) (bytes.drop k)) := by
+  have h := Slices.ByteSlice_append (α := Universal.State) 0 ptr
+    (bytes.take k) (bytes.drop k)
+  rw [List.take_append_drop, List.length_take, Nat.min_eq_left hk] at h
+  exact h
+
+/-- The region below the caller holds the region of the `call 17` at the
+bottom and the 16-byte frame of this body on top of it. -/
+private theorem insert_below_split [WasmHeapGS Universal.State]
+    (sp : UInt32) (below : List UInt8) :
+    StackBelow sp insertDepth below ⊢
+      iprop(⌜below.length = 144⌝ ∗
+        StackBelow (sp - 16) resizeDepth (below.take 128) ∗
+        Slices.ByteSlice 0 (sp - 16) (below.drop 128)) := by
+  have haddr : sp - 16 - UInt32.ofNat resizeDepth
+      = sp - UInt32.ofNat insertDepth := by
+    rw [show UInt32.ofNat resizeDepth = (128 : UInt32) from rfl,
+      Table.sub_sub_addr,
+      show (16 : UInt32) + 128
+        = UInt32.ofNat insertDepth from by decide]
+  have hup : sp - UInt32.ofNat insertDepth
+      + UInt32.ofNat 128 = sp - 16 := by
+    rw [show UInt32.ofNat 128 = (128 : UInt32) from rfl,
+      show UInt32.ofNat insertDepth = (16 : UInt32) + 128
+        from by decide,
+      ← Table.sub_sub_addr, UInt32.sub_add_cancel]
+  iintro Hbelow
+  isimp only [StackBelow] at Hbelow
+  icases Hbelow with ⟨%hlength, Hbytes⟩
+  have hlen144 : below.length = 144 := hlength
+  icases (slice_split (sp - UInt32.ofNat insertDepth) 128
+    below (by omega)).mp $$ Hbytes with ⟨Hlow, Hhigh⟩
+  isplitl_pureexact hlen144
+  · isplitl [Hlow]
+    · isimp only [StackBelow]
+      isplitl_pureexact
+        (show (below.take 128).length = resizeDepth by
+          rw [show resizeDepth = 128 from rfl, List.length_take]; omega)
+      · irw_exact [haddr] with Hlow
+    · irw_exact [← hup] with Hhigh
+
+/-- Put the two halves of the region back together. -/
+private theorem insert_below_join [WasmHeapGS Universal.State]
+    (sp : UInt32) (low frame : List UInt8) (hframe : frame.length = 16) :
+    iprop(StackBelow (sp - 16) resizeDepth low ∗
+        Slices.ByteSlice 0 (sp - 16) frame) ⊢
+      StackBelow sp insertDepth (low ++ frame) := by
+  have haddr : sp - 16 - UInt32.ofNat resizeDepth
+      = sp - UInt32.ofNat insertDepth := by
+    rw [show UInt32.ofNat resizeDepth = (128 : UInt32) from rfl,
+      Table.sub_sub_addr,
+      show (16 : UInt32) + 128
+        = UInt32.ofNat insertDepth from by decide]
+  iintro ⟨Hlow, Hframe⟩
+  isimp only [StackBelow] at Hlow
+  icases Hlow with ⟨%hlen, Hlow⟩
+  have hlow : low.length = 128 := hlen
+  have hup : sp - UInt32.ofNat insertDepth
+      + UInt32.ofNat low.length = sp - 16 := by
+    rw [hlow, show UInt32.ofNat 128 = (128 : UInt32) from rfl,
+      show UInt32.ofNat insertDepth = (16 : UInt32) + 128
+        from by decide,
+      ← Table.sub_sub_addr, UInt32.sub_add_cancel]
+  isimp only [StackBelow]
+  isplitl_pureexact
+    (show (low ++ frame).length = insertDepth by
+      rw [List.length_append, hlow, hframe]; rfl)
+  · iapply (Slices.ByteSlice_append (α := Universal.State) 0
+      (sp - UInt32.ofNat insertDepth) low frame).mpr
+    isplitl [Hlow]
+    · irw_exact [← haddr] with Hlow
+    · irw_exact [hup] with Hframe
+
+set_option maxRecDepth 1048576 in
+set_option maxHeartbeats 4000000 in
+/-- Absolute `func 18` on the general path, where the table may be full.
+The guard at WAT 4302 reads the `growth_left` word.  A zero word takes the
+`call 17` at WAT 4314, which resizes the table to
+`Table.reserve hash t 1`.  `Table.insert` starts with that same reserve,
+so both arms end at the same model pair. -/
+theorem func15_insert_correct [WasmSmallStepGS hlc Universal.State] :
+    MapOpContracts.Func15InsertSpec (hlc := hlc) := by
+  unfold MapOpContracts.Func15InsertSpec CallContract
+  intro sp out mapBase key value k0 k1 t outBefore below heapId storedCursor
+    frontier history input output raised callerLocals stack code arity
+    remainder controls calls s E Φ
+  iintro ⟨Hruntime, Hsp, Hbelow, Hout, Hmap, Hbump, Hstreams, %hfacts,
+    Hcont⟩
+  obtain ⟨houtLength, hspLow, houtBound, hmapBound, hwf, hclean, hitems,
+    hbucketsLe, hgrowthWord⟩ := hfacts
+  -- the two stack constants are the same number
+  isimp only
+    [show MapOpContracts.insertFullDepth = insertDepth from rfl]
+    at Hbelow Hcont
+  have hsize32 : UInt32.size = 4294967296 := rfl
+  have hspLt : sp.toNat < 4294967296 := sp.toBitVec.isLt
+  have hmapNat : mapBase.toNat + 32 < 4294967296 := hmapBound
+  have hsp144 : (144 : Nat) ≤ sp.toNat := hspLow
+  have hh8 := offset_facts mapBase 8 8 rfl (by omega)
+  have hhasher : (mapBase + 16).toNat = mapBase.toNat + 16 := by
+    simpa using Slices.byteOffset_toNat mapBase 16 (by omega)
+  have he24 : mapBase + 16 + 8 = mapBase + 24 := by
+    rw [UInt32.add_assoc]; rfl
+  have h16 : (16 : UInt32) ≤ sp := by
+    apply UInt32.le_iff_toNat_le.mpr
+    show (16 : UInt32).toNat ≤ sp.toNat
+    have h : (16 : UInt32).toNat = 16 := rfl
+    omega
+  have hframeNat : (sp - 16).toNat = sp.toNat - 16 := by
+    rw [UInt32.toNat_sub_of_le sp 16 h16]
+    rfl
+  have hslot8 : (sp - 16 + 8).toNat = (sp - 16).toNat + 8 := by
+    simpa using Slices.byteOffset_toNat (sp - 16) 8 (by omega)
+  isimp only [Table.HashMapAt] at Hmap
+  icases Hmap with ⟨Htable, Hk0, Hk1⟩
+  iapply twp_insert_prologue hmapBound
+  isplitl_exacts [Hruntime Hsp Hk0 Hk1]
+  iintro %w6 %w7 %w8 %w9 %w10 Hruntime Hsp Hk0 Hk1
+  -- WAT 4301 to 4304: the guard reads the room of the table
+  ihave ⟨H8, Hclose⟩ := growth_cell mapBase t $$ Htable
+  wasm_twp_pures [twp_block twp_localGet]
+  wasm_twp_rebind twp_load32 (address := mapBase) (offset := 8)
+    (UInt32.ofNat t.growthLeft) hh8.1 hh8.2.1 hh8.2.2.1 hh8.2.2.2 with H8
+  ihave Htable := Hclose $$ H8
+  by_cases hg : 1 ≤ t.growthLeft
+  · -- the table has room, so the call is dead
+    iapply twp_brIf (ofNat_ne_zero hg hgrowthWord) (by rfl)
+    simp only [List.take_zero, List.drop_zero, List.nil_append]
+    iapply twp_insert_after_reserve houtLength houtBound hmapBound hwf
+      hclean hg
+    isplitl_exacts [Hruntime Hsp Hbelow Hout Htable Hk0 Hk1]
+    iintro %below' Hruntime Hsp Hbelow Hopt Hmap
+    ihave Hnormal := BI.and_elim_l $$ Hcont
+    ihave Hnormal := Hnormal $$ %below' %storedCursor %frontier %history
+    iapply Hnormal $$ Hruntime Hsp Hbelow Hopt Hmap Hbump Hstreams
+  · -- the table is full, so `call 17` resizes it
+    have hg0 : t.growthLeft = 0 := by omega
+    have hzero : UInt32.ofNat t.growthLeft = (0 : UInt32) := by
+      rw [hg0]; rfl
+    rw [hzero]
+    iapply Wasm.SmallStep.twp_brIfZero
+    -- WAT 4305 to 4313: the five operands of `call 17`
+    wasm_twp_pures [twp_localGet twp_const twp_add]
+      rewriting [UInt32.add_comm 8 (sp - 16)]
+    wasm_twp_pures [twp_localGet twp_const twp_localGet twp_const twp_add]
+      rewriting [UInt32.add_comm 16 mapBase]
+    wasm_twp_pures [twp_const]
+    -- the frame comes out of the region below the caller
+    ihave Hsplit := insert_below_split sp below $$ Hbelow
+    icases Hsplit with ⟨%hbelowLen, Hlow, Hframe⟩
+    icases (slice_split (sp - 16) 8 (below.drop 128)
+      (by rw [List.length_drop]; omega)).mp $$ Hframe with
+      ⟨HframeLow, HframeSlot⟩
+    isimp only [show UInt32.ofNat 8 = (8 : UInt32) from rfl] at HframeSlot
+    have hslotLen : ((below.drop 128).drop 8).length = 8 := by
+      rw [List.length_drop, List.length_drop]; omega
+    have hlowLen : ((below.drop 128).take 8).length = 8 := by
+      rw [List.length_take, List.length_drop]; omega
+    ihave Hk1 : pointsTo_u64 0 (mapBase + 16 + 8) k1 $$ [Hk1]
+    · irw_exact [he24] with Hk1
+    have hresize : MapOpContracts.Func14ResizeSpec (hlc := hlc) :=
+      Func14Resize.func14_resize_correct
+    unfold MapOpContracts.Func14ResizeSpec CallContract callExpr at hresize
+    simp only [List.cons_append, List.nil_append] at hresize
+    iapply hresize (sp := sp - 16) (out := sp - 16 + 8) (table := mapBase)
+      (hasher := mapBase + 16) (k0 := k0) (k1 := k1) (t := t)
+      (outBefore := (below.drop 128).drop 8) (below := below.take 128)
+      (heapId := heapId) (storedCursor := storedCursor)
+      (frontier := frontier) (history := history) (input := input)
+      (output := output) (raised := raised)
+      (callerLocals := {
+        params := [.i32 out, .i32 mapBase, .i32 key, .i32 value]
+        locals := [.i32 (sp - 16), .i64 (SipHash.hashU32Low k0 k1 key),
+          .i64 w6, .i64 w7, .i64 w8, .i64 w9, .i64 w10,
+          ValueType.i32.zero, ValueType.i32.zero, ValueType.i32.zero,
+          ValueType.i32.zero, ValueType.i32.zero, ValueType.i32.zero,
+          ValueType.i32.zero]
+        values := [] })
+      (stack := [])
+    isplitl_exacts [Hruntime Hsp Hlow HframeSlot Htable Hk0 Hk1 Hbump
+      Hstreams]
+    isplitl_pureexact (by
+      refine ⟨hslotLen, ?_, ?_, ?_, ?_, hwf, hclean, hg0, ?_⟩
+      · rw [show resizeDepth = 128 from rfl, hframeNat]; omega
+      · rw [hslot8, hframeNat, hsize32]; omega
+      · rw [hsize32]; omega
+      · rw [hhasher, hsize32]; omega
+      · have hcap : maxTableCapacity = 117440512 := rfl
+        omega)
+    isplit
+    · -- the resize returned
+      iintro %word1 %below'' %storedCursor' %frontier' %history' Hruntime
+        Hsp Hlow Hslot Htable Hk0 Hk1 Hbump Hstreams
+      isimp only [ResumeWP, resumeExpr, List.nil_append]
+      iapply Wasm.SmallStep.twp_exitControl (by rfl)
+      simp only [List.take_zero, List.drop_zero, List.nil_append]
+      -- the frame goes back into the region below the caller
+      ihave Hframe : Slices.ByteSlice 0 (sp - 16)
+          ((below.drop 128).take 8 ++
+            WordCodec.u32le.serialize [okTag, word1]) $$ [HframeLow Hslot]
+      · iapply (Slices.ByteSlice_append (α := Universal.State) 0 (sp - 16)
+          ((below.drop 128).take 8)
+          (WordCodec.u32le.serialize [okTag, word1])).mpr
+        isplitl_exact HframeLow
+        · irw_exact [← show sp - 16 +
+              UInt32.ofNat ((below.drop 128).take 8).length = sp - 16 + 8
+            from by rw [hlowLen]; rfl] with Hslot
+      ihave Hbelow := insert_below_join sp below''
+        ((below.drop 128).take 8 ++
+          WordCodec.u32le.serialize [okTag, word1])
+        (by rw [List.length_append, hlowLen,
+          WordCodec.u32le_serialize_length]; rfl) $$ [Hlow Hframe]
+      · isplitl_exact Hlow
+        · iexact Hframe
+      ihave Hk1 : pointsTo_u64 0 (mapBase + 24) k1 $$ [Hk1]
+      · irw_exact [← he24] with Hk1
+      -- the reserved table is well formed and has room
+      have hb32 : t.buckets < 2 ^ 32 := by
+        have h27 : (2 : Nat) ^ 27 = 134217728 := by norm_num
+        have h32 : (2 : Nat) ^ 32 = 4294967296 := by norm_num
+        omega
+      obtain ⟨hwf', hclean', -, hgrow', -⟩ :=
+        hwf.reserve hclean (hclean.grow_bound hwf.shape hb32)
+      have hins : Table.insert (SipHash.hashU32 k0 k1) t key value
+          = Table.insert (SipHash.hashU32 k0 k1)
+            (Table.reserve (SipHash.hashU32 k0 k1) t 1) key value :=
+        Table.insert_eq_of_reserve key value hgrow'
+      iapply twp_insert_after_reserve houtLength houtBound hmapBound hwf'
+        hclean' hgrow'
+      isplitl_exacts [Hruntime Hsp Hbelow Hout Htable Hk0 Hk1]
+      iintro %below3 Hruntime Hsp Hbelow Hopt Hmap
+      isimp only [← hins] at Hopt Hmap
+      ihave Hnormal := BI.and_elim_l $$ Hcont
+      ihave Hnormal := Hnormal $$ %below3 %storedCursor' %frontier'
+        %history'
+      iapply Hnormal $$ Hruntime Hsp Hbelow Hopt Hmap Hbump Hstreams
+    · -- the resize ran out of memory
+      iintro %remaining' Hstreams'
+      ihave Hoom := BI.and_elim_r $$ Hcont
+      iapply Hoom $$ Hstreams'

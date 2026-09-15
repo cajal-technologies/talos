@@ -35,7 +35,8 @@ hypothesis. The evidence column names the hypothesis.
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
 | absolute 17 (`Func14Spec`) | proved | `Func14Proof.lean`; note G |
 | absolute 17 (`Func14ResizeSpec`) | proved | `Func14Resize.lean`; note S |
-| absolute 18 (`Func15Spec`) | proved (one arm) | note H |
+| absolute 18 (`Func15Spec`) | proved | `Func15Proof.lean`; note H |
+| absolute 18 (`Func15InsertSpec`) | proved | `Func15Proof.lean`; note H |
 | absolute 83 | proved | `Func80Proof.lean`; note L |
 | key decoder absolute 10 (`Func7Spec`) | proved | note I |
 | lookup absolute 12 (`Func9Spec`) | proved | `Func9Proof.lean` |
@@ -101,11 +102,22 @@ hypothesis. The evidence column names the hypothesis.
   contract, and `CollectProof.lean` joins the two, so the collect path
   of absolute 17 is unconditional now. `Func14Capacity.lean` (`3ab957f`)
   states the capacity arithmetic. The resize path is stated as
-  `Func14ResizeSpec` in `MapOpContracts.lean` and stays open. See
-  note L and note S.
-- Note H. `Func15Proof.lean` proves one arm. The resize arm
-  (`growth_left == 0`, WAT line 4314) stays open, and it is live for
-  `map_insert`. See note L.
+  `Func14ResizeSpec` in `MapOpContracts.lean` and `Func14Resize.lean`
+  proves it. See note L and note S.
+- Note H. `Func15Proof.lean` proves both arms of absolute 18.
+  `func15_correct` closes `Func15Spec`, the arm of a table that has
+  room. `func15_insert_correct` closes `Func15InsertSpec`, the general
+  arm, where a zero `growth_left` word takes the `call 17` of WAT line
+  4314 and resizes the table. Three lemmas carry both theorems.
+  `twp_insert_prologue` is the frame and the inlined hash of WAT 4131 to
+  4300. `growth_cell` takes the `growth_left` word out of `TableAt` and
+  gives it back, so the guard reads it in either physical form.
+  `twp_insert_after_reserve` is WAT 4316 to 4546, the probe, the found
+  arm and the insert, for a table that has room. The resize arm reaches
+  it with `Table.reserve hash t 1`, which `Table.WF.reserve` shows has
+  room, and `Table.insert_eq_of_reserve` ties the answer back to
+  `Table.insert`. `Func14Resize.func14_resize_correct` is the `call 17`.
+  See note L and note S.
 - Note I. `Func7Proof.lean` (`7ea932c`) proves `Func7Spec`. `89f0a6a`
   adds `KeyDecoderContract.lean`, which states the contract.
   The accepting arm of `Func7Spec` and the accepting arm of
@@ -164,8 +176,9 @@ hypothesis. The evidence column names the hypothesis.
   `Project.RustHashMap.mapGet` and `Project.RustHashMap.mapRemove`.
   Those three carry `@[proves]`. `mapInsert_of_bodies` keeps a second
   hypothesis, `Func15InsertSpec`, so `map_insert` gets no closing file
-  yet. Its `Func2Spec` hypothesis is discharged, and the resize arm of
-  absolute 18 is the one item left. See note H.
+  yet. Both of its hypotheses are proved now:
+  `CollectProof.func2_correct` and
+  `Func15Proof.func15_insert_correct`. See note H.
 - Note N. `b9d6d86` adds `ExportWrappers.lean`. Each wrapper theorem
   takes its driver contract as a named hypothesis, so no theorem there
   carries `@[proves]`.
