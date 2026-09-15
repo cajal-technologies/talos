@@ -38,13 +38,15 @@ predicate turns.
 
 No proof in this file uses `native_decide` or `bv_decide`.
 
-## A rule that the body proofs still need
+## The two bit-count rules that the body proofs use
 
 The total-WP rule for `i64.ctz` is `twp_ctzI64` at
-`CodeLib/SepLogic/SmallStepTotalLifting.lean:1627`.  There is no
-`twp_clzI64`.  `CodeLib/SepLogic/SmallStepTotalLiftingBits.lean:121`
-adds `twp_clz`, which names the 32-bit `clz32`.  A body that runs
-`i64.clz` therefore needs one more pure rule beside `twp_ctzI64`.
+`CodeLib/SepLogic/SmallStepTotalLifting.lean:1627`.  The rule for
+`i64.clz` is `twp_clzI64` at
+`CodeLib/SepLogic/SmallStepTotalLiftingBits.lean:127`, which `8bee81b`
+added.  The same file gives that rule its `wasm_twp_pures` case at line
+139, and it keeps `twp_clz` at line 123 for the 32-bit `clz32`.  A body
+that runs `i64.clz` therefore needs no new pure rule.
 -/
 
 namespace Wasm.RustStd.HashMap.Table

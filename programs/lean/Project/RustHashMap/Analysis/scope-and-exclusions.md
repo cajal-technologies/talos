@@ -71,6 +71,17 @@ Absolute Wasm index `N` is the Lean local name `func(N-3)`.
 - f18. This edge is live for `map_insert`. It is dead in the collect
   path, where `1 <= growthLeft`.
 
+## Where each row is discharged
+
+`Func21Proof.lean` closes X-F24-EQUAL with `twp_equal_guard`.
+`Func21Merge.lean` closes X-F24-ORDER with `bimerge_exhausts`.
+`Func22Proof.func22_correct` proves `Func22Spec`, which carries the live
+edge X-F24-HEAP. `Func4Proof.lean` closes X-F7-CAP, X-F7-GROW and
+X-F7-NULL. `Func5Proof.lean` closes X-F8-NULL. `Func10Proof.lean`
+carries X-F13-ADD and the live X-F13-OOM arm. `Func12Proof.lean` closes
+X-F15-OFFSET. `Func7Proof.lean` closes X-F10-TAG, and the error arms of
+`InsertTailProof.lean` close the same row at their own call site.
+
 ## The `talos.oom` exit
 
 Absolute function 59 is `call 2` and then `unreachable`, at WAT lines
