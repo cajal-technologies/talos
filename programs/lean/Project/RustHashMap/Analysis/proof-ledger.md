@@ -28,12 +28,12 @@ hypothesis. The evidence column names the hypothesis.
 | grow absolute 33, 100, 101 | proved | `d4da4b8` |
 | read phase absolute 22 | proved | `4014844` |
 | driver tail absolute 22 | proved (`Func2Spec`) | note D |
-| `map_len` | adequate (`Func2Spec`) | note E |
-| `map_contains_key` | adequate (`Func2Spec`) | note M |
-| `map_get` | adequate (`Func2Spec`) | note M |
-| collect_entries absolute 5 | proved (`Func14Spec`) | note F |
+| `map_len` | adequate | `MapLen.lean`; note E |
+| `map_contains_key` | adequate | `MapContainsKey.lean`; note M |
+| `map_get` | adequate | `MapGet.lean`; note M |
+| collect_entries absolute 5 | proved | `CollectProof.lean`; note F |
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
-| absolute 17 (`Func14Spec`) | proved | note G |
+| absolute 17 (`Func14Spec`) | proved | `Func14Proof.lean`; note G |
 | absolute 18 (`Func15Spec`) | proved (one arm) | note H |
 | absolute 83 | proved | `Func80Proof.lean`; note L |
 | key decoder absolute 10 (`Func7Spec`) | proved | note I |
@@ -50,8 +50,8 @@ hypothesis. The evidence column names the hypothesis.
 | driver absolute 9 (`map_remove`) | proved (`Func2Spec`) | `f049b79`; note M |
 | driver absolute 3 (`map_insert`) | proved (`Func2Spec`, `Func3Spec`) | `b0d7078`; note M |
 | wrappers absolute 28, 29, 30, 32 | proved (drivers) | note N |
-| `map_remove` | adequate (`Func2Spec`) | note M |
-| `map_insert` | adequate (`Func2Spec`, `Func15InsertSpec`) | note M |
+| `map_remove` | adequate | `MapRemove.lean`; note M |
+| `map_insert` | adequate (`Func15InsertSpec`) | note M |
 | adequacy bridge | proved | `Adequacy.lean` |
 
 ## Notes
@@ -70,27 +70,35 @@ hypothesis. The evidence column names the hypothesis.
   `Func2Spec` as a hypothesis.
 - Note E. `DriverProof.lean` states `mapLen_of_bodies` (`6fe59ca`).
   `c106a50` narrows the premise list to `Func2Spec` only.
+  `MapLenOfCollect.lean` then reaches `Spec.MapLenSpec` under that one
+  hypothesis. `MapLen.lean` discharges it with
+  `CollectProof.func2_correct` and states `Project.RustHashMap.mapLen`,
+  which carries `@[proves Project.RustHashMap.Spec.MapLenSpec]`.
 - Note F. The other lane assembles the body. The parts are the prologue
   (`6f9106a`), the loop (`f6e3d49`), the tail (`fe4ee40` and `cf18769`),
   the reserve block (`13fe136`) and the assembly (`0aeaefa`).
-  `CollectAssembly.lean` states `Func2SpecStrong` and proves
-  `func2_correct_of (hreserve : Func14Spec)`. The other lane proved
-  absolute 17 in `Func14Proof.lean` (`8c78c4e`).
-  `CollectAssembly.lean` does not import that file, so `Func14Spec` stays
-  a hypothesis here. The resize path of absolute 17 is stated as
-  `Func14ResizeSpec` in `MapOpContracts.lean` (`c185345`), and the other
-  lane owns it.
+  `CollectAssembly.lean` proves
+  `func2_correct_of (hreserve : Func14Spec) : Func2Spec`. That file does
+  not import the proof of absolute 17, so `Func14Spec` stays an argument
+  there. `CollectProof.lean` imports the three files and states
+  `func2_correct : Func2Spec`, which takes no argument. The chain is
+  `CollectAssembly.func2_correct_of`, then
+  `Func14Proof.func14_correct_of`, then
+  `Func55Proof.func55_correct_pow2`.
+  The resize path of absolute 17 is stated as `Func14ResizeSpec` in
+  `MapOpContracts.lean` (`c185345`), and the other lane owns it.
   The `SingletonBody` repair landed in the codelib file `TableMem.lean`:
   the static singleton claims `t.ctrl.take 8` now, and
   `CollectAssembly.TableAt_static_empty` proves the former `hsingleton`
-  premise. `Func2SpecStrong` lends the eight `EMPTY` bytes at
-  `entryStackTop` for it. Part A of this lane is done: `Func2Spec` and
-  `Func2SpecStrong` are equal by statement now, so the next step proves
-  `func2_correct : Func2Spec` and closes the five exports. `Func14Spec`
-  is discharged by `Func14Proof.func14_correct_of
-  Func55Proof.func55_correct_pow2` in a later step. See note L.
+  premise. `Func2Spec` lends the eight `EMPTY` bytes at `entryStackTop`
+  for it. `Func2SpecStrong` is gone: it became equal to `Func2Spec` by
+  statement in `0aeaefa` and in the two contract commits after it, so
+  this commit deletes it. See note L.
 - Note G. `Func14Proof.lean` (`8c78c4e`, the other lane) proves
-  absolute 17 for the collect path. `Func14Capacity.lean` (`3ab957f`)
+  absolute 17 for the collect path, under the allocator contract
+  `Func55SpecPow2`. `Func55Proof.func55_correct_pow2` proves that
+  contract, and `CollectProof.lean` joins the two, so the collect path
+  of absolute 17 is unconditional now. `Func14Capacity.lean` (`3ab957f`)
   states the capacity arithmetic. The resize path is stated as
   `Func14ResizeSpec` in `MapOpContracts.lean` and stays open. See
   note L.
@@ -129,10 +137,11 @@ hypothesis. The evidence column names the hypothesis.
   `Func13Proof.lean`, `Func15Insert.lean`, `Func15Proof.lean`,
   `CollectLoop.lean`, `CollectTail.lean`, `CollectPrologue.lean`,
   `CollectReserve.lean`, `CollectAssembly.lean` and `Func14Proof.lean`.
-  `Func2Spec` is still discharged nowhere. `CollectAssembly.lean` proves
-  `func2_correct_of` under `Func14Spec`. It states `Func2SpecStrong`,
-  which now has the same statement as `Func2Spec`. The next step states
-  `func2_correct : Func2Spec` and closes that gap.
+  `Func2Spec` is discharged since this commit. `CollectProof.lean`
+  states `func2_correct : Func2Spec` with no argument. This commit adds
+  five more files, and `Project.lean` imports all five:
+  `CollectProof.lean`, `MapLen.lean`, `MapContainsKey.lean`,
+  `MapGet.lean` and `MapRemove.lean`.
 - Note M. The drivers are `Func0Spec` (absolute 3), `Func6Spec`
   (absolute 9), `Func16Spec` (absolute 19) and `Func18Spec`
   (absolute 21). `ContainsKeyDriverProof.lean` (`7540f5b`) and
@@ -146,8 +155,16 @@ hypothesis. The evidence column names the hypothesis.
   `func0_correct_of_insert` trades `Func3Spec` for `Func15InsertSpec`
   through `Func3Proof.func3_correct_of`. The four public lines are
   `mapContainsKey_of_collect`, `mapGet_of_collect`,
-  `mapRemove_of_collect` and `mapInsert_of_bodies`. None of them carries
-  `@[proves]`, because their hypotheses are not discharged yet.
+  `mapRemove_of_collect` and `mapInsert_of_bodies`. None of the four
+  carries `@[proves]`, because each one keeps its hypothesis.
+  `MapContainsKey.lean`, `MapGet.lean` and `MapRemove.lean` feed
+  `CollectProof.func2_correct` to the first three and state
+  `Project.RustHashMap.mapContainsKey`,
+  `Project.RustHashMap.mapGet` and `Project.RustHashMap.mapRemove`.
+  Those three carry `@[proves]`. `mapInsert_of_bodies` keeps a second
+  hypothesis, `Func15InsertSpec`, so `map_insert` gets no closing file
+  yet. Its `Func2Spec` hypothesis is discharged, and the resize arm of
+  absolute 18 is the one item left. See note H.
 - Note N. `b9d6d86` adds `ExportWrappers.lean`. Each wrapper theorem
   takes its driver contract as a named hypothesis, so no theorem there
   carries `@[proves]`.

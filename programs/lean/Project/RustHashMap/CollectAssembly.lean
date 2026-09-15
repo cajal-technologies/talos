@@ -12,39 +12,35 @@ and `twp_seed_copy` in `Project.RustHashMap.CollectPrologue`,
 `Project.RustHashMap.CollectTail`.  Together they cover instructions 0 to 58,
 which is the whole body, WAT lines 853 to 973.
 
-## Why the contract here is not `Func2Spec`
+## What the contract takes
 
-`Func2Spec` in `Project.RustHashMap.CollectContract` is the contract that the
-`map_len` driver uses.  Four of its clauses are too weak for the compiled
-body, so this module states `Func2SpecStrong`, which is `Func2Spec` with four
-additions.
+`Func2Spec` in `Project.RustHashMap.CollectContract` is the contract of
+`collect_entries`.  This module proves it.  Four of its clauses come from
+the compiled body, and this list gives the reason for each one.
 
 1. The body reads sixteen bytes of the data segment at 1048584 and 1048592
    and copies them into its frame as the static empty table.  `Func2Spec`
-   owns no part of the data segment.  `Func2SpecStrong` takes the two cells
-   and gives them back unchanged, with the values pinned to 1048576 and 0.
-   It also takes the eight `EMPTY` bytes at 1048576, which are the static
-   empty group, and it does not give them back.  The singleton table owns
-   those bytes after the call.
-2. The thread-local state byte is 2 only while the thread-local is being
-   dropped, and the compiled guard panics on that value.  That exit is
-   neither arm of the contract, so `Func2SpecStrong` takes
+   takes the two cells and gives them back unchanged, with the values
+   pinned to 1048576 and 0.  It also takes the eight `EMPTY` bytes at
+   1048576, which are the static empty group, and it does not give them
+   back.  The singleton table owns those bytes after the call.
+2. The thread-local state byte is 2 only while the runtime drops the
+   thread-local, and the compiled guard panics on that value.  That exit
+   is neither arm of the contract, so `Func2Spec` takes
    `keysBefore[16]? != some 2`.
 3. Four guards inside absolute `func 17` reach a capacity-overflow panic,
-   which is also neither arm.  `Func2SpecStrong` takes
+   which is also neither arm.  `Func2Spec` takes
    `len.toNat <= maxTableCapacity`, which kills all four.
-4. The insert loop reads the pair buffer with `i32.load`, so the buffer needs
-   four-byte alignment.  `Func2SpecStrong` takes `ptr.toNat % 4 = 0`.
+4. The insert loop reads the pair buffer with `i32.load`, so the buffer
+   needs four-byte alignment.  `Func2Spec` takes `ptr.toNat % 4 = 0`.
 
 ## One open premise
 
-`func2_correct_of` is conditional on one argument.
-
-`Func14Spec` is the call contract of absolute `func 17`, the one body of the
-collect path that is not proved yet.  The body calls the allocator with
-alignment 8, and the allocator contract covers alignment 1 and 4 only, so
-that proof waits for the alignment work in
-`Project.RustHashMap.AlignPow2`.
+`func2_correct_of` is conditional on one argument.  `Func14Spec` is the
+call contract of absolute `func 17`.
+`Project.RustHashMap.Func14Proof` proves that contract, and
+`Project.RustHashMap.CollectProof` joins the two theorems.  This module
+does not import the proof, so the contract stays an argument here.
 
 ## The static empty table
 
@@ -135,67 +131,6 @@ private theorem func2_free_at_38 :
       = .block 0 0 freeBlockBody :: Project.RustHashMap.func2.drop 39 := by
   rfl
 
-def Func2SpecStrong [WasmSmallStepGS hlc Universal.State] : Prop :=
-  ∀ (sp mapSlot vecHeader cap ptr len : UInt32)
-    (heapId : GName) (entries : RustStd.HashMap.Map UInt32 UInt32)
-    (payload spare mapBefore keysBefore below : List UInt8)
-    (storedCursor : UInt32) (frontier : Nat) (history : AllocationHistory)
-    (input output : List UInt8) (raised : Bool)
-    {callerLocals : Locals} {stack : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    {s : Stuckness} {E : CoPset}
-    {Φ : ObservableOutcome → HeapIProp},
-    CallContract 5 [.i32 vecHeader, .i32 mapSlot]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
-        RuntimeContext ∗
-        StackPointer sp ∗
-        StackBelow sp collectDepth below ∗
-        Slices.ByteSlice 0 mapSlot mapBefore ∗
-        pointsTo_u32 0 vecHeader cap ∗
-        pointsTo_u32 0 (vecHeader + 4) ptr ∗
-        pointsTo_u32 0 (vecHeader + 8) len ∗
-        Slices.ByteSlice 0 ptr (payload ++ spare) ∗
-        Slices.ByteSlice 0 randomStateCell keysBefore ∗
-        Slices.ByteSlice 0 entryStackTop (List.replicate 8 0xFF) ∗
-        pointsTo_u64 0 (entryStackTop + 8) 1048576 ∗
-        pointsTo_u64 0 (entryStackTop + 16) 0 ∗
-        BumpHeap heapId storedCursor frontier history ∗
-        Streams input output raised ∗
-        ⌜mapBefore.length = 32 ∧ keysBefore.length = randomStateSize ∧
-          keysBefore[16]? ≠ some 2 ∧
-          payload = entryCodec.serialize entries ∧
-          entries.length = len.toNat ∧ len.toNat ≤ cap.toNat ∧
-          len.toNat ≤ maxTableCapacity ∧
-          spare.length = 8 * (cap.toNat - len.toNat) ∧
-          ptr.toNat % 4 = 0 ∧
-          collectDepth ≤ sp.toNat ∧ mapSlot.toNat + 32 < UInt32.size ∧
-          vecHeader.toNat + 12 < UInt32.size⌝ ∗
-        ((∀ k0 : UInt64, ∀ k1 : UInt64, ∀ below' : List UInt8,
-            ∀ keysAfter : List UInt8, ∀ storedCursor' : UInt32,
-            ∀ frontier' : Nat, ∀ history' : AllocationHistory,
-            RuntimeContext -∗
-            StackPointer sp -∗
-            StackBelow sp collectDepth below' -∗
-            RustStd.HashMap.Table.MapAt 0 mapSlot k0 k1 entries -∗
-            pointsTo_u32 0 vecHeader cap -∗
-            pointsTo_u32 0 (vecHeader + 4) ptr -∗
-            pointsTo_u32 0 (vecHeader + 8) len -∗
-            Slices.ByteSlice 0 randomStateCell keysAfter -∗
-            pointsTo_u64 0 (entryStackTop + 8) 1048576 -∗
-            pointsTo_u64 0 (entryStackTop + 16) 0 -∗
-            BumpHeap heapId storedCursor' frontier' history' -∗
-            Streams input output raised -∗
-            ⌜keysAfter.length = randomStateSize ∧
-              (RustStd.HashMap.Table.ofEntries
-                  (RustStd.HashMap.SipHash.hashU32 k0 k1) entries).items =
-                RustStd.HashMap.len (RustStd.HashMap.ofEntries entries)⌝ -∗
-            ResumeWP [] callerLocals stack code arity remainder controls
-              calls s E Φ) ∧
-         (∀ remaining' : List UInt8,
-            Streams remaining' output true -∗
-              Φ (.trapped (.host OOM.trapMessage)))))
-
 /-- The control pointer word of the static empty table.  The low word is
 the address of the static empty group and the high word is the bucket
 mask, which is zero. -/
@@ -251,8 +186,8 @@ variable [WasmSmallStepGS hlc Universal.State]
 set_option maxHeartbeats 2000000 in
 theorem func2_correct_of
     (hreserve : Func14Spec (hlc := hlc)) :
-    Func2SpecStrong (hlc := hlc) := by
-  unfold Func2SpecStrong CallContract callExpr
+    Func2Spec (hlc := hlc) := by
+  unfold Func2Spec CallContract callExpr
   intro sp mapSlot vecHeader cap ptr len heapId entries payload spare
     mapBefore keysBefore below storedCursor frontier history input output
     raised callerLocals stack code arity remainder controls calls s E Φ
