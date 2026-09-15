@@ -154,3 +154,4 @@ import Project.RustHashMap.Func21Proof
 import Project.RustHashMap.Func10Proof
 import Project.RustHashMap.Func4Proof
 import Project.RustHashMap.Func5Proof
+import Project.RustHashMap.Func8Proof
