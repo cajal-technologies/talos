@@ -137,25 +137,6 @@ and the 128 of `reserve_rehash_inner`, whose call is dead on this path but
 which the constant still covers. -/
 def insertDepth : Nat := 144
 
-/-- The largest capacity that `reserve_rehash_inner` serves without taking
-the capacity-overflow exit.
-
-The tightest of the four guards is the one at WAT 3679, which rejects a
-total allocation above 2147483640 bytes.  The total is `9 * buckets + 8`
-and `buckets` is a power of two, so the guard needs `buckets` at most
-`2 ^ 27`, and `Table.capacityToBuckets` reaches `2 ^ 27` exactly when the
-capacity is at most `bucketMaskToCapacity (2 ^ 27 - 1)`, which is
-`2 ^ 27 / 8 * 7`.
-
-The guard at WAT 3094 is looser: it allows `buckets` up to `2 ^ 28`, so a
-capacity up to 234881024.  The guards at WAT 3039 and 3080 are looser
-still. -/
-def maxTableCapacity : Nat := 117440512
-
-theorem maxTableCapacity_eq :
-    maxTableCapacity = HashMap.Table.bucketMaskToCapacity (2 ^ 27 - 1) := by
-  decide
-
 /-! ## `RandomState` seeds -/
 
 /-- Absolute `func 83`, local `func80`.  The one argument is a 16-byte

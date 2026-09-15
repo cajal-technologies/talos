@@ -27,8 +27,12 @@ current proof closes that step with one `decide` per alignment.
 
 namespace Project.RustHashMap.AlignPow2
 
+open Wasm
+open Iris Iris.ProgramLogic Language.Notation Std
+open Wasm.SepLogic Wasm.SmallStep
 open Project.RustHashMap.Allocator
 open Project.RustHashMap.Contracts
+open scoped Wasm.SmallStep.Outcome
 
 /-! ## The mask -/
 
@@ -41,7 +45,8 @@ theorem neg_two_pow_toNat (exponent : Nat) (hexponent : exponent ≤ 31) :
   have hpow : (2 : Nat) ^ 31 = 2147483648 := by norm_num
   rw [hpow] at hupper
   have hword : (UInt32.ofNat (2 ^ exponent)).toNat = 2 ^ exponent :=
-    UInt32.toNat_ofNat_of_lt' (by change (2 : Nat) ^ exponent < 4294967296; omega)
+    UInt32.toNat_ofNat_of_lt'
+      (by change (2 : Nat) ^ exponent < 4294967296; omega)
   simp only [UInt32.toNat_sub, UInt32.toNat_ofNat, hword]
   omega
 
@@ -69,13 +74,15 @@ theorem alignPow2_mask_toNat (x : UInt32) (exponent : Nat)
     (hexponent : exponent ≤ 31) :
     (x &&& (0 - UInt32.ofNat (2 ^ exponent))).toNat
       = x.toNat - x.toNat % 2 ^ exponent := by
-  change (x.toBitVec &&& ((0 - UInt32.ofNat (2 ^ exponent) : UInt32).toBitVec)).toNat =
+  change (x.toBitVec &&&
+      ((0 - UInt32.ofNat (2 ^ exponent) : UInt32).toBitVec)).toNat =
     x.toBitVec.toNat - x.toBitVec.toNat % 2 ^ exponent
   rw [neg_two_pow_toBitVec exponent hexponent, ← BitVec.shiftLeft_ushiftRight]
   simp only [BitVec.toNat_shiftLeft, BitVec.toNat_ushiftRight,
     Nat.shiftRight_eq_div_pow, Nat.shiftLeft_eq]
   have hlt : x.toBitVec.toNat < 2 ^ 32 := x.toBitVec.isLt
-  have hle : x.toBitVec.toNat / 2 ^ exponent * 2 ^ exponent ≤ x.toBitVec.toNat :=
+  have hle :
+      x.toBitVec.toNat / 2 ^ exponent * 2 ^ exponent ≤ x.toBitVec.toNat :=
     Nat.div_mul_le_self _ _
   rw [Nat.mod_eq_of_lt (by omega), Nat.mul_comm]
   have hdivmod := Nat.div_add_mod x.toBitVec.toNat (2 ^ exponent)
@@ -155,5 +162,36 @@ theorem negOne_add_pred (alignmentWord : UInt32) (alignment : Nat)
     UInt32.toNat_ofNat_of_lt' (by change alignment - 1 < 4294967296; omega)]
   change (4294967295 + alignment) % 4294967296 = alignment - 1
   omega
+
+/-! ## The commit -/
+
+/-- `Allocator.BumpHeap_commit` at every power of two.
+`classifyBump_success_pow2` gives the range facts, so the alignment
+disjunct disappears here as well. -/
+theorem BumpHeap_commit_pow2 {host : Type} [WasmHeapGS host]
+    [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
+    (heapId : GName) (frontier : Nat) (history : AllocationHistory)
+    (base finish : UInt32) (layout : AllocLayout) (bytes : List UInt8)
+    (ownedPages : Nat)
+    (hheapBase : heapBase.toNat ≤ frontier)
+    (hwf : HistoryWellFormed frontier history)
+    (hvalid : layout.Valid)
+    (hclassify : classifyBump frontier layout = .success base finish)
+    (hbytesLength : bytes.length = layout.size)
+    (hphysical : finish.toNat ≤ ownedPages * 65536) :
+    pointsTo_u32 0 allocatorCursor finish ∗
+      heapFrontierOwn finish.toNat ∗
+      AllocMetaAuth heapId history ∗
+      RetiredBytes heapId history ∗
+      memoryPagesOwn ownedPages ∗
+      Slices.ByteSlice 0 base bytes ==∗
+      BumpHeap heapId finish finish.toNat
+          (history.allocate base layout) ∗
+        LiveBlock heapId history.nextId base layout bytes :=
+  BumpHeap_commit_of_facts heapId frontier history base finish layout bytes
+    ownedPages hheapBase hwf
+    (classifyBump_success_pow2 frontier layout base finish hheapBase hvalid
+      hclassify)
+    hbytesLength hphysical
 
 end Project.RustHashMap.AlignPow2

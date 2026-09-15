@@ -15,10 +15,12 @@ rehash-in-place arm at WAT 3116 to 3640, the resize walk at WAT 3746 to
 4084, and the free of the old control array at WAT 4098 to 4117.  About
 130 of the 1112 lines run.
 
-`func14_correct_of` takes `Func55SpecPow2` as a hypothesis, because the
-body allocates at alignment 8 and the current allocator contract covers
-alignment 1 and alignment 4 only.  The section on the allocator below
-says why, and the coordinated window discharges it.
+`func14_correct_of` takes `AllocatorContracts.Func55SpecPow2` as a
+hypothesis, because the body allocates at alignment 8 and `Func55Spec`
+covers alignment 1 and alignment 4 only.
+`Project.RustHashMap.Func55Proof.func55_correct_pow2` proves that
+contract.  This file does not import `Func55Proof.lean`, so the caller
+supplies it.
 -/
 
 namespace Project.RustHashMap.Func14Proof
@@ -196,37 +198,14 @@ private theorem shape_resize :
 
 private theorem shape_commit_end : commitEnd = storePhase freeTail := by rfl
 
-
 /-! ## The allocator at alignment 8
 
 Absolute `func 17` calls the allocator at alignment 8, WAT 3682 to 3686,
 and `AllocatorContracts.Func55Spec` covers alignment 1 and alignment 4
-only.  The restriction is in the proof of `func 58`, not in the compiled
-allocator: `Project.RustHashMap.AlignPow2.classifyBump_success_pow2` is
-the same arithmetic bridge with the disjunct deleted.  Wiring it costs a
-full `Project` rebuild, so this file takes the general contract as a
-hypothesis and the coordinated window discharges it. -/
-
-/-- `Func55Spec` with the alignment disjunct deleted. -/
-def Func55SpecPow2 [WasmSmallStepGS hlc Universal.State] : Prop :=
-  ∀ (size alignment : UInt32) (layout : AllocLayout)
-    (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
-    (history : AllocationHistory)
-    (input output : List UInt8) (raised : Bool)
-    {callerLocals : Locals} {stack : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    {s : Stuckness} {E : CoPset}
-    {Φ : ObservableOutcome → HeapIProp},
-    CallContract 58 [.i32 alignment, .i32 size]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
-        RuntimeContext ∗
-        BumpHeap heapId storedCursor frontier history ∗
-        Streams input output raised ∗
-        ⌜layout.Matches size alignment ∧ layout.Valid⌝ ∗
-        AllocContinuation heapId storedCursor frontier history layout
-          input output raised callerLocals stack code arity remainder
-          controls calls s E Φ)
+only.  `AllocatorContracts.Func55SpecPow2` is the same contract with the
+disjunct deleted, and `Func55Proof.func55_correct_pow2` proves it.  This
+file takes it as a hypothesis, because it does not import
+`Func55Proof.lean`. -/
 
 /-- WAT 3665 to 3686: the slots and the control bytes in one block. -/
 private def resizeLayout (buckets : Nat) : AllocLayout :=

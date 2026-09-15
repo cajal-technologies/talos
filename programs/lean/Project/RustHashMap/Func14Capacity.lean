@@ -19,6 +19,7 @@ namespace Project.RustHashMap.Func14Capacity
 
 open Wasm
 open Wasm.RustStd.HashMap
+open Project.RustHashMap.EntryContracts
 open Project.RustHashMap.CollectBodyContracts
 
 /-! ## The two compiled forms -/
@@ -63,7 +64,8 @@ theorem buckets_ge_four {a : Nat} (h1 : 1 ≤ a) (hmax : a ≤ maxTableCapacity)
     show 4 ≤ if max 3 a < 4 then 4 else if max 3 a < 8 then 8 else 16
     split_ifs <;> omega
   · rw [if_neg h15]
-    obtain ⟨m, -, hp, hnm, -⟩ := Table.nextPow2_spec (n := a * 8 / 7) (by omega)
+    obtain ⟨m, -, hp, hnm, -⟩ :=
+      Table.nextPow2_spec (n := a * 8 / 7) (by omega)
     rw [hp]
     have : 17 ≤ a * 8 / 7 := by omega
     omega
@@ -80,7 +82,8 @@ theorem buckets_le {a : Nat} (hmax : a ≤ maxTableCapacity) :
     show (if max 3 a < 4 then 4 else if max 3 a < 8 then 8 else 16) ≤ 2 ^ 27
     split_ifs <;> omega
   · rw [if_neg h15]
-    obtain ⟨m, -, hp, hnm, hor⟩ := Table.nextPow2_spec (n := a * 8 / 7) (by omega)
+    obtain ⟨m, -, hp, hnm, hor⟩ :=
+      Table.nextPow2_spec (n := a * 8 / 7) (by omega)
     rw [hp]
     rcases hor with rfl | hlt
     · omega
@@ -88,7 +91,8 @@ theorem buckets_le {a : Nat} (hmax : a ≤ maxTableCapacity) :
       have hm : 28 ≤ m := by
         by_contra hlt27
         exact hgt (Nat.pow_le_pow_right (by omega) (by omega))
-      have : (2 : Nat) ^ 27 ≤ 2 ^ (m - 1) := Nat.pow_le_pow_right (by omega) (by omega)
+      have : (2 : Nat) ^ 27 ≤ 2 ^ (m - 1) :=
+        Nat.pow_le_pow_right (by omega) (by omega)
       omega
 
 /-- The bucket count is a power of two, which `TableRefinement` calls a
@@ -102,7 +106,8 @@ theorem buckets_shape {a : Nat} (hmax : a ≤ maxTableCapacity) :
 /-- The growth counter that WAT 3729 to 3742 computes is the model
 `bucket_mask_to_capacity` of the new mask. -/
 theorem growthLeft_eq {b : Nat} (hb : 1 ≤ b) :
-    (if b < 9 then b - 1 else b / 8 * 7) = Table.bucketMaskToCapacity (b - 1) := by
+    (if b < 9 then b - 1 else b / 8 * 7) =
+      Table.bucketMaskToCapacity (b - 1) := by
   unfold Table.bucketMaskToCapacity
   by_cases h9 : b < 9
   · rw [if_pos h9, if_pos (by omega)]

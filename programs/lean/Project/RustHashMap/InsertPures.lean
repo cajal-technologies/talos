@@ -122,10 +122,10 @@ theorem acceptedInsertEntries_le_maxTable (input : List UInt8)
     (hfacts : PushVecFacts capacity ptr frontier)
     (hfits : input.length ≤ capacity.toNat) :
     (acceptedInsertEntries input).length ≤
-      MapOpContracts.maxTableCapacity := by
+      EntryContracts.maxTableCapacity := by
   have h := acceptedInsertEntries_le_max input capacity ptr frontier
     haccept hfacts hfits
-  rw [MapOpContracts.maxTableCapacity_eq]
+  rw [EntryContracts.maxTableCapacity_eq]
   omega
 
 /-- The strict bound that `Func3Spec` asks for.  The contract takes
@@ -137,10 +137,10 @@ theorem acceptedInsertEntries_lt_maxTable (input : List UInt8)
     (hfacts : PushVecFacts capacity ptr frontier)
     (hfits : input.length ≤ capacity.toNat) :
     (acceptedInsertEntries input).length <
-      MapOpContracts.maxTableCapacity := by
+      EntryContracts.maxTableCapacity := by
   have h := acceptedInsertEntries_le_max input capacity ptr frontier
     haccept hfacts hfits
-  rw [MapOpContracts.maxTableCapacity_eq]
+  rw [EntryContracts.maxTableCapacity_eq]
   omega
 
 /-- The bound that the table model asks for. -/
@@ -311,7 +311,7 @@ the reservation asks for `items + 1` buckets, and
 theorem buckets_insert_le {hash : UInt32 → UInt64}
     {t : HashMap.Table UInt32 UInt32} (hw : HashMap.Table.WF hash t)
     (hcl : HashMap.Table.Clean t)
-    (hitems : t.items < MapOpContracts.maxTableCapacity)
+    (hitems : t.items < EntryContracts.maxTableCapacity)
     (hb : t.buckets ≤ 2 ^ 27) (k v : UInt32) :
     (HashMap.Table.insert hash t k v).2.buckets ≤ 2 ^ 27 := by
   have hpow : (2 : Nat) ^ 27 = 134217728 := by norm_num
@@ -337,7 +337,7 @@ theorem buckets_insert_le {hash : UInt32 → UInt64}
     · rw [hcase]
       refine HashMap.Table.capBuckets_le_of_le_max ?_
       rw [← hfull]
-      rw [MapOpContracts.maxTableCapacity_eq] at hitems
+      rw [EntryContracts.maxTableCapacity_eq] at hitems
       omega
 
 end Project.RustHashMap.InsertPures

@@ -836,20 +836,29 @@ theorem AllocatorResources_insert {host : Type} [WasmHeapGS host]
   imodintro
   iframe
 
-/-- Assemble the allocator's exact post-commit resources.  The caller supplies
-the cursor word and frontier fragment *after* the Wasm store and sparse-range
-state update; this lemma performs only the metadata update and representation
-reassembly. -/
-theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
+/-- Assemble the allocator's exact post-commit resources from the range
+facts.  The caller supplies the cursor word and frontier fragment after
+the Wasm store and the sparse-range state update; this lemma does only
+the metadata update and the representation reassembly.
+
+`classifyBump_success_reachable` proves `hreachable` at alignment 1 and
+alignment 4.  `Project.RustHashMap.AlignPow2.classifyBump_success_pow2`
+proves it at every power of two. -/
+theorem BumpHeap_commit_of_facts {host : Type} [WasmHeapGS host]
     [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
     (heapId : GName) (frontier : Nat) (history : AllocationHistory)
     (base finish : UInt32) (layout : AllocLayout) (bytes : List UInt8)
     (ownedPages : Nat)
     (hheapBase : heapBase.toNat ≤ frontier)
     (hwf : HistoryWellFormed frontier history)
-    (hvalid : layout.Valid)
-    (halignment : layout.alignment = 1 ∨ layout.alignment = 4)
-    (hclassify : classifyBump frontier layout = .success base finish)
+    (hreachable :
+      frontier ≤ base.toNat ∧
+      base ≠ 0 ∧
+      base.toNat % layout.alignment = 0 ∧
+      base.toNat + layout.size < UInt32.size ∧
+      base.toNat + layout.size < 2147483648 ∧
+      finish.toNat = base.toNat + layout.size ∧
+      AllocationMetaValid (liveMeta base layout))
     (hbytesLength : bytes.length = layout.size)
     (hphysical : finish.toNat ≤ ownedPages * 65536) :
     pointsTo_u32 0 allocatorCursor finish ∗
@@ -861,8 +870,7 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
       BumpHeap heapId finish finish.toNat
           (history.allocate base layout) ∗
         LiveBlock heapId history.nextId base layout bytes := by
-  rcases classifyBump_success_reachable frontier layout base finish
-      hheapBase hvalid halignment hclassify with
+  rcases hreachable with
     ⟨hstart, hnonnull, haligned, _hendWord, hendSigned,
       hfinish, hmetadata⟩
   have hfresh : get? history.records history.nextId = none :=
@@ -898,6 +906,35 @@ theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
         rfl)
   · unfold LiveBlock
     iframe_pureexact using [Htoken Hbytes] => ⟨hbytesLength, hnonnull, haligned⟩
+
+/-- `BumpHeap_commit_of_facts` at the two alignments that
+`classifyBump_success_reachable` covers. -/
+theorem BumpHeap_commit {host : Type} [WasmHeapGS host]
+    [WasmHeapDomainGS host] [WasmMemoryPagesGS host]
+    (heapId : GName) (frontier : Nat) (history : AllocationHistory)
+    (base finish : UInt32) (layout : AllocLayout) (bytes : List UInt8)
+    (ownedPages : Nat)
+    (hheapBase : heapBase.toNat ≤ frontier)
+    (hwf : HistoryWellFormed frontier history)
+    (hvalid : layout.Valid)
+    (halignment : layout.alignment = 1 ∨ layout.alignment = 4)
+    (hclassify : classifyBump frontier layout = .success base finish)
+    (hbytesLength : bytes.length = layout.size)
+    (hphysical : finish.toNat ≤ ownedPages * 65536) :
+    pointsTo_u32 0 allocatorCursor finish ∗
+      heapFrontierOwn finish.toNat ∗
+      AllocMetaAuth heapId history ∗
+      RetiredBytes heapId history ∗
+      memoryPagesOwn ownedPages ∗
+      Slices.ByteSlice 0 base bytes ==∗
+      BumpHeap heapId finish finish.toNat
+          (history.allocate base layout) ∗
+        LiveBlock heapId history.nextId base layout bytes :=
+  BumpHeap_commit_of_facts heapId frontier history base finish layout bytes
+    ownedPages hheapBase hwf
+    (classifyBump_success_reachable frontier layout base finish hheapBase
+      hvalid halignment hclassify)
+    hbytesLength hphysical
 
 /-- Retirement with the agreement fact needed to update pure history. -/
 theorem AllocMetaAuth_retire_with_lookup {host : Type}

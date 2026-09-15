@@ -32,6 +32,28 @@ open Project.RustHashMap.Contracts
 open Project.RustHashMap.Allocator
 open scoped Wasm.SmallStep.Outcome
 
+/-! ## Constants -/
+
+/-- The largest capacity that `reserve_rehash_inner`, absolute `func 17`,
+serves without taking the capacity-overflow exit.
+
+The tightest of the four guards is the one at WAT 3679, which rejects a
+total allocation above 2147483640 bytes.  The total is `9 * buckets + 8`
+and `buckets` is a power of two, so the guard needs `buckets` at most
+`2 ^ 27`, and `Table.capacityToBuckets` reaches `2 ^ 27` exactly when the
+capacity is at most `bucketMaskToCapacity (2 ^ 27 - 1)`, which is
+`2 ^ 27 / 8 * 7`.  `CodeLib.RustStd.HashMap.EraseWasm` states that
+equation as `bucketMaskToCapacity_pow27`.
+
+The guard at WAT 3094 is looser: it allows `buckets` up to `2 ^ 28`, so a
+capacity up to 234881024.  The guards at WAT 3039 and 3080 are looser
+still.
+
+This module is upstream of both lanes, so both read the constant here. -/
+def maxTableCapacity : Nat := 117440512
+
+theorem maxTableCapacity_eq : maxTableCapacity = 117440512 := rfl
+
 /-- Ownership of mutable Wasm global zero, the Rust shadow stack pointer. -/
 def StackPointer [WasmGlobalGS Universal.State]
     (sp : UInt32) : HeapIProp :=

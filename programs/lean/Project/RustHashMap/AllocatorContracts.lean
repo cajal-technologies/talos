@@ -79,6 +79,36 @@ def Func55Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           input output raised callerLocals stack code arity remainder controls
           calls s E Φ)
 
+/-- `Func55Spec` with the alignment disjunct deleted.
+
+The restriction to alignment 1 and alignment 4 is in the proof of
+`func 58`, not in the compiled allocator.
+`Project.RustHashMap.AlignPow2.classifyBump_success_pow2` is the same
+arithmetic bridge at every power of two, so the body proof closes this
+stronger contract and `Func55Spec` follows from it.
+
+Absolute `func 17`, the table resize, calls the allocator at alignment 8
+at WAT 3682 to 3686, so it needs this contract. -/
+def Func55SpecPow2 [WasmSmallStepGS hlc Universal.State] : Prop :=
+  ∀ (size alignment : UInt32) (layout : AllocLayout)
+    (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
+    (history : AllocationHistory)
+    (input output : List UInt8) (raised : Bool)
+    {callerLocals : Locals} {stack : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → HeapIProp},
+    CallContract 58 [.i32 alignment, .i32 size]
+      callerLocals stack code arity remainder controls calls s E Φ iprop(
+        RuntimeContext ∗
+        BumpHeap heapId storedCursor frontier history ∗
+        Streams input output raised ∗
+        ⌜layout.Matches size alignment ∧ layout.Valid⌝ ∗
+        AllocContinuation heapId storedCursor frontier history layout
+          input output raised callerLocals stack code arity remainder
+          controls calls s E Φ)
+
 def ReallocContinuation [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory)
@@ -100,8 +130,8 @@ def ReallocContinuation [WasmSmallStepGS hlc Universal.State]
           ⌜newBytes.take (min oldLayout.size newLayout.size) =
             oldBytes.take (min oldLayout.size newLayout.size)⌝ -∗
           Streams input output raised -∗
-          ResumeWP [.i32 newPtr] callerLocals stack code arity remainder controls
-            calls s E Φ) ∧
+          ResumeWP [.i32 newPtr] callerLocals stack code arity remainder
+            controls calls s E Φ) ∧
         (BumpHeap heapId storedCursor frontier history -∗
           LiveBlock heapId oldId oldPtr oldLayout oldBytes -∗
           Streams input output true -∗

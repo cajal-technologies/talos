@@ -39,7 +39,7 @@ the two files share `acceptedEntries`, `keyAndMap_of_accepts` and
 `Project.RustHashMap.ContainsKeyTailProof.acceptedEntries_bound` reads the
 entry count against `UInt32.size` alone, which is enough for the table
 model.  The remove tail also needs `Func14ResizeSpec`, which rejects a
-capacity above `Project.RustHashMap.MapOpContracts.maxTableCapacity`.
+capacity above `Project.RustHashMap.EntryContracts.maxTableCapacity`.
 `Project.RustHashMap.VecGrow.PushVecFacts.capacity_le` bounds the input
 vector, so the tighter bound comes from the read phase and not from the
 address space.
@@ -246,10 +246,10 @@ theorem acceptedEntries_le_maxTable (input : List UInt8)
     (haccept : KeyDecodeAccepts input)
     (hfacts : PushVecFacts capacity ptr frontier)
     (hfits : input.length ≤ capacity.toNat) :
-    (acceptedEntries input).length ≤ MapOpContracts.maxTableCapacity := by
+    (acceptedEntries input).length ≤ EntryContracts.maxTableCapacity := by
   have h := acceptedEntries_le_max input capacity ptr frontier haccept
     hfacts hfits
-  rw [MapOpContracts.maxTableCapacity_eq]
+  rw [EntryContracts.maxTableCapacity_eq]
   omega
 
 /-- The bound that the table model asks for. -/

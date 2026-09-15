@@ -1,4 +1,5 @@
 import Project.RustHashMap.BodyContracts
+import Project.RustHashMap.CollectBodyContracts
 import CodeLib.RustStd.HashMap.ProbeWasm
 import CodeLib.RustStd.HashMap.OptionOut
 import CodeLib.RustStd.HashMap.TableRefinement
@@ -53,10 +54,13 @@ alone, in the shape of
 ## The stack constants
 
 `resizeDepth` is the 32-byte frame of absolute `func 17`, at WAT 3021 to
-3023, plus the 96 of the dead panic subtree below `call 97`.
-`insertFullDepth` is the 16-byte frame of absolute `func 18`, at WAT 4133
-to 4135, plus `resizeDepth`.  `insertWrapDepth` is the 16-byte frame of
-absolute `func 6`, at WAT 977 to 979, plus `insertFullDepth`.
+3023, plus the 96 of the dead panic subtree below `call 97`.  This module
+reads it from `Project.RustHashMap.CollectBodyContracts`, which is the one
+home of that constant.  `insertFullDepth` is the 16-byte frame of absolute
+`func 18`, at WAT 4133 to 4135, plus `resizeDepth`.  `insertWrapDepth` is
+the 16-byte frame of absolute `func 6`, at WAT 977 to 979, plus
+`insertFullDepth`.  `maxTableCapacity` is in
+`Project.RustHashMap.EntryContracts`, which both lanes read.
 -/
 
 namespace Project.RustHashMap.MapOpContracts
@@ -69,31 +73,10 @@ open Project.RustHashMap.Allocator
 open Project.RustHashMap.AllocatorContracts
 open Project.RustHashMap.EntryContracts
 open Project.RustHashMap.BodyContracts
+open Project.RustHashMap.CollectBodyContracts
 open scoped Wasm.SmallStep.Outcome
 
 /-! ## Constants -/
-
-/-- The largest capacity that `reserve_rehash_inner` serves without
-taking the capacity-overflow exit.
-
-The tightest of its four guards is the one at WAT 3679, which rejects a
-total allocation above 2147483640 bytes.  The total is `9 * buckets + 8`
-and `buckets` is a power of two, so the guard needs `buckets` at most
-`2 ^ 27`, and `Table.capacityToBuckets` reaches `2 ^ 27` exactly when the
-capacity is at most `bucketMaskToCapacity (2 ^ 27 - 1)`, which is
-`2 ^ 27 / 8 * 7`.  `CodeLib.RustStd.HashMap.EraseWasm` states that
-equation as `bucketMaskToCapacity_pow27`.
-
-A later window moves this constant to
-`Project.RustHashMap.EntryContracts`, where both lanes can read it. -/
-def maxTableCapacity : Nat := 117440512
-
-theorem maxTableCapacity_eq : maxTableCapacity = 117440512 := rfl
-
-/-- The stack that `reserve_rehash_inner`, absolute `func 17`, takes
-below its caller: its own 32-byte frame and the 96 of the dead panic
-subtree below `call 97`. -/
-def resizeDepth : Nat := 128
 
 /-- The stack that `HashMap::insert`, absolute `func 18`, takes below its
 caller on the general path: its own 16-byte frame and `resizeDepth`, for

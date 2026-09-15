@@ -75,10 +75,11 @@ hypothesis. The evidence column names the hypothesis.
   the reserve block (`13fe136`) and the assembly (`0aeaefa`).
   `CollectAssembly.lean` states `Func2SpecStrong` and proves
   `func2_correct_of (hreserve : Func14Spec) (hsingleton : ...)`. The
-  other lane proved absolute 17 in `Func14Proof.lean` (`8c78c4e`). No
-  imported file reaches that file, so `Func14Spec` stays a hypothesis
-  here. The resize path of absolute 17 is stated as `Func14ResizeSpec`
-  in `MapOpContracts.lean` (`c185345`), and the other lane owns it.
+  other lane proved absolute 17 in `Func14Proof.lean` (`8c78c4e`).
+  `CollectAssembly.lean` does not import that file, so `Func14Spec` stays
+  a hypothesis here. The resize path of absolute 17 is stated as
+  `Func14ResizeSpec` in `MapOpContracts.lean` (`c185345`), and the other
+  lane owns it.
   Two blockers stay open. `hsingleton` needs the `SingletonBody` repair
   in the codelib file `TableMem.lean`. `Func2Spec` must become
   `Func2SpecStrong`, which is Part A of this lane. See note L.
@@ -113,12 +114,17 @@ hypothesis. The evidence column names the hypothesis.
   `Func21Proof.lean` (`7d2588d`) discharges it with
   `Func21Merge.bimerge_exhausts` of `Func21Merge.lean`. Absolute 107
   therefore needs no proof file.
-- Note L. `Project.lean` does not import this file, and no imported
-  file reaches it. The unimported set is `CollectBodyContracts.lean`,
-  `CollectPrologue.lean`, `CollectLoop.lean`, `CollectTail.lean`,
-  `CollectReserve.lean`, `CollectAssembly.lean`, `Func14Capacity.lean`,
-  `Func14Proof.lean`, `AlignPow2.lean`, `Func13Proof.lean`,
-  `Func15Proof.lean` and `Func80Proof.lean`.
+- Note L. `Project.lean` imports the collect lane since this commit, so
+  no file of the hash map proof is unimported now. The sixteen files are
+  `AlignPow2.lean`, `BitPures.lean`, `Func15Hash.lean`, `ProbeStop.lean`,
+  `CollectBodyContracts.lean`, `Func14Capacity.lean`, `Func80Proof.lean`,
+  `Func13Proof.lean`, `Func15Insert.lean`, `Func15Proof.lean`,
+  `CollectLoop.lean`, `CollectTail.lean`, `CollectPrologue.lean`,
+  `CollectReserve.lean`, `CollectAssembly.lean` and `Func14Proof.lean`.
+  `Func2Spec` is still discharged nowhere. `CollectAssembly.lean` proves
+  `func2_correct_of` under `Func14Spec` and `hsingleton`, and it states
+  `Func2SpecStrong`, which no theorem ties to `Func2Spec` yet. A later
+  step closes that gap.
 - Note M. The drivers are `Func0Spec` (absolute 3), `Func6Spec`
   (absolute 9), `Func16Spec` (absolute 19) and `Func18Spec`
   (absolute 21). `ContainsKeyDriverProof.lean` (`7540f5b`) and

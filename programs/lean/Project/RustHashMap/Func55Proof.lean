@@ -1,14 +1,22 @@
 import Project.RustHashMap.AllocatorContracts
+import Project.RustHashMap.AlignPow2
 import Project.RustHashMap.ImportProofs
 
 /-!
 # Proof of the hash map bump allocator
 
-This module proves local `func55` (absolute index 58) against `Func55Spec`.
+This module proves local `func55` (absolute index 58) against
+`Func55SpecPow2`, which is `Func55Spec` without the alignment disjunct.
 The body is the same compiled code as the mergesort allocator, so the proof
 is a port of `Project.Mergesort.Func5Proof` with the hash map constants.
 It covers the successful bump allocation result and the exact `talos.oom`
 outcome when an arithmetic check or `memory.grow` fails.
+
+`Project.RustHashMap.AlignPow2` carries the two arithmetic steps that were
+per alignment before: `classifyBump_success_pow2` and `negOne_add_pred`.
+The compiled allocator always served every power of two; the restriction
+was in this proof.  `func55_correct : Func55Spec` stays as a corollary, so
+no caller changes.
 -/
 
 namespace Project.RustHashMap.Func55Proof
@@ -18,6 +26,7 @@ open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic Wasm.SmallStep
 open Project.RustHashMap.Contracts
 open Project.RustHashMap.Allocator Project.RustHashMap.AllocatorContracts
+open Project.RustHashMap.AlignPow2
 open scoped Wasm.SmallStep.Outcome
 
 private theorem func55_index :
@@ -72,7 +81,6 @@ private theorem twp_func55_commit_and_return
     (hfrontierLow : heapBase.toNat ≤ frontier)
     (hwf : HistoryWellFormed frontier history)
     (hvalid : layout.Valid)
-    (halignment : layout.alignment = 1 ∨ layout.alignment = 4)
     (hclassify : classifyBump frontier layout = .success base finish)
     (hbytesLength : bytes.length = layout.size)
     (hphysical : finish.toNat ≤ ownedPages * 65536) :
@@ -113,8 +121,8 @@ private theorem twp_func55_commit_and_return
       storedCursor (by decide) (by decide) (by decide) (by decide) with HcursorAt => Hcursor
   ihave Hcursor' : pointsTo_u32 0 allocatorCursor finish $$ [Hcursor]
   · irw_exact [← show (0 : UInt32) + 1049496 = allocatorCursor by decide] with Hcursor
-  imod BumpHeap_commit heapId frontier history base finish layout bytes
-      ownedPages hfrontierLow hwf hvalid halignment hclassify hbytesLength
+  imod BumpHeap_commit_pow2 heapId frontier history base finish layout bytes
+      ownedPages hfrontierLow hwf hvalid hclassify hbytesLength
       hphysical $$ [Hcursor' Hfrontier Hauth Hretired Hpages Hbytes] with
       ⟨Hbump, Hblock⟩
   · iframe
@@ -145,7 +153,6 @@ private theorem twp_func55_claim_commit_and_return
     (hfrontierLow : heapBase.toNat ≤ frontier)
     (hwf : HistoryWellFormed frontier history)
     (hvalid : layout.Valid)
-    (halignment : layout.alignment = 1 ∨ layout.alignment = 4)
     (hclassify : classifyBump frontier layout = .success base finish)
     (hbaseFresh : frontier ≤ base.toNat)
     (hallocWord : base.toNat + layout.size < UInt32.size)
@@ -203,7 +210,7 @@ private theorem twp_func55_claim_commit_and_return
   iapply twp_func55_commit_and_return currentPages finish base requiredPages
       storedCursor layout heapId bytes frontier ownedPages history input output
       raised callerLocals stack code arity remainder controls calls s E Φ
-      hfrontierLow hwf hvalid halignment hclassify hbytes hphysical
+      hfrontierLow hwf hvalid hclassify hbytes hphysical
   iframe Hruntime Hcursor Hfrontier' Hauth Hretired Hpages Hbytes Hstreams Hcont
 
 /-- Delegate the generated failure tail to the proved `talos.oom` shim. -/
@@ -255,9 +262,9 @@ private theorem twp_func55_oom
   iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hstreams
 
-theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
-    Func55Spec (hlc := hlc) := by
-  unfold Func55Spec CallContract callExpr
+theorem func55_correct_pow2 [WasmSmallStepGS hlc Universal.State] :
+    Func55SpecPow2 (hlc := hlc) := by
+  unfold Func55SpecPow2 CallContract callExpr
   intro size alignment layout heapId storedCursor frontier history input output
     raised callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hbump, Hstreams, %hlayout, Hcont⟩
@@ -267,17 +274,15 @@ theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
       Project.RustHashMap.func55Def (by decide) func55_index with Hmodule
   simp [Project.RustHashMap.func55Def, Project.RustHashMap.func55,
     Function.toLocals, Function.numParams]
-  have hvalid : layout.Valid := hlayout.2.1
-  have halignmentCases : layout.alignment = 1 ∨ layout.alignment = 4 :=
-    hlayout.2.2
+  have hvalid : layout.Valid := hlayout.2
+  have halignmentLe : layout.alignment ≤ 2147483648 := hvalid.2.2.2.1
+  have halignmentPos : 0 < layout.alignment := hvalid.2.1
   have hsizeNat : size.toNat = layout.size := hlayout.1.1
   have halignmentNat : alignment.toNat = layout.alignment := hlayout.1.2
   have halignmentWord : alignment = UInt32.ofNat layout.alignment :=
     UInt32.toNat_inj.mp <| by
       simpa only [UInt32.toNat_ofNat_of_lt' hvalid.2.2.2.2.2.2] using halignmentNat
-  have halignmentSmall : layout.alignment ≤ 4 := by
-    rcases halignmentCases with h | h <;> omega
-  have hpadSmall : layout.alignment - 1 ≤ 3 := by omega
+  have hpadSmall : layout.alignment - 1 ≤ 2147483647 := by omega
   isimp only [BumpHeap] at Hbump
   icases Hbump with ⟨Hcursor, Hfrontier, Hauth, Hretired, Hheap⟩
   icases Hheap with ⟨%ownedPages, #Hpages, %hheap⟩
@@ -305,10 +310,9 @@ theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
     norm_num [UInt32.size] at hfrontierSigned ⊢; omega
   have hpadWord :
       (0xFFFFFFFF : UInt32) + alignment =
-        UInt32.ofNat (layout.alignment - 1) := by
-    rcases halignmentCases with h | h
-    · rw [halignmentWord, h]; decide
-    · rw [halignmentWord, h]; decide
+        UInt32.ofNat (layout.alignment - 1) :=
+    negOne_add_pred alignment layout.alignment halignmentNat halignmentPos
+      halignmentLe
   have hsumWord :
       UInt32.ofNat frontier + UInt32.ofNat (layout.alignment - 1) =
         UInt32.ofNat (frontier + (layout.alignment - 1)) := by
@@ -471,8 +475,8 @@ theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
       simpa only [hfinishNatEq] using hfinishSigned
     have hrequiredCovers :=
       allocatorRequiredPages_covers finish hfinishSignedWord
-    rcases classifyBump_success_reachable frontier layout base finish
-        hfrontierLow hvalid halignmentCases hclassify with
+    rcases classifyBump_success_pow2 frontier layout base finish
+        hfrontierLow hvalid hclassify with
       ⟨hbaseFresh, hbaseNonzero, hbaseAligned, hallocWord, hallocSigned,
         hfinishExact, hmeta⟩
     ihave HsizeFrame : iprop(
@@ -521,7 +525,7 @@ theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
           (allocatorRequiredPages finish) storedCursor layout heapId frontier
           pages history input output raised callerLocals stack code arity
           remainder controls calls s E Φ hfrontierLow hwf hvalid
-          halignmentCases hclassify hbaseFresh hallocWord hfinishExact hphysical
+          hclassify hbaseFresh hallocWord hfinishExact hphysical
       iframe Hruntime Hcursor Hfrontier Hauth Hretired Hmeasured Hstreams Hnormal
     · iapply twp_leU (result := 0) (by rw [if_neg hfits])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
@@ -643,10 +647,29 @@ theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
                   base (allocatorRequiredPages finish) storedCursor layout
                   heapId frontier newPages history input output raised
                   callerLocals stack code arity remainder controls calls s E Φ
-                  hfrontierLow hwf hvalid halignmentCases hclassify hbaseFresh
+                  hfrontierLow hwf hvalid hclassify hbaseFresh
                   hallocWord hfinishExact hphysical
               iframe Hruntime Hcursor Hfrontier Hauth Hretired HnewPages
                 Hstreams Hnormal)
           $$ HgrowFrame Hmodule Hmeasured
+
+/-- `Func55Spec` is `Func55SpecPow2` with one more hypothesis, so the
+alignment disjunct drops out.  Every caller of `func55_correct` keeps
+working. -/
+theorem func55_correct [WasmSmallStepGS hlc Universal.State] :
+    Func55Spec (hlc := hlc) := by
+  unfold Func55Spec CallContract callExpr
+  intro size alignment layout heapId storedCursor frontier history input output
+    raised callerLocals stack code arity remainder controls calls s E Φ
+  have Hpow2 := func55_correct_pow2 (hlc := hlc) size alignment layout heapId
+    storedCursor frontier history input output raised
+    (callerLocals := callerLocals) (stack := stack) (code := code)
+    (arity := arity) (remainder := remainder) (controls := controls)
+    (calls := calls) (s := s) (E := E) (Φ := Φ)
+  unfold Func55SpecPow2 CallContract callExpr at Hpow2
+  iintro ⟨Hruntime, Hbump, Hstreams, %hlayout, Hcont⟩
+  iapply Hpow2
+  iframe
+  ipureexact ⟨hlayout.1, hlayout.2.1⟩
 
 end Project.RustHashMap.Func55Proof
