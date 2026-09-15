@@ -165,3 +165,4 @@ import Project.RustHashMap.InsertPures
 import Project.RustHashMap.InsertTailDefs
 import Project.RustHashMap.InsertTailContracts
 import Project.RustHashMap.InsertTailProof
+import Project.RustHashMap.InsertDriverProof
