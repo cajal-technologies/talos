@@ -39,7 +39,7 @@ hypothesis. The evidence column names the hypothesis.
 | lookup absolute 20 (`Func17Spec`) | proved | `Func17Proof.lean` |
 | remove kernel absolute 11 (`Func8Spec`) | draft contract | note O |
 | insert shim absolute 6 (`Func3Spec`) | draft contract | note O |
-| sort group absolute 14, 15, 23, 24, 25 | draft contract | note J |
+| sort group absolute 14, 15, 23, 24, 25 | proved | note J |
 | sorted entries absolute 7 (`Func4Spec`) | draft contract | note P |
 | grow absolute 13 (`Func10Spec`) | draft contract | note Q |
 | reply writer absolute 8 (`Func5Spec`) | draft contract | note P |
@@ -89,6 +89,12 @@ hypothesis. The evidence column names the hypothesis.
   and `Func22Spec` (absolute 25). `SortContracts.lean` (`2ca62d8`)
   states the five contracts. `SortModels.lean` (`cf35aa7`) holds the
   pure models of the sort.
+  The five bodies are proved: `1796c0b` (absolute 15), `b4f044b`
+  (absolute 23), `2d43dc7` (absolute 25), `7d2588d` (absolute 24) and
+  `decaf4b` (absolute 14). The body of absolute 24 needs a bound on
+  the ancestor cell, so `Func21Spec` states `AncestorFits anc` and
+  `Func21Proof.func21_correct` closes it. `Func11Proof` rests on that
+  contract.
 - Note K. The only caller of absolute 107 is the dead pointer check of
   absolute 24. Absolute 107 therefore needs no proof file.
 - Note L. `Project.lean` does not import this file, and no imported

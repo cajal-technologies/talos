@@ -942,13 +942,14 @@ private theorem twp_sort_tail [WasmSmallStepGS hlc Universal.State]
   isplitl_exacts [Hruntime Hsp Hbelow Hbuf]
   · iapply BI.emp_sep.mpr
     isplitl_pureexact (⟨hlen, hlen27, hnodup, by simp [AncestorBelow],
-      hroom, hdepth, by simp⟩ :
+      hroom, hdepth, by simp, by simp [AncestorFits]⟩ :
       pairs.length = len.toNat ∧ len.toNat ≤ 2 ^ 27 ∧
         NodupKeys pairs ∧ AncestorBelow none pairs ∧
         v.toNat + 8 * len.toNat < UInt32.size ∧
         sortDepth len.toNat ≤ sp.toNat ∧
         (∀ p k, (none : Option (UInt32 × UInt32)) = some (p, k) →
-          p ≠ 0))
+          p ≠ 0) ∧
+        AncestorFits (none : Option (UInt32 × UInt32)))
     · isimp only [SortPost]
       iintro %out %below' Hr Hs Hb Hp Hemp %hf
       iclear Hemp

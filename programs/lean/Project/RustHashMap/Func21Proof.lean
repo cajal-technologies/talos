@@ -534,13 +534,10 @@ the rule `Wasm.SmallStep.twp_load32_addr` therefore asks for the three
 address facts.  `AncestorCell` is a bare `pointsTo_u32`, which carries
 no such fact: a slice carries one, a cell does not.
 
-`SortContracts.Func21Spec` states `p ≠ 0` for the ancestor and no bound,
-so the load of WAT 5764 is not covered by it.  `AncestorFits` is the
-missing fact.  Every recursive call of WAT 6173 passes a cell of its own
-buffer, which fits, so the induction carries it. -/
-
-def AncestorFits (anc : Option (UInt32 × UInt32)) : Prop :=
-  ∀ p k, anc = some (p, k) → p.toNat + 4 ≤ UInt32.size
+`SortContracts.Func21Spec` states the missing fact as `AncestorFits`,
+because the contract cannot read it out of `AncestorCell`.  Every
+recursive call of WAT 6173 passes a cell of its own buffer, which fits,
+so the induction carries it. -/
 
 /-- The three address facts of one `i32` cell that does not wrap. -/
 private theorem addr_facts (addr : UInt32)
@@ -2381,15 +2378,14 @@ private theorem twp_func21_upto [WasmSmallStepGS hlc Universal.State]
 `Func21Upto` proves the body for an input below `N` entries, so the
 whole input needs `N = pairs.length + 1`.
 
-The theorem below is `SortContracts.Func21Spec` with one hypothesis
-added, `AncestorFits anc`.  The load at WAT 5764 reads four bytes at the
-ancestor address, and `Wasm.SmallStep.twp_load32_addr` asks that those
-four bytes do not run over the end of the address space.  `Func21Spec`
-states `p ≠ 0` for the ancestor and no bound, and `AncestorCell` carries
-no bound of its own, because a cell is four owned bytes and nothing
-more.  A load of four bytes at address `2 ^ 32 - 1` traps, so the
-hypothesis is not a gap of this proof: it is a fact that the contract
-does not state.
+The first theorem below takes `AncestorFits anc` as a hypothesis.  The
+load at WAT 5764 reads four bytes at the ancestor address, and
+`Wasm.SmallStep.twp_load32_addr` asks that those four bytes do not run
+over the end of the address space.  `AncestorCell` carries no bound of
+its own, because a cell is four owned bytes and nothing more, and a
+load of four bytes at address `2 ^ 32 - 1` traps.
+`SortContracts.Func21Spec` therefore states the fact in its pure part,
+and `func21_correct` is the contract itself.
 
 Every call site of the program has it.  The top call, absolute `func 14`
 at WAT 2839, passes the null ancestor, and `ancestorFits_none` covers
@@ -2403,8 +2399,8 @@ theorem ancestorFits_none : AncestorFits none := by
   exact absurd h (by simp)
 
 /-- Absolute `func 24` sorts its buffer.  This is
-`SortContracts.Func21Spec` with `AncestorFits anc` added; read the note
-above for why the contract needs it. -/
+`SortContracts.Func21Spec` with `AncestorFits anc` as a separate
+hypothesis; read the note above for why the contract states it. -/
 theorem func21_correct_of_ancestorFits
     [WasmSmallStepGS hlc Universal.State]
     (sp v len limit env : UInt32) (anc : Option (UInt32 × UInt32))
@@ -2433,5 +2429,34 @@ theorem func21_correct_of_ancestorFits
           controls calls s E Φ) :=
   twp_func21_upto (pairs.length + 1) sp v len limit env anc pairs below
     (by omega) hfits
+
+set_option maxHeartbeats 2000000 in
+/-- `SortContracts.Func21Spec` holds: absolute `func 24` sorts its
+buffer.  The pure part of the contract now carries `AncestorFits anc`,
+so the hypothesis of `func21_correct_of_ancestorFits` comes out of the
+precondition. -/
+theorem func21_correct [WasmSmallStepGS hlc Universal.State] :
+    Func21Spec (hlc := hlc) := by
+  unfold Func21Spec CallContract callExpr
+  intro sp v len limit env anc pairs below callerLocals stack code
+    arity remainder controls calls s E Φ
+  iintro ⟨Hruntime, Hsp, Hbelow, Hbuf, Hanc, %hpure, Hcont⟩
+  obtain ⟨hplen, hlen27, hnodup, hbelow, hroom, hdepth, hzero,
+    hfits⟩ := hpure
+  have Hcall := func21_correct_of_ancestorFits sp v len limit env anc
+    pairs below (callerLocals := callerLocals) (stack := stack)
+    (code := code) (arity := arity) (remainder := remainder)
+    (controls := controls) (calls := calls) (s := s) (E := E) (Φ := Φ)
+    hfits
+  unfold CallContract callExpr at Hcall
+  iapply Hcall
+  isplitl_exacts [Hruntime Hsp Hbelow Hbuf Hanc]
+  · isplitl_pureexact (⟨hplen, hlen27, hnodup, hbelow, hroom, hdepth,
+      hzero⟩ : pairs.length = len.toNat ∧ len.toNat ≤ 2 ^ 27 ∧
+        NodupKeys pairs ∧ AncestorBelow anc pairs ∧
+        v.toNat + 8 * len.toNat < UInt32.size ∧
+        quicksortDepth limit.toNat ≤ sp.toNat ∧
+        (∀ p k, anc = some (p, k) → p ≠ 0))
+    · iexact Hcont
 
 end Project.RustHashMap.Func21Proof

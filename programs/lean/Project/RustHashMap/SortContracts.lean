@@ -167,6 +167,17 @@ def AncestorBelow (anc : Option (UInt32 × UInt32))
     (pairs : List (UInt32 × UInt32)) : Prop :=
   ∀ p k, anc = some (p, k) → ∀ x ∈ pairs, k < x.1
 
+/-- The ancestor cell does not run over the end of the address space.
+
+The equal-partition guard at WAT 5763 and 5764 loads the ancestor key.
+A load of four bytes traps when the address is in the last three bytes
+of the address space, and `AncestorCell` is a bare `pointsTo_u32`,
+which carries no address bound.  The contract states the bound here.
+Every call site has it: absolute `func 14` passes the null ancestor,
+and each recursive call passes a key cell of its own buffer. -/
+def AncestorFits (anc : Option (UInt32 × UInt32)) : Prop :=
+  ∀ p k, anc = some (p, k) → p.toNat + 4 ≤ UInt32.size
+
 /-! ## `insertion_sort_shift_left`, absolute `func 15` -/
 
 /-- Absolute `func 15`, local `func12`, WAT 2849 to 2952.  The arguments
@@ -331,7 +342,10 @@ the equal-partition path that `AncestorBelow` kills.  X-F24-ORDER, the
 comparison which is not a strict total order raises; `NodupKeys` on
 distinct keys gives the strict order, and
 `SortModels.BimergeExhausts` is the property that the body proof needs
-there. -/
+there.
+
+`AncestorFits` bounds the ancestor cell, because the guard of
+X-F24-EQUAL loads the key at that address. -/
 def Func21Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp v len limit env : UInt32) (anc : Option (UInt32 × UInt32))
     (pairs : List (UInt32 × UInt32)) (below : List UInt8)
@@ -352,7 +366,7 @@ def Func21Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           HashMap.NodupKeys pairs ∧ AncestorBelow anc pairs ∧
           v.toNat + 8 * len.toNat < UInt32.size ∧
           quicksortDepth limit.toNat ≤ sp.toNat ∧
-          (∀ p k, anc = some (p, k) → p ≠ 0)⌝ ∗
+          (∀ p k, anc = some (p, k) → p ≠ 0) ∧ AncestorFits anc⌝ ∗
         SortPost v pairs sp (quicksortDepth limit.toNat) (AncestorCell anc)
           callerLocals stack code arity remainder controls calls s E Φ)
 
