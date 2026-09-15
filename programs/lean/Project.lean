@@ -164,3 +164,4 @@ import Project.RustHashMap.Func3Proof
 import Project.RustHashMap.InsertPures
 import Project.RustHashMap.InsertTailDefs
 import Project.RustHashMap.InsertTailContracts
+import Project.RustHashMap.InsertTailProof
