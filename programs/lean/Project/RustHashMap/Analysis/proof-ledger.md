@@ -74,15 +74,20 @@ hypothesis. The evidence column names the hypothesis.
   (`6f9106a`), the loop (`f6e3d49`), the tail (`fe4ee40` and `cf18769`),
   the reserve block (`13fe136`) and the assembly (`0aeaefa`).
   `CollectAssembly.lean` states `Func2SpecStrong` and proves
-  `func2_correct_of (hreserve : Func14Spec) (hsingleton : ...)`. The
-  other lane proved absolute 17 in `Func14Proof.lean` (`8c78c4e`).
+  `func2_correct_of (hreserve : Func14Spec)`. The other lane proved
+  absolute 17 in `Func14Proof.lean` (`8c78c4e`).
   `CollectAssembly.lean` does not import that file, so `Func14Spec` stays
   a hypothesis here. The resize path of absolute 17 is stated as
   `Func14ResizeSpec` in `MapOpContracts.lean` (`c185345`), and the other
   lane owns it.
-  Two blockers stay open. `hsingleton` needs the `SingletonBody` repair
-  in the codelib file `TableMem.lean`. `Func2Spec` must become
-  `Func2SpecStrong`, which is Part A of this lane. See note L.
+  The `SingletonBody` repair landed in the codelib file `TableMem.lean`:
+  the static singleton claims `t.ctrl.take 8` now, and
+  `CollectAssembly.TableAt_static_empty` proves the former `hsingleton`
+  premise. `Func2SpecStrong` lends the eight `EMPTY` bytes at
+  `entryStackTop` for it. One blocker stays open: `Func2Spec` must become
+  `Func2SpecStrong`, which is Part A of this lane. `Func14Spec` is
+  discharged by `Func14Proof.func14_correct_of
+  Func55Proof.func55_correct_pow2` in a later step. See note L.
 - Note G. `Func14Proof.lean` (`8c78c4e`, the other lane) proves
   absolute 17 for the collect path. `Func14Capacity.lean` (`3ab957f`)
   states the capacity arithmetic. The resize path is stated as
@@ -122,7 +127,7 @@ hypothesis. The evidence column names the hypothesis.
   `CollectLoop.lean`, `CollectTail.lean`, `CollectPrologue.lean`,
   `CollectReserve.lean`, `CollectAssembly.lean` and `Func14Proof.lean`.
   `Func2Spec` is still discharged nowhere. `CollectAssembly.lean` proves
-  `func2_correct_of` under `Func14Spec` and `hsingleton`, and it states
+  `func2_correct_of` under `Func14Spec`, and it states
   `Func2SpecStrong`, which no theorem ties to `Func2Spec` yet. A later
   step closes that gap.
 - Note M. The drivers are `Func0Spec` (absolute 3), `Func6Spec`

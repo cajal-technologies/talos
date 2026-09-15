@@ -1863,8 +1863,8 @@ private theorem twp_func8_singleton_probe
       branchTarget? arity 2 (f :: g :: controls) ([] : List Value) =
         some (missCode, missControls, missValues)) :
     iprop(
-      Slices.ByteSlice 0 ctrl t.ctrl ∗
-      (Slices.ByteSlice 0 ctrl t.ctrl -∗
+      Slices.ByteSlice 0 ctrl (t.ctrl.take 8) ∗
+      (Slices.ByteSlice 0 ctrl (t.ctrl.take 8) -∗
         WP (.running
             ⟨{ func8Locals out map key ctrl t 0
                   (Table.repeatByte (Table.h2 (SipHash.hashU32 k0 k1 key)))
@@ -1959,13 +1959,12 @@ private theorem twp_func8_singleton_probe
     rw [← UInt32.toNat_inj, UInt32.toNat_and, hmaskNat, UInt32.toNat_zero,
       Nat.zero_and]
   -- the group at bucket zero, as one owned word
-  have hctrlLen : 0 + 8 ≤ t.ctrl.length := by
+  have hctrlLen : 8 ≤ t.ctrl.length := by
     rw [hlayout.ctrl_len]; omega
-  ihave ⟨Hpre, ⟨%hgbound, Hgroup⟩, Hpost⟩ :=
-    (Table.ByteSlice_groupAt 0 ctrl t hctrlLen).mp $$ Hctrl
-  have hgroupAddr : ctrl + UInt32.ofNat 0 = (0 : UInt32) + ctrl + 0 := by
-    rw [show UInt32.ofNat 0 = (0 : UInt32) from rfl, UInt32.add_zero,
-      UInt32.add_zero, UInt32.add_comm, UInt32.add_zero]
+  ihave ⟨%hgbound, Hgroup⟩ :=
+    (Table.ByteSlice_singleton_group 0 ctrl t hctrlLen).mp $$ Hctrl
+  have hgroupAddr : ctrl = (0 : UInt32) + ctrl + 0 := by
+    rw [UInt32.add_zero, UInt32.add_comm, UInt32.add_zero]
   have hgf := FrameCells.offset_facts64 ((0 : UInt32) + ctrl) 0 0 rfl
     (by rw [← UInt32.add_zero ((0 : UInt32) + ctrl), ← hgroupAddr]; omega)
   ihave Hgroup := wordMove64 hgroupAddr $$ Hgroup
@@ -1991,7 +1990,7 @@ private theorem twp_func8_singleton_probe
   isimp only [swarMatchTag_wasm, htag0]
   iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos rfl])
   iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
-  simp only [List.take_zero, List.drop_zero, List.nil_append,
+  simp only [List.drop_zero, List.nil_append,
     List.take_nil]
   wasm_twp_pures [twp_const]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
@@ -2002,16 +2001,11 @@ private theorem twp_func8_singleton_probe
   iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hne0])
   iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
   iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (hmiss _ _)
-  ihave Hctrl : Slices.ByteSlice 0 ctrl t.ctrl $$ [Hpre Hgroup Hpost]
-  · iapply (Table.ByteSlice_groupAt 0 ctrl t hctrlLen).mpr
-    isplitl [Hpre]
-    · isimp only [List.take_zero]
-      iexact Hpre
-    · isplitl [Hgroup]
-      · isplitl_pureexact hgbound
-        iapply wordMove64 hgroupAddr.symm
-        iexact Hgroup
-      · iexact Hpost
+  ihave Hctrl : Slices.ByteSlice 0 ctrl (t.ctrl.take 8) $$ [Hgroup]
+  · iapply (Table.ByteSlice_singleton_group 0 ctrl t hctrlLen).mpr
+    isplitl_pureexact hgbound
+    iapply wordMove64 hgroupAddr.symm
+    iexact Hgroup
   ihave Hgo := Hmiss $$ Hctrl
   iexact Hgo
 

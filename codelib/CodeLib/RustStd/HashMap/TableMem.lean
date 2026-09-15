@@ -283,6 +283,20 @@ theorem ByteSlice_groupAt {K V : Type} (memId : Nat) (ctrl : UInt32) (t : Table 
   refine BI.sep_congr .rfl (BI.sep_congr ?_ .rfl)
   exact ByteSlice_eight_as_u64 memId _ _ (by rw [List.length_take, List.length_drop]; omega)
 
+/-- The one group of the static singleton, as one owned `u64`.  The
+singleton owns the first eight control bytes only, so the group at zero
+is the whole slice. -/
+theorem ByteSlice_singleton_group {K V : Type} (memId : Nat) (ctrl : UInt32)
+    (t : Table K V) (hlen : 8 ≤ t.ctrl.length) :
+    Slices.ByteSlice (α := α) memId ctrl (t.ctrl.take 8) ⊣⊢
+      iprop(⌜ctrl.toNat + 8 < UInt32.size⌝ ∗
+        pointsTo_u64 memId ctrl (groupWord (groupAt t 0))) := by
+  have hgroup : groupAt t 0 = t.ctrl.take 8 := by
+    rw [groupAt_eq_take_drop t (by omega), List.drop_zero]
+  rw [hgroup]
+  exact ByteSlice_eight_as_u64 memId ctrl _
+    (by rw [List.length_take]; omega)
+
 /-- One control byte of the control bytes, as one owned byte. -/
 theorem ByteSlice_ctrlAt {K V : Type} (memId : Nat) (ctrl : UInt32) (t : Table K V)
     {i : Nat} (hi : i < t.ctrl.length) :
@@ -451,12 +465,17 @@ def TableBody (memId : Nat) (base ctrl : UInt32) (t : Table UInt32 UInt32) :
     slotsBefore memId ctrl t.slots)
 
 /-- The singleton table of `RawTableInner::NEW`: `bucket_mask` is zero,
-`ctrl` points at the static empty group, and no bucket is allocated. -/
+`ctrl` points at the static empty group, and no bucket is allocated.
+The static singleton owns one group of eight `EMPTY` bytes.  The model
+keeps nine control bytes (`Table.empty.ctrl.length = 9`), because an
+allocated table of one bucket mirrors its bucket byte.  That ninth byte
+has no physical home in the static segment, so the conjunct here claims
+the first eight bytes only. -/
 def SingletonBody (memId : Nat) (base ctrl : UInt32) (t : Table UInt32 UInt32) :
     IProp (WasmHeapGF α) :=
   iprop(⌜t.buckets = 1 ∧ t.items = 0 ∧ t.growthLeft = 0⌝ ∗
     tableHeader memId base ctrl 0 0 0 ∗
-    Slices.ByteSlice memId ctrl t.ctrl)
+    Slices.ByteSlice memId ctrl (t.ctrl.take 8))
 
 /-- A table at `base`, in either of its two physical forms. -/
 def TableAt (memId : Nat) (base : UInt32) (t : Table UInt32 UInt32) :

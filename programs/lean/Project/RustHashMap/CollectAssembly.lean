@@ -23,6 +23,9 @@ additions.
    and copies them into its frame as the static empty table.  `Func2Spec`
    owns no part of the data segment.  `Func2SpecStrong` takes the two cells
    and gives them back unchanged, with the values pinned to 1048576 and 0.
+   It also takes the eight `EMPTY` bytes at 1048576, which are the static
+   empty group, and it does not give them back.  The singleton table owns
+   those bytes after the call.
 2. The thread-local state byte is 2 only while the thread-local is being
    dropped, and the compiled guard panics on that value.  That exit is
    neither arm of the contract, so `Func2SpecStrong` takes
@@ -33,9 +36,9 @@ additions.
 4. The insert loop reads the pair buffer with `i32.load`, so the buffer needs
    four-byte alignment.  `Func2SpecStrong` takes `ptr.toNat % 4 = 0`.
 
-## Two open premises
+## One open premise
 
-`func2_correct_of` is conditional on two arguments.
+`func2_correct_of` is conditional on one argument.
 
 `Func14Spec` is the call contract of absolute `func 17`, the one body of the
 collect path that is not proved yet.  The body calls the allocator with
@@ -43,14 +46,15 @@ alignment 8, and the allocator contract covers alignment 1 and 4 only, so
 that proof waits for the alignment work in
 `Project.RustHashMap.AlignPow2`.
 
-`hsingleton` says that the two words of the static empty table are
-`Table.TableAt` of `Table.empty`.  It is not provable today, because
-`Table.SingletonBody` in `CodeLib.RustStd.HashMap.TableMem` also claims the
-nine control bytes of `Table.empty.ctrl`, while the data segment holds eight
-`\xff` bytes and the ninth address belongs to the control pointer word.
-`hashbrown` never indexes the control array of the shared static singleton,
-so the repair is to drop that slice from `SingletonBody`; after it, the four
-header words of `tableHeader` are what the two cells give.
+## The static empty table
+
+`TableAt_static_empty` was a premise of `func2_correct_of` before.  It is a
+theorem now.  `Table.SingletonBody` in `CodeLib.RustStd.HashMap.TableMem`
+claimed the nine control bytes of `Table.empty.ctrl`, while the data segment
+holds eight `EMPTY` bytes and the ninth address belongs to the control
+pointer word.  The repair narrows that conjunct to `t.ctrl.take 8`.  The
+remove kernel reads the group at `ctrl + 0`, so the slice must stay; only
+the mirror byte goes.
 -/
 
 namespace Project.RustHashMap.CollectAssembly
@@ -153,6 +157,7 @@ def Func2SpecStrong [WasmSmallStepGS hlc Universal.State] : Prop :=
         pointsTo_u32 0 (vecHeader + 8) len ∗
         Slices.ByteSlice 0 ptr (payload ++ spare) ∗
         Slices.ByteSlice 0 randomStateCell keysBefore ∗
+        Slices.ByteSlice 0 entryStackTop (List.replicate 8 0xFF) ∗
         pointsTo_u64 0 (entryStackTop + 8) 1048576 ∗
         pointsTo_u64 0 (entryStackTop + 16) 0 ∗
         BumpHeap heapId storedCursor frontier history ∗
@@ -191,24 +196,68 @@ def Func2SpecStrong [WasmSmallStepGS hlc Universal.State] : Prop :=
             Streams remaining' output true -∗
               Φ (.trapped (.host OOM.trapMessage)))))
 
+/-- The control pointer word of the static empty table.  The low word is
+the address of the static empty group and the high word is the bucket
+mask, which is zero. -/
+private theorem wordPair_static_ctrl :
+    wordPair entryStackTop 0 = 1048576 := by decide
+
+/-- The growth and item words of the static empty table are both zero. -/
+private theorem wordPair_static_zero : wordPair 0 0 = (0 : UInt64) := by
+  decide
+
+/-- The eight `EMPTY` bytes, as the literal list that `simp` leaves in the
+proof context. -/
+private theorem replicate_eight_ff :
+    List.replicate 8 (0xFF : UInt8) =
+      [255, 255, 255, 255, 255, 255, 255, 255] := rfl
+
+/-- The eight control bytes of the static empty table.  The model keeps a
+ninth mirror byte, and `Table.SingletonBody` drops it. -/
+private theorem empty_ctrl_take :
+    (HashMap.Table.empty (K := UInt32) (V := UInt32)).ctrl.take 8 =
+      List.replicate 8 0xFF := by decide
+
+/-- The static empty table of the data segment is `Table.empty`.  The
+caller lends the eight `EMPTY` bytes at `entryStackTop` and the two
+words that the compiled body copies into its frame. -/
+theorem TableAt_static_empty [WasmHeapGS Universal.State] (base : UInt32) :
+    iprop(Slices.ByteSlice (α := Universal.State) 0 entryStackTop
+        (List.replicate 8 0xFF) ∗
+      pointsTo_u64 0 base 1048576 ∗ pointsTo_u64 0 (base + 8) 0) ⊢
+      HashMap.Table.TableAt 0 base HashMap.Table.empty := by
+  iintro ⟨Hctrl, H0, H8⟩
+  isimp only [HashMap.Table.TableAt]
+  iexists entryStackTop
+  ileft
+  isimp only [HashMap.Table.SingletonBody]
+  isplitl_pureexact
+    (show (HashMap.Table.empty (K := UInt32) (V := UInt32)).buckets = 1 ∧
+        (HashMap.Table.empty (K := UInt32) (V := UInt32)).items = 0 ∧
+        (HashMap.Table.empty (K := UInt32) (V := UInt32)).growthLeft = 0
+      by decide)
+  isplitl [H0 H8]
+  · iapply (tableHeader_as_u64 (α := Universal.State) 0 base entryStackTop
+      0 0 0).mpr
+    isplitl [H0]
+    · irw_exact [wordPair_static_ctrl] with H0
+    · irw_exact [wordPair_static_zero] with H8
+  · irw_exact [empty_ctrl_take] with Hctrl
+
 section Machine
 
 variable [WasmSmallStepGS hlc Universal.State]
 
 set_option maxHeartbeats 2000000 in
 theorem func2_correct_of
-    (hreserve : Func14Spec (hlc := hlc))
-    (hsingleton : ∀ base : UInt32,
-      iprop(pointsTo_u64 (α := Universal.State) 0 base 1048576 ∗
-          pointsTo_u64 0 (base + 8) 0) ⊢
-        HashMap.Table.TableAt 0 base HashMap.Table.empty) :
+    (hreserve : Func14Spec (hlc := hlc)) :
     Func2SpecStrong (hlc := hlc) := by
   unfold Func2SpecStrong CallContract callExpr
   intro sp mapSlot vecHeader cap ptr len heapId entries payload spare
     mapBefore keysBefore below storedCursor frontier history input output
     raised callerLocals stack code arity remainder controls calls s E Φ
   iintro ⟨Hruntime, Hsp, Hbelow, Hslot, Hcap, Hptr, Hlen, Hbuf, Hkeys,
-    Hstatic0, Hstatic1, Hbump, Hstreams, %hfacts, Hcont⟩
+    Hstatic, Hstatic0, Hstatic1, Hbump, Hstreams, %hfacts, Hcont⟩
   obtain ⟨hmapLength, hkeysLength, hstate, hpayload, hentriesLen, hlencap,
     hcapBound, hspare, halign, hspLow, hmapSlot, hheader⟩ := hfacts
   have hsize : UInt32.size = 4294967296 := rfl
@@ -309,8 +358,12 @@ theorem func2_correct_of
       iintro ⟨Hkey0, Hkey1, Hstatic0, Hstatic1, Hd0, Hd1, Hs32, Hs40⟩
       -- the static empty table is the frame table
       isimp only [← b24] at Hd1
-      ihave Htable := hsingleton (sp - 48 + 16) $$ [Hd0 Hd1]
-      · iframe Hd0 Hd1
+      ihave Hstatic : Slices.ByteSlice 0 entryStackTop
+          (List.replicate 8 0xFF) $$ [Hstatic]
+      · irw_exact [replicate_eight_ff] with Hstatic
+      ihave Htable := TableAt_static_empty (sp - 48 + 16) $$
+        [Hstatic Hd0 Hd1]
+      · iframe Hstatic Hd0 Hd1
       ihave Hout0 : OutSlot (sp - 48) $$ [Hout0]
       · isimp only [OutSlot]
         iexists ((below.drop collectBelowDepth).take 16).take 8

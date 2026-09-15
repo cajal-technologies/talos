@@ -17,16 +17,16 @@ calls absolute `func 17` once with the exact count, and hands the returned
 `CollectFold.ofEntries_eq_insertAll` names the two phases together, so both
 paths end at `Table.ofEntries`.
 
-Two premises are open work, and each one is an argument here rather than a
-fact the rule proves.
+One premise is open work, and it is an argument here rather than a fact
+the rule proves.  One resource comes from the caller.
 
 * `Func14Spec`, the contract of absolute `func 17`, is a hypothesis.  The
   body of that function needs an allocator call at alignment 8, which
   `Func55Spec` does not cover yet.
 * `Table.TableAt 0 (frame + 16) Table.empty` is a resource.  The compiled
-  body copies the static singleton out of the data segment, and
-  `Table.SingletonBody` asks for nine control bytes while the segment holds
-  eight, so no caller can build it today.
+  body copies the static singleton out of the data segment.
+  `CollectAssembly.TableAt_static_empty` builds it from the eight `EMPTY`
+  bytes at `entryStackTop` and the two copied words.
 -/
 
 namespace Project.RustHashMap.CollectReserve

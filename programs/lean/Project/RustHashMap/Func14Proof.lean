@@ -271,8 +271,8 @@ private theorem pointsTo_u32_at [WasmHeapGS Universal.State]
   iexact H
 
 /-- The static empty table is four header words.  The control slice that
-`Table.SingletonBody` also owns is dropped: the body of `func 17` never
-reads it, and the coordinated window removes it from the predicate. -/
+`Table.SingletonBody` also owns is dropped here: the body of `func 17`
+never reads it.  The separation logic is affine, so the drop is free. -/
 theorem TableAt_empty_open [WasmHeapGS Universal.State] (base : UInt32) :
     HashMap.Table.TableAt 0 base
         (HashMap.Table.empty (K := UInt32) (V := UInt32)) ⊢
