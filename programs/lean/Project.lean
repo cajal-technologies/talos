@@ -190,3 +190,4 @@ import Project.RustHashMap.MapLen
 import Project.RustHashMap.MapContainsKey
 import Project.RustHashMap.MapGet
 import Project.RustHashMap.MapRemove
+import Project.RustHashMap.MapInsert

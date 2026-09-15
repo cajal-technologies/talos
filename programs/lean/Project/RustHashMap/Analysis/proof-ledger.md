@@ -53,7 +53,7 @@ hypothesis. The evidence column names the hypothesis.
 | driver absolute 3 (`map_insert`) | proved (`Func2Spec`, `Func3Spec`) | `b0d7078`; note M |
 | wrappers absolute 28, 29, 30, 32 | proved (drivers) | note N |
 | `map_remove` | adequate | `MapRemove.lean`; note M |
-| `map_insert` | adequate (`Func15InsertSpec`) | note M |
+| `map_insert` | adequate | `MapInsert.lean`; note M |
 | adequacy bridge | proved | `Adequacy.lean` |
 
 ## Notes
@@ -175,10 +175,11 @@ hypothesis. The evidence column names the hypothesis.
   `Project.RustHashMap.mapContainsKey`,
   `Project.RustHashMap.mapGet` and `Project.RustHashMap.mapRemove`.
   Those three carry `@[proves]`. `mapInsert_of_bodies` keeps a second
-  hypothesis, `Func15InsertSpec`, so `map_insert` gets no closing file
-  yet. Both of its hypotheses are proved now:
+  hypothesis, `Func15InsertSpec`. `MapInsert.lean` feeds
   `CollectProof.func2_correct` and
-  `Func15Proof.func15_insert_correct`. See note H.
+  `Func15Proof.func15_insert_correct` to it and states
+  `Project.RustHashMap.mapInsert`, which carries `@[proves]`. All five
+  exports are adequate now. See note H.
 - Note N. `b9d6d86` adds `ExportWrappers.lean`. Each wrapper theorem
   takes its driver contract as a named hypothesis, so no theorem there
   carries `@[proves]`.
