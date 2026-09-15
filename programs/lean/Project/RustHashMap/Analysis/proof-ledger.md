@@ -204,3 +204,15 @@ hypothesis. The evidence column names the hypothesis.
   lemmas). `moveStep_spec` gives the insert index of one turn and the
   `EMPTY` byte at it. `and_xor_self` and `swarMatchFull_eq_zero_iff` read
   the group mask that the compiled advance loop keeps.
+  `Func14ResizeWalk.lean` proves the walk itself. `twp_resize_walk` is
+  the loop of WAT 3796 to 4083 under `twp_loop_wf_family`, with the
+  length of `walkRem` as the measure. It carries `Table.MoveInv`, so it
+  leaves the fresh table equal to the model fold. Seven stage lemmas
+  build it: `twp_resize_hoist` (WAT 3750 to 3795), `twp_resize_adv` (WAT
+  3797 to 3823), `twp_resize_addr` (WAT 3825 to 3842), `twp_resize_hash`
+  (WAT 3843 to 3976), `twp_resize_probe` (WAT 3977 to 4012),
+  `twp_resize_fix` (WAT 4018 to 4044) and `twp_resize_write` (WAT 4045
+  to 4081).  Nine `rfl` shape theorems tie each fragment to the decoded
+  program.  The fresh table has no counters while the walk runs, so the
+  probe and the fix take `Table.Layout` plus a short entry list in place
+  of `Table.WF` and `Table.Clean`.
