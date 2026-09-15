@@ -162,3 +162,4 @@ import Project.RustHashMap.RemoveTailProof
 import Project.RustHashMap.RemoveDriverProof
 import Project.RustHashMap.Func3Proof
 import Project.RustHashMap.InsertPures
+import Project.RustHashMap.InsertTailDefs
