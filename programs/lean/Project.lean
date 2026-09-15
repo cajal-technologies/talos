@@ -159,3 +159,4 @@ import Project.RustHashMap.RemovePures
 import Project.RustHashMap.RemoveTailDefs
 import Project.RustHashMap.RemoveTailContracts
 import Project.RustHashMap.RemoveTailProof
+import Project.RustHashMap.RemoveDriverProof
