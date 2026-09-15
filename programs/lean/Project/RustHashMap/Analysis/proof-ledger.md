@@ -29,6 +29,8 @@ hypothesis. The evidence column names the hypothesis.
 | read phase absolute 22 | proved | `4014844` |
 | driver tail absolute 22 | proved (`Func2Spec`) | note D |
 | `map_len` | adequate (`Func2Spec`) | note E |
+| `map_contains_key` | adequate (`Func2Spec`) | note M |
+| `map_get` | adequate (`Func2Spec`) | note M |
 | collect_entries absolute 5 | proved (two premises) | note F |
 | absolute 16 (`Func13Spec`) | proved | `Func13Proof.lean`; note L |
 | absolute 17 (`Func14Spec`) | proved | note G |
