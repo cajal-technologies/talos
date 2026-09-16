@@ -136,30 +136,64 @@ def removeOutput (bytes : List UInt8) : List UInt8 :=
 
 /-! ## Contracts -/
 
-/-- `map_len` writes the entry count. -/
+/-- `map_len` writes the entry count.
+
+Informal spec:
+The export reads the whole input as a borsh map of `u32` keys to `u32`
+values, which `mapOf` decodes.  It writes the entry count of that map as
+a borsh `u32`.  It writes nothing when borsh rejects the bytes.  The run
+may instead end in the allocator `talos.oom` trap, because the decoder
+and the map allocate in proportion to the input. -/
 @[spec_of "rust-exported-partial" "rust_hash_map::map_len"]
 def MapLenSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "map_len" bytes (lenOutput bytes)
 
 /-- `map_get` writes the value under the leading key, and `None` when the key
-is absent. -/
+is absent.
+
+Informal spec:
+The export reads the input as `key ++ map`, which `keyAndMap` decodes:
+the first four bytes are the `u32` key and the rest is the borsh map.
+It writes the value under that key as a borsh `Option`, and `None` when
+the key has no entry.  It writes nothing when borsh rejects the bytes.
+The run may instead end in the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_hash_map::map_get"]
 def MapGetSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "map_get" bytes (getOutput bytes)
 
-/-- `map_contains_key` writes whether the leading key has an entry. -/
+/-- `map_contains_key` writes whether the leading key has an entry.
+
+Informal spec:
+The export reads the input as `key ++ map`, which `keyAndMap` decodes.
+It writes a borsh `bool` that says whether that key has an entry.  It
+writes nothing when borsh rejects the bytes.  The run may instead end in
+the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_hash_map::map_contains_key"]
 def MapContainsKeySpec : Prop :=
   ∀ bytes : List UInt8,
     WritesOrOOM "map_contains_key" bytes (containsKeyOutput bytes)
 
 /-- `map_insert` writes the displaced value beside the map after the
-insertion. -/
+insertion.
+
+Informal spec:
+The export reads the input as `key ++ value ++ map`, which
+`keyValueAndMap` decodes: the first four bytes are the `u32` key, the
+next four are the `u32` value, and the rest is the borsh map.  It writes
+the displaced value as a borsh `Option`, then the map after the
+insertion, in key order.  It writes nothing when borsh rejects the
+bytes.  The run may instead end in the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_hash_map::map_insert"]
 def MapInsertSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "map_insert" bytes (insertOutput bytes)
 
-/-- `map_remove` writes the removed value beside the map after the removal. -/
+/-- `map_remove` writes the removed value beside the map after the removal.
+
+Informal spec:
+The export reads the input as `key ++ map`, which `keyAndMap` decodes.
+It writes the removed value as a borsh `Option`, then the map after the
+removal, in key order.  It writes nothing when borsh rejects the bytes.
+The run may instead end in the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_hash_map::map_remove"]
 def MapRemoveSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "map_remove" bytes (removeOutput bytes)
