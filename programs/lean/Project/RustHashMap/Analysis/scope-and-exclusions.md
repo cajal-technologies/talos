@@ -65,7 +65,8 @@ Absolute Wasm index `N` is the Lean local name `func(N-3)`.
 - f12. This edge is live and is not excluded. `Func22Spec` proves it.
 - f13. `1 <= offset <= len`, which is a precondition of `Func12Spec`.
 - f14. `PushVecFacts` in `VecGrow.lean`. This fact is proved.
-- f15. `CapacityFits`. This fact is proved by `44bf4f3`.
+- f15. `CapacityFits` in `DecoderLoop.lean`. The `Func1Spec` audit of
+  `BodyContracts.lean` covers this arm. This fact is proved.
 - f16. `word1 != okTag` from `Func52Spec` and `Func49Spec`.
 - f17. The single-shot instance never sets the thread state to 2.
 - f18. This edge is live for `map_insert`. It is dead in the collect
