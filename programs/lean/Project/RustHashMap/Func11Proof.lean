@@ -6,7 +6,7 @@ import Project.RustHashMap.SortPures
 Absolute `func 14` is `ipnsort`, local `func11`, WAT lines 2635 to 2848
 of `programs/rust/build/rust_hash_map/program.wat`.  This module proves
 `SortContracts.Func11Spec` from `SortContracts.Func21Spec`, the contract
-of `quicksort`, which stays open.
+of `quicksort`, which `Project.RustHashMap.Func21Proof` proves.
 
 ## The register map
 

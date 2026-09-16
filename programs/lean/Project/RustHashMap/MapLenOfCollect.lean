@@ -9,8 +9,8 @@ body contracts.  `Project.RustHashMap.Func1Proof.func1_correct` discharges
 the borsh decoder at absolute function 4, so one is left: `Func2Spec`,
 `collect_entries` at absolute function 5.
 
-This theorem is not tagged `@[proves]`, because its hypothesis is not
-discharged yet.
+This theorem keeps that hypothesis, so it is not tagged `@[proves]`.
+`Project.RustHashMap.MapLen` discharges it and carries the tag.
 -/
 
 namespace Project.RustHashMap.MapLenOfCollect

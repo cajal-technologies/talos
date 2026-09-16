@@ -13,12 +13,12 @@ carries the result through
 `Project.RustHashMap.ExportWrappers.mapInsert_of_driver` to the public
 partial contract `Spec.MapInsertSpec`.
 
-Two body contracts stay open: `collect_entries` at absolute function 5,
-and the insert shim at absolute function 6.  `Func3Proof.func3_correct_of`
-gives the shim under `Func15InsertSpec`, so the second theorem here takes
-that contract instead.  Every theorem takes its open contracts as named
-hypotheses, so none of them carries `@[proves]`.  The tag goes on when
-the two bodies land.
+Every theorem here takes two body contracts as named hypotheses:
+`collect_entries` at absolute function 5, and the insert shim at absolute
+function 6.  `Func3Proof.func3_correct_of` gives the shim under
+`Func15InsertSpec`, so the second theorem here takes that contract
+instead.  None of them carries `@[proves]`.
+`Project.RustHashMap.MapInsert` discharges both and carries the tag.
 
 The driver owns 14464 of the 1048576 stack bytes: 368 bytes of frame, 16
 bytes of stack reserve, and 14080 bytes below the reserve for its
@@ -228,11 +228,11 @@ theorem func0_correct_of_insert [WasmSmallStepGS hlc Universal.State]
     ExportWrappers.Func0Spec (hlc := hlc) :=
   func0_correct_of hfunc2 (Func3Proof.func3_correct_of hins)
 
-/-! ## The public line, conditional on the two open bodies -/
+/-! ## The public line, conditional on the two bodies -/
 
 /-- The public partial contract of `map_insert`, conditional on the two
-open body contracts.  This theorem is not tagged `@[proves]`, because its
-hypotheses are not discharged yet. -/
+body contracts.  This theorem keeps them as hypotheses, so it is not
+tagged `@[proves]`; `Project.RustHashMap.MapInsert` is. -/
 theorem mapInsert_of_bodies
     (hfunc2 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
       CollectContract.Func2Spec (hlc := hlc))

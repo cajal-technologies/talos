@@ -10,8 +10,10 @@ the third one, so two are left: `Func1Spec`, the borsh decoder at
 absolute function 4, and `Func2Spec`, `collect_entries` at absolute
 function 5.
 
-This theorem is not tagged `@[proves]`, because its hypotheses are not
-discharged yet.
+This theorem keeps those hypotheses, so it is not tagged `@[proves]`.
+`Project.RustHashMap.MapLenOfCollect` discharges the decoder, and
+`Project.RustHashMap.MapLen` discharges `collect_entries` and carries the
+tag.
 -/
 
 namespace Project.RustHashMap.MapLenOfDecoder

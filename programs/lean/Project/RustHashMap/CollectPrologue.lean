@@ -31,14 +31,13 @@ seeds land at frame offsets 32 and 40, which is where `Table.HashMapAt`
 keeps them, so `twp_copy_out` in `Project.RustHashMap.CollectTail` reads
 them back without a move.
 
-## Two resources that `Func2Spec` does not lend yet
+## Two resources that the rules take as arguments
 
 The copy phase reads the data segment at 1048584 and 1048592, and the guard
-reads the thread-local state byte.  `Func2Spec` lends neither.  The rules
-take both as explicit arguments, so they are provable now and the contract
-edit can follow.  The docstring of
-`Project.RustHashMap.CollectBodyContracts` records the same gap for
-`Func13Spec`.
+reads the thread-local state byte.  The rules take both as explicit
+arguments.  `Func2Spec` lends the two data cells and takes the guard
+condition on the state byte, and `Project.RustHashMap.CollectAssembly`
+passes them down.
 -/
 
 namespace Project.RustHashMap.CollectPrologue

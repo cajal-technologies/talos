@@ -12,9 +12,10 @@ carries the result through
 `Project.RustHashMap.ExportWrappers.mapGet_of_driver` to the public
 partial contract `Spec.MapGetSpec`.
 
-One body contract stays open: `collect_entries` at absolute function 5.
-Every theorem here takes it as a named hypothesis, so neither of them
-carries `@[proves]`.  The tag goes on when that body lands.
+Every theorem here takes one body contract as a named hypothesis:
+`collect_entries` at absolute function 5.  Neither of them carries
+`@[proves]`.  `Project.RustHashMap.MapGet` discharges the contract and
+carries the tag.
 
 The driver owns 656 of the 1048576 stack bytes: 320 bytes of frame, and
 336 bytes below the frame for its callees.  The key decoder is the
@@ -168,9 +169,9 @@ theorem func18_correct_of [WasmSmallStepGS hlc Universal.State]
 
 /-! ## The public line, conditional on `collect_entries` -/
 
-/-- The public partial contract of `map_get`, conditional on the one open
-body contract.  This theorem is not tagged `@[proves]`, because its
-hypothesis is not discharged yet. -/
+/-- The public partial contract of `map_get`, conditional on the one body
+contract.  This theorem keeps it as a hypothesis, so it is not tagged
+`@[proves]`; `Project.RustHashMap.MapGet` is. -/
 theorem mapGet_of_collect
     (hfunc2 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
       CollectContract.Func2Spec (hlc := hlc)) :

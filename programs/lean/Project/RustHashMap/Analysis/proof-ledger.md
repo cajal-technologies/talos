@@ -11,7 +11,10 @@ is the Lean local name `func(N-3)`. Contract names use the local index.
 - `draft contract`: the interface is written but not audited.
 - `frozen`: the provability and all call sites are audited.
 - `proved`: the Lean theorem is closed and has no unapproved axiom.
-- `adequate`: the theorem reaches the public fuel-free theorem.
+- `adequate`: the theorem reaches the public fuel-free theorem. That
+  theorem is partial: every finite terminal execution writes exactly the
+  output or ends in the allocator OOM outcome, and it does not assert
+  termination.
 
 A status with a parenthesis is a `proved` theorem that keeps a named
 hypothesis. The evidence column names the hypothesis.
@@ -76,7 +79,7 @@ hypothesis. The evidence column names the hypothesis.
   `MapLen.lean` discharges it with `CollectProof.func2_correct` and
   states `Project.RustHashMap.mapLen`, which carries
   `@[proves Project.RustHashMap.Spec.MapLenSpec]`.
-- Note F. The other lane assembles the body. The parts are the prologue
+- Note F. Five files assemble the body. The parts are the prologue
   (`CollectPrologue.lean`), the loop (`CollectLoop.lean`), the tail
   (`CollectTail.lean`), the reserve block (`CollectReserve.lean`) and
   the assembly (`CollectAssembly.lean`).
@@ -89,7 +92,7 @@ hypothesis. The evidence column names the hypothesis.
   `Func14Proof.func14_correct_of`, then
   `Func55Proof.func55_correct_pow2`.
   The resize path of absolute 17 is stated as `Func14ResizeSpec` in
-  `MapOpContracts.lean`, and the other lane owns it.
+  `MapOpContracts.lean`, and `Func14Resize.lean` proves it (note S).
   The `SingletonBody` repair landed in the codelib file `TableMem.lean`:
   the static singleton claims `t.ctrl.take 8` now, and
   `CollectAssembly.TableAt_static_empty` proves the former `hsingleton`
@@ -97,7 +100,7 @@ hypothesis. The evidence column names the hypothesis.
   for it. `Func2SpecStrong` is gone: it became equal to `Func2Spec` by
   statement in `CollectAssembly.lean` and in the two contract files
   after it, so it is deleted. See note L.
-- Note G. `Func14Proof.lean` (the other lane) proves absolute 17 for
+- Note G. `Func14Proof.lean` proves absolute 17 for
   the collect path, under the allocator contract
   `Func55SpecPow2`. `Func55Proof.func55_correct_pow2` proves that
   contract, and `CollectProof.lean` joins the two, so the collect path
@@ -145,16 +148,16 @@ hypothesis. The evidence column names the hypothesis.
   `Func21Proof.lean` discharges it with
   `Func21Merge.bimerge_exhausts` of `Func21Merge.lean`. Absolute 107
   therefore needs no proof file.
-- Note L. `Project.lean` imports the collect lane since this commit, so
-  no file of the hash map proof is unimported now. The sixteen files are
+- Note L. `Project.lean` imports every file of the hash map proof. The
+  sixteen collect files are
   `AlignPow2.lean`, `BitPures.lean`, `Func15Hash.lean`, `ProbeStop.lean`,
   `CollectBodyContracts.lean`, `Func14Capacity.lean`, `Func80Proof.lean`,
   `Func13Proof.lean`, `Func15Insert.lean`, `Func15Proof.lean`,
   `CollectLoop.lean`, `CollectTail.lean`, `CollectPrologue.lean`,
   `CollectReserve.lean`, `CollectAssembly.lean` and `Func14Proof.lean`.
-  `Func2Spec` is discharged since this commit. `CollectProof.lean`
-  states `func2_correct : Func2Spec` with no argument. This commit adds
-  five more files, and `Project.lean` imports all five:
+  `Func2Spec` is discharged. `CollectProof.lean`
+  states `func2_correct : Func2Spec` with no argument. Five more files
+  follow, and `Project.lean` imports all five:
   `CollectProof.lean`, `MapLen.lean`, `MapContainsKey.lean`,
   `MapGet.lean` and `MapRemove.lean`.
 - Note M. The drivers are `Func0Spec` (absolute 3), `Func6Spec`
@@ -207,11 +210,11 @@ hypothesis. The evidence column names the hypothesis.
   `ContainsKeyTailProof.lean`, `GetTailProof.lean`,
   `ContainsKeyDriverProof.lean` and `GetDriverProof.lean`. It also adds
   the read phases `ContainsKeyRead.lean` and `GetRead.lean`.
-  `Project.lean` imports all fourteen files. The lane also adds
+  `Project.lean` imports all fourteen files. The group also adds
   `PairSlice.lean`, `SortedByKey.lean`, `SortingNetwork.lean` and
   `EraseWasm.lean` in `codelib/CodeLib/RustStd/HashMap/`.
-- Note S. The resize path of absolute 17 is `Func14ResizeSpec`. The body
-  proof is open. `ResizePures.lean` holds the model side of it. It shows
+- Note S. The resize path of absolute 17 is `Func14ResizeSpec`.
+  `ResizePures.lean` holds the model side of it. It shows
   that a clean table with no growth left takes the resize arm and not the
   rehash-in-place arm (`reserve_one_eq`), it reads the answer off
   `Table.WF.resize` (`resize_spec`), and it names the state of the walk

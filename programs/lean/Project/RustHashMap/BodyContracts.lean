@@ -4,8 +4,7 @@ import Project.RustHashMap.DeallocNoop
 /-!
 # Call contracts of the bodies that the `map_len` driver calls
 
-The tail of the `map_len` driver calls three functions whose bodies are not
-proved yet:
+The tail of the `map_len` driver calls three functions:
 
 * absolute `func 4`, the borsh decoder of `Vec<(u32, u32)>`;
 * absolute `func 5`, `collect_entries`, which builds the hash table;
@@ -344,9 +343,10 @@ already, so the caller pays nothing new.
 
 The error arm calls absolute `func 52`, which turns the `io::Error` into
 the error that the output slot takes.  That call opens a subtree of 14
-bodies and 325 WAT lines that no contract covers yet: 34 to 41, 45 to 47,
-52, 53 and 54.  Each one is small, and the largest is 63 lines.  The
-accepting arm of the decoder reaches none of them. -/
+bodies and 325 WAT lines: 34 to 41, 45 to 47, 52, 53 and 54.  Each one is
+small, and the largest is 63 lines.  The accepting arm of the decoder
+reaches none of them.  `Project.RustHashMap.DecodeErrorContract` states the
+call as `Func49Spec`, and `Project.RustHashMap.Func49Proof` proves it. -/
 def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out hdr ptr len : UInt32)
     (heapId : GName) (bytes outBefore below dataBytes : List UInt8)

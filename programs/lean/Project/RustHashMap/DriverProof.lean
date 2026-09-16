@@ -13,10 +13,13 @@ Absolute function 22 is the `map_len` driver.  Its read phase is proved in
 carries the result through the one-instruction wrapper at absolute function
 31 to the public partial contract `Spec.MapLenSpec`.
 
-Three body contracts stay open: the borsh decoder at absolute 4, the
-`collect_entries` at absolute 5, and `io::Error::new` at absolute 55.  Every
-theorem here takes them as named hypotheses, so none of them carries
-`@[proves]`.  The tag goes on when the three bodies land.
+Every theorem here takes three body contracts as named hypotheses: the
+borsh decoder at absolute 4, the `collect_entries` at absolute 5, and
+`io::Error::new` at absolute 55.  None of them carries `@[proves]`.
+`Project.RustHashMap.MapLenOfDecoder` discharges `io::Error::new`,
+`Project.RustHashMap.MapLenOfCollect` discharges the decoder, and
+`Project.RustHashMap.MapLen` discharges `collect_entries` and carries the
+tag.
 -/
 
 namespace Project.RustHashMap.DriverProof
@@ -274,9 +277,9 @@ theorem func28_correct_of [WasmSmallStepGS hlc Universal.State]
 
 /-! ## The public line, conditional on the three bodies -/
 
-/-- The public partial contract of `map_len`, conditional on the three open
-body contracts.  This theorem is not tagged `@[proves]`, because its
-hypotheses are not discharged yet. -/
+/-- The public partial contract of `map_len`, conditional on the three
+body contracts.  This theorem keeps them as hypotheses, so it is not
+tagged `@[proves]`; `Project.RustHashMap.MapLen` is. -/
 theorem mapLen_of_bodies
     (hfunc1 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
       Func1Spec (hlc := hlc))
