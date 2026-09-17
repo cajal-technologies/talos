@@ -180,6 +180,15 @@ private def popcntNat : Nat → Nat
   | 0 => 0
   | n + 1 => (n + 1) % 2 + popcntNat ((n + 1) / 2)
 
+/-- `mapLanes`, picking the 32- or 64-bit float implementation by shape
+(`f64x2` uses 64-bit lanes; every other float shape here is `f32x4`).
+Abstracts the width dispatch shared by every unary float lane op below. -/
+def mapFloatLanes (sh : Shape) (op32 : UInt32 → UInt32)
+    (op64 : UInt64 → UInt64) (v : V128) : V128 :=
+  match sh with
+  | .f64x2 => mapLanes 64 (f64LaneUn op64) v
+  | _      => mapLanes 32 (f32LaneUn op32) v
+
 def UnOp.eval (op : UnOp) (v : V128) : V128 :=
   match op with
   | .not => ~~~v
@@ -190,27 +199,13 @@ def UnOp.eval (op : UnOp) (v : V128) : V128 :=
     let b := sh.laneBits
     mapLanes b (fun n => toU b (-(sx b n))) v
   | .popcnt => mapLanes 8 popcntNat v
-  | .fAbs sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Abs) v
-    | _      => mapLanes 32 (f32LaneUn f32Abs) v
-  | .fNeg sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Neg) v
-    | _      => mapLanes 32 (f32LaneUn f32Neg) v
-  | .fSqrt sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Sqrt) v
-    | _      => mapLanes 32 (f32LaneUn f32Sqrt) v
-  | .fCeil sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Ceil) v
-    | _      => mapLanes 32 (f32LaneUn f32Ceil) v
-  | .fFloor sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Floor) v
-    | _      => mapLanes 32 (f32LaneUn f32Floor) v
-  | .fTrunc sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Trunc) v
-    | _      => mapLanes 32 (f32LaneUn f32Trunc) v
-  | .fNearest sh => match sh with
-    | .f64x2 => mapLanes 64 (f64LaneUn f64Nearest) v
-    | _      => mapLanes 32 (f32LaneUn f32Nearest) v
+  | .fAbs sh => mapFloatLanes sh f32Abs f64Abs v
+  | .fNeg sh => mapFloatLanes sh f32Neg f64Neg v
+  | .fSqrt sh => mapFloatLanes sh f32Sqrt f64Sqrt v
+  | .fCeil sh => mapFloatLanes sh f32Ceil f64Ceil v
+  | .fFloor sh => mapFloatLanes sh f32Floor f64Floor v
+  | .fTrunc sh => mapFloatLanes sh f32Trunc f64Trunc v
+  | .fNearest sh => mapFloatLanes sh f32Nearest f64Nearest v
   | .extend dst high signed =>
     let db := dst.laneBits
     let sb := db / 2
@@ -279,6 +274,14 @@ inductive BinOp where
   | fAdd (sh : Shape) | fSub (sh : Shape) | fMul (sh : Shape) | fDiv (sh : Shape)
   | fMin (sh : Shape) | fMax (sh : Shape) | fPmin (sh : Shape) | fPmax (sh : Shape)
 deriving Repr, DecidableEq, Inhabited
+
+/-- `zipLanes`, picking the 32- or 64-bit float implementation by shape.
+Same width dispatch as `mapFloatLanes`, for `v128 → v128 → v128` ops. -/
+def zipFloatLanes (sh : Shape) (op32 : UInt32 → UInt32 → UInt32)
+    (op64 : UInt64 → UInt64 → UInt64) (a b : V128) : V128 :=
+  match sh with
+  | .f64x2 => zipLanes 64 (f64LaneBin op64) a b
+  | _      => zipLanes 32 (f32LaneBin op32) a b
 
 def BinOp.eval (op : BinOp) (a b : V128) : V128 :=
   match op with
@@ -350,30 +353,14 @@ def BinOp.eval (op : BinOp) (a b : V128) : V128 :=
         boolLane 64 (op.eval64 (UInt64.ofNat x) (UInt64.ofNat y))) a b
     | _ => zipLanes 32 (fun x y =>
         boolLane 32 (op.eval32 (UInt32.ofNat x) (UInt32.ofNat y))) a b
-  | .fAdd sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Add) a b
-    | _      => zipLanes 32 (f32LaneBin f32Add) a b
-  | .fSub sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Sub) a b
-    | _      => zipLanes 32 (f32LaneBin f32Sub) a b
-  | .fMul sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Mul) a b
-    | _      => zipLanes 32 (f32LaneBin f32Mul) a b
-  | .fDiv sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Div) a b
-    | _      => zipLanes 32 (f32LaneBin f32Div) a b
-  | .fMin sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Min) a b
-    | _      => zipLanes 32 (f32LaneBin f32Min) a b
-  | .fMax sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Max) a b
-    | _      => zipLanes 32 (f32LaneBin f32Max) a b
-  | .fPmin sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Pmin) a b
-    | _      => zipLanes 32 (f32LaneBin f32Pmin) a b
-  | .fPmax sh => match sh with
-    | .f64x2 => zipLanes 64 (f64LaneBin f64Pmax) a b
-    | _      => zipLanes 32 (f32LaneBin f32Pmax) a b
+  | .fAdd sh => zipFloatLanes sh f32Add f64Add a b
+  | .fSub sh => zipFloatLanes sh f32Sub f64Sub a b
+  | .fMul sh => zipFloatLanes sh f32Mul f64Mul a b
+  | .fDiv sh => zipFloatLanes sh f32Div f64Div a b
+  | .fMin sh => zipFloatLanes sh f32Min f64Min a b
+  | .fMax sh => zipFloatLanes sh f32Max f64Max a b
+  | .fPmin sh => zipFloatLanes sh f32Pmin f64Pmin a b
+  | .fPmax sh => zipFloatLanes sh f32Pmax f64Pmax a b
 
 /-! ## Test operations (`v128 → i32`) -/
 

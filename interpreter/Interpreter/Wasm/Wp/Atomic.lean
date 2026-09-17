@@ -70,21 +70,21 @@ macro "wp_atomic" : tactic => `(tactic|
 @[simp, wp_simp] theorem wp_add_cons :
     wp m (.add :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a + b) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (b + a) :: vs } env
      | _ => Q (.Invalid "add: ill-shaped operand stack")) := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_sub_cons :
     wp m (.sub :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (b - a) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (a - b) :: vs } env
      | _ => Q (.Invalid "sub: ill-shaped operand stack")) := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_mul_cons :
     wp m (.mul :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a * b) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (b * a) :: vs } env
      | _ => Q (.Invalid "mul: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -215,7 +215,7 @@ macro "wp_atomic" : tactic => `(tactic|
 @[simp, wp_simp] theorem wp_and_cons :
     wp m (.and :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a &&& b) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (b &&& a) :: vs } env
      | _ => Q (.Invalid "and: ill-shaped operand stack")) := by
   wp_atomic
 

@@ -191,14 +191,36 @@ macro "wasm_twp_pure_rule " name:ident binders:bracketedBinder* " : "
           [{ Φ }] :=
       twp_pureStep _ _ _ (fun _ => $step))
 
+/-! ## Generic scalar numeric rules
+
+The float/conversion family is exposed through the evaluator functions used
+by `Step`, so generated proofs can specialize results by reduction without a
+separate lifting theorem for every opcode. -/
+
+wasm_twp_pure_rule twp_scalarFloat0
+    {instruction : Instruction} {value : Value}
+    (heval : evalScalarFloat0? instruction = some value) :
+  instruction, values => value :: values := Step.scalarFloat0 heval
+
+wasm_twp_pure_rule twp_scalarFloat1
+    {instruction : Instruction} {operand value : Value}
+    (hzero : evalScalarFloat0? instruction = none)
+    (heval : evalScalarFloat1? instruction operand = some value) :
+  instruction, operand :: values => value :: values :=
+    Step.scalarFloat1 hzero heval
+
+wasm_twp_pure_rule twp_scalarFloat2
+    {instruction : Instruction} {lhs rhs value : Value}
+    (hzero : evalScalarFloat0? instruction = none)
+    (hunary : evalScalarFloat1? instruction rhs = none)
+    (heval : evalScalarFloat2? instruction lhs rhs = some value) :
+  instruction, rhs :: lhs :: values => value :: values :=
+    Step.scalarFloat2 hzero hunary heval
+
 wasm_twp_pure_rule twp_remU {dividend divisor : UInt32}
     (hdivisor : divisor ≠ 0) :
   .remU, .i32 divisor :: .i32 dividend :: values =>
     .i32 (dividend % divisor) :: values := Step.remU hdivisor
-
-wasm_twp_pure_rule twp_eqz {value result : UInt32}
-    (hresult : result = if value = 0 then 1 else 0) :
-  .eqz, .i32 value :: values => .i32 result :: values := Step.eqz hresult
 
 wasm_twp_pure_rule twp_const {value : UInt32} :
   .const value, values => .i32 value :: values := Step.const
@@ -212,13 +234,20 @@ wasm_twp_pure_rule twp_sub {lhs rhs : UInt32} :
 wasm_twp_pure_rule twp_mul {lhs rhs : UInt32} :
   .mul, .i32 rhs :: .i32 lhs :: values => .i32 (rhs * lhs) :: values := Step.mul
 
-wasm_twp_pure_rule twp_shl {lhs rhs : UInt32} :
-  .shl, .i32 rhs :: .i32 lhs :: values =>
-    .i32 (lhs <<< (rhs % 32)) :: values := Step.shl
+wasm_twp_pure_rule twp_subI64 {lhs rhs : UInt64} :
+  .subI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs - rhs) :: values := Step.subI64
 
-wasm_twp_pure_rule twp_shrU {lhs rhs : UInt32} :
-  .shrU, .i32 rhs :: .i32 lhs :: values =>
-    .i32 (lhs >>> (rhs % 32)) :: values := Step.shrU
+wasm_twp_pure_rule twp_mulI64 {lhs rhs : UInt64} :
+  .mulI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs * rhs) :: values := Step.mulI64
+
+wasm_twp_pure_rule twp_constI64 {value : UInt64} :
+  .constI64 value, values => .i64 value :: values := Step.constI64
+
+wasm_twp_pure_rule twp_eqz {value result : UInt32}
+    (hresult : result = if value = 0 then 1 else 0) :
+  .eqz, .i32 value :: values => .i32 result :: values := Step.eqz hresult
 
 wasm_twp_pure_rule twp_ltU {lhs rhs result : UInt32}
     (hresult : result = if lhs < rhs then 1 else 0) :
@@ -243,6 +272,73 @@ wasm_twp_pure_rule twp_leU {lhs rhs result : UInt32}
 wasm_twp_pure_rule twp_gtU {lhs rhs result : UInt32}
     (hresult : result = if lhs > rhs then 1 else 0) :
   .gtU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.gtU hresult
+
+wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
+    (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
+  .geS, .i32 rhs :: .i32 lhs :: values =>
+    .i32 result :: values := Step.geS hresult
+
+wasm_twp_pure_rule twp_ne {lhs rhs result : UInt32}
+    (hresult : result = if lhs ≠ rhs then 1 else 0) :
+  .ne, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ne hresult
+
+wasm_twp_pure_rule twp_eqI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs = rhs then 1 else 0) :
+  .eqI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.eqI64 hresult
+
+wasm_twp_pure_rule twp_neI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs ≠ rhs then 1 else 0) :
+  .neI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.neI64 hresult
+
+wasm_twp_pure_rule twp_ltUI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs < rhs then 1 else 0) :
+  .ltUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.ltUI64 hresult
+
+wasm_twp_pure_rule twp_gtUI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs > rhs then 1 else 0) :
+  .gtUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.gtUI64 hresult
+
+wasm_twp_pure_rule twp_shl {lhs rhs : UInt32} :
+  .shl, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (lhs <<< (rhs % 32)) :: values := Step.shl
+
+wasm_twp_pure_rule twp_shrU {lhs rhs : UInt32} :
+  .shrU, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (lhs >>> (rhs % 32)) :: values := Step.shrU
+
+wasm_twp_pure_rule twp_and {lhs rhs : UInt32} :
+  .and, .i32 rhs :: .i32 lhs :: values => .i32 (lhs &&& rhs) :: values := Step.and
+
+wasm_twp_pure_rule twp_or {lhs rhs : UInt32} :
+  .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
+
+wasm_twp_pure_rule twp_orI64 {lhs rhs : UInt64} :
+  .orI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs ||| rhs) :: values := Step.orI64
+
+wasm_twp_pure_rule twp_shlI64 {lhs rhs : UInt64} :
+  .shlI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs <<< (rhs % 64)) :: values := Step.shlI64
+
+wasm_twp_pure_rule twp_shrUI64 {lhs rhs : UInt64} :
+  .shrUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs >>> (rhs % 64)) :: values := Step.shrUI64
+
+wasm_twp_pure_rule twp_ctzI64 {value : UInt64} :
+  .ctzI64, .i64 value :: values =>
+    .i64 (UInt64.ofNat (ctz64 64 value)) :: values := Step.ctzI64
+
+wasm_twp_pure_rule twp_wrapI64 {value : UInt64} :
+  .wrapI64, .i64 value :: values =>
+    .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values := Step.wrapI64
+
+wasm_twp_pure_rule twp_extendUI32 {value : UInt32} :
+  .extendUI32, .i32 value :: values =>
+    .i64 (UInt64.ofNat value.toNat) :: values := Step.extendUI32
 
 wasm_twp_pure_rule twp_select
     {first second selected : Value} {condition : UInt32}
@@ -948,12 +1044,6 @@ theorem twp_store32
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-
-wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
-    (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
-  .geS, .i32 rhs :: .i32 lhs :: values =>
-    .i32 result :: values := Step.geS hresult
-
 theorem twp_memoryFill32
     {params localValues values : List Value}
     {destination len value : UInt32}
@@ -1168,14 +1258,6 @@ theorem twp_tryTable
         arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
   dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.tryTable)
 
-
-wasm_twp_pure_rule twp_and {lhs rhs : UInt32} :
-  .and, .i32 rhs :: .i32 lhs :: values => .i32 (lhs &&& rhs) :: values := Step.and
-
-wasm_twp_pure_rule twp_ne {lhs rhs result : UInt32}
-    (hresult : result = if lhs ≠ rhs then 1 else 0) :
-  .ne, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ne hresult
-
 theorem twp_globalGet
     {params localValues values : List Value}
     {value : Value} {code : Program} {arity : Nat}
@@ -1201,26 +1283,6 @@ theorem twp_globalGet
     simpa [globalAt?, hcanonical] using Hget)) =>
     wasm_twp_frame
       iapply_exact Htwp with Hglobal
-
-wasm_twp_pure_rule twp_scalarFloat0
-    {instruction : Instruction} {value : Value}
-    (heval : evalScalarFloat0? instruction = some value) :
-  instruction, values => value :: values := Step.scalarFloat0 heval
-
-wasm_twp_pure_rule twp_scalarFloat1
-    {instruction : Instruction} {operand value : Value}
-    (hzero : evalScalarFloat0? instruction = none)
-    (heval : evalScalarFloat1? instruction operand = some value) :
-  instruction, operand :: values => value :: values :=
-    Step.scalarFloat1 hzero heval
-
-wasm_twp_pure_rule twp_scalarFloat2
-    {instruction : Instruction} {lhs rhs value : Value}
-    (hzero : evalScalarFloat0? instruction = none)
-    (hunary : evalScalarFloat1? instruction rhs = none)
-    (heval : evalScalarFloat2? instruction lhs rhs = some value) :
-  instruction, rhs :: lhs :: values => value :: values :=
-    Step.scalarFloat2 hzero hunary heval
 
 theorem twp_f32Load
     {params localValues values : List Value}
@@ -1360,9 +1422,6 @@ theorem twp_globalSet
         0 oldValue newValue $$ [$Hσ $Hglobal] with ⟨Hσ, Hglobal⟩
     wasm_twp_frame
       iapply_exact Htwp with Hglobal
-
-wasm_twp_pure_rule twp_or {lhs rhs : UInt32} :
-  .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
 
 theorem twp_f64Load
     {params localValues values : List Value}
@@ -1601,66 +1660,13 @@ local instance (priority := high) activeTerminalIrisGSHelpers :
 variable {s : Stuckness} {E : CoPset}
 variable {Φ : Terminal → IProp (WasmHeapGF α)}
 
-wasm_twp_pure_rule twp_subI64 {lhs rhs : UInt64} :
-  .subI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs - rhs) :: values := Step.subI64
-
-wasm_twp_pure_rule twp_mulI64 {lhs rhs : UInt64} :
-  .mulI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs * rhs) :: values := Step.mulI64
-
-wasm_twp_pure_rule twp_constI64 {value : UInt64} :
-  .constI64 value, values => .i64 value :: values := Step.constI64
-
-wasm_twp_pure_rule twp_orI64 {lhs rhs : UInt64} :
-  .orI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs ||| rhs) :: values := Step.orI64
-
-wasm_twp_pure_rule twp_shlI64 {lhs rhs : UInt64} :
-  .shlI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs <<< (rhs % 64)) :: values := Step.shlI64
-
-wasm_twp_pure_rule twp_shrUI64 {lhs rhs : UInt64} :
-  .shrUI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs >>> (rhs % 64)) :: values := Step.shrUI64
-
-wasm_twp_pure_rule twp_ctzI64 {value : UInt64} :
-  .ctzI64, .i64 value :: values =>
-    .i64 (UInt64.ofNat (ctz64 64 value)) :: values := Step.ctzI64
-
-wasm_twp_pure_rule twp_wrapI64 {value : UInt64} :
-  .wrapI64, .i64 value :: values =>
-    .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values := Step.wrapI64
-
-wasm_twp_pure_rule twp_extendUI32 {value : UInt32} :
-  .extendUI32, .i32 value :: values =>
-    .i64 (UInt64.ofNat value.toNat) :: values := Step.extendUI32
-
-wasm_twp_pure_rule twp_eqI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs = rhs then 1 else 0) :
-  .eqI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.eqI64 hresult
-
-wasm_twp_pure_rule twp_neI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs ≠ rhs then 1 else 0) :
-  .neI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.neI64 hresult
-
-wasm_twp_pure_rule twp_ltUI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs < rhs then 1 else 0) :
-  .ltUI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.ltUI64 hresult
-
-wasm_twp_pure_rule twp_gtUI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs > rhs then 1 else 0) :
-  .gtUI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.gtUI64 hresult
-
 /-- Apply an explicit sequence of side-condition-free pure Wasm steps.
 Stops before any rule that needs a semantic choice, client resource, or
 non-definitional proof. -/
 syntax "wasm_twp_pures" "[" ident* "]" : tactic
 
+-- Arm-by-arm mirror of `wasm_wp_pures` in `SmallStepLifting.lean`; keep the
+-- two lists in sync when a pure rule gains a total- or partial-WP form.
 macro_rules
   | `(tactic| wasm_twp_pures []) => `(tactic| skip)
   | `(tactic| wasm_twp_pures [twp_localGet $rest:ident*]) =>

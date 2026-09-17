@@ -34,12 +34,10 @@ deriving Repr, Inhabited, DecidableEq
 /-- Start a fresh host run with `input` available and an empty output. -/
 def State.ofInput (input : List UInt8) : State := { input }
 
-/-- The number of addressable bytes in the primary linear memory. -/
-def byteCapacity (st : Store State) : Nat := st.mem.pages * 65536
-
-/-- Whether the half-open range `[pointer, pointer + length)` is in memory. -/
-def rangeInBounds (st : Store State) (pointer length : Nat) : Bool :=
-  pointer + length ≤ byteCapacity st
+-- `byteCapacity`/`rangeInBounds` depend only on `.mem`, not on this host's
+-- state, so the shared definition in `Host.lean` is re-exported here rather
+-- than redefined.
+export Store (byteCapacity rangeInBounds)
 
 def readResult (st : Store State) (args : List Value) : HostResult State :=
   match args with

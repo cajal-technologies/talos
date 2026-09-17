@@ -64,47 +64,12 @@ theorem twp_load8U
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨.running
-        ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8U (address := Value.i32 address) rfl hbound⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
-    iexact Hpt
+  wasm_twp_step (by
+      simpa [Hread] using
+        (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)) =>
+    wasm_twp_frame
+      iapply Htwp
+      iexact Hpt
 
 /-- Offset-zero form of `twp_load8U`. -/
 theorem twp_load8U_addr
