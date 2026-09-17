@@ -12,7 +12,7 @@ name = "iris"
 git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
 # Pin upstream master (total weakest preconditions from iris-lean#554 now merged).
-rev = "e7a0a43814c4f1154ca0c8049883ca56c2288b86"
+rev = "728a17140939e49af9236f7cb0d037da9ec52435"
 
 [[lean_lib]]
 name = "CodeLib"
