@@ -22,6 +22,36 @@ the stack to concrete `i64` and the atomic `wp_*` lemmas fire. -/
 
 namespace U64
 
+/-- Close a `BinChunk` goal for a `u64` operation that the compiler inlines to a
+single `i64` instruction, given the atomic lifting rule that justifies it:
+
+    theorem add_chunk : BinChunk [.addI64] ((· + ·) : UInt64 → UInt64 → UInt64) := by
+      bin_chunk_of Wasm.SmallStep.wp_addI64
+
+Every such chunk is proved the same way — introduce the contextual telescope,
+then reduce `toV` and the singleton-fragment append so the atomic rule's
+conclusion is syntactically the goal. Only the rule differs, so only the rule is
+written down.
+
+Chunks with a precondition name it with `with`, and may then feed it to the
+rule; the name is the caller's, so it is in scope in the rule term:
+
+    theorem div_chunk : BinChunk [.divUI64] (· / ·) (fun _ b => b ≠ 0) := by
+      bin_chunk_of Wasm.SmallStep.wp_divUI64 hne with hne
+
+Operations that are *not* one instruction (`shl`, `shr`, `not`) have their own
+proofs; this tactic is for the single-instruction family only. -/
+syntax "bin_chunk_of " term (" with " ident)? : tactic
+
+macro_rules
+  | `(tactic| bin_chunk_of $rule:term) =>
+      `(tactic| bin_chunk_of $rule with _hpre)
+  | `(tactic| bin_chunk_of $rule:term with $hpre:ident) =>
+      `(tactic|
+        (intro α hlc inst s E Φ params localValues rest arity remainder
+           controls calls a b vs $hpre
+         simpa only [toV_u64, List.cons_append, List.nil_append] using $rule))
+
 /-- Wasm masks `u64` shift amounts to the low 6 bits. -/
 abbrev shiftMask : UInt32 := 63
 
