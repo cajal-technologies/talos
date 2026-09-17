@@ -11,6 +11,13 @@ rev = "v4.32.2"
 [[lean_lib]]
 name = "Interpreter"
 
+# Execution-based specification testing (`Interpreter.Wasm.SpecTest`): a library
+# that problem workspaces link into their own `spec_test` executable.
+[[lean_lib]]
+name = "WasmSpecTest"
+roots = ["Interpreter.Wasm.SpecTest"]
+globs = ["Interpreter.Wasm.SpecTest.+"]
+
 [[lean_exe]]
 name = "runner"
 root = "Interpreter.Runner"
