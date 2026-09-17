@@ -1612,6 +1612,10 @@ wasm_twp_pure_rule twp_mulI64 {lhs rhs : UInt64} :
 wasm_twp_pure_rule twp_constI64 {value : UInt64} :
   .constI64 value, values => .i64 value :: values := Step.constI64
 
+wasm_twp_pure_rule twp_andI64 {lhs rhs : UInt64} :
+  .andI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs &&& rhs) :: values := Step.andI64
+
 wasm_twp_pure_rule twp_orI64 {lhs rhs : UInt64} :
   .orI64, .i64 rhs :: .i64 lhs :: values =>
     .i64 (lhs ||| rhs) :: values := Step.orI64
@@ -1661,6 +1665,25 @@ Stops before any rule that needs a semantic choice, client resource, or
 non-definitional proof. -/
 syntax "wasm_twp_pures" "[" ident* "]" : tactic
 
+/-- Apply a sequence of total-WP rules to the successive main goals.
+Unlike `wasm_twp_pures`, each entry is an arbitrary term, so callers may
+supply side conditions and explicit arguments while retaining a compact
+straight-line proof. -/
+syntax "wasm_twp_chain" "[" pmTerm,* "]" : tactic
+
+macro_rules
+  | `(tactic| wasm_twp_chain []) => `(tactic| skip)
+  | `(tactic| wasm_twp_chain [$step:pmTerm]) =>
+      `(tactic| iapply $step)
+  | `(tactic| wasm_twp_chain [$step:pmTerm, $next:pmTerm]) =>
+      `(tactic|
+        (iapply $step
+         iapply $next))
+  | `(tactic| wasm_twp_chain [$step:pmTerm, $next:pmTerm, $rest:pmTerm,*]) =>
+      `(tactic|
+        (iapply $step
+         wasm_twp_chain [$next, $rest,*]))
+
 macro_rules
   | `(tactic| wasm_twp_pures []) => `(tactic| skip)
   | `(tactic| wasm_twp_pures [twp_localGet $rest:ident*]) =>
@@ -1691,6 +1714,8 @@ macro_rules
       `(tactic| iapply twp_subI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_mulI64 $rest:ident*]) =>
       `(tactic| iapply twp_mulI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_andI64 $rest:ident*]) =>
+      `(tactic| iapply twp_andI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_orI64 $rest:ident*]) =>
       `(tactic| iapply twp_orI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_shlI64 $rest:ident*]) =>

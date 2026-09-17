@@ -1091,6 +1091,18 @@ theorem UInt32.add_ofNat_toNat_noWrap (addr : UInt32) (n : Nat)
   omega
 
 omit inst in
+/-- An offset strictly inside a fitting address range cannot wrap. -/
+theorem UInt32.add_ofNat_toNat_of_lt_of_fit (addr : UInt32)
+    (offset width : Nat) (hfit : addr.toNat + width ≤ UInt32.size)
+    (hoffset : offset < width) :
+    (addr + UInt32.ofNat offset).toNat = addr.toNat + offset := by
+  apply UInt32.add_ofNat_toNat_noWrap addr offset
+  · simp only [UInt32.size] at hfit ⊢
+    omega
+  · simp only [UInt32.size] at hfit ⊢
+    omega
+
+omit inst in
 /-- Address ladder for a 4-byte access at `addr`: given room for the whole
 word, none of `addr + 1 … addr + 3` wraps, so each `toNat` is the obvious sum.
 Stated with numerals (`addr + 1`, not `addr + UInt32.ofNat 1`) because that is
