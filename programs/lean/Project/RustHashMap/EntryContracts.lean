@@ -37,7 +37,7 @@ open scoped Wasm.SmallStep.Outcome
 /-- The largest capacity that `reserve_rehash_inner`, absolute `func 17`,
 serves without taking the capacity-overflow exit.
 
-The tightest of the four guards is the one at WAT 3679, which rejects a
+The tightest of the five guards is the one at WAT 3679, which rejects a
 total allocation above 2147483640 bytes.  The total is `9 * buckets + 8`
 and `buckets` is a power of two, so the guard needs `buckets` at most
 `2 ^ 27`, and `Table.capacityToBuckets` reaches `2 ^ 27` exactly when the
@@ -46,8 +46,9 @@ capacity is at most `bucketMaskToCapacity (2 ^ 27 - 1)`, which is
 equation as `bucketMaskToCapacity_pow27`.
 
 The guard at WAT 3094 is looser: it allows `buckets` up to `2 ^ 28`, so a
-capacity up to 234881024.  The guards at WAT 3039 and 3080 are looser
-still.
+capacity up to 234881024.  The bound at WAT 3080 is looser still.  The
+wrap checks at WAT 3039 and 3677 reject only a sum that wraps past
+`2 ^ 32`.
 
 This module is upstream of both proof groups, so both read the constant
 here. -/

@@ -40,19 +40,19 @@ directly and `twp_clzI64` names `clz64` directly.
 The map proof needs no rule for `unreachable`, because no proof steps that
 instruction.  An `unreachable` in a proved body is one of three kinds.
 
-Most stand directly after a call to a function that does not return:
+Most stand directly after a call to a function that does not return.
 `call 99`, `call 102`, `call 104` and `call 107` are the panic and abort
 paths that `rustc` emits.  The proof shows that the guard in front of the
 call is false, so control never reaches the block.
 
 Four stand after the `talos.oom` exit.  Absolute `func 59` is `call 2` and
-then `unreachable`, and absolute funcs 58, 61 and 62 each end in `call 59`
-and then `unreachable`.  That arm is live.  Import 2 traps, so the proof
+then `unreachable`.  Absolute funcs 58, 61 and 62 each hold `call 59` and
+then `unreachable`.  That arm is live.  Import 2 traps, so the proof
 ends in the `talos.oom` outcome before the `unreachable`, and the contract
 states that outcome.
 
-Two stand after the `end` of a block, with no call in front of them: WAT
-2951 in absolute `func 15` and WAT 8654 in absolute `func 24`.  The proofs
+Two stand after the `end` of a block, with no call in front of them.  One
+is in absolute `func 15` and one is in absolute `func 24`.  The proofs
 show that every branch to that label is dead.
 
 The contracts carry those obligations.  `Project.RustHashMap.Func14Proof`

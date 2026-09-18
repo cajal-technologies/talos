@@ -18,8 +18,9 @@ no callee.  The proof of the body can then use them as one step each.
 The rest of the header stage calls absolute `func 52`, the decode-error
 conversion, which is local `func49`.
 `Project.RustHashMap.DecodeErrorContracts.Func49Spec` states its contract,
-the same module names the 14 bodies below it, and
-`Func49Proof.func49_correct` proves it.
+and `Func49Proof.func49_correct` proves it.
+`Project.RustHashMap.DropErrorContracts` states the contracts of the
+thirteen bodies below it.
 -/
 
 namespace Project.RustHashMap.Decoder

@@ -6,7 +6,7 @@ import CodeLib.RustStd.HashMap.BorshBridge
 /-!
 # The tail of the `map_len` driver: the stack the callees take
 
-`Project.RustHashMap.ReadAllPhase.twp_read_phase` gives `AfterRead`, which
+`Project.RustHashMap.ReadAll.twp_read_phase` gives `AfterRead`, which
 returns only the sixteen bytes of `StackReserve` below the driver frame.
 The three functions the tail calls take much more, and each takes a
 different amount: the decoder 240 bytes, `collect_entries` 192, and
