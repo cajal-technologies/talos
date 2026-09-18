@@ -19,6 +19,9 @@ are *literally* the same everywhere live here.
 * The `wasm_alloc_*` tactics allocate memory and fixed runtime resources, and
   `wasm_install_heap_map_instances` installs the map instances. They expose
   the same local instances and hypotheses used by the adequacy proofs.
+* `wasm_unfold_stateInterp` closes out the matching `stateInterp_eq` rebuild
+  once the allocated witnesses are supplied, unfolding the same ownership
+  predicates at every call site.
 
 The parts that genuinely differ between entry points — which maps start empty
 and which start populated, whether the runtime module and host env maps get an
@@ -397,6 +400,24 @@ macro "wasm_alloc_fixed_runtime_resources " config:term : tactic =>
     (wasm_alloc_runtime_instances $config
      wasm_alloc_exception_map
      wasm_alloc_tag_table $config))
+
+/-- Finish reconstructing `stateInterp` once the seven `iexists` witnesses for
+its component maps are on the goal: unfold the record-typed ownership
+predicates `stateInterp_eq`'s right-hand side is stated through, then
+normalise the resulting big separating conjunctions. Call sites differ in
+which maps they exhibited empty (closed by `bigSepM_empty`/`emp_sep`) versus
+as a singleton (closed by `bigSepM_singleton`), so the simp lemma set is an
+argument; the witnesses themselves and the `iframe`/`ipureexact` (or
+`iframe_pureexact`) that close the goal vary too much between call sites to
+generalise, and stay written out there. -/
+syntax "wasm_unfold_stateInterp" Lean.Parser.Tactic.simpArgs : tactic
+
+macro_rules
+  | `(tactic| wasm_unfold_stateInterp [$lemmas,*]) =>
+      `(tactic|
+        (unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth
+             currentInstanceAuthN
+         simp only [$lemmas,*]))
 
 set_option hygiene false in
 /-- Build the auxiliary machine interpretation from freshly allocated state. -/

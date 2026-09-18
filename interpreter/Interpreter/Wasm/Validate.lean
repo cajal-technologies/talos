@@ -83,21 +83,52 @@ def Module.dataSegmentCount (m : Module) : Nat :=
   | some memory => memory.data.length
   | none => 0
 
-def Instruction.isScalarMemoryAccess : Instruction → Bool
-  | .load8U _ | .load8S _ | .load16U _ | .load16S _ | .load32 _
-  | .store8 _ | .store16 _ | .store32 _
-  | .load64 _ | .store64 _
+/-- Scalar load/store signature once the selected memory's address width is
+known. The operand list is top-of-stack first, matching `straightSig`. -/
+def Instruction.scalarMemorySig
+    (addressType : ValueType) : Instruction →
+      Option (List ValueType × List ValueType)
+  | .load8U _ | .load8S _ | .load16U _ | .load16S _ | .load32 _ =>
+      some ([addressType], [.i32])
+  | .store8 _ | .store16 _ | .store32 _ =>
+      some ([.i32, addressType], [])
+  | .load64 _
   | .load8UI64 _ | .load8SI64 _ | .load16UI64 _ | .load16SI64 _
-  | .load32UI64 _ | .load32SI64 _
-  | .store8I64 _ | .store16I64 _ | .store32I64 _
-  | .f32Load _ | .f64Load _ | .f32Store _ | .f64Store _ => true
-  | _ => false
+  | .load32UI64 _ | .load32SI64 _ =>
+      some ([addressType], [.i64])
+  | .store64 _ | .store8I64 _ | .store16I64 _ | .store32I64 _ =>
+      some ([.i64, addressType], [])
+  | .f32Load _ => some ([addressType], [.f32])
+  | .f64Load _ => some ([addressType], [.f64])
+  | .f32Store _ => some ([.f32, addressType], [])
+  | .f64Store _ => some ([.f64, addressType], [])
+  | _ => none
 
-def Instruction.isSimdMemoryAccess : Instruction → Bool
-  | .v128Load _ | .v128Store _
-  | .v128LoadExt _ _ _ | .v128LoadSplat _ _ | .v128LoadZero _ _
-  | .v128LoadLane _ _ _ | .v128StoreLane _ _ _ => true
-  | _ => false
+/-- SIMD load/store signature once the selected memory's address width is
+known. The operand list is top-of-stack first, matching `straightSig`. -/
+def Instruction.simdMemorySig
+    (addressType : ValueType) : Instruction →
+      Option (List ValueType × List ValueType)
+  | .v128Load _ | .v128LoadExt _ _ _
+  | .v128LoadSplat _ _ | .v128LoadZero _ _ =>
+      some ([addressType], [.v128])
+  | .v128Store _ => some ([.v128, addressType], [])
+  | .v128LoadLane _ _ _ =>
+      some ([.v128, addressType], [.v128])
+  | .v128StoreLane _ _ _ =>
+      some ([.v128, addressType], [])
+  | _ => none
+
+/-- Whether `i` is a scalar (non-SIMD) memory-accessing instruction. Defined
+from `scalarMemorySig` (the address type is irrelevant to whether a sig
+exists, only to its shape, so any witness works) so the two cannot drift. -/
+def Instruction.isScalarMemoryAccess (i : Instruction) : Bool :=
+  (i.scalarMemorySig .i32).isSome
+
+/-- Whether `i` is a SIMD memory-accessing instruction. Defined from
+`simdMemorySig`, for the same reason as `isScalarMemoryAccess`. -/
+def Instruction.isSimdMemoryAccess (i : Instruction) : Bool :=
+  (i.simdMemorySig .i32).isSome
 
 def Instruction.checkBulkMemoryRefs
     (m : Module) : Instruction → Except String Unit
@@ -255,7 +286,7 @@ theorem Instruction.checkBulkMemoryRefs_scalar_ok
     (h : operation.checkBulkMemoryRefs m = .ok ()) :
     (m.memoryDecl? 0).isSome = true := by
   cases operation <;>
-    simp_all [Instruction.isScalarMemoryAccess,
+    simp_all [Instruction.isScalarMemoryAccess, Instruction.scalarMemorySig,
       Instruction.checkBulkMemoryRefs, Option.isSome_iff_ne_none,
       Option.isNone_iff_eq_none]
 
@@ -266,7 +297,7 @@ theorem Instruction.checkBulkMemoryRefs_indexedScalar_ok
       .ok ()) :
     (m.memoryDecl? memoryIndex).isSome = true := by
   cases operation <;>
-    simp_all [Instruction.isScalarMemoryAccess,
+    simp_all [Instruction.isScalarMemoryAccess, Instruction.scalarMemorySig,
       Instruction.checkBulkMemoryRefs, Option.isSome_iff_ne_none,
       Option.isNone_iff_eq_none]
 
@@ -906,45 +937,11 @@ def Value.toValueType : Value → ValueType
 def GlobalDecl.valueType (global : GlobalDecl) : ValueType :=
   global.declaredType.getD global.init.toValueType
 
-/-- Scalar load/store signature once the selected memory's address width is
-known. The operand list is top-of-stack first, matching `straightSig`. -/
-def Instruction.scalarMemorySig
-    (addressType : ValueType) : Instruction →
-      Option (List ValueType × List ValueType)
-  | .load8U _ | .load8S _ | .load16U _ | .load16S _ | .load32 _ =>
-      some ([addressType], [.i32])
-  | .store8 _ | .store16 _ | .store32 _ =>
-      some ([.i32, addressType], [])
-  | .load64 _
-  | .load8UI64 _ | .load8SI64 _ | .load16UI64 _ | .load16SI64 _
-  | .load32UI64 _ | .load32SI64 _ =>
-      some ([addressType], [.i64])
-  | .store64 _ | .store8I64 _ | .store16I64 _ | .store32I64 _ =>
-      some ([.i64, addressType], [])
-  | .f32Load _ => some ([addressType], [.f32])
-  | .f64Load _ => some ([addressType], [.f64])
-  | .f32Store _ => some ([.f32, addressType], [])
-  | .f64Store _ => some ([.f64, addressType], [])
-  | _ => none
-
 def Simd.Shape.scalarType : Simd.Shape → ValueType
   | .i8x16 | .i16x8 | .i32x4 => .i32
   | .i64x2 => .i64
   | .f32x4 => .f32
   | .f64x2 => .f64
-
-def Instruction.simdMemorySig
-    (addressType : ValueType) : Instruction →
-      Option (List ValueType × List ValueType)
-  | .v128Load _ | .v128LoadExt _ _ _
-  | .v128LoadSplat _ _ | .v128LoadZero _ _ =>
-      some ([addressType], [.v128])
-  | .v128Store _ => some ([.v128, addressType], [])
-  | .v128LoadLane _ _ _ =>
-      some ([.v128, addressType], [.v128])
-  | .v128StoreLane _ _ _ =>
-      some ([.v128, addressType], [])
-  | _ => none
 
 /-- The `(pops, pushes)` operand-stack signature of a straight-line
 instruction (top of stack first in each list), or `none` to bail out
@@ -1169,6 +1166,41 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
       (operation.scalarMemorySig addressType).orElse fun _ =>
         operation.simdMemorySig addressType
 
+/-- Shared entry step for `block`/`loop`/`try_table`: resolve the declared
+parameter/result types and pop (or, if the source retained them, replay)
+the operand stack down to the construct's initial inner state. The three
+constructs differ only in which arity/types their own label refers to when
+checking the body — that stays with each caller. -/
+def CheckState.enterBlock
+    (m : Module) (state : CheckState)
+    (paramArity resultArity : Nat) (paramTypes resultTypes : List ValueType) :
+    Except String
+      (Option (List ValueType) × Option (List ValueType) ×
+        CheckState × CheckState) := do
+  let parameterTypes? := declaredTypes? paramArity paramTypes
+  let resultTypes? := declaredTypes? resultArity resultTypes
+  let (parameters, outer) ← match parameterTypes? with
+    | some types => do
+        let outer ← state.applySig m (types.reverse, [])
+        pure (types.reverse.map some, outer)
+    | none => state.popAnyN paramArity
+  return (parameterTypes?, resultTypes?,
+    { stack := parameters, unreachable := false }, outer)
+
+/-- Shared exit step for `block`/`loop`/`try_table`: require the body's
+final stack to match its declared result arity/types, then splice the
+result back under the state `enterBlock` captured on entry. -/
+def CheckState.exitBlock
+    (m : Module) (state outer : CheckState)
+    (resultArity : Nat) (resultTypes? : Option (List ValueType))
+    (bodyState : CheckState) : Except String CheckState := do
+  let fallthrough ← match resultTypes? with
+    | some types => bodyState.requireTypes m types
+    | none => bodyState.requireArity resultArity
+  return { stack := fallthrough ++ outer.stack
+           unreachable := state.unreachable
+           transfers := lowerTransfers bodyState.transfers ++ state.transfers }
+
 /-- Recursively check a program. `none` means an unsupported instruction was
 encountered, so callers conservatively accept the whole function. -/
 def Program.checkTypes
@@ -1242,13 +1274,8 @@ def Program.checkTypes
           pure (some fallthrough)
       | .tryTable paramArity resultArity catches body
           paramTypes resultTypes => do
-          let parameterTypes? := declaredTypes? paramArity paramTypes
-          let resultTypes? := declaredTypes? resultArity resultTypes
-          let (parameters, outer) ← match parameterTypes? with
-            | some types => do
-                let outer ← state.applySig m (types.reverse, [])
-                pure (types.reverse.map some, outer)
-            | none => state.popAnyN paramArity
+          let (_, resultTypes?, inner, outer) ←
+            state.enterBlock m paramArity resultArity paramTypes resultTypes
           for clause in catches do
             let (label, caughtTypes) ← match clause with
               | .catch tagIndex label =>
@@ -1269,62 +1296,33 @@ def Program.checkTypes
                 if !resultTypesCompat m caughtTypes labelTypes.reverse then
                   throw "type mismatch"
             | none => pure ()
-          let inner : CheckState :=
-            { stack := parameters, unreachable := false }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) body inner
             | return none
-          let fallthrough ← match resultTypes? with
-            | some types => bodyState.requireTypes m types
-            | none => bodyState.requireArity resultArity
-          pure (some
-            { stack := fallthrough ++ outer.stack
-              unreachable := state.unreachable
-              transfers :=
-                lowerTransfers bodyState.transfers ++ state.transfers })
+          let finalState ←
+            state.exitBlock m outer resultArity resultTypes? bodyState
+          pure (some finalState)
       | .block paramArity resultArity body paramTypes resultTypes => do
-          let parameterTypes? := declaredTypes? paramArity paramTypes
-          let resultTypes? := declaredTypes? resultArity resultTypes
-          let (parameters, outer) ← match parameterTypes? with
-            | some types => do
-                let outer ← state.applySig m (types.reverse, [])
-                pure (types.reverse.map some, outer)
-            | none => state.popAnyN paramArity
-          let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+          let (_, resultTypes?, inner, outer) ←
+            state.enterBlock m paramArity resultArity paramTypes resultTypes
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) body inner
             | return none
-          let fallthrough ← match resultTypes? with
-            | some types => bodyState.requireTypes m types
-            | none => bodyState.requireArity resultArity
-          pure (some
-            { stack := fallthrough ++ outer.stack
-              unreachable := state.unreachable
-              transfers := lowerTransfers bodyState.transfers ++ state.transfers })
+          let finalState ←
+            state.exitBlock m outer resultArity resultTypes? bodyState
+          pure (some finalState)
       | .loop paramArity resultArity body paramTypes resultTypes => do
-          let parameterTypes? := declaredTypes? paramArity paramTypes
-          let resultTypes? := declaredTypes? resultArity resultTypes
-          let (parameters, outer) ← match parameterTypes? with
-            | some types => do
-                let outer ← state.applySig m (types.reverse, [])
-                pure (types.reverse.map some, outer)
-            | none => state.popAnyN paramArity
-          let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+          let (parameterTypes?, resultTypes?, inner, outer) ←
+            state.enterBlock m paramArity resultArity paramTypes resultTypes
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((paramArity, parameterTypes?) :: labels) body inner
             | return none
-          let fallthrough ← match resultTypes? with
-            | some types => bodyState.requireTypes m types
-            | none => bodyState.requireArity resultArity
-          pure (some
-            { stack := fallthrough ++ outer.stack
-              unreachable := state.unreachable
-              transfers := lowerTransfers bodyState.transfers ++ state.transfers })
+          let finalState ←
+            state.exitBlock m outer resultArity resultTypes? bodyState
+          pure (some finalState)
       | .iff paramArity resultArity thenBody elseBody
           paramTypes resultTypes => do
           let afterCondition ← state.popExpected m .i32
@@ -1504,6 +1502,17 @@ def Module.checkConstProgram
         if (m.funcSig? functionIndex).isNone then throw "unknown function"
     | _ => pure ()
 
+/-- A segment's declared offset is `addressType`-compatible: shared by data
+and element segments (against their memory/table respectively). -/
+def Module.checkSegmentOffset (m : Module)
+    (offsetType : Option ValueType) (offsetExpr : Program)
+    (offsetExprPresent : Bool) (addressType : ValueType) :
+    Except String Unit := do
+  if let some sourceType := offsetType then
+    if !m.vtCompat sourceType addressType then throw "type mismatch"
+  if offsetExprPresent then
+    m.checkConstProgram offsetExpr addressType
+
 /-- Run the partial structural validator. `throw` on the first violation. -/
 def Module.validate (m : Module) : Except String Unit := do
   m.checkInterface
@@ -1518,13 +1527,8 @@ def Module.validate (m : Module) : Except String Unit := do
         | some _ =>
             let some selectedMemory := m.memoryDecl? segment.memIdx
               | throw "unknown memory"
-            let addressType := selectedMemory.addressType
-            match segment.offsetType with
-            | some sourceType =>
-                if !m.vtCompat sourceType addressType then throw "type mismatch"
-            | none => pure ()
-            if segment.offsetExprPresent then
-              m.checkConstProgram segment.offsetExpr addressType
+            m.checkSegmentOffset segment.offsetType segment.offsetExpr
+              segment.offsetExprPresent selectedMemory.addressType
   for segment in m.elements do
     segment.checkTableRef m
     for functionIndex in segment.funcs do
@@ -1543,13 +1547,8 @@ def Module.validate (m : Module) : Except String Unit := do
         let some table := m.tableDecl? tableIndex
           | throw "unknown table"
         if !m.vtCompat segmentType table.elemType then throw "type mismatch"
-        let addressType := table.addressType
-        match segment.offsetType with
-        | some sourceType =>
-            if !m.vtCompat sourceType addressType then throw "type mismatch"
-        | none => pure ()
-        if segment.offsetExprPresent then
-          m.checkConstProgram segment.offsetExpr addressType
+        m.checkSegmentOffset segment.offsetType segment.offsetExpr
+          segment.offsetExprPresent table.addressType
   let nTypes := m.gcTypes.length
   -- Hand-built globals without a retained source initializer must agree with
   -- their literal runtime value. Decoded globals are checked from

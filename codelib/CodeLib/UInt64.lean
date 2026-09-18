@@ -27,10 +27,9 @@ Internal layering:
 
 namespace Wasm
 
-/-- The reverse `UInt64` inequality follows when strict comparison fails. -/
-theorem UInt64.le_of_not_lt {a b : UInt64} (h : ¬a < b) : b ≤ a := by
-  change ¬a.toNat < b.toNat at h
-  exact Nat.le_of_not_lt h
+/-- The reverse `UInt64` inequality follows when strict comparison fails.
+Exactly core's `UInt64.not_lt : ¬a < b ↔ b ≤ a`. -/
+theorem UInt64.le_of_not_lt {a b : UInt64} (h : ¬a < b) : b ≤ a := UInt64.not_lt.mp h
 
 /-! ## Small `UInt64 ↔ Nat` helpers (bitwise) -/
 

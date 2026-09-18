@@ -29,35 +29,14 @@ theorem wp_block_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
           st s env) :
     wp m (.block ps rs body :: rest) Q st s env := by
   refine wp_of_body_dispatch h ?_ ?_ ?_ ?_ ?_
-  · -- Forwarded continuations: the block is transparent to them.
-    intro f cont hcont hbody
-    cases cont <;>
-      first
-        | exact (hcont : False).elim
-        | rw [exec_block_cons, hbody]
-  · intro cont hcont hQ
-    cases cont <;>
-      first
-        | exact (hcont : False).elim
-        | exact hQ
+  -- Forwarded continuations: the block is transparent to them.
+  wp_dispatch_fwd exec_block_cons
   · -- Fall-through: carry on with `rest` on the trimmed stack.
-    intro N st' s' hQ hstable
-    refine wp_of_eventually_eq (N := N + 1) ?_ hQ
-    intro fuel hfuel
-    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    rw [exec_block_cons, hstable f (by omega)]
+    wp_dispatch_exit exec_block_cons
   · -- `br 0` exits the block, landing exactly where fall-through does.
-    intro N st' s' hQ hstable
-    refine wp_of_eventually_eq (N := N + 1) ?_ hQ
-    intro fuel hfuel
-    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    rw [exec_block_cons, hstable f (by omega)]
+    wp_dispatch_exit exec_block_cons
   · -- An outer break sheds one level and propagates.
-    intro N k st' s' hQ hstable
-    refine wp_of_eventually_const (N := N + 1) (cont := .Break k st' s') ?_ hQ
-    intro fuel hfuel
-    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    rw [exec_block_cons, hstable f (by omega)]
+    wp_dispatch_break exec_block_cons
 
 /-- `iff` rule: dispatch on the top-of-stack i32 condition, then reason like
     a block on the chosen branch. Stack precondition: `.i32 c :: vs` on top. -/
@@ -77,34 +56,13 @@ theorem wp_iff_cons {ps rs : Nat} {thn els rest : Program} {Q : Assertion α}
               st { s with values := vs } env) :
     wp m (.iff ps rs thn els :: rest) Q st s env := by
   refine wp_of_body_dispatch hBody ?_ ?_ ?_ ?_ ?_
-  · -- Forwarded continuations: the chosen branch's result passes through.
-    intro f cont hcont hbody
-    cases cont <;>
-      first
-        | exact (hcont : False).elim
-        | rw [exec_iff_cons hStack, hbody]
-  · intro cont hcont hQ
-    cases cont <;>
-      first
-        | exact (hcont : False).elim
-        | exact hQ
+  -- Forwarded continuations: the chosen branch's result passes through.
+  wp_dispatch_fwd exec_iff_cons hStack
   · -- Fall-through: carry on with `rest` on the trimmed stack.
-    intro N st' s' hQ hstable
-    refine wp_of_eventually_eq (N := N + 1) ?_ hQ
-    intro fuel hfuel
-    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    rw [exec_iff_cons hStack, hstable f (by omega)]
+    wp_dispatch_exit exec_iff_cons hStack
   · -- `br 0` exits the `if`, landing exactly where fall-through does.
-    intro N st' s' hQ hstable
-    refine wp_of_eventually_eq (N := N + 1) ?_ hQ
-    intro fuel hfuel
-    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    rw [exec_iff_cons hStack, hstable f (by omega)]
+    wp_dispatch_exit exec_iff_cons hStack
   · -- An outer break sheds one level and propagates.
-    intro N k st' s' hQ hstable
-    refine wp_of_eventually_const (N := N + 1) (cont := .Break k st' s') ?_ hQ
-    intro fuel hfuel
-    obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-    rw [exec_iff_cons hStack, hstable f (by omega)]
+    wp_dispatch_break exec_iff_cons hStack
 
 end Wasm

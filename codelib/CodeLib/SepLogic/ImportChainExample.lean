@@ -5,14 +5,6 @@ namespace Wasm.SmallStep
 open Iris Iris.BI Iris.ProgramLogic OFE COFE Iris.Algebra
   Language.Notation Std Wasm.SepLogic
 
-@[simp] private theorem RuntimeEnv.currentModule_mk2 {α : Type} (inst1 inst2 : ModuleInstance α) :
-    ({ instances := #[inst1, inst2], entry := ⟨0⟩ } : RuntimeEnv α).currentModule = inst1.module := by
-  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-
-@[simp] private theorem RuntimeEnv.currentHost_mk2 {α : Type} (inst1 inst2 : ModuleInstance α) :
-    ({ instances := #[inst1, inst2], entry := ⟨0⟩ } : RuntimeEnv α).currentHost = inst1.host := by
-  simp [RuntimeEnv.currentHost, RuntimeEnv.currentInstance]
-
 -- host fn: appends i32 argument to the host list
 def logHost : HostFn (List UInt32) where
   params  := [.i32]
@@ -120,8 +112,8 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
   apply wasm_smallStep_instance_host_state_partiallyMeets (α := List UInt32)
   · simp only [importChainConfig]; decide
   · intro gs
-    simp only [importChainConfig, RuntimeEnv.currentModule_mk2, RuntimeEnv.currentHost_mk2,
-               chainInstA_module, chainInstA_host]
+    simp only [importChainConfig, RuntimeEnv.currentModule_mk2_fst,
+               RuntimeEnv.currentHost_mk2_fst, chainInstA_module, chainInstA_host]
     iintro ⟨Hruntime, Henv, Hhost, HruntimeInstances⟩
     simp only [runtimeModuleOwn]
     icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩

@@ -149,6 +149,34 @@ invariant, and every `Step` preserves `instances` while only switching
     ({ instances := #[inst], entry := ⟨0⟩ } : RuntimeEnv α).currentHost = inst.host := by
   simp [RuntimeEnv.currentHost, RuntimeEnv.currentInstance]
 
+/-- Two-instance analogue of `currentModule_mk1`: the first instance, selected
+by `entry = ⟨0⟩`. -/
+@[simp] theorem RuntimeEnv.currentModule_mk2_fst (inst1 inst2 : ModuleInstance α) :
+    ({ instances := #[inst1, inst2], entry := ⟨0⟩ } : RuntimeEnv α).currentModule =
+      inst1.module := by
+  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+
+/-- Two-instance analogue of `currentHost_mk1`: the first instance, selected
+by `entry = ⟨0⟩`. -/
+@[simp] theorem RuntimeEnv.currentHost_mk2_fst (inst1 inst2 : ModuleInstance α) :
+    ({ instances := #[inst1, inst2], entry := ⟨0⟩ } : RuntimeEnv α).currentHost =
+      inst1.host := by
+  simp [RuntimeEnv.currentHost, RuntimeEnv.currentInstance]
+
+/-- Two-instance analogue of `currentModule_mk1`: the second instance,
+selected by `entry = ⟨1⟩`. -/
+@[simp] theorem RuntimeEnv.currentModule_mk2_snd (inst1 inst2 : ModuleInstance α) :
+    ({ instances := #[inst1, inst2], entry := ⟨1⟩ } : RuntimeEnv α).currentModule =
+      inst2.module := by
+  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
+
+/-- Two-instance analogue of `currentHost_mk1`: the second instance, selected
+by `entry = ⟨1⟩`. -/
+@[simp] theorem RuntimeEnv.currentHost_mk2_snd (inst1 inst2 : ModuleInstance α) :
+    ({ instances := #[inst1, inst2], entry := ⟨1⟩ } : RuntimeEnv α).currentHost =
+      inst2.host := by
+  simp [RuntimeEnv.currentHost, RuntimeEnv.currentInstance]
+
 /-- Reserved funcref address range for function instances owned by another
 module. Local Wasm function indices are far below this boundary. A funcref
 `foreignFunctionBase + id` names the script-wide callable
@@ -6636,16 +6664,24 @@ by
       tag arguments hthrow hhandler
     cases hh : handler.kind <;>
       simp_all [stepChecked?]
-  case unwindNestedException =>
+  case unwindNestedException | catchException | unwindExceptionCall |
+      uncaughtException | throwI | throwRef | vSplat | vReplaceLane |
+      v128LoadTrap | v128Load | v128StoreTrap | v128Store | v128LoadExtTrap |
+      v128LoadExt | v128LoadSplatTrap | v128LoadSplat | v128LoadZeroTrap |
+      v128LoadZero | v128LoadLaneTrap | v128LoadLane | v128StoreLaneTrap |
+      v128StoreLane | brOnNullBranch | brOnNullFallthrough |
+      brOnNonNullFallthrough | brOnNonNullBranch | gcFallthrough | gcTrap |
+      gcBranch | memoryCopyBetweenTrap | memoryCopyBetween | callHostReturn |
+      callHostTrap | callHostThrow | returnCallHostReturn | returnCallHostTrap |
+      returnCallHostThrow | callRefHostReturn | callRefHostTrap |
+      callRefHostThrow | returnCallRefHostReturn | returnCallRefHostTrap |
+      returnCallRefHostThrow | returnCallIndirectHostTypeMismatch |
+      returnCallIndirectHostReturn | returnCallIndirectHostTrap |
+      returnCallIndirectHostThrow | callCrossInstance =>
     simp_all [stepChecked?]
-  case catchException =>
-    simp_all [stepChecked?]
-  case unwindExceptionCall => simp_all [stepChecked?]
-  case uncaughtException => simp_all [stepChecked?]
-  case tryTable => simp [stepChecked?]
-  case throwI => simp_all [stepChecked?]
-  case throwRefNull => simp [stepChecked?]
-  case throwRef => simp_all [stepChecked?]
+  case tryTable | throwRefNull | vConst | vUnOp | vBinOp | vBitselect |
+      vTestOp | vShiftOp | vExtractLane | vShuffle | vFma | vDotAdd =>
+    simp [stepChecked?]
   case memOp =>
     rename_i inner store memoryIndex indexedStore locals arity remainder
       controls calls innerKind stepped rest hinner henter hstep
@@ -6676,84 +6712,19 @@ by
       code arity remainder controls calls store hresult =>
     cases hi : instruction <;> cases ho : operand <;>
       simp_all [stepChecked?, evalScalarTrunc?]
-  case vConst => simp [stepChecked?]
-  case vUnOp => simp [stepChecked?]
-  case vBinOp => simp [stepChecked?]
-  case vBitselect => simp [stepChecked?]
-  case vTestOp => simp [stepChecked?]
-  case vShiftOp => simp [stepChecked?]
-  case vSplat => simp_all [stepChecked?]
-  case vExtractLane => simp [stepChecked?]
-  case vReplaceLane => simp_all [stepChecked?]
-  case vShuffle => simp [stepChecked?]
-  case vFma => simp [stepChecked?]
-  case vDotAdd => simp [stepChecked?]
-  case v128LoadTrap => simp_all [stepChecked?]
-  case v128Load => simp_all [stepChecked?]
-  case v128StoreTrap => simp_all [stepChecked?]
-  case v128Store => simp_all [stepChecked?]
-  case v128LoadExtTrap => simp_all [stepChecked?]
-  case v128LoadExt => simp_all [stepChecked?]
-  case v128LoadSplatTrap => simp_all [stepChecked?]
-  case v128LoadSplat => simp_all [stepChecked?]
-  case v128LoadZeroTrap => simp_all [stepChecked?]
-  case v128LoadZero => simp_all [stepChecked?]
-  case v128LoadLaneTrap => simp_all [stepChecked?]
-  case v128LoadLane => simp_all [stepChecked?]
-  case v128StoreLaneTrap => simp_all [stepChecked?]
-  case v128StoreLane => simp_all [stepChecked?]
-  case brOnNullBranch => simp_all [stepChecked?]
-  case brOnNullFallthrough => simp_all [stepChecked?]
-  case brOnNonNullFallthrough => simp_all [stepChecked?]
-  case brOnNonNullBranch => simp_all [stepChecked?]
-  case gcFallthrough => simp_all [stepChecked?]
-  case gcTrap => simp_all [stepChecked?]
-  case gcBranch => simp_all [stepChecked?]
-  case memoryCopyBetweenTrap => simp_all [stepChecked?]
-  case memoryCopyBetween => simp_all [stepChecked?]
-  case callHostReturn => simp_all [stepChecked?]
-  case callHostTrap => simp_all [stepChecked?]
-  case callHostThrow => simp_all [stepChecked?]
-  case returnCallHostReturn => simp_all [stepChecked?]
-  case returnCallHostTrap => simp_all [stepChecked?]
-  case returnCallHostThrow => simp_all [stepChecked?]
-  case callRefHostReturn => simp_all [stepChecked?]
-  case callRefHostTrap => simp_all [stepChecked?]
-  case callRefHostThrow => simp_all [stepChecked?]
-  case returnCallRefHostReturn => simp_all [stepChecked?]
-  case returnCallRefHostTrap => simp_all [stepChecked?]
-  case returnCallRefHostThrow => simp_all [stepChecked?]
-  case callIndirectHostTypeMismatch =>
+  case callIndirectHostTypeMismatch | callIndirectHostReturn |
+      callIndirectHostTrap | callIndirectHostThrow |
+      callIndirectCrossInstanceTypeMismatch | callIndirectCrossInstance =>
     simp_all [stepChecked?, isForeignFunctionIndex] <;> omega
-  case callIndirectHostReturn =>
-    simp_all [stepChecked?, isForeignFunctionIndex] <;> omega
-  case callIndirectHostTrap =>
-    simp_all [stepChecked?, isForeignFunctionIndex] <;> omega
-  case callIndirectHostThrow =>
-    simp_all [stepChecked?, isForeignFunctionIndex] <;> omega
-  case callIndirectForeignTypeMismatch =>
+  case callIndirectForeignTypeMismatch | callIndirectForeignReturn |
+      callIndirectForeignTrap | callIndirectForeignThrow =>
     simp_all [stepChecked?, Bool.and_eq_true]
-  case callIndirectForeignReturn =>
-    simp_all [stepChecked?, Bool.and_eq_true]
-  case callIndirectForeignTrap =>
-    simp_all [stepChecked?, Bool.and_eq_true]
-  case callIndirectForeignThrow =>
-    simp_all [stepChecked?, Bool.and_eq_true]
-  case callIndirectCrossInstanceTypeMismatch =>
-    simp_all [stepChecked?, isForeignFunctionIndex] <;> omega
-  case callIndirectCrossInstance =>
-    simp_all [stepChecked?, isForeignFunctionIndex] <;> omega
   case callIndirectTypeMismatch hselector htable helement himports
       hnotforeign hfn hsignature hexpected htype =>
     simp_all [stepChecked?]
   case callIndirect hselector htable helement himports
       hnotforeign hfn hsignature hexpected htype =>
     simp_all [stepChecked?]
-  case returnCallIndirectHostTypeMismatch => simp_all [stepChecked?]
-  case returnCallIndirectHostReturn => simp_all [stepChecked?]
-  case returnCallIndirectHostTrap => simp_all [stepChecked?]
-  case returnCallIndirectHostThrow => simp_all [stepChecked?]
-  case callCrossInstance => simp_all [stepChecked?]
   case returnFromCallCrossInstanceFallthrough hdiff =>
     simp [stepChecked?, if_neg hdiff]
   case returnFromCallCrossInstanceExplicit hdiff =>
@@ -6847,54 +6818,16 @@ theorem memory_step_globals_preserved {config config' : Config α} {kind}
     config'.store.wasm.globals = config.store.wasm.globals := by
   cases h <;> simp_all [setMemory, setDataSegments]
 
-/-- Growing memory changes only the primary memory component. In particular,
-resource arrays and host state retain their stable identities. -/
-theorem memory_grow_store_frame {config config' : Config α}
-    (h : Step config (.instruction .memoryGrow) config') :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
-  cases h <;> simp_all [setMemory]
-
-theorem memory_fill_store_frame {config config' : Config α}
-    (h : Step config (.instruction .memoryFill) config') :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
-  cases h <;> simp_all [setMemory]
-
-theorem memory_copy_store_frame {config config' : Config α}
-    (h : Step config (.instruction .memoryCopy) config') :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
-  cases h <;> simp_all [setMemory]
-
-theorem memory_init_store_frame {config config' : Config α} {segmentIndex}
-    (h : Step config (.instruction (.memoryInit segmentIndex)) config') :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
+/-- Memory instructions may replace memory contents but frame every unrelated
+runtime resource: `config'` is `config` with at most `mem` patched. -/
+theorem memory_step_store_frame {config config' : Config α} {kind}
+    (h : Step config kind config')
+    (hk : kind = .instruction .memoryGrow ∨
+      kind = .instruction .memoryFill ∨
+      kind = .instruction .memoryCopy ∨
+      ∃ segmentIndex, kind = .instruction (.memoryInit segmentIndex)) :
+    { config'.store.wasm with mem := config.store.wasm.mem } =
+      config.store.wasm := by
   cases h <;> simp_all [setMemory]
 
 theorem data_drop_memory_preserved {config config' : Config α} {segmentIndex}
@@ -6912,7 +6845,7 @@ theorem data_drop_segments_length_preserved
   cases h <;> simp_all [setDataSegments]
 
 /-- Table instructions may replace table contents but frame every unrelated
-runtime resource, including linear memories and host state. -/
+runtime resource: `config'` is `config` with at most `tables` patched. -/
 theorem table_step_store_frame {config config' : Config α} {kind}
     (h : Step config kind config')
     (hk : (∃ index, kind = .instruction (.tableGet index)) ∨
@@ -6924,27 +6857,17 @@ theorem table_step_store_frame {config config' : Config α} {kind}
         kind = .instruction (.tableCopy destination source)) ∨
       ∃ tableIndex elementIndex,
         kind = .instruction (.tableInit tableIndex elementIndex)) :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.mem = config.store.wasm.mem ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
+    { config'.store.wasm with tables := config.store.wasm.tables } =
+      config.store.wasm := by
   cases h <;> simp_all [setTables]
 
-/-- Dropping an element segment changes only the segment-status array. -/
+/-- Dropping an element segment changes only the segment-status array:
+`config'` is `config` with at most `elementSegments` patched. -/
 theorem elem_drop_store_frame {config config' : Config α} {elementIndex}
     (h : Step config (.instruction (.elemDrop elementIndex)) config') :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.mem = config.store.wasm.mem ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
+    { config'.store.wasm with
+        elementSegments := config.store.wasm.elementSegments } =
+      config.store.wasm := by
   cases h <;> simp_all [setElementSegments]
 
 /-- Finite traces of the authoritative one-step relation. -/

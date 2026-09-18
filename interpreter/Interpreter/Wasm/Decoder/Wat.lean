@@ -2335,32 +2335,40 @@ private def collectFuncNames (fields : List Sexpr)
     | _ => pure ()
   return idOf
 
-private def collectGlobalNames (fields : List Sexpr)
-    : Except Err (NameMap) := do
+/-- Collect `$name → index` for fields keyed by `keyword`, imports first (in
+import order, occupying the low indices) then declarations, both in source
+order. Shared by `collectGlobalNames`, `collectTableNames`, `collectMemNames`,
+`collectTagNames`. -/
+private def collectNamesFor (keyword : String) (fields : List Sexpr)
+    : NameMap := Id.run do
   let mut idOf : NameMap := {}
   let mut i := 0
-  -- Imported globals occupy the low indices, in import order.
   for f in fields do
     match f with
-    | .list [.atom "import", .atom _, .atom _, .list (.atom "global" :: body)] =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then
-          idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
+    | .list [.atom "import", .atom _, .atom _, .list (.atom kw :: body)] =>
+      if kw == keyword then
+        match body with
+        | .atom a :: _ =>
+          if startsWith a "$" then
+            idOf := idOf.insert (a.drop 1).toString i
+        | _ => pure ()
+        i := i + 1
     | _ => pure ()
   for f in fields do
     match f with
-    | .list (.atom "global" :: body) =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then
-          idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
+    | .list (.atom kw :: body) =>
+      if kw == keyword then
+        match body with
+        | .atom a :: _ =>
+          if startsWith a "$" then
+            idOf := idOf.insert (a.drop 1).toString i
+        | _ => pure ()
+        i := i + 1
     | _ => pure ()
   return idOf
+
+private def collectGlobalNames (fields : List Sexpr) : NameMap :=
+  collectNamesFor "global" fields
 
 private def decodeWatBytes : List Char → Except Err (List UInt8)
   | []                   => .ok []
@@ -2619,59 +2627,13 @@ private def parseDataSegment (ctx : Ctx)
 
 /-- Collect names declared by `(table $name ...)` forms in source order.
 Same pattern as `collectFuncNames` / `collectGlobalNames`. -/
-private def collectTableNames (fields : List Sexpr) : NameMap := Id.run do
-  let mut idOf : NameMap := {}
-  let mut i := 0
-  -- Imported tables occupy the low indices, in import order.
-  for f in fields do
-    match f with
-    | .list [.atom "import", .atom _, .atom _, .list (.atom "table" :: body)] =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then
-          idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
-    | _ => pure ()
-  for f in fields do
-    match f with
-    | .list (.atom "table" :: body) =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then
-          idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
-    | _ => pure ()
-  return idOf
+private def collectTableNames (fields : List Sexpr) : NameMap :=
+  collectNamesFor "table" fields
 
 /-- Collect names declared by `(memory $name ...)` forms in source order
 (multi-memory). -/
-private def collectMemNames (fields : List Sexpr) : NameMap := Id.run do
-  let mut idOf : NameMap := {}
-  let mut i := 0
-  -- Imported memorys occupy the low indices, in import order.
-  for f in fields do
-    match f with
-    | .list [.atom "import", .atom _, .atom _, .list (.atom "memory" :: body)] =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then
-          idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
-    | _ => pure ()
-  for f in fields do
-    match f with
-    | .list (.atom "memory" :: body) =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then
-          idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
-    | _ => pure ()
-  return idOf
+private def collectMemNames (fields : List Sexpr) : NameMap :=
+  collectNamesFor "memory" fields
 
 /-- Collect names declared by `(elem $name ...)` forms, numbering them the
 way `parseModule` numbers element segments: an inline `(table … (elem …))`
@@ -2984,28 +2946,8 @@ private def parseImportSig (types : Array TypeEntry) (xs : List Sexpr)
   return (params, results)
 
 /-- Collect `$name → tag index` (imports first, then declarations). -/
-private def collectTagNames (fields : List Sexpr) : NameMap := Id.run do
-  let mut idOf : NameMap := {}
-  let mut i := 0
-  for f in fields do
-    match f with
-    | .list [.atom "import", .atom _, .atom _, .list (.atom "tag" :: body)] =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
-    | _ => pure ()
-  for f in fields do
-    match f with
-    | .list (.atom "tag" :: body) =>
-      match body with
-      | .atom a :: _ =>
-        if startsWith a "$" then idOf := idOf.insert (a.drop 1).toString i
-      | _ => pure ()
-      i := i + 1
-    | _ => pure ()
-  return idOf
+private def collectTagNames (fields : List Sexpr) : NameMap :=
+  collectNamesFor "tag" fields
 
 /-- Parse a tag's signature: `(tag $id? (type N))` or inline
 `(param …)*` forms (tags have no results). -/
@@ -3161,7 +3103,7 @@ private def parseModuleWith (rejectUnsupported : Bool)
   let mut funcIds : NameMap := importFuncIds
   for (name, idx) in inModuleFuncIds.toList do
     funcIds := funcIds.insert name (idx + imports.length)
-  let globalIds ← collectGlobalNames rest
+  let globalIds := collectGlobalNames rest
   let tableNames := collectTableNames rest
   let elemNames := collectElemNames rest
   let memNames := collectMemNames rest

@@ -1168,6 +1168,16 @@ theorem store64_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Op
     · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
 
 -- single-memory-0 wrappers for the common case where resolve = (fun id => if id = 0 then some mem else none)
+
+/-- Two nested `if id = 0 then _ else …` guards on the same condition collapse
+to the outer branch — the identical last step of every `_0` wrapper below,
+which rebuilds that shape by evaluating `store*_sound`/`store*_inBounds` at
+`resolve := fun id => if id = 0 then some mem else none`. -/
+theorem resolver0_collapse (new old : Mem) :
+    (fun id : Nat => if id = 0 then some new else if id = 0 then some old else none) =
+    fun id => if id = 0 then some new else none := by
+  funext id; by_cases hid : id = 0 <;> simp [hid]
+
 theorem store32_sound0 (σ : WasmHeapMap (Option UInt8))
     (mem : Mem) (addr value : UInt32)
     (h1 : (addr + 1).toNat = addr.toNat + 1)
@@ -1177,11 +1187,7 @@ theorem store32_sound0 (σ : WasmHeapMap (Option UInt8))
     heapAgreesWithMem (store32Heap σ 0 addr value)
       (fun id => if id = 0 then some (mem.write32 addr value) else none) := by
   have h := store32_sound σ (fun id => if id = 0 then some mem else none) 0 mem addr value rfl h1 h2 h3 h_agree
-  have heq : (fun id : Nat => if id = 0 then some (mem.write32 addr value)
-      else if id = 0 then some mem else none) =
-      fun id => if id = 0 then some (mem.write32 addr value) else none := by
-    funext id; by_cases hid : id = 0 <;> simp [hid]
-  rwa [heq] at h
+  rwa [resolver0_collapse (mem.write32 addr value) mem] at h
 
 theorem store32_inBounds0 (σ : WasmHeapMap (Option UInt8))
     (mem : Mem) (addr value : UInt32)
@@ -1193,11 +1199,7 @@ theorem store32_inBounds0 (σ : WasmHeapMap (Option UInt8))
     heapAddressesInBounds (store32Heap σ 0 addr value)
       (fun id => if id = 0 then some (mem.write32 addr value) else none) := by
   have h := store32_inBounds σ (fun id => if id = 0 then some mem else none) 0 mem addr value rfl h1 h2 h3 h_addresses h_addr
-  have heq : (fun id : Nat => if id = 0 then some (mem.write32 addr value)
-      else if id = 0 then some mem else none) =
-      fun id => if id = 0 then some (mem.write32 addr value) else none := by
-    funext id; by_cases hid : id = 0 <;> simp [hid]
-  rwa [heq] at h
+  rwa [resolver0_collapse (mem.write32 addr value) mem] at h
 
 theorem store64_sound0 (σ : WasmHeapMap (Option UInt8))
     (mem : Mem) (addr : UInt32) (value : UInt64)
@@ -1212,11 +1214,7 @@ theorem store64_sound0 (σ : WasmHeapMap (Option UInt8))
     heapAgreesWithMem (store64Heap σ 0 addr value)
       (fun id => if id = 0 then some (mem.write64 addr value) else none) := by
   have h := store64_sound σ (fun id => if id = 0 then some mem else none) 0 mem addr value rfl h1 h2 h3 h4 h5 h6 h7 h_agree
-  have heq : (fun id : Nat => if id = 0 then some (mem.write64 addr value)
-      else if id = 0 then some mem else none) =
-      fun id => if id = 0 then some (mem.write64 addr value) else none := by
-    funext id; by_cases hid : id = 0 <;> simp [hid]
-  rwa [heq] at h
+  rwa [resolver0_collapse (mem.write64 addr value) mem] at h
 
 theorem store64_inBounds0 (σ : WasmHeapMap (Option UInt8))
     (mem : Mem) (addr : UInt32) (value : UInt64)
@@ -1232,11 +1230,7 @@ theorem store64_inBounds0 (σ : WasmHeapMap (Option UInt8))
     heapAddressesInBounds (store64Heap σ 0 addr value)
       (fun id => if id = 0 then some (mem.write64 addr value) else none) := by
   have h := store64_inBounds σ (fun id => if id = 0 then some mem else none) 0 mem addr value rfl h1 h2 h3 h4 h5 h6 h7 h_addresses h_addr
-  have heq : (fun id : Nat => if id = 0 then some (mem.write64 addr value)
-      else if id = 0 then some mem else none) =
-      fun id => if id = 0 then some (mem.write64 addr value) else none := by
-    funext id; by_cases hid : id = 0 <;> simp [hid]
-  rwa [heq] at h
+  rwa [resolver0_collapse (mem.write64 addr value) mem] at h
 
 /-! Tactics for concrete-address heap chains. They discharge only the routine
 `UInt32.toNat` no-wrap premises and leave agreement or bounds obligations open. -/

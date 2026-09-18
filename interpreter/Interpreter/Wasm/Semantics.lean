@@ -270,7 +270,11 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
         { st with gcHeap := st.gcHeap ++ [.struct t (fields.map (·.storage.zero))] }
         { s with values := .anyref (some (.struct st.gcHeap.length)) :: s.values }
     | none => .Invalid "structNewDefault: not a struct type"
-  | .structGet _ f => match s.values with
+  -- `structGetU` reads the field unsigned, same as the plain `structGet`
+  -- (packed fields are stored already truncated by `structNew`/`structSet`;
+  -- only `structGetS` needs to sign-extend on the way out), so the two
+  -- share one body.
+  | .structGet _ f | .structGetU _ f => match s.values with
     | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
       | some (.struct _ fields) => match fields[f]? with
         | some v => .Fallthrough st { s with values := v :: vs }
@@ -278,14 +282,6 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
       | _ => .Invalid "structGet: not a struct"
     | .anyref none :: _ => .Trap st "null structure reference"
     | _ => .Invalid "structGet: ill-shaped operand stack"
-  | .structGetU _ f => match s.values with
-    | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
-      | some (.struct _ fields) => match fields[f]? with
-        | some v => .Fallthrough st { s with values := v :: vs }
-        | none   => .Invalid "structGetU: field index out of range"
-      | _ => .Invalid "structGetU: not a struct"
-    | .anyref none :: _ => .Trap st "null structure reference"
-    | _ => .Invalid "structGetU: ill-shaped operand stack"
   | .structGetS t f => match s.values with
     | .anyref (some (.struct addr)) :: vs => match st.gcHeap[addr]? with
       | some (.struct _ fields) => match fields[f]?, m.structField? t f with
@@ -323,7 +319,11 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
       let pelems := match m.arrayElem? t with | some ft => elems.map ft.pack | none => elems
       .Fallthrough { st with gcHeap := st.gcHeap ++ [.array t pelems] }
         { s with values := .anyref (some (.array st.gcHeap.length)) :: s.values.drop n }
-  | .arrayGet _ => match s.values with
+  -- `arrayGetU` reads the element unsigned, same as the plain `arrayGet`
+  -- (packed elements are stored already truncated by `arrayNew`/`arraySet`;
+  -- only `arrayGetS` needs to sign-extend on the way out), so the two
+  -- share one body.
+  | .arrayGet _ | .arrayGetU _ => match s.values with
     | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
       | some (.array _ elems) => match elems[idx.toNat]? with
         | some v => .Fallthrough st { s with values := v :: vs }
@@ -331,14 +331,6 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
       | _ => .Invalid "arrayGet: not an array"
     | _ :: .anyref none :: _ => .Trap st "null array reference"
     | _ => .Invalid "arrayGet: ill-shaped operand stack"
-  | .arrayGetU _ => match s.values with
-    | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
-      | some (.array _ elems) => match elems[idx.toNat]? with
-        | some v => .Fallthrough st { s with values := v :: vs }
-        | none   => .Trap st "out of bounds array access"
-      | _ => .Invalid "arrayGetU: not an array"
-    | _ :: .anyref none :: _ => .Trap st "null array reference"
-    | _ => .Invalid "arrayGetU: ill-shaped operand stack"
   | .arrayGetS t => match s.values with
     | .i32 idx :: .anyref (some (.array addr)) :: vs => match st.gcHeap[addr]? with
       | some (.array _ elems) => match elems[idx.toNat]?, m.arrayElem? t with

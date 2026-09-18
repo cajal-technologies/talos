@@ -54,57 +54,20 @@ theorem twp_load8U
   iintro Hpt Htwp
   iapply twp_lift_step_no_fork rfl
   iintro %store %ns %obs %nt Hσ
-  ihave %Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
-      (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
-  · imod stateInterp_pointsTo_facts store ns obs nt
-      (address + offset) byte $$ [$Hσ $Hpt] with %Hfacts
-    ipureintro
-    exact Hfacts
+  ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
+      (address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_facts store ns obs nt
+      (address + offset) byte $$ [Hσ Hpt]
   obtain ⟨Hread, HinBounds⟩ := Hfacts
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨.running
-        ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, _, rfl, by simpa [Hread] using Step.load8U (address := Value.i32 address) rfl hbound⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  have expectedStep : Step
-      ⟨.running ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8U offset))
-      ⟨.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩, store⟩ := by
-    simpa [Hread] using (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
-    iexact Hpt
+  wasm_twp_step (by
+      simpa [Hread] using
+        (Step.load8U (α := α) (address := Value.i32 address) rfl hbound)) =>
+    wasm_twp_frame
+      iapply Htwp
+      iexact Hpt
 
 /-- Offset-zero form of `twp_load8U`. -/
 theorem twp_load8U_addr
@@ -151,33 +114,13 @@ theorem twp_store8
   iintro Hpt Htwp
   iapply twp_lift_step_no_fork rfl
   iintro %store %ns %obs %nt Hσ
-  ihave %HinBounds :
-      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hpt]
-  · imod stateInterp_pointsTo_inBounds store ns obs nt
-      (address + offset) oldByte $$ [$Hσ $Hpt] with %HinBounds
-    ipureintro
-    exact HinBounds
+  ihave_pure HinBounds :
+      ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
+    stateInterp_pointsTo_inBounds store ns obs nt
+      (address + offset) oldByte $$ [Hσ Hpt]
   have hbound : address.toNat + offset.toNat + 1 ≤
       store.wasm.mem.pages * 65536 := by
     omega
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨.running
-        ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
-      { store with wasm :=
-          { store.wasm with
-            mem := store.wasm.mem.write8 (address + offset) value.toUInt8 } },
-      [], ⟨rfl, _, rfl, by
-        simpa only [setMemory_eq] using
-          Step.store8 (address := Value.i32 address) rfl hbound⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
   have expectedStep : Step
       ⟨.running
         ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
@@ -190,29 +133,13 @@ theorem twp_store8
                 (address + offset) value.toUInt8 } }⟩ := by
     simpa only [setMemory_eq] using
       Step.store8 (address := Value.i32 address) rfl hbound
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod stateInterp_store8 store ns obs nt
-      (address + offset) oldByte value.toUInt8
-      (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Htwp
-    iexact Hpt
+  wasm_twp_step expectedStep =>
+    imod stateInterp_store8 store ns obs nt
+        (address + offset) oldByte value.toUInt8
+        (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
+    wasm_twp_frame
+      iapply Htwp
+      iexact Hpt
 
 /-- Offset-zero form of `twp_store8`, avoiding an `addr + 0` unification
 artifact in generated code. -/
@@ -297,46 +224,12 @@ theorem twp_memorySize_framed
   iintro ⟨Hruntime, HR⟩
   iapply twp_lift_step_no_fork rfl
   iintro %store %ns %obs %nt Hσ
-  ihave %Hmodule : ⌜store.runtime.currentModule = runtimeModule⌝ $$
-      [Hσ Hruntime]
-  · imod stateInterp_runtimeModule_agree store ns obs nt
-      instanceId runtimeModule $$ [$Hσ $Hruntime] with %Hmodule
-    ipureintro
-    exact Hmodule
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨.running ⟨⟨params, localValues,
-        sizeValue store.runtime.currentModule.memIs64 store.wasm.mem.pages :: values⟩,
-      code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, .instruction .memorySize, rfl, Step.memorySize⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ := step_deterministic Step.memorySize wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro
-    rfl
-  isplit
-  · ipureintro
-    rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · simp only [Hmodule]
-    iapply Htwp
-    iframe
+  wasm_runtime_module_agree obs, instanceId, runtimeModule $$ [$Hσ $Hruntime]
+  wasm_twp_step Step.memorySize =>
+    wasm_twp_frame
+      simp only [Hmodule]
+      iapply Htwp
+      iframe
 
 /-- Total rule for `memory.grow`, exposing both the successful old-page
 count and the `0xffffffff` failure result to the continuation. -/
@@ -361,60 +254,12 @@ theorem twp_memoryGrow_framed
   cases hg : store.wasm.mem.grow delta
       (store.wasm.memoryCap store.runtime.currentModule 0) with
   | none =>
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-      exact ⟨.running ⟨⟨params, localValues,
-          .i32 (0xFFFFFFFF : UInt32) :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-        store, [], ⟨rfl, .instruction .memoryGrow, rfl,
-          Step.memoryGrowFailure hg⟩⟩
-    iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
-    obtain ⟨rfl, hconfig⟩ :=
-      step_deterministic (Step.memoryGrowFailure hg) wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
-    imod Hclose
-    imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · iapply Htwp
-      iframe
+    wasm_twp_step Step.memoryGrowFailure hg =>
+      wasm_twp_frame
+        iapply Htwp
+        iframe
   | some grown =>
     obtain ⟨memory, previousPages⟩ := grown
-    iapply fupd_mask_intro Std.LawfulSet.empty_subset
-    iintro Hclose
-    isplitr
-    · ipureintro
-      cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-      exact ⟨.running ⟨⟨params, localValues,
-          .i32 previousPages.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩,
-        { store with wasm := { store.wasm with mem := memory } }, [],
-        ⟨rfl, .instruction .memoryGrow, rfl, by
-          simpa only [Wasm.SmallStep.setMemory_eq] using
-            Step.memoryGrowSuccess hg⟩⟩
-    iintro %κ %e₂ %store₂ %forks %Hstep
-    rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-    change forks = [] at hforks
-    subst forks
-    subst κ
     have expectedStep : Step
         ⟨.running ⟨⟨params, localValues, .i32 delta :: values⟩,
           .memoryGrow :: code, arity, remainder, controls, calls⟩, store⟩
@@ -424,28 +269,13 @@ theorem twp_memoryGrow_framed
           code, arity, remainder, controls, calls⟩,
           { store with wasm := { store.wasm with mem := memory } }⟩ := by
       simpa only [Wasm.SmallStep.setMemory_eq] using Step.memoryGrowSuccess hg
-    obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-    have parts := Config.mk.inj hconfig
-    have hexpr := parts.1
-    have hstore := parts.2
-    simp only at hexpr hstore
-    subst e₂
-    subst store₂
-    imod stateInterp_memoryGrow store ns obs nt delta
-      (store.wasm.memoryCap store.runtime.currentModule 0)
-      memory previousPages hg $$ Hσ with Hσ
-    imod Hclose
-    imodintro
-    isplit
-    · ipureintro
-      rfl
-    isplit
-    · ipureintro
-      rfl
-    isplitl [Hσ]
-    · iexact Hσ
-    · iapply Htwp
-      iframe
+    wasm_twp_step expectedStep =>
+      imod stateInterp_memoryGrow store ns obs nt delta
+        (store.wasm.memoryCap store.runtime.currentModule 0)
+        memory previousPages hg $$ Hσ with Hσ
+      wasm_twp_frame
+        iapply Htwp
+        iframe
 
 
 /-- Offset-zero form of `twp_store64`. -/

@@ -160,10 +160,16 @@ macro "wasm_twp_rebind " rule:term " with " resource:ident : tactic =>
 It preserves the public binder names while factoring the common
 instruction/operand-stack transition shape.
 -/
-set_option hygiene false in
-macro "wasm_twp_pure_rule " name:ident binders:bracketedBinder* " : "
-    instruction:term ", " before:term " => " after:term " := "
-    step:term : command => do
+/-- Split a `wasm_twp_pure_rule`/`wasm_twp_resource_rule` binder list into
+implicit value binders and explicit side conditions, rejecting anything else
+(`macroName` names the caller for the error). Mirrors `splitPureRuleBinders`
+in `SmallStepLifting.lean` — not shared across files, for the same reason the
+two generator macros below aren't (see `wasm_twp_pure_rule`'s docstring). -/
+def splitTwpPureRuleBinders (macroName : String)
+    (binders : Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder)) :
+    Lean.MacroM
+      (Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) ×
+        Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder)) := do
   let isValueBinder (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
     b.raw.getKind == ``Lean.Parser.Term.implicitBinder
   let isSideCondition (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
@@ -171,9 +177,15 @@ macro "wasm_twp_pure_rule " name:ident binders:bracketedBinder* " : "
   for b in binders do
     unless isValueBinder b || isSideCondition b do
       Lean.Macro.throwErrorAt b
-        "wasm_twp_pure_rule takes implicit value binders and explicit side conditions"
-  let valueBinders := binders.filter isValueBinder
-  let sideConditions := binders.filter isSideCondition
+        s!"{macroName} takes implicit value binders and explicit side conditions"
+  return (binders.filter isValueBinder, binders.filter isSideCondition)
+
+set_option hygiene false in
+macro "wasm_twp_pure_rule " name:ident binders:bracketedBinder* " : "
+    instruction:term ", " before:term " => " after:term " := "
+    step:term : command => do
+  let (valueBinders, sideConditions) ←
+    splitTwpPureRuleBinders "wasm_twp_pure_rule" binders
   `(command|
     theorem $name:ident
         {params localValues values : List Value}
@@ -191,14 +203,96 @@ macro "wasm_twp_pure_rule " name:ident binders:bracketedBinder* " : "
           [{ Φ }] :=
       twp_pureStep _ _ _ (fun _ => $step))
 
+/-! ### Declaring a total rule that owns a resource
+
+Total counterpart of `wasm_wp_resource_rule` in `SmallStepLifting.lean`: the
+stateful total rules — every load, every store, the global rules — all state
+"one instruction retired, operand stack rewritten, an Iris resource borrowed
+across the step and handed back (possibly changed)", with only the payload
+differing and, unlike the partial-WP form, no `▷` anywhere. `owning R` alone
+means the resource comes back unchanged; a store adds `returning R'`. As with
+`wasm_wp_resource_rule`, the proof is written at the call site but the
+binders are introduced here, so `params`, `values`, `code`, `store` and
+friends have to be the same names on both sides. -/
+set_option hygiene false in
+syntax (docComment)? "wasm_twp_resource_rule " ident
+    (ppSpace bracketedBinder)* " : "
+    term ", " term " => " term
+    ppLine "owning " term (ppLine "returning " term)?
+    " := " term : command
+
+set_option hygiene false in
+macro_rules
+  | `(command|
+      $[$doc:docComment]? wasm_twp_resource_rule $name:ident
+        $binders:bracketedBinder* :
+        $instruction:term, $before:term => $after:term
+        owning $resource:term := $proof:term) =>
+    `(command|
+      $[$doc:docComment]? wasm_twp_resource_rule $name:ident
+        $binders:bracketedBinder* :
+        $instruction:term, $before:term => $after:term
+        owning $resource:term
+        returning $resource:term := $proof:term)
+  | `(command|
+      $[$doc:docComment]? wasm_twp_resource_rule $name:ident
+        $binders:bracketedBinder* :
+        $instruction:term, $before:term => $after:term
+        owning $resourceIn:term
+        returning $resourceOut:term := $proof:term) => do
+    let (valueBinders, sideConditions) ←
+      splitTwpPureRuleBinders "wasm_twp_resource_rule" binders
+    `(command|
+      $[$doc:docComment]?
+      theorem $name:ident
+          {params localValues values : List Value}
+          $valueBinders:bracketedBinder*
+          {code : Program} {arity : Nat}
+          {remainder : List Value} {controls : List ControlFrame}
+          {calls : List CallFrame}
+          $sideConditions:bracketedBinder* :
+          let current : ThreadState α :=
+            ⟨⟨params, localValues, $before⟩,
+              $instruction :: code, arity, remainder, controls, calls⟩
+          let next : ThreadState α :=
+            ⟨⟨params, localValues, $after⟩,
+              code, arity, remainder, controls, calls⟩
+          $resourceIn -∗
+          ($resourceOut -∗
+            WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
+            WP (Expr.running current : Expr α) @ s; E [{ Φ }] :=
+        $proof)
+
+/-! ## Generic scalar numeric rules
+
+The float/conversion family is exposed through the evaluator functions used
+by `Step`, so generated proofs can specialize results by reduction without a
+separate lifting theorem for every opcode. -/
+
+wasm_twp_pure_rule twp_scalarFloat0
+    {instruction : Instruction} {value : Value}
+    (heval : evalScalarFloat0? instruction = some value) :
+  instruction, values => value :: values := Step.scalarFloat0 heval
+
+wasm_twp_pure_rule twp_scalarFloat1
+    {instruction : Instruction} {operand value : Value}
+    (hzero : evalScalarFloat0? instruction = none)
+    (heval : evalScalarFloat1? instruction operand = some value) :
+  instruction, operand :: values => value :: values :=
+    Step.scalarFloat1 hzero heval
+
+wasm_twp_pure_rule twp_scalarFloat2
+    {instruction : Instruction} {lhs rhs value : Value}
+    (hzero : evalScalarFloat0? instruction = none)
+    (hunary : evalScalarFloat1? instruction rhs = none)
+    (heval : evalScalarFloat2? instruction lhs rhs = some value) :
+  instruction, rhs :: lhs :: values => value :: values :=
+    Step.scalarFloat2 hzero hunary heval
+
 wasm_twp_pure_rule twp_remU {dividend divisor : UInt32}
     (hdivisor : divisor ≠ 0) :
   .remU, .i32 divisor :: .i32 dividend :: values =>
     .i32 (dividend % divisor) :: values := Step.remU hdivisor
-
-wasm_twp_pure_rule twp_eqz {value result : UInt32}
-    (hresult : result = if value = 0 then 1 else 0) :
-  .eqz, .i32 value :: values => .i32 result :: values := Step.eqz hresult
 
 wasm_twp_pure_rule twp_const {value : UInt32} :
   .const value, values => .i32 value :: values := Step.const
@@ -212,13 +306,20 @@ wasm_twp_pure_rule twp_sub {lhs rhs : UInt32} :
 wasm_twp_pure_rule twp_mul {lhs rhs : UInt32} :
   .mul, .i32 rhs :: .i32 lhs :: values => .i32 (rhs * lhs) :: values := Step.mul
 
-wasm_twp_pure_rule twp_shl {lhs rhs : UInt32} :
-  .shl, .i32 rhs :: .i32 lhs :: values =>
-    .i32 (lhs <<< (rhs % 32)) :: values := Step.shl
+wasm_twp_pure_rule twp_subI64 {lhs rhs : UInt64} :
+  .subI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs - rhs) :: values := Step.subI64
 
-wasm_twp_pure_rule twp_shrU {lhs rhs : UInt32} :
-  .shrU, .i32 rhs :: .i32 lhs :: values =>
-    .i32 (lhs >>> (rhs % 32)) :: values := Step.shrU
+wasm_twp_pure_rule twp_mulI64 {lhs rhs : UInt64} :
+  .mulI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs * rhs) :: values := Step.mulI64
+
+wasm_twp_pure_rule twp_constI64 {value : UInt64} :
+  .constI64 value, values => .i64 value :: values := Step.constI64
+
+wasm_twp_pure_rule twp_eqz {value result : UInt32}
+    (hresult : result = if value = 0 then 1 else 0) :
+  .eqz, .i32 value :: values => .i32 result :: values := Step.eqz hresult
 
 wasm_twp_pure_rule twp_ltU {lhs rhs result : UInt32}
     (hresult : result = if lhs < rhs then 1 else 0) :
@@ -243,6 +344,73 @@ wasm_twp_pure_rule twp_leU {lhs rhs result : UInt32}
 wasm_twp_pure_rule twp_gtU {lhs rhs result : UInt32}
     (hresult : result = if lhs > rhs then 1 else 0) :
   .gtU, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.gtU hresult
+
+wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
+    (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
+  .geS, .i32 rhs :: .i32 lhs :: values =>
+    .i32 result :: values := Step.geS hresult
+
+wasm_twp_pure_rule twp_ne {lhs rhs result : UInt32}
+    (hresult : result = if lhs ≠ rhs then 1 else 0) :
+  .ne, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ne hresult
+
+wasm_twp_pure_rule twp_eqI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs = rhs then 1 else 0) :
+  .eqI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.eqI64 hresult
+
+wasm_twp_pure_rule twp_neI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs ≠ rhs then 1 else 0) :
+  .neI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.neI64 hresult
+
+wasm_twp_pure_rule twp_ltUI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs < rhs then 1 else 0) :
+  .ltUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.ltUI64 hresult
+
+wasm_twp_pure_rule twp_gtUI64 {lhs rhs : UInt64} {result : UInt32}
+    (hresult : result = if lhs > rhs then 1 else 0) :
+  .gtUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i32 result :: values := Step.gtUI64 hresult
+
+wasm_twp_pure_rule twp_shl {lhs rhs : UInt32} :
+  .shl, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (lhs <<< (rhs % 32)) :: values := Step.shl
+
+wasm_twp_pure_rule twp_shrU {lhs rhs : UInt32} :
+  .shrU, .i32 rhs :: .i32 lhs :: values =>
+    .i32 (lhs >>> (rhs % 32)) :: values := Step.shrU
+
+wasm_twp_pure_rule twp_and {lhs rhs : UInt32} :
+  .and, .i32 rhs :: .i32 lhs :: values => .i32 (lhs &&& rhs) :: values := Step.and
+
+wasm_twp_pure_rule twp_or {lhs rhs : UInt32} :
+  .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
+
+wasm_twp_pure_rule twp_orI64 {lhs rhs : UInt64} :
+  .orI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs ||| rhs) :: values := Step.orI64
+
+wasm_twp_pure_rule twp_shlI64 {lhs rhs : UInt64} :
+  .shlI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs <<< (rhs % 64)) :: values := Step.shlI64
+
+wasm_twp_pure_rule twp_shrUI64 {lhs rhs : UInt64} :
+  .shrUI64, .i64 rhs :: .i64 lhs :: values =>
+    .i64 (lhs >>> (rhs % 64)) :: values := Step.shrUI64
+
+wasm_twp_pure_rule twp_ctzI64 {value : UInt64} :
+  .ctzI64, .i64 value :: values =>
+    .i64 (UInt64.ofNat (ctz64 64 value)) :: values := Step.ctzI64
+
+wasm_twp_pure_rule twp_wrapI64 {value : UInt64} :
+  .wrapI64, .i64 value :: values =>
+    .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values := Step.wrapI64
+
+wasm_twp_pure_rule twp_extendUI32 {value : UInt32} :
+  .extendUI32, .i32 value :: values =>
+    .i64 (UInt64.ofNat value.toNat) :: values := Step.extendUI32
 
 wasm_twp_pure_rule twp_select
     {first second selected : Value} {condition : UInt32}
@@ -857,29 +1025,15 @@ theorem twp_memoryGrow_tracked
       wasm_twp_frame
         iexact HcontNew
 
-theorem twp_load32
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u32 0 (address + offset) word -∗
-    (pointsTo_u32 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_load32
+    {address offset : UInt32}
+    (word : UInt32)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
+  .load32 offset, .i32 address :: values => .i32 word :: values
+  owning pointsTo_u32 0 (address + offset) word := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -896,29 +1050,16 @@ theorem twp_load32
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-theorem twp_store32
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-        .store32 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u32 0 (address + offset) oldWord -∗
-    (pointsTo_u32 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_store32
+    {address offset value : UInt32}
+    (oldWord : UInt32)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
+  .store32 offset, .i32 value :: .i32 address :: values => values
+  owning pointsTo_u32 0 (address + offset) oldWord
+  returning pointsTo_u32 0 (address + offset) value := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -947,12 +1088,6 @@ theorem twp_store32
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_twp_frame
       iapply_exact Htwp with Hword
-
-
-wasm_twp_pure_rule twp_geS {lhs rhs result : UInt32}
-    (hresult : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
-  .geS, .i32 rhs :: .i32 lhs :: values =>
-    .i32 result :: values := Step.geS hresult
 
 theorem twp_memoryFill32
     {params localValues values : List Value}
@@ -1168,29 +1303,10 @@ theorem twp_tryTable
         arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] := by
   dsimp only; exact twp_pureStep _ _ _ (fun _ => Step.tryTable)
 
-
-wasm_twp_pure_rule twp_and {lhs rhs : UInt32} :
-  .and, .i32 rhs :: .i32 lhs :: values => .i32 (lhs &&& rhs) :: values := Step.and
-
-wasm_twp_pure_rule twp_ne {lhs rhs result : UInt32}
-    (hresult : result = if lhs ≠ rhs then 1 else 0) :
-  .ne, .i32 rhs :: .i32 lhs :: values => .i32 result :: values := Step.ne hresult
-
-theorem twp_globalGet
-    {params localValues values : List Value}
-    {value : Value} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, .globalGet 0 :: code,
-        arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, value :: values⟩, code,
-        arity, remainder, controls, calls⟩
-    globalPointsToAt 0 0 value -∗
-    (globalPointsToAt 0 0 value -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_globalGet
+    {value : Value} :
+  .globalGet 0, values => value :: values
+  owning globalPointsToAt 0 0 value := by
   wasm_twp_start_with iintro Hglobal Htwp
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
@@ -1202,49 +1318,15 @@ theorem twp_globalGet
     wasm_twp_frame
       iapply_exact Htwp with Hglobal
 
-wasm_twp_pure_rule twp_scalarFloat0
-    {instruction : Instruction} {value : Value}
-    (heval : evalScalarFloat0? instruction = some value) :
-  instruction, values => value :: values := Step.scalarFloat0 heval
-
-wasm_twp_pure_rule twp_scalarFloat1
-    {instruction : Instruction} {operand value : Value}
-    (hzero : evalScalarFloat0? instruction = none)
-    (heval : evalScalarFloat1? instruction operand = some value) :
-  instruction, operand :: values => value :: values :=
-    Step.scalarFloat1 hzero heval
-
-wasm_twp_pure_rule twp_scalarFloat2
-    {instruction : Instruction} {lhs rhs value : Value}
-    (hzero : evalScalarFloat0? instruction = none)
-    (hunary : evalScalarFloat1? instruction rhs = none)
-    (heval : evalScalarFloat2? instruction lhs rhs = some value) :
-  instruction, rhs :: lhs :: values => value :: values :=
-    Step.scalarFloat2 hzero hunary heval
-
-theorem twp_f32Load
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .f32Load offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .f32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u32 0 (address + offset) word -∗
-    (pointsTo_u32 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_f32Load
+    {address offset : UInt32}
+    (word : UInt32)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
+  .f32Load offset, .i32 address :: values => .f32 word :: values
+  owning pointsTo_u32 0 (address + offset) word := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -1261,29 +1343,16 @@ theorem twp_f32Load
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-theorem twp_f32Store
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
-        .f32Store offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u32 0 (address + offset) oldWord -∗
-    (pointsTo_u32 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_f32Store
+    {address offset value : UInt32}
+    (oldWord : UInt32)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
+  .f32Store offset, .f32 value :: .i32 address :: values => values
+  owning pointsTo_u32 0 (address + offset) oldWord
+  returning pointsTo_u32 0 (address + offset) value := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -1314,21 +1383,11 @@ theorem twp_f32Store
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-theorem twp_globalSet
-    {params localValues values : List Value}
-    {oldValue newValue : Value} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, newValue :: values⟩,
-        .globalSet 0 :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    globalPointsToAt 0 0 oldValue -∗
-    (globalPointsToAt 0 0 newValue -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_globalSet
+    {oldValue newValue : Value} :
+  .globalSet 0, newValue :: values => values
+  owning globalPointsToAt 0 0 oldValue
+  returning globalPointsToAt 0 0 newValue := by
   wasm_twp_start_with iintro Hglobal Htwp
   have hcanonical : ∀ s : MachineStore α,
       canonicalGlobalIndex s 0 = 0 := fun _ => rfl
@@ -1361,40 +1420,19 @@ theorem twp_globalSet
     wasm_twp_frame
       iapply_exact Htwp with Hglobal
 
-wasm_twp_pure_rule twp_or {lhs rhs : UInt32} :
-  .or, .i32 rhs :: .i32 lhs :: values => .i32 (lhs ||| rhs) :: values := Step.or
-
-theorem twp_f64Load
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt64)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3)
-    (h4 : ((address + offset) + 4).toNat =
-      (address + offset).toNat + 4)
-    (h5 : ((address + offset) + 5).toNat =
-      (address + offset).toNat + 5)
-    (h6 : ((address + offset) + 6).toNat =
-      (address + offset).toNat + 6)
-    (h7 : ((address + offset) + 7).toNat =
-      (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .f64Load offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .f64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u64 0 (address + offset) word -∗
-    (pointsTo_u64 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_f64Load
+    {address offset : UInt32}
+    (word : UInt64)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3)
+    (h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4)
+    (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
+    (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
+    (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
+  .f64Load offset, .i32 address :: values => .f64 word :: values
+  owning pointsTo_u64 0 (address + offset) word := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
@@ -1411,38 +1449,20 @@ theorem twp_f64Load
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-theorem twp_f64Store
-    {params localValues values : List Value}
+wasm_twp_resource_rule twp_f64Store
     {address offset : UInt32} {value : UInt64}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt64)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3)
-    (h4 : ((address + offset) + 4).toNat =
-      (address + offset).toNat + 4)
-    (h5 : ((address + offset) + 5).toNat =
-      (address + offset).toNat + 5)
-    (h6 : ((address + offset) + 6).toNat =
-      (address + offset).toNat + 6)
-    (h7 : ((address + offset) + 7).toNat =
-      (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
-        .f64Store offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u64 0 (address + offset) oldWord -∗
-    (pointsTo_u64 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+    (oldWord : UInt64)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3)
+    (h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4)
+    (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
+    (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
+    (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
+  .f64Store offset, .f64 value :: .i32 address :: values => values
+  owning pointsTo_u64 0 (address + offset) oldWord
+  returning pointsTo_u64 0 (address + offset) value := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
@@ -1473,37 +1493,19 @@ theorem twp_f64Store
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-theorem twp_load64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt64)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3)
-    (h4 : ((address + offset) + 4).toNat =
-      (address + offset).toNat + 4)
-    (h5 : ((address + offset) + 5).toNat =
-      (address + offset).toNat + 5)
-    (h6 : ((address + offset) + 6).toNat =
-      (address + offset).toNat + 6)
-    (h7 : ((address + offset) + 7).toNat =
-      (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u64 0 (address + offset) word -∗
-    (pointsTo_u64 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+wasm_twp_resource_rule twp_load64
+    {address offset : UInt32}
+    (word : UInt64)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3)
+    (h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4)
+    (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
+    (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
+    (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
+  .load64 offset, .i32 address :: values => .i64 word :: values
+  owning pointsTo_u64 0 (address + offset) word := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
@@ -1520,38 +1522,20 @@ theorem twp_load64
     wasm_twp_frame
       iapply_exact Htwp with Hword
 
-theorem twp_store64
-    {params localValues values : List Value}
+wasm_twp_resource_rule twp_store64
     {address offset : UInt32} {value : UInt64}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt64)
-    (hnowrap : (address + offset).toNat =
-      address.toNat + offset.toNat)
-    (h1 : ((address + offset) + 1).toNat =
-      (address + offset).toNat + 1)
-    (h2 : ((address + offset) + 2).toNat =
-      (address + offset).toNat + 2)
-    (h3 : ((address + offset) + 3).toNat =
-      (address + offset).toNat + 3)
-    (h4 : ((address + offset) + 4).toNat =
-      (address + offset).toNat + 4)
-    (h5 : ((address + offset) + 5).toNat =
-      (address + offset).toNat + 5)
-    (h6 : ((address + offset) + 6).toNat =
-      (address + offset).toNat + 6)
-    (h7 : ((address + offset) + 7).toNat =
-      (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-        .store64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    pointsTo_u64 0 (address + offset) oldWord -∗
-    (pointsTo_u64 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-      WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
+    (oldWord : UInt64)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
+    (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
+    (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
+    (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3)
+    (h4 : ((address + offset) + 4).toNat = (address + offset).toNat + 4)
+    (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
+    (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
+    (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
+  .store64 offset, .i64 value :: .i32 address :: values => values
+  owning pointsTo_u64 0 (address + offset) oldWord
+  returning pointsTo_u64 0 (address + offset) value := by
   wasm_twp_start_with iintro Hword Htwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
@@ -1601,130 +1585,33 @@ local instance (priority := high) activeTerminalIrisGSHelpers :
 variable {s : Stuckness} {E : CoPset}
 variable {Φ : Terminal → IProp (WasmHeapGF α)}
 
-wasm_twp_pure_rule twp_subI64 {lhs rhs : UInt64} :
-  .subI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs - rhs) :: values := Step.subI64
-
-wasm_twp_pure_rule twp_mulI64 {lhs rhs : UInt64} :
-  .mulI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs * rhs) :: values := Step.mulI64
-
-wasm_twp_pure_rule twp_constI64 {value : UInt64} :
-  .constI64 value, values => .i64 value :: values := Step.constI64
-
-wasm_twp_pure_rule twp_orI64 {lhs rhs : UInt64} :
-  .orI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs ||| rhs) :: values := Step.orI64
-
-wasm_twp_pure_rule twp_shlI64 {lhs rhs : UInt64} :
-  .shlI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs <<< (rhs % 64)) :: values := Step.shlI64
-
-wasm_twp_pure_rule twp_shrUI64 {lhs rhs : UInt64} :
-  .shrUI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs >>> (rhs % 64)) :: values := Step.shrUI64
-
-wasm_twp_pure_rule twp_ctzI64 {value : UInt64} :
-  .ctzI64, .i64 value :: values =>
-    .i64 (UInt64.ofNat (ctz64 64 value)) :: values := Step.ctzI64
-
-wasm_twp_pure_rule twp_wrapI64 {value : UInt64} :
-  .wrapI64, .i64 value :: values =>
-    .i32 (UInt32.ofNat (value.toNat % 2 ^ 32)) :: values := Step.wrapI64
-
-wasm_twp_pure_rule twp_extendUI32 {value : UInt32} :
-  .extendUI32, .i32 value :: values =>
-    .i64 (UInt64.ofNat value.toNat) :: values := Step.extendUI32
-
-wasm_twp_pure_rule twp_eqI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs = rhs then 1 else 0) :
-  .eqI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.eqI64 hresult
-
-wasm_twp_pure_rule twp_neI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs ≠ rhs then 1 else 0) :
-  .neI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.neI64 hresult
-
-wasm_twp_pure_rule twp_ltUI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs < rhs then 1 else 0) :
-  .ltUI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.ltUI64 hresult
-
-wasm_twp_pure_rule twp_gtUI64 {lhs rhs : UInt64} {result : UInt32}
-    (hresult : result = if lhs > rhs then 1 else 0) :
-  .gtUI64, .i64 rhs :: .i64 lhs :: values =>
-    .i32 result :: values := Step.gtUI64 hresult
-
 /-- Apply an explicit sequence of side-condition-free pure Wasm steps.
 Stops before any rule that needs a semantic choice, client resource, or
 non-definitional proof. -/
 syntax "wasm_twp_pures" "[" ident* "]" : tactic
 
+-- Generic over the lemma name (mirrors `wasm_wp_pures` in
+-- `SmallStepLifting.lean`); keep the two `NeedsRfl` allowlists in sync when a
+-- pure rule gains a total- or partial-WP form.
+/-- `wasm_twp_pures` lemma names whose lone side condition this combinator
+discharges with `rfl`; every other name in its vocabulary applies clean. -/
+private def twpPuresNeedsRfl (n : Lean.Name) : Bool :=
+  n == `twp_localGet || n == `twp_localSet || n == `twp_localTee ||
+  n == `twp_br || n == `twp_exitControl || n == `twp_eqz || n == `twp_eq ||
+  n == `twp_ltU || n == `twp_gtU || n == `twp_ltUI64 || n == `twp_iff ||
+  n == `twp_scalarFloat0
+
 macro_rules
   | `(tactic| wasm_twp_pures []) => `(tactic| skip)
-  | `(tactic| wasm_twp_pures [twp_localGet $rest:ident*]) =>
-      `(tactic| iapply twp_localGet rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_localSet $rest:ident*]) =>
-      `(tactic| iapply twp_localSet rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_localTee $rest:ident*]) =>
-      `(tactic| iapply twp_localTee rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_const $rest:ident*]) =>
-      `(tactic| iapply twp_const; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_add $rest:ident*]) =>
-      `(tactic| iapply twp_add; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_sub $rest:ident*]) =>
-      `(tactic| iapply twp_sub; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_mul $rest:ident*]) =>
-      `(tactic| iapply twp_mul; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_and $rest:ident*]) =>
-      `(tactic| iapply twp_and; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_or $rest:ident*]) =>
-      `(tactic| iapply twp_or; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_shl $rest:ident*]) =>
-      `(tactic| iapply twp_shl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_shrU $rest:ident*]) =>
-      `(tactic| iapply twp_shrU; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_constI64 $rest:ident*]) =>
-      `(tactic| iapply twp_constI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_subI64 $rest:ident*]) =>
-      `(tactic| iapply twp_subI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_mulI64 $rest:ident*]) =>
-      `(tactic| iapply twp_mulI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_orI64 $rest:ident*]) =>
-      `(tactic| iapply twp_orI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_shlI64 $rest:ident*]) =>
-      `(tactic| iapply twp_shlI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_shrUI64 $rest:ident*]) =>
-      `(tactic| iapply twp_shrUI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_ctzI64 $rest:ident*]) =>
-      `(tactic| iapply twp_ctzI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_wrapI64 $rest:ident*]) =>
-      `(tactic| iapply twp_wrapI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_extendUI32 $rest:ident*]) =>
-      `(tactic| iapply twp_extendUI32; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_block $rest:ident*]) =>
-      `(tactic| iapply twp_block; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_brIfZero $rest:ident*]) =>
-      `(tactic| iapply twp_brIfZero; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_br $rest:ident*]) =>
-      `(tactic| iapply twp_br rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_exitControl $rest:ident*]) =>
-      `(tactic| iapply twp_exitControl rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_eqz $rest:ident*]) =>
-      `(tactic| iapply twp_eqz rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_eq $rest:ident*]) =>
-      `(tactic| iapply twp_eq rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_ltU $rest:ident*]) =>
-      `(tactic| iapply twp_ltU rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_gtU $rest:ident*]) =>
-      `(tactic| iapply twp_gtU rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_ltUI64 $rest:ident*]) =>
-      `(tactic| iapply twp_ltUI64 rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_iff $rest:ident*]) =>
-      `(tactic| iapply twp_iff rfl; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_scalarFloat0 $rest:ident*]) =>
-      `(tactic| iapply twp_scalarFloat0 rfl; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [$head:ident $rest:ident*]) => do
+    -- Resolve in `Wasm.SmallStep`, not at the call site — see the note on
+    -- `wasm_wp_pures` in `SmallStepLifting.lean`.
+    -- `eraseMacroScopes`: names reaching here through another macro (e.g.
+    -- `shift_chunk_of`) carry that macro's scope, which no declaration has.
+    let rule := Lean.mkIdent (`Wasm.SmallStep ++ head.getId.eraseMacroScopes)
+    let step ← if twpPuresNeedsRfl head.getId.eraseMacroScopes then `(tactic| iapply ($rule) rfl)
+      else `(tactic| iapply ($rule))
+    `(tactic| $step; wasm_twp_pures [$rest:ident*])
 
 /-- Execute pure Wasm steps, then normalize with caller-selected rewrites. -/
 syntax "wasm_twp_pures" "[" ident* "]" "using"

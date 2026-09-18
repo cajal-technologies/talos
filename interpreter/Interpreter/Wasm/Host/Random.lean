@@ -58,12 +58,10 @@ theorem State.draw_length (state : State) (count : Nat) :
 def State.advance (state : State) (count : Nat) : State :=
   { state with cursor := state.cursor + count }
 
-/-- The number of addressable bytes in the primary linear memory. -/
-def byteCapacity (store : Store State) : Nat := store.mem.pages * 65536
-
-/-- Whether the half-open range `[pointer, pointer + length)` is in memory. -/
-def rangeInBounds (store : Store State) (pointer length : Nat) : Bool :=
-  pointer + length ≤ byteCapacity store
+-- `byteCapacity`/`rangeInBounds` depend only on `.mem`, not on this host's
+-- state, so the shared definition in `Host.lean` is re-exported here rather
+-- than redefined.
+export Store (byteCapacity rangeInBounds)
 
 /-- Pure implementation of `random.get(pointer, length)`. -/
 def getResult (store : Store State) (args : List Value) : HostResult State :=
@@ -104,13 +102,8 @@ def spec : HostSpec State := { contracts := [getContract] }
 /-- The concrete environment satisfies the pathwise specification for every
 module whose import list is exactly `Random.imports`. -/
 theorem env_satisfies (module : Module) (himports : module.imports = imports) :
-    env.Satisfies module spec := by
-  intro index hindex
-  rw [himports] at hindex
-  have hzero : index = 0 := by simpa [imports] using hindex
-  subst index
-  refine ⟨getHost, getContract, rfl, rfl, ?_⟩
-  intro store args
-  rfl
+    env.Satisfies module spec :=
+  HostEnv.singleton_satisfies getHost getContract (by rw [himports]; rfl)
+    (fun _ _ => rfl)
 
 end Wasm.Random
