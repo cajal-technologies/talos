@@ -143,9 +143,7 @@ theorem RunsExportWith.deterministic
   rcases second with
     ⟨secondConfig, secondStart, secondTrace, secondValues, secondStore,
       secondSteps, hsecond⟩
-  rw [firstStart] at secondStart
-  injection secondStart with configEq
-  subst secondConfig
+  obtain rfl := Option.some_inj.mp (firstStart.symm.trans secondStart)
   obtain ⟨rfl, rfl⟩ :=
     SmallStep.steps_done_deterministic firstSteps secondSteps
   exact ⟨{ values := firstValues, final := firstStore.wasm }, hfirst, hsecond⟩
@@ -196,9 +194,7 @@ theorem RunsExportWithOutcome.deterministic
   rcases second with
     ⟨secondConfig, secondStart, secondTrace, secondOutcome, secondStore,
       secondSteps, hsecond⟩
-  rw [firstStart] at secondStart
-  injection secondStart with configEq
-  subst secondConfig
+  obtain rfl := Option.some_inj.mp (firstStart.symm.trans secondStart)
   have firstTerminal (kind : SmallStep.StepKind)
       (next : SmallStep.Config α) :
       ¬ SmallStep.Step
@@ -326,9 +322,7 @@ theorem RunsWith.deterministic
   rcases second with
     ⟨secondConfig, secondStart, secondTrace, secondValues, secondStore,
       secondSteps, _, hsecond⟩
-  rw [firstStart] at secondStart
-  injection secondStart with configEq
-  subst secondConfig
+  obtain rfl := Option.some_inj.mp (firstStart.symm.trans secondStart)
   obtain ⟨rfl, rfl⟩ :=
     SmallStep.steps_done_deterministic firstSteps secondSteps
   exact ⟨firstStore.wasm.host, hfirst, hsecond⟩
