@@ -57,6 +57,7 @@ import CodeLib.RustStd.HashMap.PairSlice
 import CodeLib.RustStd.HashMap.SortedByKey
 import CodeLib.RustStd.HashMap.SortingNetwork
 import CodeLib.RustStd.HashMap.EraseWasm
+import CodeLib.RustStd.HashMap.CollectFold
 import CodeLib.Near.State
 import CodeLib.Near.Env
 import CodeLib.Near.Proof
