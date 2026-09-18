@@ -6,8 +6,9 @@ import Project.RustHashMap.Func17Proof
 
 `Project.RustHashMap.LookupTailContracts.GetTailSpec` is the contract of
 everything after the read phase of absolute `func 21`.  This module proves
-it.  `collect_entries`, absolute `func 5`, is the one open contract; every
-other callee is a proved theorem.
+it.  `collect_entries`, absolute `func 5`, arrives as a hypothesis, which
+`CollectProof.func2_correct` supplies; every other callee is a proved
+theorem.
 
 The proof follows the block structure of
 `Project.RustHashMap.LookupTailDefs`, one lemma per control block, from the
@@ -1086,7 +1087,7 @@ theorem twp_get_reject [WasmSmallStepGS hlc Universal.State]
 
 set_option maxHeartbeats 2000000 in
 /-- The tail of the `map_get` driver, from the end of the read loop to the
-return.  `collect_entries` is the one open contract.  WAT lines 5162 to
+return.  `collect_entries` arrives as a hypothesis.  WAT lines 5162 to
 5306. -/
 theorem twp_get_tail [WasmSmallStepGS hlc Universal.State]
     (hfunc2 : CollectContract.Func2Spec (hlc := hlc)) :

@@ -48,11 +48,14 @@ proofs of the probe loop, of `insert` and of `remove` against the compiled
 bodies are the consumers.
 
 Overlap note: upstream PR #235 adds `CodeLib.SepLogic.PointsToBytesSlice`,
-with `pointsTo_u64_as_bytes` (a `u64` as its eight `u64Byte`s) and
-`pointsToBytes_focus` over byte windows.  `pointsToBytes_eight_as_u64` here
-starts from eight arbitrary bytes and names the word `groupWord`, and
-`ByteSlice_window` is a corollary of `ByteSlice_append` at the `ByteSlice`
-level.  When that PR lands, both can be re-based on it in place.
+with `pointsTo_u64_as_bytes` (a `u64` as its eight `u64Byte`s),
+`pointsToBytes_focus_u64` (the closest analogue of
+`pointsToBytes_eight_as_u64` here, which starts from eight arbitrary bytes
+and names the word `groupWord`), and `pointsToBytes_slice` and
+`pointsToBytes_focus` over byte windows (the closest analogues of
+`ByteSlice_window` here, which is a corollary of `ByteSlice_append` at the
+`ByteSlice` level).  When that PR lands, both can be re-based on it in
+place.
 -/
 
 namespace Wasm.RustStd.HashMap.Table

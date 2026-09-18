@@ -59,28 +59,18 @@ is `call 80` then `unreachable`.  Neither reaches `call 2`, the
 is neither arm of `Func2Spec`.  A contract would only name an outcome that
 the proof must show unreachable.  `Func14Spec` takes the bound instead.
 
-CAUTION.  `Func2Spec` does not carry that bound today.  Its precondition
-bounds `8 * cap` by `UInt32.size` through the byte slice of the pair
-buffer, which allows `cap` up to 536870911, and `BumpHeap` owns the cursor
-and the frontier ghost, not the bytes above the frontier, so no
-disjointness argument recovers a tighter bound.  `Func2Spec` is therefore
-not provable as stated.  The repair is the one commit 44bf4f3 made for the
-decoder: strengthen the accepting arm of `Func1Spec` with a heap tie on
-`capacity`, then pass it down.  Do that edit in one window, because both
-contracts are imported by `DriverProof` and `DriverTailProof`.
-
-`Func2Spec` misses a second conjunct for the same reason.  `Func13Spec`
-needs `keysBefore[16]? != some 2`, because the guard at WAT 2993 to 2997
-panics when the thread-local state byte is 2.  `Func2Spec` lends
-`keysBefore` with a length equation only, and the guard at WAT 867 to 872
-in `func 5` gives just "not 1", so the fact has to come from the entry.
-It holds there: the one data segment runs from 1048576 to 1049496 and the
-state byte is at 1049528, so it starts at 0.  Add both conjuncts in the
-same window.
+`Func2Spec` carries both facts as pure conjuncts of its precondition, at
+`CollectContract.lean`: `len.toNat ≤ maxTableCapacity` for the capacity
+guards, and `keysBefore[16]? ≠ some 2` for `Func13Spec`, whose guard at
+WAT 2993 to 2997 panics when the thread-local state byte is 2.  The second
+one holds at the entry: the one data segment runs from 1048576 to 1049496
+and the state byte is at 1049528, so Wasm zero-initializes it, and the
+module only ever stores 1 there.  `CollectProof.func2_correct` discharges
+the whole contract with no hypothesis.
 
 ## The stack constants
 
-`collectDepth` is 192 and the audit that measured it gives the path
+`collectDepth` is 192 and the worst path of the WAT call graph is
 `f5(+48) f18(+16) f17(+32) f97(+0) f104(+32) f79(+16) f72(+0) f73(+16)
 f75(+32)`.  Each constant below is the sum along the worst path from the
 entry of that function, so each includes the frame of the function itself.
@@ -96,7 +86,7 @@ f18             16 + 128                                         = 144
 f5              48 + max(112, 144, 128, 0)                       = 192
 ```
 
-The last line is `collectDepth`, so the constants agree with the audit
+The last line is `collectDepth`, so the constants agree with that path
 with no slack at the top.  The two indirect calls that `func 71` and
 `func 75` make resolve to leaves; the argument is in the
 `Project.RustHashMap.BodyContracts` docstring and it is what makes the
@@ -209,8 +199,8 @@ guard at WAT 2993 to 2997 panics when the state byte is 2, through
 `call 104` and then `unreachable`, which is neither arm.  The guard in
 `func 5` gives only "not 1", so the fact comes from the entry: the one
 data segment ends at 1049496 and the state byte is at 1049528, so it
-starts at 0 and the module only ever stores 1 there.  `Func2Spec` does not
-carry that conjunct today; see the module docstring. -/
+starts at 0 and the module only ever stores 1 there.  `Func2Spec` carries
+the same conjunct, so the caller supplies it. -/
 def Func13Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp : UInt32) (keysBefore below : List UInt8)
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
@@ -270,9 +260,10 @@ of `Table.resize` runs over an empty `fullIndices`.
 The `additional` bound kills every capacity-overflow guard.  Without it
 the body reaches `func 97` and traps, which is neither arm.
 
-The `Result` slot takes the `Ok` tag `0x80000001` in word 0.  Word 1 is
-untouched on that path, so the contract leaves it existential.  The
-allocation at WAT 3685 can raise `talos.oom`, so the second arm stays. -/
+The `Result` slot takes the `Ok` tag `0x80000001` in word 0.  WAT 4120 to
+4122 also write word 1, with a value the contract does not characterize,
+so the postcondition quantifies it.  The allocation at WAT 3685 can raise
+`talos.oom`, so the second arm stays. -/
 def Func14Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out table additional hasher : UInt32)
     (k0 k1 : UInt64) (t : HashMap.Table UInt32 UInt32)

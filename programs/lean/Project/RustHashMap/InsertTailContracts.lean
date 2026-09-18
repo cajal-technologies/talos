@@ -65,10 +65,11 @@ Five of the seven callees are proved already: `Func1Spec` by
 `Project.RustHashMap.Func1Proof.func1_correct`, `Func52Spec` by
 `Func52Proof.func52_correct`, `Func49Spec` by `Func49Proof`,
 `Func4Spec` by `Func4Proof.func4_correct` and `Func5Spec` by
-`Func5Proof.func5_correct`.  Two are open here:
-`Project.RustHashMap.CollectContract.Func2Spec`, and
+`Func5Proof.func5_correct`.  Two arrive as hypotheses here:
+`Project.RustHashMap.CollectContract.Func2Spec`, which
+`CollectProof.func2_correct` proves, and
 `Project.RustHashMap.MapOpContracts.Func3Spec`, which
-`Func3Proof.func3_correct_of` gives under `Func15InsertSpec`.  So the
+`Func3Proof.func3_correct_of` proves under `Func15InsertSpec`.  So the
 theorem that discharges this contract is
 
 ```

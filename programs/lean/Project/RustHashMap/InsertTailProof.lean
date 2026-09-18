@@ -14,8 +14,9 @@ import Project.RustHashMap.TailShared
 `Project.RustHashMap.InsertTailContracts.InsertTailSpec` is the contract
 of everything after the read phase of absolute `func 3`.  This module
 proves it.  `collect_entries`, absolute `func 5`, and the insert shim,
-absolute `func 6`, are the two open contracts; every other callee is a
-proved theorem.
+absolute `func 6`, arrive as the two hypotheses, which
+`CollectProof.func2_correct` and `Func3Proof.func3_correct_of` supply;
+every other callee is a proved theorem.
 
 The proof follows the block structure of
 `Project.RustHashMap.InsertTailDefs`, one lemma for each control block,

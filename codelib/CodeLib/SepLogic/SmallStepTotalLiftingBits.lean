@@ -4,60 +4,56 @@ import CodeLib.SepLogic.SmallStepTotalLifting
 # Total lifting rules for the bit operations of the hash map program
 
 `CodeLib.SepLogic.SmallStepTotalLifting` carries the total-WP rules of the
-Wasm instructions that the proofs needed until now.  The compiled hash map
-uses eight more instructions that had no rule.  This file adds them.
+Wasm instructions that the earlier proofs needed.  The compiled hash map
+uses eleven more instructions that had no rule.  This file adds them.
 
-Every rule here is a pure rule.  The interpreter already has a `Step`
-constructor for each instruction, so each rule is one use of the
+Nine rules are pure rules.  The interpreter already has a `Step`
+constructor for each of those instructions, so each rule is one use of the
 `wasm_twp_pure_rule` macro over that constructor.  The macro is at
-`CodeLib/SepLogic/SmallStepTotalLifting.lean:164`.
+`CodeLib/SepLogic/SmallStepTotalLifting.lean:164`.  The two load rules,
+`twp_load8S_gen` and `twp_load32UI64`, are written out, because a load
+reads the heap.
 
 ## Where the instructions come from
 
-The SipHash-1-3 of `std::collections::HashMap` is inlined into two bodies of
-the program: absolute `func 17`, which rehashes, and absolute `func 18`,
-which inserts.  The two bodies hold 215 of the 231 uses of `i64.xor`,
-`i64.rotl`, `i64.add` and `i64.and`.  The remaining rules serve the capacity
-arithmetic of `func 17`.
+The SipHash-1-3 of `std::collections::HashMap` is inlined into five bodies
+of the program: absolute funcs 11, 12, 17, 18 and 20.  The program holds
+442 uses of `i64.xor`, `i64.rotl`, `i64.add` and `i64.and`; `func 17`,
+which rehashes, and `func 18`, which inserts, hold 215 of them.  The
+remaining rules serve the capacity arithmetic of `func 17` and the byte
+loads of the probe loops.  Absolute `func 4`, the borsh decoder, uses none
+of these instructions.  The proofs of all five exports use these rules.
 
-No body below absolute `func 52` uses any of these instructions, and the
-borsh decoder at absolute `func 4` uses none of them either.  These rules are
-therefore a prerequisite of `collect_entries` alone.
-
-## Two names that are private
+## One name that is private
 
 `rotateLeft64` at `Interpreter/Wasm/SmallStep.lean:459` is private, so
 `twp_rotlI64` states the rotate in the unfolded form that the public theorem
 `rotateLeft64_eq` gives.  That theorem is `rfl`, so the `Step` constructor
-still closes the rule.  `twp_wrapI64` and `twp_extendUI32` state their
-results the same way.
+still closes the rule.
 
 `clz32` at `Interpreter/Wasm/Semantics.lean:12` and `clz64` at
 `Interpreter/Wasm/Semantics.lean:27` are public.  `twp_clz` names `clz32`
-directly and `twp_clzI64` names `clz64` directly, as `twp_ctzI64` names
-`ctz64`.
+directly and `twp_clzI64` names `clz64` directly.
 
 ## Why there is no rule for `unreachable`
 
-The gap survey counted `unreachable` as a twelfth missing rule.  This file
-does not add one, and the map proof does not need one.
+The map proof needs no rule for `unreachable`.  Every `unreachable` in the
+studied regions stands directly after a call to a function that does not
+return: `call 99`, `call 102`, `call 103`, `call 104` and `call 107` are the
+panic and abort paths that `rustc` emits.  The instruction is the
+terminator of a block that control reaches only after the panic call.  A
+total-correctness proof closes such a block by showing that its guard is
+false, so the step never happens.
 
-Every `unreachable` in the studied regions stands directly after a call to a
-function that does not return: `call 99`, `call 102`, `call 103`, `call 104`
-and `call 107` are the panic and abort paths that `rustc` emits.  The
-instruction is the terminator of a block that control reaches only after the
-panic call.  A total-correctness proof closes such a block by showing that
-its guard is false, so the step never happens.
+The contracts carry that obligation.  `Project.RustHashMap.Func14Proof`
+shows the capacity-overflow exit of absolute `func 17` unreachable from the
+precondition bound `len.toNat ≤ maxTableCapacity` of
+`Project.RustHashMap.CollectContract`, not from any allocator behaviour.
+The decoder carries the same obligation for absolute `func 99`.
 
-The contracts already carry that obligation.
-`Project.RustHashMap.CollectContract` states that the body proof must show
-the capacity-overflow exit of absolute `func 17` is not reachable, because
-absolute `func 58` refuses the allocation and raises `talos.oom` first.  The
-decoder carries the same obligation for absolute `func 99`.
-
-Write `twp_unreachable_gen` only if one of those guards turns out to be
-live.  The rule cannot use `wasm_twp_pure_rule`, because the step leaves the
-`.running` expression for `.trapped`, which `twp_pureStep` cannot state.
+A rule for `unreachable` could not use `wasm_twp_pure_rule`, because the
+step leaves the `.running` expression for `.trapped`, which `twp_pureStep`
+cannot state.
 -/
 
 namespace Wasm.SmallStep

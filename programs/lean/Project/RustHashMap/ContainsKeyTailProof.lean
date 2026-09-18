@@ -9,8 +9,9 @@ import Project.RustHashMap.Func9Proof
 
 `Project.RustHashMap.LookupTailContracts.ContainsKeyTailSpec` is the
 contract of everything after the read phase of absolute `func 19`.  This
-module proves it.  `collect_entries`, absolute `func 5`, is the one open
-contract; every other callee is a proved theorem.
+module proves it.  `collect_entries`, absolute `func 5`, arrives as a
+hypothesis, which `CollectProof.func2_correct` supplies; every other callee
+is a proved theorem.
 
 The proof follows the block structure of
 `Project.RustHashMap.LookupTailDefs`, one lemma per control block, from the
@@ -979,7 +980,7 @@ theorem pairCount_le_maxTable (input : List UInt8)
 
 set_option maxHeartbeats 2000000 in
 /-- The tail of the `map_contains_key` driver, from the end of the read
-loop to the return.  `collect_entries` is the one open contract.  WAT lines
+loop to the return.  `collect_entries` arrives as a hypothesis.  WAT lines
 4652 to 4769. -/
 theorem twp_contains_key_tail [WasmSmallStepGS hlc Universal.State]
     (hfunc2 : CollectContract.Func2Spec (hlc := hlc)) :

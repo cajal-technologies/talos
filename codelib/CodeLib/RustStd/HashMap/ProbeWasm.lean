@@ -33,8 +33,7 @@ would assume.  `TableU32.wf_ofEntries_u32` proves that this table is
 well formed and clean.
 
 What this file does not do: it states nothing about the compiled function
-bodies.  The five drivers, the inlined SipHash, the probe loop invariant,
-and insert, remove and resize stay open.
+bodies.  Those proofs live under `Project.RustHashMap`.
 -/
 
 namespace Wasm.RustStd.HashMap.Table

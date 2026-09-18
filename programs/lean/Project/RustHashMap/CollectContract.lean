@@ -35,8 +35,9 @@ The two SipHash seeds come from the thread-local cells at 1049512 and
 1049520, with the state byte at 1049528.  The first call in a run writes
 all three; every later call reads `k0` and `k1` and bumps `k0` by one.  The
 contract owns the region as raw bytes and hands it back with the contents
-changed, and the continuation names the two seeds the run used.  No caller
-can predict them, because they are addresses of the run.
+changed, and the continuation names the two seeds the run used.  The
+contract therefore quantifies the two seeds existentially: no caller can
+name them in advance.
 
 ## The postcondition the driver needs
 
@@ -47,16 +48,18 @@ builds from the pairs in wire order.  It carries the four table words at
 which is frame offset 36 in the driver, is `items`.  The driver writes that
 word to the output stream, and `Project.RustHashMap.Spec.lenOutput` names
 `HashMap.len`, so the contract states the equation between the two counts
-as a pure conjunct.  Without it the driver cannot close its own contract.
+as a pure conjunct.  `CodeLib.RustStd.HashMap.TableU32.len_ofEntries_u32`
+proves it in `CollectAssembly.lean`.
 
 ## Outcomes
 
 There are two.  A normal return leaves the map in the slot.  A failed
 allocation inside `RandomState::new` or inside `reserve_rehash_inner`
 raises the terminal `talos.oom` host trap.  The capacity overflow panic of
-`func 17` is a third exit of the compiled code.  The body proof must show
-that it is not reachable, because `func 58` refuses any allocation whose
-end passes `isize::MAX` and raises `talos.oom` first.
+`func 17` is a third exit of the compiled code.  The precondition
+`len.toNat ≤ maxTableCapacity` kills it: each of the four guards compares
+against 2147483640, 536870911 or 536870910, and `Func14Proof.lean` closes
+them with `twp_gtU (result := 0)`.
 -/
 
 namespace Project.RustHashMap.CollectContract
@@ -77,7 +80,7 @@ open scoped Wasm.SmallStep.Outcome
 /-- The stack that `collect_entries` takes below the caller.  Its own frame
 is 48 bytes.
 
-The audit measured the worst path and it uses exactly 192 bytes:
+The worst path through the panic subtree uses exactly 192 bytes:
 
 ```
 f5(+48) f18(+16) f17(+32) f97(+0) f104(+32) f79(+16) f72(+0) f73(+16)
@@ -85,13 +88,10 @@ f75(+32)
 ```
 
 That path does not return.  `func 97` is a bounds assert, and everything
-below it ends in `unreachable`, so the path reaches 192 bytes only on a
-run that traps.  Cut every edge into the panic subtree and the maximum
-falls to 96 bytes.
-
-Keep 192 here.  The driver already owns 240 bytes and gives 192 of them
-away, so the larger number costs the driver proof nothing, and a body
-proof that keeps the panic subtree alive still fits. -/
+below it ends in `unreachable`, so a run that returns uses at most 96
+bytes.  The driver owns 240 bytes and lends 192, so the larger number
+costs the driver proof nothing, and a body proof that keeps the panic
+subtree alive still fits. -/
 def collectDepth : Nat := 192
 
 /-- The codec of one wire pair: the key in the first four bytes, the value

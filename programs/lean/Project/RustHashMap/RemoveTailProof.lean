@@ -11,8 +11,9 @@ import Project.RustHashMap.TailShared
 
 `Project.RustHashMap.RemoveTailContracts.RemoveTailSpec` is the contract
 of everything after the read phase of absolute `func 9`.  This module
-proves it.  `collect_entries`, absolute `func 5`, is the one open
-contract; every other callee is a proved theorem.
+proves it.  `collect_entries`, absolute `func 5`, arrives as a
+hypothesis, which `CollectProof.func2_correct` supplies; every other callee
+is a proved theorem.
 
 The proof follows the block structure of
 `Project.RustHashMap.RemoveTailDefs`, one lemma per control block, from
@@ -1328,7 +1329,7 @@ theorem twp_rm_accept_copy [WasmSmallStepGS hlc Universal.State]
 
 set_option maxHeartbeats 2000000 in
 /-- The tail of the `map_remove` driver, from the end of the read loop to
-the return.  `collect_entries` is the one open contract.  WAT lines 1597
+the return.  `collect_entries` arrives as a hypothesis.  WAT lines 1597
 to 1739. -/
 theorem twp_remove_tail [WasmSmallStepGS hlc Universal.State]
     (hfunc2 : CollectContract.Func2Spec (hlc := hlc)) :

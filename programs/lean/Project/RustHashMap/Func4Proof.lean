@@ -492,7 +492,7 @@ private theorem nextGroup_step (ctrl : UInt32) (b : Nat) :
     UInt32.add_comm (8 : UInt32)]
 
 /-- Move an owned double word between two names of one address.  Copy of
-`LookupProbe.lean:102`, which is private there. -/
+`Func15Insert.wordMove64`. -/
 private theorem wordMove64 [WasmSmallStepGS hlc Universal.State]
     {address address' : UInt32} {value : UInt64}
     (haddress : address = address') :

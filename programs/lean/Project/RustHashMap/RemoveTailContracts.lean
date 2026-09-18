@@ -40,8 +40,9 @@ Four of the five callees are proved already: `Func7Spec` by
 `Project.RustHashMap.Func7Proof.func7_correct`, `Func4Spec` by
 `Func4Proof.func4_correct`, `Func5Spec` by `Func5Proof.func5_correct`,
 and `Func8Spec` by `Func8Proof.func8_correct`.  The fifth is
-`Project.RustHashMap.CollectContract.Func2Spec`, which is still open, so
-the theorem that discharges this contract is
+`Project.RustHashMap.CollectContract.Func2Spec`, which
+`CollectProof.func2_correct` proves, so the theorem that discharges this
+contract is
 `twp_remove_tail (hfunc2 : Func2Spec) : RemoveTailSpec`.
 -/
 

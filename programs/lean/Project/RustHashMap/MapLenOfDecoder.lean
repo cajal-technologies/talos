@@ -4,10 +4,10 @@ import Project.RustHashMap.Func52Proof
 /-!
 # `map_len`, conditional on the two decoder bodies
 
-`Project.RustHashMap.DriverProof.mapLen_of_bodies` takes three open body
-contracts.  `Project.RustHashMap.Func52Proof.func52_correct` discharges
-the third one, so two are left: `Func1Spec`, the borsh decoder at
-absolute function 4, and `Func2Spec`, `collect_entries` at absolute
+`Project.RustHashMap.DriverProof.mapLen_of_bodies` takes three body
+contracts as hypotheses.  `Project.RustHashMap.Func52Proof.func52_correct`
+discharges the third one, so two are left: `Func1Spec`, the borsh decoder
+at absolute function 4, and `Func2Spec`, `collect_entries` at absolute
 function 5.
 
 This theorem keeps those hypotheses, so it is not tagged `@[proves]`.

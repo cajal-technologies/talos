@@ -26,14 +26,14 @@ needs more stack than its constant gives must raise the constant, and only
 the driver proof has to follow.
 
 CAUTION. Do not let a body proof use more stack than its constant gives.
-An audit of the WAT call graph on 2026-09-11 measured the true maximum of
-all three constants.  Each constant is large enough, and each one is
-exactly equal to the true maximum.  There is no slack.  A new local, or a
-new version of rustc, borsh or hashbrown, can break all three at once.
+Each of the three constants is exactly the maximum that the WAT call graph
+allows, so there is no slack.  A new local, or a new version of rustc,
+borsh or hashbrown, can break all three at once.
 
-The audit is sound only because every reachable `call_indirect` resolves
-to one concrete leaf.  The module has one table of 17 entries, filled from
-index 1 by the element segment.  Three resolutions carry the result:
+The three constants are sound only because every reachable
+`call_indirect` resolves to one concrete leaf.  The module has one table of
+17 entries, filled from index 1 by the element segment.  Three resolutions
+carry the result:
 
 * `func 71` loads the panic hook from 1049536 and selects 1 when the hook
   is zero, so the target is `table[1]`, which is `func 76`, a leaf.
@@ -85,9 +85,9 @@ def okTag : UInt32 := 2147483649
 
 /-- The stack that `borsh::io::Error::new` takes below the caller.  Its own
 frame is 16 bytes; the rest is the format and allocate chain 42, 43, 57,
-51, 48, 49, 44 and 58.
+51, 48, 50, 44 and 58.
 
-The audit measured the worst path and it uses exactly 160 bytes:
+The worst path uses exactly 160 bytes:
 
 ```
 f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48) f50(+16) f44(+32)
@@ -96,11 +96,10 @@ f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48) f50(+16) f44(+32)
 The path returns normally, so 160 is the true maximum for a run that does
 not trap.  There is no slack.
 
-A second read of the WAT on 2026-09-11 replaced `f49` by `f50` in this
-path.  Both frames are 16 bytes, so the total does not move, but `f49` is
-the dead arm.  `func 48` picks between `f49` and `f50` on bit 0 of its
-third argument at WAT line 9426, and `func 51` passes the folded constant
-`0 & 1` there at WAT lines 9593 to 9596.  So `f50` is the live arm.
+`func 48` picks between `f49` and `f50` on bit 0 of its third argument at
+WAT line 9426, and `func 51` passes the folded constant `0 & 1` there at
+WAT lines 9593 to 9596, so `f49` is dead and `f50` is the live arm.  Both
+frames are 16 bytes.
 
 The other branch of `func 55` is `f55(+16) f56(+32)`, which is 48 bytes.
 `func 56` does not commit the stack pointer; it writes a red zone below
@@ -217,7 +216,7 @@ def DecodeAccepts (bytes : List UInt8) : Prop :=
 /-- The stack that the decoder takes below the caller.  Its own frame is 64
 bytes; the rest is the error chain through 52 and 55.
 
-The audit measured the worst path and it uses exactly 240 bytes:
+The worst path uses exactly 240 bytes:
 
 ```
 f4(+64) f52(+16) f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48)
@@ -300,15 +299,12 @@ The body proof must carry two facts.  Write them as loop invariants.
   `BumpHeap` bounds the frontier by 2147483648, so the fact bounds
   `16 * oldCap` by 2146438175.  The panic arm needs
   `8 * newCap > 2147483644` with `newCap = max(4, 2 * oldCap)`, and that
-  needs `16 * oldCap` to be 2147483645 or more.  The margin is 1045469
+  needs `16 * oldCap` to be 2147483645 or more.  The margin is 1045470
   bytes.  `Project.RustHashMap.Decoder.grow_no_overflow` is the argument
   in Lean.
 
-  The fact is about the allocator alone.  An earlier version of this
-  docstring used the input length instead, through the claim that the pair
-  buffer and the input bytes are two live blocks of one bump heap.  That
-  claim does not follow from this contract.  The contract lends the input
-  as a plain byte slice, and it never says that the input is in the heap.
+  The fact is about the allocator alone.  The contract lends the input as
+  a plain byte slice and never says that the input lies in the heap.
 
 * `4 + 8 * index <= bytes.length` says that the input holds every pair that
   the loop read.  The accepting arm needs it.  `func 26` runs only when the
@@ -334,12 +330,11 @@ then calls `func 52`, whose own error arm builds a second message of 26
 bytes at 1049137.  Both sit in the data segment at [1048576, 1049496).
 
 So this contract lends the whole data segment and gives it back unchanged.
-An earlier version lent nothing, and no proof of it was possible, because
-the body reads memory that the contract does not own.
+The contract must lend the segment, because the body reads it.
 `Project.RustHashMap.DriverTail.DriverTailSpec` carries the segment
 already, so the caller pays nothing new.
 
-## What is still open below the decoder
+## The subtree below the decoder
 
 The error arm calls absolute `func 52`, which turns the `io::Error` into
 the error that the output slot takes.  That call opens a subtree of 14

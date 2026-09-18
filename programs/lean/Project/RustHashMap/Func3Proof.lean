@@ -28,10 +28,11 @@ one straight line.
 | 1014 to 1016 | the discriminant goes to `out` |
 | 1017 to 1020 | global zero takes `frame + 16` back |
 
-`Func15InsertSpec` is a hypothesis of this theorem.  Another window proves
-it.  Every conjunct of its precondition comes from the precondition of
-`Func3Spec`: the table facts pass through unchanged, and the two address
-facts of the frame slot follow from `insertWrapDepth <= sp.toNat`.
+`Func15InsertSpec` is a hypothesis of this theorem;
+`Func15Proof.func15_insert_correct` proves it.  Every conjunct of its
+precondition comes from the precondition of `Func3Spec`: the table facts
+pass through unchanged, and the two address facts of the frame slot follow
+from `insertWrapDepth <= sp.toNat`.
 
 ## The stack
 

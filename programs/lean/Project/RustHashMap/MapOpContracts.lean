@@ -40,8 +40,8 @@ general contracts of the same two bodies: they take the stream and the
 bump heap, they carry an out-of-memory arm, and `Func14ResizeSpec` takes
 a general table rather than the singleton.
 
-The two contracts stay in this module and nothing imports them from the
-`collect` lane, so the two windows do not collide.
+The two contracts stay in this module, and nothing in the `collect_entries`
+proof imports them, so the two contract sets stay independent.
 
 ## Absolute `func 11` has no dead arm and no frame
 
@@ -60,7 +60,8 @@ home of that constant.  `insertFullDepth` is the 16-byte frame of absolute
 `func 18`, at WAT 4133 to 4135, plus `resizeDepth`.  `insertWrapDepth` is
 the 16-byte frame of absolute `func 6`, at WAT 977 to 979, plus
 `insertFullDepth`.  `maxTableCapacity` is in
-`Project.RustHashMap.EntryContracts`, which both lanes read.
+`Project.RustHashMap.EntryContracts`, which both the `collect_entries`
+proof and the map-operation proofs read.
 -/
 
 namespace Project.RustHashMap.MapOpContracts
@@ -289,18 +290,22 @@ both as constants.
 
 This is `Project.RustHashMap.CollectBodyContracts.Func14Spec` with a
 general table instead of the static empty singleton, and with the
-addition fixed to 1.  A general table has items, so the rehash-in-place
-region and the resize loop are both live here, and the answer is
-`Table.reserve` rather than `Table.withCapacity`.
+addition fixed to 1.  A general table has items, so the resize walk of
+WAT 3746 to 4083 and the free of WAT 4098 to 4117 both run, and the answer
+is `Table.reserve` rather than `Table.withCapacity`.  The rehash-in-place
+arm of WAT 3116 to 3640 stays dead: the guard at WAT 3063 asks for
+`items + 1 <= full_cap / 2`, and a clean table with no growth left has
+`items = full_cap`.
 
 `t.growthLeft = 0` is the guard that absolute `func 18` already tested,
 so the reserve is never the identity.  `t.items + 1 <= maxTableCapacity`
 kills the capacity-overflow exit X-F17-CAP, which is `call 97` and not an
 arm.
 
-The `Result` slot takes the `Ok` tag `okTag` in word 0.  Word 1 is
-untouched on that path, so the contract leaves it existential.  The
-allocation at WAT 3685 can raise `talos.oom`, so the second arm stays. -/
+The `Result` slot takes the `Ok` tag `okTag` in word 0.  WAT 4120 to
+4122 also write word 1, with a value the contract does not characterize,
+so the postcondition quantifies it.  The allocation at WAT 3685 can raise
+`talos.oom`, so the second arm stays. -/
 def Func14ResizeSpec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out table hasher : UInt32) (k0 k1 : UInt64)
     (t : HashMap.Table UInt32 UInt32) (outBefore below : List UInt8)

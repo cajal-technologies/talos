@@ -25,10 +25,12 @@ statement here is about the model, about a word, or about one owned range.
 ## The four groups
 
 * The bit bridges, the hash flattening and the address bridges are copies
-  from the insert lane.  Each copy carries the line it came from.  Delete
-  a copy when the file it came from joins `Project.lean`; `grep` for the
-  marker finds them all.
-* The probe lemmas repeat the insert lane as well, with one change.  The
+  of lemmas in `BitPures.lean`, `Func15Hash.lean`, `Func15Insert.lean`,
+  `ProbeStop.lean` and `CollectTail.lean`.  Each copy names its original.
+  They are duplicated rather than imported to keep this file's import
+  surface at the `CodeLib` layer, and `CollectTail.lean` cannot be
+  imported here at all, because it depends on this file.
+* The probe lemmas repeat the insert proof as well, with one change.  The
   insert loop runs on a table with room, so it gets its stopping window
   from `1 <= t.growthLeft`.  A lookup runs on a table that `ofEntries`
   filled, and such a table can be exactly full.  `exists_empty_of_clean`
@@ -52,7 +54,7 @@ namespace Wasm.SmallStep
 
 /-! ## The missing `wasm_twp_pures` cases
 
-Copy of `BitPures.lean:36`; delete when that file is imported. -/
+Copy of the section with the same name in `BitPures.lean`. -/
 
 macro_rules
   | `(tactic| wasm_twp_pures [twp_addI64 $rest:ident*]) =>
@@ -91,7 +93,7 @@ open Wasm.RustStd.HashMap.SipHash
 
 /-! ## The five rotate bridges
 
-Copy of `BitPures.lean:70`; delete when that file is imported. -/
+Copy of the section with the same name in `BitPures.lean`. -/
 
 /-- The rotate that `twp_rotlI64` gives, at amount 13. -/
 theorem rotlWasm13 (x : UInt64) :
@@ -125,7 +127,7 @@ theorem rotlWasm32 (x : UInt64) :
 
 /-! ## The shift-amount bridges
 
-Copy of `BitPures.lean:106`; delete when that file is imported. -/
+Copy of the section with the same name in `BitPures.lean`. -/
 
 /-- `i64.shr_u` at 1. -/
 theorem shrU64Wasm1 (x : UInt64) : x >>> ((1 : UInt64) % 64) = x >>> 1 :=
@@ -160,7 +162,7 @@ theorem wrapWasm (x : UInt64) :
 
 /-! ## The hash that the two lookup bodies compute inline
 
-Copy of `Func15Hash.lean:38`; delete when that file is imported.  Absolute
+Copy of `Func15Hash.lean`, from `xor_left_comm` on.  Absolute
 `func 12` holds the same run at WAT 2292 to 2452 and absolute `func 20` at
 WAT 4782 to 4942.  The seeds come from the table header, `k0` at
 `mapBase + 16` and `k1` at `mapBase + 24`. -/
@@ -299,7 +301,7 @@ end InlineHash
 
 /-! ## Small word bridges
 
-Copy of `Func15Insert.lean:98`; delete when that file is imported. -/
+Copy of `Func15Insert.lean`, from `addNegEight` on. -/
 
 theorem addNegEight (x : UInt32) : x + 4294967288 = x - 8 := by
   apply UInt32.toNat_inj.mp
@@ -380,8 +382,8 @@ theorem stride_step (n : Nat) (hn : 8 * n < UInt32.size) :
 
 /-! ## One owned range as words
 
-Copies of `Func15Insert.lean:457` and of `CollectTail.lean:65`; delete when
-those files are imported. -/
+Copies of `outWords` in `Func15Insert.lean` and of `wordPair` in
+`CollectTail.lean`. -/
 
 section Memory
 
@@ -581,7 +583,7 @@ section Probe
 variable {K V : Type} {hash : K → UInt64} {t : Table K V}
 
 /-- The stride of window `n` is eight groups times `n`.  Copy of
-`ProbeStop.lean:42`; delete when that file is imported. -/
+`probeSeq_stride` in `ProbeStop.lean`. -/
 theorem probeSeq_stride (t : Table K V) (h : UInt64) (n : Nat) :
     (probeSeq t h n).stride = 8 * n := by
   induction n with

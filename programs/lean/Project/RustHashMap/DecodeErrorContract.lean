@@ -34,8 +34,7 @@ capacity is not `okTag`.
 ## The stack
 
 `func49Depth` is `16 + errorNewDepth`, because the deepest call of the body
-is the one to `func 55`.  The audit of 2026-09-11 measured the worst path
-of the decoder as
+is the one to `func 55`.  The worst path of the decoder is
 
 ```
 f4(+64) f52(+16) f55(+16) f42(+0) f43(+16) f57(+16) f51(+16) f48(+48)

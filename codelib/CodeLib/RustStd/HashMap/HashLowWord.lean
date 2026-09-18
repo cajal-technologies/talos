@@ -21,7 +21,7 @@ can therefore step the shift form and still speak about `SipHash.hashU32`.
 forms.  They are a bridge, not a specification.  Use `SipHash.hashU32` in
 every contract.
 
-The `AgreeLow32` lemmas belong beside `SipHash.rotl` when the tree is quiet.
+The `AgreeLow32` lemmas belong beside `SipHash.rotl`.
 -/
 
 namespace Wasm.RustStd.HashMap

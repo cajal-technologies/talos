@@ -1,7 +1,7 @@
 import Project.RustHashMap.Adequacy
 
 /-!
-# The four export wrappers that are still open
+# The four export wrappers
 
 The five exports of the module are one-instruction wrappers.  Each one
 calls its driver and returns.  `Project.RustHashMap.DriverProof` carries
@@ -15,8 +15,10 @@ four, and it states the rule once instead of four times.
 | `map_insert` | 30 | 3 |
 | `map_remove` | 32 | 9 |
 
-The four driver contracts are open.  Every theorem here takes one as a
-named hypothesis, so none of them carries `@[proves]`.
+Every theorem here takes its driver contract as a named hypothesis, so
+none of them carries `@[proves]`.  `Project.RustHashMap.MapGet`,
+`MapInsert`, `MapRemove` and `MapContainsKey` feed the driver proofs in and
+carry `@[proves]` themselves.
 -/
 
 namespace Project.RustHashMap.ExportWrappers

@@ -351,7 +351,7 @@ private def lookupInv (t : Table UInt32 UInt32) (h : UInt64) (key : UInt32)
         (fun j => t.keyIs (Table.probeIdx t h m j) key) = none
 
 /-- Move an owned double word between two names of one address.  Copy of
-`LookupProbe.lean:107`. -/
+`Func15Insert.wordMove64`. -/
 private theorem wordMove64 [WasmSmallStepGS hlc Universal.State]
     {address address' : UInt32} {value : UInt64}
     (haddress : address = address') :
@@ -359,13 +359,13 @@ private theorem wordMove64 [WasmSmallStepGS hlc Universal.State]
   rw [haddress]
 
 /-- `Group::match_empty` in the operand order of the compiled test.  Copy
-of `LookupProbe.lean:120`. -/
+of `LookupPures.swarMatchEmpty_wasm`. -/
 private theorem swarMatchEmpty_wasm (x : UInt64) :
     (x &&& (x <<< 1)) &&& 9259542123273814144 = Table.swarMatchEmpty x :=
   rfl
 
-/-- The walk covers every window up to `N`.  Copy of
-`LookupProbe.lean:126`. -/
+/-- The walk covers every window up to `N`.  Copy of the private
+`find_none_of_inv` in `LookupProbe.lean`. -/
 private theorem find_none_of_inv {t : Table UInt32 UInt32} {h : UInt64}
     {key : UInt32} {N : Nat} {i : LookupIdx}
     (hN : N < Table.probeFuel t)
@@ -390,7 +390,7 @@ private theorem find_none_of_inv {t : Table UInt32 UInt32} {h : UInt64}
     exact hfind
 
 /-- The next stride register, as a number.  Copy of
-`LookupProbe.lean:151`. -/
+`LookupPures.stride_step`. -/
 private theorem stride_step (n : Nat) (hn : 8 * n < UInt32.size) :
     (8 : UInt32) + UInt32.ofNat (8 * n) = UInt32.ofNat (8 * (n + 1)) := by
   apply UInt32.toNat_inj.mp

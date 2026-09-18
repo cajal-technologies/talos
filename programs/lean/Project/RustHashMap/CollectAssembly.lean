@@ -34,7 +34,7 @@ the compiled body, and this list gives the reason for each one.
 4. The insert loop reads the pair buffer with `i32.load`, so the buffer
    needs four-byte alignment.  `Func2Spec` takes `ptr.toNat % 4 = 0`.
 
-## One open premise
+## One premise
 
 `func2_correct_of` is conditional on one argument.  `Func14Spec` is the
 call contract of absolute `func 17`.

@@ -24,9 +24,8 @@ negation of `isSpecial`, so the two masks are complementary.
 ## Where these belong
 
 `swarMatchFull` and its three lemmas belong beside
-`swarMatchEmptyOrDeleted` in `Swar.lean`.  They sit here only because a
-second session held that file when they were written.  Move them when the
-tree is quiet.
+`swarMatchEmptyOrDeleted` in `Swar.lean`.  They sit here to keep that
+file's import surface small.
 -/
 
 namespace Wasm.RustStd.HashMap.Table

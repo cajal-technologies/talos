@@ -18,8 +18,7 @@ This module proves the two forms equal for `2 <= c` and `c <= 2 ^ 32`.  On
 the way it proves `clz32_eq`, which reads the interpreter function `clz32`
 off a power-of-two bound.  No lemma in the tree did that before.
 
-`clz32_eq` is general.  It belongs in the interpreter beside `clz32` when
-the tree is quiet.
+`clz32_eq` is general.  It belongs in the interpreter beside `clz32`.
 -/
 
 namespace Wasm.RustStd.HashMap.Table

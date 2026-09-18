@@ -1810,7 +1810,7 @@ theorem WF.remove (hw : WF hash t) (k : K) :
 
 end Remove
 
-/-! ## Checkpoint F: fresh tables, sizing, `resize`, `reserve`
+/-! ## Fresh tables, sizing, `resize`, `reserve`
 
 `rehashInPlace` is unreachable from a `Clean` table. `reserve` takes that
 branch only when `items + additional <= fullCap / 2`, and a `Clean` table
@@ -2287,7 +2287,7 @@ theorem WF.insert (hw : WF hash t) (hcl : Clean t) (hb : t.buckets < 2 ^ 32) (k 
 
 end Resize
 
-/-! ## Checkpoint G: `ofEntries` and the sorted entry list -/
+/-! ## `ofEntries` and the sorted entry list -/
 
 /-- The insert fold of `extend`. -/
 def insertAll [BEq K] (hash : K → UInt64) (t : Table K V) (es : List (K × V)) : Table K V :=

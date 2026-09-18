@@ -43,10 +43,10 @@ No proof in this file uses `native_decide` or `bv_decide`.
 The total-WP rule for `i64.ctz` is `twp_ctzI64` at
 `CodeLib/SepLogic/SmallStepTotalLifting.lean:1627`.  The rule for
 `i64.clz` is `twp_clzI64` at
-`CodeLib/SepLogic/SmallStepTotalLiftingBits.lean:127`, which `8bee81b`
-added.  The same file gives that rule its `wasm_twp_pures` case at line
-139, and it keeps `twp_clz` at line 123 for the 32-bit `clz32`.  A body
-that runs `i64.clz` therefore needs no new pure rule.
+`CodeLib/SepLogic/SmallStepTotalLiftingBits.lean:127`.  The same file
+gives that rule its `wasm_twp_pures` case at line 139, and it keeps
+`twp_clz` at line 123 for the 32-bit `clz32`.  A body that runs `i64.clz`
+therefore needs no new pure rule.
 -/
 
 namespace Wasm.RustStd.HashMap.Table

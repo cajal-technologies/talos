@@ -20,7 +20,7 @@ contracts therefore take `RuntimeContext` alone, in the shape of
 `Project.RustHashMap.DropErrorContracts.Func44Spec` and of
 `Project.RustHashMap.VecGrow.Func30Spec`.  There is no `StackPointer`, no
 `StackBelow`, and no ledger row: a frameless body adds no stack depth to
-the caller, so the stack audit has nothing to record.
+the caller, so the stack accounting has nothing to record.
 
 ## Why `HashMapAt` and not `MapAt`
 

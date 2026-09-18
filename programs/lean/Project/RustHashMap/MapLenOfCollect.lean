@@ -4,10 +4,11 @@ import Project.RustHashMap.Func1Proof
 /-!
 # `map_len`, conditional on `collect_entries` alone
 
-`Project.RustHashMap.MapLenOfDecoder.mapLen_of_decoder` takes two open
-body contracts.  `Project.RustHashMap.Func1Proof.func1_correct` discharges
-the borsh decoder at absolute function 4, so one is left: `Func2Spec`,
-`collect_entries` at absolute function 5.
+`Project.RustHashMap.MapLenOfDecoder.mapLen_of_decoder` takes two body
+contracts as hypotheses.  `Project.RustHashMap.Func1Proof.func1_correct`
+discharges the borsh decoder at absolute function 4, so one is left:
+`Func2Spec`, `collect_entries` at absolute function 5, which
+`CollectProof.func2_correct` proves.
 
 This theorem keeps that hypothesis, so it is not tagged `@[proves]`.
 `Project.RustHashMap.MapLen` discharges it and carries the tag.

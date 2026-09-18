@@ -49,7 +49,8 @@ The guard at WAT 3094 is looser: it allows `buckets` up to `2 ^ 28`, so a
 capacity up to 234881024.  The guards at WAT 3039 and 3080 are looser
 still.
 
-This module is upstream of both lanes, so both read the constant here. -/
+This module is upstream of both proof groups, so both read the constant
+here. -/
 def maxTableCapacity : Nat := 117440512
 
 theorem maxTableCapacity_eq : maxTableCapacity = 117440512 := rfl
