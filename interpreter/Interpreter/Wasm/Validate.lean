@@ -589,7 +589,8 @@ def Module.checkInterface (m : Module) : Except String Unit := do
     m.exports.map (·.name) ++
     m.globalExports.map (·.1) ++
     m.tableExports.map (·.1) ++
-    m.memoryExports.map (·.1)
+    m.memoryExports.map (·.1) ++
+    m.tagExports.map (·.1)
   if _h : names.Nodup then pure () else throw "duplicate export name"
   m.checkStart
 
