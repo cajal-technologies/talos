@@ -22,9 +22,9 @@ lines, so they hold for this build only.
   `panic`, `overflow-checks`, `debug` or `strip` key is set, so cargo's
   release defaults apply.
 - Tools: the verifier runs the `wasm-tools` on the path and checks no
-  version.  wasm-tools 1.252.0 reproduces the frozen WAT.  The `justfile`
-  pins 1.251.0 for the testsuite only.  The verifier runs
-  `wasm-tools strip --all` before it prints the WAT
+  version.  The `justfile` and the CI workflows pin 1.251.0, and
+  `verifier-freshness.yml` checks the frozen WAT with that version.  The
+  verifier runs `wasm-tools strip --all` before it prints the WAT
   (`verifier/Verifier/Main.lean`), so the frozen WAT carries no name
   section and every function is an index.  The WAT SHA-256
   `578221d6197053edb0629e77a9ae62c2c4099ac6b7cc44079b1c534374b5bbf7` is
@@ -67,7 +67,7 @@ function index in `proof-ledger.md` gives the Rust symbol of each index.
 | X-F17-REHASH | 3116-3640 | 3043-3064 | in place | f8 |
 | X-F17-CAP2 | 3107 | 3078-3082 | -> 97 | f19 |
 | X-F17-NULL | 3694 | 3682-3687 | -> 98 | f1 |
-| X-F17-CAP | 3707 | 3093-3096, 3674-3677, 3678-3681 | -> 97 | f7, f22 |
+| X-F17-CAP | 3707 | 3083-3096, 3665-3677, 3678-3681 | -> 97 | f7, f22 |
 | X-F16-STATE | 3002 | 2993-2998 | -> 104 | f9, f17 |
 | X-F24-ORDER | 8654, 8656-8657 | 5944, 6152, 8396, 8632-8653 | -> 107 | f10 |
 | X-F24-EQUAL | 5758-5976 | 5760-5771 | equal part | f11 |
@@ -112,8 +112,8 @@ sits in absolute function 26, which absolute function 4 reaches through
   WAT 8838 to 8843 reads a word that is not 1.  The capacity bound of
   `Func23Spec` makes the new layout valid, which makes `Func24Spec`
   apply.  Absolute function 4 meets that bound at `call 26` by
-  `Decoder.grow_no_overflow` from the loop fact `CapacityFits`
-  (`DecoderGrow.lean`, `DecoderLoop.lean`).
+  `Decoder.grow_no_overflow` from the loop fact `CapacityFits` (both in
+  `DecoderLoop.lean`; `DecoderGrow.lean` applies them).
 - f16. `word1 != okTag` from `Func52Spec` and `Func49Spec`.
 - f17. The single-shot instance never sets the thread state to 2.
 - f18. This edge is live for `map_insert`. It is dead in the collect
@@ -124,10 +124,12 @@ sits in absolute function 26, which absolute function 4 reaches through
   wraps.
 - f21. Absolute function 48 reports the flag word 0 for the error-string
   layout, so the low bit that WAT 9600 to 9606 tests is zero.
-- f22. `capacityToBuckets additional <= 2 ^ 27`, which is `buckets_le` in
-  `Func14Capacity.lean`.  So `buckets - 1 <= 536870910`, and the layout
-  size `(buckets + 8) + 8 * buckets` is at most `9 * 2 ^ 27 + 8`, which
-  does not wrap and is not above 2147483640.
+- f22. `capacityToBuckets a <= 2 ^ 27` for the requested capacity `a`,
+  which is `additional` on the collect path and `t.items + 1` on the
+  resize path.  This is `buckets_le` in `Func14Capacity.lean`.  So
+  `buckets - 1 <= 536870910`, and the layout size
+  `(buckets + 8) + 8 * buckets` is at most `9 * 2 ^ 27 + 8`, which does
+  not wrap and is not above 2147483640.
 
 ## Where each row is discharged
 
@@ -150,7 +152,9 @@ sits in absolute function 26, which absolute function 4 reaches through
   `twp_brIf hbaseNonzero`.
 - X-F16-STATE: `Func13Proof.func13_correct`, with `toUInt32_ne_two`, from
   the conjunct f9.  `entryRandomBytes_not_dropping` in `Adequacy.lean`
-  gives f17 at the entry.
+  gives f9 at the entry.  f17 is a fact of the WAT: the one store to
+  1049528, at WAT 3005 to 3007, writes 1, and each export runs the body
+  one time.
 - X-F24-ORDER: `Func21Merge.lean`, with `bimerge_exhausts`.
 - X-F24-EQUAL: `Func21Proof.lean`, with `twp_equal_guard`.
 - X-F24-HEAP: `Func22Proof.func22_correct` proves `Func22Spec`, which

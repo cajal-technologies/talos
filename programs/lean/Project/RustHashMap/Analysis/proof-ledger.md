@@ -394,14 +394,18 @@ The frozen binary has 108 functions: three imports and 105 bodies. The
 table gives each absolute index, its Lean local name, its Rust symbol,
 the exports whose direct-call closure reaches it, and the file that
 proves it. `table only` marks a function that only the indirect-call
-table names. No proof reaches one of those, because every `call_indirect`
-sits in an `excluded edge` body (absolute 71 and 75) or in a `not called`
-body (absolute 105 and 106). `BodyContracts.lean` resolves the live sites
-in absolute 71 and 75 to the three leaves absolute 76, 88 and 95.
+table names. No proof reaches one of those. Every `call_indirect` sits in
+an `excluded edge` body (absolute 71 and 75) or in a `not called` body
+(absolute 105 and 106). `BodyContracts.lean` resolves the live sites in
+absolute 71 and 75 to the three leaves absolute 76, 88 and 95:
+`table[1]` is the target of the `call_indirect` in absolute 71, and
+`table[9]` and `table[14]` are the targets of the `call_indirect` at
+WAT 10488 in absolute 75.
 `excluded edge` marks a body of the panic and abort subtree, which no
 proof enters: the rows of `scope-and-exclusions.md` show every guard in
 front of it false. `not called` marks a body that no table entry names
-and that only `table only` bodies call, so no export reaches it.
+and that only `table only` or `not called` bodies call, so no export
+reaches it.
 
 The symbols come from the `name` section of the cargo output
 `target/wasm32-unknown-unknown/release/rust_hash_map.wasm`, read with
@@ -494,7 +498,7 @@ one, and only absolute 66, which no export reaches, calls absolute 74.
 | 73 | func70 | `std::panicking::panic_handler::{closure#0}` | all five | excluded edge |
 | 74 | func71 | `<alloc::raw_vec::RawVecInner>::finish_grow` | none | not called |
 | 75 | func72 | `std::panicking::panic_with_hook` | all five | excluded edge |
-| 76 | func73 | `std::alloc::default_alloc_error_hook` | table only | `table[1]`, the target of the `call_indirect` in absolute 71 |
+| 76 | func73 | `std::alloc::default_alloc_error_hook` | table only | `table[1]`, see the legend |
 | 77 | func74 | `__rustc::rust_panic` | all five | excluded edge |
 | 78 | func75 | `__rustc::__rust_abort` | all five | excluded edge |
 | 79 | func76 | `__rustc::rust_begin_unwind` | all five | excluded edge |
@@ -506,14 +510,14 @@ one, and only absolute 66, which no export reaches, calls absolute 74.
 | 85 | func82 | `<&str as core::any::Any>::type_id` | table only | table entry, never called |
 | 86 | func83 | `<std::panicking::panic_handler::FormatStringPayload as core::fmt::Display>::fmt` | table only | table entry, never called |
 | 87 | func84 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::get` | table only | table entry, never called |
-| 88 | func85 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::as_str` | table only | `table[9]`, a target of the `call_indirect` at WAT 10488 in absolute 75 |
+| 88 | func85 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::as_str` | table only | `table[9]`, see the legend |
 | 89 | func86 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::take_box` | table only | table entry, never called |
 | 90 | func87 | `<std::panicking::panic_handler::StaticStrPayload as core::fmt::Display>::fmt` | table only | table entry, never called |
 | 91 | func88 | `<alloc::string::String as core::fmt::Write>::write_char` | table only | table entry, never called |
 | 92 | func89 | `<alloc::string::String as core::fmt::Write>::write_str` | table only | table entry, never called |
 | 93 | func90 | `<std::panicking::panic_handler::FormatStringPayload as core::panic::PanicPayload>::get` | table only | table entry, never called |
 | 94 | func91 | `<std::panicking::panic_handler::FormatStringPayload as core::panic::PanicPayload>::take_box` | table only | table entry, never called |
-| 95 | func92 | `<std::panicking::begin_panic::Payload<&str> as core::panic::PanicPayload>::as_str` | table only | `table[14]`, the other target of that `call_indirect` |
+| 95 | func92 | `<std::panicking::begin_panic::Payload<&str> as core::panic::PanicPayload>::as_str` | table only | `table[14]`, see the legend |
 | 96 | func93 | `<alloc::string::String as core::fmt::Write>::write_fmt` | table only | table entry, never called |
 | 97 | func94 | `<hashbrown::raw::Fallibility>::capacity_overflow` | all five | excluded edge |
 | 98 | func95 | `<hashbrown::raw::Fallibility>::alloc_err` | all five | excluded edge |
