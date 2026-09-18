@@ -6819,21 +6819,15 @@ theorem memory_step_globals_preserved {config config' : Config α} {kind}
   cases h <;> simp_all [setMemory, setDataSegments]
 
 /-- Memory instructions may replace memory contents but frame every unrelated
-runtime resource, including tables and host state. -/
+runtime resource: `config'` is `config` with at most `mem` patched. -/
 theorem memory_step_store_frame {config config' : Config α} {kind}
     (h : Step config kind config')
     (hk : kind = .instruction .memoryGrow ∨
       kind = .instruction .memoryFill ∨
       kind = .instruction .memoryCopy ∨
       ∃ segmentIndex, kind = .instruction (.memoryInit segmentIndex)) :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
+    { config'.store.wasm with mem := config.store.wasm.mem } =
+      config.store.wasm := by
   cases h <;> simp_all [setMemory]
 
 theorem data_drop_memory_preserved {config config' : Config α} {segmentIndex}
@@ -6851,7 +6845,7 @@ theorem data_drop_segments_length_preserved
   cases h <;> simp_all [setDataSegments]
 
 /-- Table instructions may replace table contents but frame every unrelated
-runtime resource, including linear memories and host state. -/
+runtime resource: `config'` is `config` with at most `tables` patched. -/
 theorem table_step_store_frame {config config' : Config α} {kind}
     (h : Step config kind config')
     (hk : (∃ index, kind = .instruction (.tableGet index)) ∨
@@ -6863,27 +6857,17 @@ theorem table_step_store_frame {config config' : Config α} {kind}
         kind = .instruction (.tableCopy destination source)) ∨
       ∃ tableIndex elementIndex,
         kind = .instruction (.tableInit tableIndex elementIndex)) :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.mem = config.store.wasm.mem ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.elementSegments = config.store.wasm.elementSegments ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
+    { config'.store.wasm with tables := config.store.wasm.tables } =
+      config.store.wasm := by
   cases h <;> simp_all [setTables]
 
-/-- Dropping an element segment changes only the segment-status array. -/
+/-- Dropping an element segment changes only the segment-status array:
+`config'` is `config` with at most `elementSegments` patched. -/
 theorem elem_drop_store_frame {config config' : Config α} {elementIndex}
     (h : Step config (.instruction (.elemDrop elementIndex)) config') :
-    config'.store.wasm.globals = config.store.wasm.globals ∧
-    config'.store.wasm.mem = config.store.wasm.mem ∧
-    config'.store.wasm.extraMems = config.store.wasm.extraMems ∧
-    config'.store.wasm.dataSegments = config.store.wasm.dataSegments ∧
-    config'.store.wasm.tables = config.store.wasm.tables ∧
-    config'.store.wasm.exns = config.store.wasm.exns ∧
-    config'.store.wasm.gcHeap = config.store.wasm.gcHeap ∧
-    config'.store.wasm.host = config.store.wasm.host := by
+    { config'.store.wasm with
+        elementSegments := config.store.wasm.elementSegments } =
+      config.store.wasm := by
   cases h <;> simp_all [setElementSegments]
 
 /-- Finite traces of the authoritative one-step relation. -/

@@ -15,17 +15,6 @@ mask-extend-shift sequence on stack operands, normalising the count via
 theorem shl_chunk :
     BinChunk (A := UInt64) (B := UInt32) (C := UInt64)
       (shiftAmountFrag ++ [.shlI64]) (fun a b => a <<< (b.toUInt64 % 64)) := by
-  intro α hlc inst s E Φ params localValues rest arity remainder
-    controls calls a b vs _
-  have hnorm :
-      UInt64.ofNat (b &&& shiftMask).toNat % 64 = b.toUInt64 % 64 := by
-    rw [UInt32.and_comm]; exact shiftAmount_norm b
-  simp only [shiftAmountFrag, toV_u64, toV_u32, List.cons_append,
-    List.nil_append]
-  iintro Hwp
-  wasm_wp_pures [wp_const wp_and wp_extendUI32]
-  iapply Wasm.SmallStep.wp_shlI64
-  simp only [hnorm]
-  ilater_exact Hwp
+  shift_chunk_of Wasm.SmallStep.wp_shlI64
 
 end Wasm.RustStd.U64

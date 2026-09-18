@@ -40,7 +40,8 @@ rule; the name is the caller's, so it is in scope in the rule term:
       bin_chunk_of Wasm.SmallStep.wp_divUI64 hne with hne
 
 Operations that are *not* one instruction (`shl`, `shr`, `not`) have their own
-proofs; this tactic is for the single-instruction family only. -/
+proofs (`shl`/`shr` share `shift_chunk_of` below); this tactic is for the
+single-instruction family only. -/
 syntax "bin_chunk_of " term (" with " ident)? : tactic
 
 macro_rules
@@ -70,6 +71,28 @@ theorem shiftAmount_norm (b : UInt32) :
   change ((63 &&& b.toNat) % 2^64) % 64 = b.toNat % 64
   rw [Nat.and_comm, show (63 : Nat) = 2^6-1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
   omega
+
+/-- Close a `BinChunk` goal for a `u64` shift (`shl`/`shr`, its only two
+members): the mask-extend-shift prefix normalises the count via
+`shiftAmount_norm`, then the given atomic rule closes the shift itself —
+`shift_chunk_of Wasm.SmallStep.wp_shlI64`. -/
+syntax "shift_chunk_of " pmTerm : tactic
+
+macro_rules
+  | `(tactic| shift_chunk_of $rule:pmTerm) =>
+      `(tactic|
+        (intro α hlc inst s E Φ params localValues rest arity remainder
+           controls calls a b vs _
+         have hnorm :
+             UInt64.ofNat (b &&& shiftMask).toNat % 64 = b.toUInt64 % 64 := by
+           rw [UInt32.and_comm]; exact shiftAmount_norm b
+         simp only [shiftAmountFrag, toV_u64, toV_u32, List.cons_append,
+           List.nil_append]
+         iintro Hwp
+         wasm_wp_pures [wp_const wp_and wp_extendUI32]
+         iapply $rule
+         simp only [hnorm]
+         ilater_exact Hwp))
 
 end U64
 

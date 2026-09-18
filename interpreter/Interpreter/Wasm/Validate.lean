@@ -1502,20 +1502,14 @@ def Module.checkConstProgram
         if (m.funcSig? functionIndex).isNone then throw "unknown function"
     | _ => pure ()
 
-/-- Shared "declared offset agrees with the target's address type" check for
-active data/element segments: the offset's retained static type (if any)
-must be `addressType`-compatible, and the retained offset expression (if
-any) must itself check as a constant expression of `addressType`. Shared by
-data segments (against their memory) and element segments (against their
-table). -/
+/-- A segment's declared offset is `addressType`-compatible: shared by data
+and element segments (against their memory/table respectively). -/
 def Module.checkSegmentOffset (m : Module)
     (offsetType : Option ValueType) (offsetExpr : Program)
     (offsetExprPresent : Bool) (addressType : ValueType) :
     Except String Unit := do
-  match offsetType with
-  | some sourceType =>
-      if !m.vtCompat sourceType addressType then throw "type mismatch"
-  | none => pure ()
+  if let some sourceType := offsetType then
+    if !m.vtCompat sourceType addressType then throw "type mismatch"
   if offsetExprPresent then
     m.checkConstProgram offsetExpr addressType
 

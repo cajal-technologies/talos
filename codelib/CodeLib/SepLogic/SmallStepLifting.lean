@@ -74,12 +74,17 @@ Rules whose proof is more than that one line, and rules whose thread state
 this shape does not cover — the branch, control-frame and unwinding rules —
 stay hand-written below.
 -/
-set_option hygiene false in
-macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
-    instruction:term ", " before:term " => " after:term " := "
-    step:term : command => do
-  -- Keep these as `TSyntax`, not raw `Syntax`: the `$xs:bracketedBinder*`
-  -- antiquotations below only accept a typed array.
+/-- Split a `wasm_wp_pure_rule`/`wasm_wp_resource_rule` binder list into
+implicit value binders and explicit side conditions, rejecting anything else
+(`macroName` names the caller for the error). Both macros generate the same
+binder block from this split; keep it as `TSyntax`, not raw `Syntax` — the
+`$xs:bracketedBinder*` antiquotations at each call site only accept a typed
+array. -/
+def splitPureRuleBinders (macroName : String)
+    (binders : Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder)) :
+    Lean.MacroM
+      (Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) ×
+        Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder)) := do
   let isValueBinder (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
     b.raw.getKind == ``Lean.Parser.Term.implicitBinder
   let isSideCondition (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
@@ -87,9 +92,15 @@ macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
   for b in binders do
     unless isValueBinder b || isSideCondition b do
       Lean.Macro.throwErrorAt b
-        "wasm_wp_pure_rule takes implicit value binders and explicit side conditions"
-  let valueBinders := binders.filter isValueBinder
-  let sideConditions := binders.filter isSideCondition
+        s!"{macroName} takes implicit value binders and explicit side conditions"
+  return (binders.filter isValueBinder, binders.filter isSideCondition)
+
+set_option hygiene false in
+macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
+    instruction:term ", " before:term " => " after:term " := "
+    step:term : command => do
+  let (valueBinders, sideConditions) ←
+    splitPureRuleBinders "wasm_wp_pure_rule" binders
   `(command|
     theorem $name:ident
         {params localValues values : List Value}
@@ -106,6 +117,43 @@ macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
             $instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
           {{ Φ }} :=
       wp_pureStep _ _ _ (fun _ => $step))
+
+/-! ### Generating the trap rules
+
+The unconditional traps below (division/remainder by a zero or overflowing
+operand, `unreachable`, a null `ref.as_non_null`, a null `throw_ref`, …) say
+the same thing as the pure rules, minus an "after" stack: one instruction is
+retired from a syntactically-known operand-stack shape and the step traps.
+`wasm_wp_trap_rule` writes the theorem out the same way `wasm_wp_pure_rule`
+does, closed by `wp_trapStep _ _ _ (fun _ => step)`. Rules whose thread state
+this shape does not cover — `wp_uncaughtException`'s `Locals`-bundled frame —
+stay hand-written below. -/
+set_option hygiene false in
+syntax (docComment)? "wasm_wp_trap_rule " ident (ppSpace bracketedBinder)* " : "
+    term ", " term " := " term : command
+
+set_option hygiene false in
+macro_rules
+  | `(command|
+      $[$doc:docComment]? wasm_wp_trap_rule $name:ident
+        $binders:bracketedBinder* :
+        $instruction:term, $before:term := $step:term) => do
+    let (valueBinders, sideConditions) ←
+      splitPureRuleBinders "wasm_wp_trap_rule" binders
+    `(command|
+      $[$doc:docComment]?
+      theorem $name:ident
+          {params localValues values : List Value}
+          $valueBinders:bracketedBinder*
+          {code : Program} {arity : Nat}
+          {remainder : List Value} {controls : List ControlFrame}
+          {calls : List CallFrame}
+          $sideConditions:bracketedBinder* :
+          True ⊢ WP (.running
+            ⟨⟨params, localValues, $before⟩,
+              $instruction :: code, arity, remainder, controls, calls⟩ :
+              Expr α) @ E ?{{ Φ }} :=
+        wp_trapStep _ _ _ (fun _ => $step))
 
 /-! ### Declaring a rule that owns a resource
 
@@ -162,18 +210,8 @@ macro_rules
         $instruction:term, $before:term => $after:term
         owning $resourceIn:term
         returning $resourceOut:term := $proof:term) => do
-    -- Keep these as `TSyntax`, not raw `Syntax`: the `$xs:bracketedBinder*`
-    -- antiquotations below only accept a typed array.
-    let isValueBinder (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
-      b.raw.getKind == ``Lean.Parser.Term.implicitBinder
-    let isSideCondition (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
-      b.raw.getKind == ``Lean.Parser.Term.explicitBinder
-    for b in binders do
-      unless isValueBinder b || isSideCondition b do
-        Lean.Macro.throwErrorAt b
-          "wasm_wp_resource_rule takes implicit value binders and explicit side conditions"
-    let valueBinders := binders.filter isValueBinder
-    let sideConditions := binders.filter isSideCondition
+    let (valueBinders, sideConditions) ←
+      splitPureRuleBinders "wasm_wp_resource_rule" binders
     `(command|
       $[$doc:docComment]?
       theorem $name:ident
@@ -865,60 +903,25 @@ The rule list keeps the Wasm trace visible while avoiding repetitive `iapply`
 lines. -/
 syntax "wasm_wp_pures" "[" ident* "]" : tactic
 
+/-- `wasm_wp_pures` lemma names whose lone side condition this combinator
+discharges with `rfl`; every other name in its vocabulary applies clean. -/
+private def wpPuresNeedsRfl (n : Lean.Name) : Bool :=
+  n == `wp_localGet || n == `wp_localSet || n == `wp_localTee ||
+  n == `wp_br || n == `wp_exitControl || n == `wp_scalarFloat0
+
 macro_rules
   | `(tactic| wasm_wp_pures []) => `(tactic| skip)
-  | `(tactic| wasm_wp_pures [wp_localGet $rest:ident*]) =>
-      `(tactic| iapply wp_localGet rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_localSet $rest:ident*]) =>
-      `(tactic| iapply wp_localSet rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_localTee $rest:ident*]) =>
-      `(tactic| iapply wp_localTee rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_const $rest:ident*]) =>
-      `(tactic| iapply wp_const; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_add $rest:ident*]) =>
-      `(tactic| iapply wp_add; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_sub $rest:ident*]) =>
-      `(tactic| iapply wp_sub; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_mul $rest:ident*]) =>
-      `(tactic| iapply wp_mul; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_and $rest:ident*]) =>
-      `(tactic| iapply wp_and; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_or $rest:ident*]) =>
-      `(tactic| iapply wp_or; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_shl $rest:ident*]) =>
-      `(tactic| iapply wp_shl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_constI64 $rest:ident*]) =>
-      `(tactic| iapply wp_constI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_addI64 $rest:ident*]) =>
-      `(tactic| iapply wp_addI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_subI64 $rest:ident*]) =>
-      `(tactic| iapply wp_subI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_mulI64 $rest:ident*]) =>
-      `(tactic| iapply wp_mulI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_andI64 $rest:ident*]) =>
-      `(tactic| iapply wp_andI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_orI64 $rest:ident*]) =>
-      `(tactic| iapply wp_orI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_shlI64 $rest:ident*]) =>
-      `(tactic| iapply wp_shlI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_shrUI64 $rest:ident*]) =>
-      `(tactic| iapply wp_shrUI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_ctzI64 $rest:ident*]) =>
-      `(tactic| iapply wp_ctzI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_wrapI64 $rest:ident*]) =>
-      `(tactic| iapply wp_wrapI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_extendUI32 $rest:ident*]) =>
-      `(tactic| iapply wp_extendUI32; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_block $rest:ident*]) =>
-      `(tactic| iapply wp_block; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_brIfZero $rest:ident*]) =>
-      `(tactic| iapply wp_brIfZero; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_br $rest:ident*]) =>
-      `(tactic| iapply wp_br rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_exitControl $rest:ident*]) =>
-      `(tactic| iapply wp_exitControl rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_scalarFloat0 $rest:ident*]) =>
-      `(tactic| iapply wp_scalarFloat0 rfl; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [$head:ident $rest:ident*]) => do
+    -- Resolve the name in `Wasm.SmallStep`, where the rules live, not at the
+    -- call site: downstream files invoke this from their own namespace and do
+    -- not have the unqualified names in scope. (The hand-written arms this
+    -- replaced baked the literal name in here, so they resolved here too.)
+    -- `eraseMacroScopes`: names reaching here through another macro (e.g.
+    -- `shift_chunk_of`) carry that macro's scope, which no declaration has.
+    let rule := Lean.mkIdent (`Wasm.SmallStep ++ head.getId.eraseMacroScopes)
+    let step ← if wpPuresNeedsRfl head.getId.eraseMacroScopes then `(tactic| iapply ($rule) rfl)
+      else `(tactic| iapply ($rule))
+    `(tactic| $step; inext; wasm_wp_pures [$rest:ident*])
 
 /-- Execute pure Wasm steps, then normalize with caller-selected rewrites. -/
 syntax "wasm_wp_pures" "[" ident* "]" "using"
@@ -982,14 +985,8 @@ theorem wp_unwindNestedException
   wp_pureStep _ _ _ (fun _ => Step.unwindNestedException hthrow hhandler)
 
 /-- Trap step: `throw_ref` with a null exnref traps immediately. -/
-theorem wp_throwRefNull
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .exnref none :: values⟩,
-        .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.throwRefNull)
+wasm_wp_trap_rule wp_throwRefNull :
+  .throwRef, .exnref none :: values := Step.throwRefNull
 
 /-- Trap step: an exception propagated through all control frames with no
 matching handler and no enclosing call frame traps. -/
@@ -3283,115 +3280,45 @@ wasm_wp_pure_rule wp_vDotAdd {lhs rhs addend : BitVec 128} :
   .vDotAdd, .v128 addend :: .v128 rhs :: .v128 lhs :: values =>
     .v128 (Simd.dotAdd lhs rhs addend) :: values := Step.vDotAdd
 
-theorem wp_unreachable
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .unreachable :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.unreachable)
+wasm_wp_trap_rule wp_unreachable :
+  .unreachable, values := Step.unreachable
 
-theorem wp_refAsNonNullTrap
-    {params localValues values : List Value} {value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
+wasm_wp_trap_rule wp_refAsNonNullTrap
+    {value : Value}
     (h : value.isNullRef? = some true) :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.refAsNonNullTrap h)
+  .refAsNonNull, value :: values := Step.refAsNonNullTrap h
 
-theorem wp_divUZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divUZero)
+wasm_wp_trap_rule wp_divUZero {dividend : UInt32} :
+  .divU, .i32 0 :: .i32 dividend :: values := Step.divUZero
 
-theorem wp_divSZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSZero)
+wasm_wp_trap_rule wp_divSZero {dividend : UInt32} :
+  .divS, .i32 0 :: .i32 dividend :: values := Step.divSZero
 
-theorem wp_divSOverflow
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0xFFFFFFFF :: .i32 0x80000000 :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSOverflow)
+wasm_wp_trap_rule wp_divSOverflow :
+  .divS, .i32 0xFFFFFFFF :: .i32 0x80000000 :: values := Step.divSOverflow
 
-theorem wp_remUZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remUZero)
+wasm_wp_trap_rule wp_remUZero {dividend : UInt32} :
+  .remU, .i32 0 :: .i32 dividend :: values := Step.remUZero
 
-theorem wp_remSZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remSZero)
+wasm_wp_trap_rule wp_remSZero {dividend : UInt32} :
+  .remS, .i32 0 :: .i32 dividend :: values := Step.remSZero
 
-theorem wp_divUI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divUI64Zero)
+wasm_wp_trap_rule wp_divUI64Zero {dividend : UInt64} :
+  .divUI64, .i64 0 :: .i64 dividend :: values := Step.divUI64Zero
 
-theorem wp_divSI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSI64Zero)
+wasm_wp_trap_rule wp_divSI64Zero {dividend : UInt64} :
+  .divSI64, .i64 0 :: .i64 dividend :: values := Step.divSI64Zero
 
-theorem wp_divSI64Overflow
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues,
-          .i64 0xFFFFFFFFFFFFFFFF :: .i64 0x8000000000000000 :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSI64Overflow)
+wasm_wp_trap_rule wp_divSI64Overflow :
+  .divSI64,
+    .i64 0xFFFFFFFFFFFFFFFF :: .i64 0x8000000000000000 :: values :=
+  Step.divSI64Overflow
 
-theorem wp_remUI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remUI64Zero)
+wasm_wp_trap_rule wp_remUI64Zero {dividend : UInt64} :
+  .remUI64, .i64 0 :: .i64 dividend :: values := Step.remUI64Zero
 
-theorem wp_remSI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remSI64Zero)
+wasm_wp_trap_rule wp_remSI64Zero {dividend : UInt64} :
+  .remSI64, .i64 0 :: .i64 dividend :: values := Step.remSI64Zero
 
 theorem wp_brTable
     {params localValues values targetValues : List Value}

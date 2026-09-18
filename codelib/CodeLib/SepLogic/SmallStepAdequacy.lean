@@ -212,13 +212,11 @@ theorem wasm_smallStep_adequacy
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists (∅ : WasmHeapMap (Option UInt8))
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (∅ : WasmRuntimeModuleMap Module)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists (∅ : WasmHeapMap (Option UInt8)), (∅ : WasmGlobalMap Value),
+      (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (∅ : WasmRuntimeModuleMap Module), (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureexact ⟨heapAgreesWithMem_empty _,
@@ -309,13 +307,11 @@ theorem wasm_smallStep_stronglyNormalizing
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists (∅ : WasmHeapMap (Option UInt8))
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (∅ : WasmRuntimeModuleMap Module)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists (∅ : WasmHeapMap (Option UInt8)), (∅ : WasmGlobalMap Value),
+      (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (∅ : WasmRuntimeModuleMap Module), (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureexact ⟨heapAgreesWithMem_empty _,
@@ -404,14 +400,12 @@ theorem wasm_smallStep_heap_globals_runtime_tags_stronglyNormalizing
     iframe HmemoryPagesAuth HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists σ, globalσ, (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureexact ⟨hagree, hinBounds, hglobals,
@@ -625,14 +619,13 @@ theorem wasm_smallStep_runtime_tags_adequacy
     iframe HmemoryPagesAuth HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists (∅ : WasmHeapMap (Option UInt8))
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists (∅ : WasmHeapMap (Option UInt8)), (∅ : WasmGlobalMap Value),
+      (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureexact ⟨heapAgreesWithMem_empty _,
@@ -684,101 +677,6 @@ theorem wasm_smallStep_runtime_partiallyMeets
     PartiallyMeets config (fun values _store => φ values) :=
   adequate_to_partiallyMeets config (fun values _store => φ values)
     (wasm_smallStep_runtime_adequacy config φ hwf hwp)
-
-/-- Call-capable runtime adequacy that also provides `currentInstanceOwn` to
-the WP proof, enabling cross-instance call rules. -/
-theorem wasm_smallStep_runtime_instance_adequacy
-    [WasmSmallStepGpreS α]
-    (config : Config α) (φ : List Value → Prop)
-    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
-      runtimeModuleOwn config.store.runtime.entry
-          config.store.runtime.currentModule ∗
-        runtimeInstancesOwn config.store.runtime.instances ⊢
-        WP config.expr @ Stuckness.NotStuck; ⊤
-          {{ values, ⌜φ values⌝ }}) :
-    adequate Stuckness.NotStuck config.expr config.store
-      (fun values _ => φ values) := by
-  refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
-    config.expr config.store φ ?_
-  intro inv κs
-  wasm_alloc_memory_ghosts config from (∅ : WasmHeapMap (Option UInt8))
-  wasm_alloc_empty_heap_maps
-  wasm_install_heap_map_instances
-  wasm_alloc_current_runtime_module config
-  wasm_alloc_empty_host_envs
-  wasm_alloc_host_state config
-  iclear HhostStateFrag
-  wasm_alloc_current_instance config
-  letI runtimeInstancesElem :
-      ElemG (WasmHeapGF α) (constOF (Agree (DiscreteO (Array (ModuleInstance α))))) :=
-    GhostSlot.runtimeInstancesElem
-  let runtimeInstancesValue : Agree (DiscreteO (Array (ModuleInstance α))) :=
-    toAgree ⟨config.store.runtime.instances⟩
-  imod (iOwn_alloc (E := runtimeInstancesElem)
-      (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
-          (toAgree_op_valid_iff_eq.mpr rfl) n)) with
-    ⟨%runtimeInstancesName, HruntimeInstances⟩
-  letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
-    { runtimeInstancesElem
-      runtimeInstancesName }
-  wasm_alloc_exception_map
-  wasm_alloc_tag_table config
-  letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
-  iclear Hpoints Hmeta
-  ihave ⟨HruntimeInstancesState, HruntimeInstancesWP⟩ := iOwn_op.mp $$ HruntimeInstances
-  imodintro
-  iexists (fun store _observations =>
-    stateInterp (GF := WasmHeapGF α) store 0 [] 0)
-  iexists (fun _ => iprop(True))
-  dsimp only
-  wasm_build_machine_aux config
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc]
-  · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists (∅ : WasmHeapMap (Option UInt8))
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
-    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
-    ipureexact ⟨heapAgreesWithMem_empty _,
-      heapAddressesInBounds_empty _,
-      globalHeapAgrees_empty _,
-      dataSegmentHeapAgrees_empty _,
-      tableHeapAgrees_empty _,
-      elementSegmentHeapAgrees_empty _,
-      runtimeModuleSingletonAgrees config.store.runtime hwf,
-      fun id env hm => by simp [get?_empty] at hm⟩
-  · iapply hwp
-    isplitl [HruntimeWP HinstanceFrag]
-    · unfold runtimeModuleOwn
-      isplitl [HruntimeWP]
-      · unfold runtimeModuleElem
-        iexact HruntimeWP
-      · unfold currentInstanceOwnN
-        iexact HinstanceFrag
-    · unfold runtimeInstancesOwn
-      iexact HruntimeInstancesWP
-
-/-- Partial-correctness form providing `runtimeModuleOwn` for user proofs. -/
-theorem wasm_smallStep_runtime_instance_partiallyMeets
-    [WasmSmallStepGpreS α]
-    (config : Config α) (φ : List Value → Prop)
-    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
-      runtimeModuleOwn config.store.runtime.entry
-          config.store.runtime.currentModule ∗
-        runtimeInstancesOwn config.store.runtime.instances ⊢
-        WP config.expr @ Stuckness.NotStuck; ⊤
-          {{ values, ⌜φ values⌝ }}) :
-    PartiallyMeets config (fun values _store => φ values) :=
-  adequate_to_partiallyMeets config (fun values _store => φ values)
-    (wasm_smallStep_runtime_instance_adequacy config φ hwf hwp)
 
 /-- Combined adequacy for cross-instance proofs that also track host state via
 ExclAuth. Provides runtimeModuleOwn, hostEnvOwn, hostStateOwn, currentInstanceOwn,
@@ -834,15 +732,14 @@ theorem wasm_smallStep_instance_host_state_adequacy
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists (∅ : WasmHeapMap (Option UInt8))
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentHost)
+    iexists (∅ : WasmHeapMap (Option UInt8)), (∅ : WasmGlobalMap Value),
+      (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentHost)
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth' HhostState Hexc
     ipureexact ⟨heapAgreesWithMem_empty _,
@@ -864,6 +761,43 @@ theorem wasm_smallStep_instance_host_state_adequacy
       · isplitl [HhostStateFrag]
         · unfold hostStateOwn; iexact HhostStateFrag
         · unfold runtimeInstancesOwn; iexact HruntimeInstancesWP
+
+/-- Call-capable adequacy providing `runtimeModuleOwn` and
+`runtimeInstancesOwn`. Derived from
+`wasm_smallStep_instance_host_state_adequacy` by discarding the host-tracking
+resources it additionally provides. -/
+theorem wasm_smallStep_runtime_instance_adequacy
+    [WasmSmallStepGpreS α]
+    (config : Config α) (φ : List Value → Prop)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule ∗
+        runtimeInstancesOwn config.store.runtime.instances ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values, ⌜φ values⌝ }}) :
+    adequate Stuckness.NotStuck config.expr config.store
+      (fun values _ => φ values) := by
+  apply wasm_smallStep_instance_host_state_adequacy config φ hwf
+  intro gs
+  iintro ⟨HruntimeModule, _HhostEnv, _HhostState, HruntimeInstances⟩
+  iapply hwp
+  iframe HruntimeModule HruntimeInstances
+
+/-- Partial-correctness form providing `runtimeModuleOwn` for user proofs. -/
+theorem wasm_smallStep_runtime_instance_partiallyMeets
+    [WasmSmallStepGpreS α]
+    (config : Config α) (φ : List Value → Prop)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule ∗
+        runtimeInstancesOwn config.store.runtime.instances ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values, ⌜φ values⌝ }}) :
+    PartiallyMeets config (fun values _store => φ values) :=
+  adequate_to_partiallyMeets config (fun values _store => φ values)
+    (wasm_smallStep_runtime_instance_adequacy config φ hwf hwp)
 
 theorem wasm_smallStep_instance_host_state_partiallyMeets
     [WasmSmallStepGpreS α]
@@ -921,13 +855,11 @@ theorem wasm_smallStep_heap_adequacy
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (∅ : WasmRuntimeModuleMap Module)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists σ, (∅ : WasmGlobalMap Value),
+      (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (∅ : WasmRuntimeModuleMap Module), (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
     ipureexact ⟨hagree, hinBounds,
@@ -939,82 +871,8 @@ theorem wasm_smallStep_heap_adequacy
       fun id env hm => by simp [get?_empty] at hm⟩
   · iapply_exact hwp with Hpoints
 
-/-- Adequacy with authoritative ownership for both physical memory bytes and
-instantiated globals. This is the entry point used by generated functions
-whose behavior depends on `global.get`; it prevents a proof from assuming a
-global value unrelated to the concrete machine store. -/
-theorem wasm_smallStep_heap_globals_runtime_adequacy
-    [WasmSmallStepGpreS α]
-    (config : Config α)
-    (σ : WasmHeapMap (Option UInt8))
-    (globalσ : WasmGlobalMap Value)
-    (φ : List Value → Prop)
-    (hagree : heapAgreesWithMem σ (storeResolve config.store))
-    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
-    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
-    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
-      (([∗map] address ↦ value ∈ σ,
-          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-            address (DFrac.own 1) value) ∗
-        ([∗map] index ↦ value ∈ globalσ,
-          globalPointsTo index value) ∗
-        runtimeModuleOwn config.store.runtime.entry
-          config.store.runtime.currentModule) ⊢
-        WP config.expr @ Stuckness.NotStuck; ⊤
-          {{ values, ⌜φ values⌝ }}) :
-    adequate Stuckness.NotStuck config.expr config.store
-      (fun values _ => φ values) := by
-  refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
-    config.expr config.store φ ?_
-  intro inv κs
-  wasm_alloc_memory_ghosts config from σ
-  wasm_alloc_globals_and_empty_heap_maps globalσ
-  wasm_install_heap_map_instances
-  wasm_alloc_current_runtime_module config
-  wasm_alloc_empty_host_envs
-  wasm_alloc_host_state config
-  iclear HhostStateFrag
-  wasm_alloc_current_instance config
-  wasm_alloc_fixed_runtime_resources config
-  letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
-  iclear Hmeta
-  imodintro
-  iexists (fun store _observations =>
-    stateInterp (GF := WasmHeapGF α) store 0 [] 0)
-  iexists (fun _ => iprop(True))
-  dsimp only
-  wasm_build_machine_aux config
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
-  · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
-    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureexact ⟨hagree, hinBounds, hglobals,
-      dataSegmentHeapAgrees_empty _,
-      tableHeapAgrees_empty _,
-      elementSegmentHeapAgrees_empty _,
-      runtimeModuleSingletonAgrees config.store.runtime hwf,
-      fun id env hm => by simp [get?_empty] at hm⟩
-  · iapply hwp
-    isplitl_exact Hpoints
-    · isplitl [HglobalPoints]
-      · unfold globalPointsTo
-        iexact HglobalPoints
-      · unfold runtimeModuleOwn
-        isplitl [HruntimeWP]
-        · unfold runtimeModuleElem; iexact HruntimeWP
-        · unfold currentInstanceOwnN; iexact HinstanceFrag
-
 /-- State-sensitive authoritative adequacy. Unlike the value-only convenience
-wrapper above, the WP post receives the final physical state interpretation
+wrapper below, the WP post receives the final physical state interpretation
 and may use its returned byte/global ownership to prove a predicate about the
 actual reached `MachineStore`. -/
 theorem wasm_smallStep_heap_globals_runtime_store_adequacy
@@ -1065,15 +923,13 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentHost)
+    iexists σ, globalσ, (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentHost)
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureexact ⟨hagree, hinBounds, hglobals,
@@ -1094,6 +950,128 @@ theorem wasm_smallStep_heap_globals_runtime_store_adequacy
           · unfold currentInstanceOwnN; iexact HinstanceFrag
         · unfold hostEnvOwn
           iexact HhostEnvWP
+
+/-- Adequacy with authoritative ownership for both physical memory bytes and
+instantiated globals. This is the entry point used by generated functions
+whose behavior depends on `global.get`; it prevents a proof from assuming a
+global value unrelated to the concrete machine store. Derived from
+`wasm_smallStep_heap_globals_runtime_store_adequacy` by fixing a
+state-independent postcondition and discarding `hostEnvOwn`. -/
+theorem wasm_smallStep_heap_globals_runtime_adequacy
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (φ : List Value → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values, ⌜φ values⌝ }}) :
+    adequate Stuckness.NotStuck config.expr config.store
+      (fun values _ => φ values) := by
+  apply wasm_smallStep_heap_globals_runtime_store_adequacy config σ globalσ
+    (fun values _store => φ values) hagree hinBounds hglobals hwf
+  intro gs
+  iintro ⟨Hpoints, Hglobals, HruntimeModule, _HhostEnv⟩
+  iapply (wp_mono (Φ := fun values => iprop(⌜φ values⌝)) ?hmono)
+  case hmono =>
+    intro values
+    iintro %hφ
+    iintro %store %observations Hstate
+    iclear Hstate
+    ipureexact hφ
+  iapply hwp
+  iframe Hpoints Hglobals HruntimeModule
+
+/-- Total-WP strong normalization for the store-sensitive resource footprint
+shared with `wasm_smallStep_heap_globals_runtime_store_adequacy`: authoritative
+memory, globals, and runtime-module ownership. Factored out so both
+`wasm_smallStep_heap_globals_runtime_store_terminates` and
+`wasm_smallStep_heap_store_terminates` (at `globalσ := ∅`) reuse one ghost
+allocation instead of repeating it. -/
+theorem wasm_smallStep_heap_globals_runtime_store_stronglyNormalizing
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (Φ : List Value → IProp (WasmHeapGF α))
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (htwp : ∀ [WasmSmallStepGS .hasNoLC α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+            config.store.runtime.currentModule) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤ [{ Φ }]) :
+    StronglyNormalizing
+      (ExprErasedStep (Expr := Expr α)
+        (State := MachineStore α) (Obs := StepKind))
+      (config.expr, config.store) := by
+  apply stronglyNormalizing_expr_of_threadPool
+  apply twp_total (hlc := .hasNoLC) (GF := WasmHeapGF α)
+    Stuckness.NotStuck config.expr config.store Φ 0 0
+  intro inv
+  wasm_alloc_memory_ghosts config from σ
+  wasm_alloc_globals_and_empty_heap_maps globalσ
+  wasm_install_heap_map_instances
+  wasm_alloc_current_runtime_module config
+  wasm_alloc_empty_host_envs
+  wasm_alloc_host_state config
+  iclear HhostStateFrag
+  wasm_alloc_current_instance config
+  wasm_alloc_fixed_runtime_resources config
+  letI gs : WasmSmallStepGS .hasNoLC α := smallStepGS .hasNoLC inv
+  iclear Hmeta
+  imodintro
+  iexists
+    (fun store (_ : Nat) (observations : List StepKind) (_ : Nat) =>
+      stateInterp (GF := WasmHeapGF α) store 0 observations 0),
+    (fun _ => 0), (fun _ => iprop(True)),
+    (fun _ _ _ _ => by
+      iintro Hstate
+      imodintro; iexact Hstate)
+  dsimp only
+  wasm_build_machine_aux config
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
+  · iapply (stateInterp_eq config.store 0 [] 0).mpr
+    iexists σ, globalσ, (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (∅ : WasmHostEnvMap (HostEnv α))
+    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
+    ipureexact ⟨hagree, hinBounds, hglobals,
+      dataSegmentHeapAgrees_empty _,
+      tableHeapAgrees_empty _,
+      elementSegmentHeapAgrees_empty _,
+      runtimeModuleSingletonAgrees config.store.runtime hwf,
+      fun id env hm => by simp [get?_empty] at hm⟩
+  · iintro _
+    iapply_splitl_exact htwp with Hpoints
+    · isplitl [HglobalPoints]
+      · unfold globalPointsTo
+        iexact HglobalPoints
+      · unfold runtimeModuleOwn
+        isplitl [HruntimeWP]
+        · unfold runtimeModuleElem; iexact HruntimeWP
+        · unfold currentInstanceOwnN; iexact HinstanceFrag
 
 /-- Total-WP adequacy for programs that own heap memory and globals in Talos's
 `TerminatesWith` form. TWP supplies strong normalization; `twp.to_wp` supplies
@@ -1123,60 +1101,14 @@ theorem wasm_smallStep_heap_globals_runtime_store_terminates
               ⌜post values store⌝ }]) :
     TerminatesWith config post := by
   apply stronglyNormalizing_adequate_terminates config post
-  · apply stronglyNormalizing_expr_of_threadPool
-    apply twp_total (hlc := .hasNoLC) (GF := WasmHeapGF α)
-      Stuckness.NotStuck config.expr config.store
-      (fun _values => iprop(True)) 0 0
-    intro inv
-    wasm_alloc_memory_ghosts config from σ
-    wasm_alloc_globals_and_empty_heap_maps globalσ
-    wasm_install_heap_map_instances
-    wasm_alloc_current_runtime_module config
-    wasm_alloc_empty_host_envs
-    wasm_alloc_host_state config
-    iclear HhostStateFrag
-    wasm_alloc_current_instance config
-    wasm_alloc_fixed_runtime_resources config
-    letI gs : WasmSmallStepGS .hasNoLC α := smallStepGS .hasNoLC inv
-    iclear Hmeta
-    imodintro
-    iexists
-      (fun store (_ : Nat) (observations : List StepKind) (_ : Nat) =>
-        stateInterp (GF := WasmHeapGF α) store 0 observations 0),
-      (fun _ => 0), (fun _ => iprop(True)),
-      (fun _ _ _ _ => by
-        iintro Hstate
-        imodintro; iexact Hstate)
-    dsimp only
-    wasm_build_machine_aux config
-    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
-    · iapply (stateInterp_eq config.store 0 [] 0).mpr
-      iexists σ
-      iexists globalσ
-      iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-      iexists (∅ : WasmTableMap TableInst)
-      iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-      iexists (PartialMap.singleton config.store.runtime.entry.id
-        config.store.runtime.currentModule)
-      iexists (∅ : WasmHostEnvMap (HostEnv α))
-      wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
-      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-      ipureexact ⟨hagree, hinBounds, hglobals,
-        dataSegmentHeapAgrees_empty _,
-        tableHeapAgrees_empty _,
-        elementSegmentHeapAgrees_empty _,
-        runtimeModuleSingletonAgrees config.store.runtime hwf,
-        fun id env hm => by simp [get?_empty] at hm⟩
-    · iintro _
-      iapply (twp.mono (fun _ => BI.true_intro))
-      iapply_splitl_exact htwp .hasNoLC with Hpoints
-      · isplitl [HglobalPoints]
-        · unfold globalPointsTo
-          iexact HglobalPoints
-        · unfold runtimeModuleOwn
-          isplitl [HruntimeWP]
-          · unfold runtimeModuleElem; iexact HruntimeWP
-          · unfold currentInstanceOwnN; iexact HinstanceFrag
+  · apply wasm_smallStep_heap_globals_runtime_store_stronglyNormalizing
+      config σ globalσ (fun _ => iprop(True))
+      hagree hinBounds hglobals hwf
+    intro gs
+    iintro ⟨Hpoints, HglobalPoints, HruntimeModule⟩
+    iapply (twp.mono (fun _ => BI.true_intro))
+    iapply htwp .hasNoLC
+    iframe Hpoints HglobalPoints HruntimeModule
   · apply wasm_smallStep_heap_globals_runtime_store_adequacy config σ globalσ post
       hagree hinBounds hglobals hwf
     intro gs
@@ -1241,57 +1173,15 @@ theorem wasm_smallStep_heap_store_terminates
               ⌜post values store⌝ }]) :
     TerminatesWith config post := by
   apply stronglyNormalizing_adequate_terminates config post
-  · apply stronglyNormalizing_expr_of_threadPool
-    apply twp_total (hlc := .hasNoLC) (GF := WasmHeapGF α)
-      Stuckness.NotStuck config.expr config.store
-      (fun values => iprop(True)) 0 0
-    intro inv
-    wasm_alloc_memory_ghosts config from σ
-    wasm_alloc_empty_heap_maps
-    wasm_install_heap_map_instances
-    wasm_alloc_current_runtime_module config
-    wasm_alloc_empty_host_envs
-    wasm_alloc_host_state config
-    iclear HhostStateFrag
-    wasm_alloc_current_instance config
-    wasm_alloc_fixed_runtime_resources config
-    letI gs : WasmSmallStepGS .hasNoLC α := smallStepGS .hasNoLC inv
-    iclear Hmeta
-    imodintro
-    iexists
-      (fun store (_ : Nat) (observations : List StepKind) (_ : Nat) =>
-        stateInterp (GF := WasmHeapGF α) store 0 observations 0),
-      (fun _ => 0), (fun _ => iprop(True)),
-      (fun _ _ _ _ => by
-        iintro Hstate
-        imodintro; iexact Hstate)
-    dsimp only
-    wasm_build_machine_aux config
-    isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
-    · iapply (stateInterp_eq config.store 0 [] 0).mpr
-      iexists σ
-      iexists (∅ : WasmGlobalMap Value)
-      iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-      iexists (∅ : WasmTableMap TableInst)
-      iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-      iexists (PartialMap.singleton config.store.runtime.entry.id
-        config.store.runtime.currentModule)
-      iexists (∅ : WasmHostEnvMap (HostEnv α))
-      wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
-      iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-      ipureexact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
-        dataSegmentHeapAgrees_empty _,
-        tableHeapAgrees_empty _,
-        elementSegmentHeapAgrees_empty _,
-        runtimeModuleSingletonAgrees config.store.runtime hwf,
-        fun id env hm => by simp [get?_empty] at hm⟩
-    · iintro _
-      iapply (twp.mono (fun _ => BI.true_intro))
-      iapply_splitl_exact htwp .hasNoLC with Hpoints
-      · unfold runtimeModuleOwn
-        isplitl [HruntimeWP]
-        · unfold runtimeModuleElem; iexact HruntimeWP
-        · unfold currentInstanceOwnN; iexact HinstanceFrag
+  · apply wasm_smallStep_heap_globals_runtime_store_stronglyNormalizing
+      config σ ∅ (fun _ => iprop(True))
+      hagree hinBounds (globalHeapAgrees_empty _) hwf
+    intro gs
+    simp only [BI.BigSepM.bigSepM_empty.to_eq]
+    iintro ⟨Hpoints, _Hempty, HruntimeModule⟩
+    iapply (twp.mono (fun _ => BI.true_intro))
+    iapply htwp .hasNoLC
+    iframe Hpoints HruntimeModule
   · apply wasm_smallStep_heap_globals_runtime_store_adequacy config σ ∅ post
       hagree hinBounds (globalHeapAgrees_empty _) hwf
     intro gs
@@ -1361,145 +1251,6 @@ theorem wasm_smallStep_heap_terminates
     iclear Hstate
     ipureexact hφ
   iapply_exact htwp hlc with Hpoints
-
-/-- State-sensitive adequacy with explicit authoritative ownership of passive
-data-segment status in addition to memory, globals, and the runtime module. -/
-theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
-    [WasmSmallStepGpreS α]
-    (config : Config α)
-    (σ : WasmHeapMap (Option UInt8))
-    (globalσ : WasmGlobalMap Value)
-    (dataSegmentσ : WasmDataSegmentMap (Option (List UInt8)))
-    (post : List Value → MachineStore α → Prop)
-    (hagree : heapAgreesWithMem σ (storeResolve config.store))
-    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
-    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
-    (hsegments :
-      dataSegmentHeapAgrees dataSegmentσ config.store.wasm.dataSegments)
-    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
-      (([∗map] address ↦ value ∈ σ,
-          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-            address (DFrac.own 1) value) ∗
-        ([∗map] index ↦ value ∈ globalσ,
-          globalPointsTo index value) ∗
-        ([∗map] index ↦ value ∈ dataSegmentσ,
-          dataSegmentPointsTo index value) ∗
-        runtimeModuleOwn config.store.runtime.entry
-          config.store.runtime.currentModule) ⊢
-        WP config.expr @ Stuckness.NotStuck; ⊤
-          {{ values,
-            ∀ (store : MachineStore α) (_observations : List StepKind),
-              stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
-              ⌜post values store⌝ }}) :
-    adequate Stuckness.NotStuck config.expr config.store post := by
-  refine wp_store_adequacy
-    (GF := WasmHeapGF α) Stuckness.NotStuck
-    config.expr config.store post ?_
-  intro inv κs
-  wasm_alloc_memory_ghosts config from σ
-  letI globalMapG : GhostMapG (WasmHeapGF α) GlobalKey Value WasmGlobalMap :=
-    GhostSlot.globalMap
-  imod (ghost_map_alloc (GF := WasmHeapGF α) (K := GlobalKey)
-      (V := Value) (H := WasmGlobalMap) globalσ) with
-    ⟨%globalName, Hglobals, HglobalPoints⟩
-  letI dataSegmentMapG :
-      GhostMapG (WasmHeapGF α) DataSegmentKey (Option (List UInt8))
-        WasmDataSegmentMap :=
-    GhostSlot.dataSegmentMap
-  imod (ghost_map_alloc (GF := WasmHeapGF α) (K := DataSegmentKey)
-      (V := Option (List UInt8)) (H := WasmDataSegmentMap)
-      dataSegmentσ) with
-    ⟨%dataSegmentName, HsegmentsAuth, HsegmentPoints⟩
-  letI tableMapG : GhostMapG (WasmHeapGF α) TableKey TableInst WasmTableMap :=
-    GhostSlot.tableMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := TableKey)
-      (V := TableInst) (H := WasmTableMap)) with
-    ⟨%tableName, Htables⟩
-  letI elementSegmentMapG :
-      GhostMapG (WasmHeapGF α) ElementSegmentKey (Option (List (Option Nat)))
-        WasmElementSegmentMap :=
-    GhostSlot.elementSegmentMap
-  imod (ghost_map_alloc_empty (GF := WasmHeapGF α) (K := ElementSegmentKey)
-      (V := Option (List (Option Nat))) (H := WasmElementSegmentMap)) with
-    ⟨%elementSegmentName, HelementSegments⟩
-  wasm_install_heap_map_instances
-  wasm_alloc_current_runtime_module config
-  wasm_alloc_empty_host_envs
-  wasm_alloc_host_state config
-  iclear HhostStateFrag
-  wasm_alloc_current_instance config
-  wasm_alloc_fixed_runtime_resources config
-  letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
-  iclear Hmeta
-  imodintro
-  iexists (fun store _observations =>
-    stateInterp (GF := WasmHeapGF α) store 0 [] 0)
-  iexists (fun _ => iprop(True))
-  dsimp only
-  wasm_build_machine_aux config
-  isplitl [Hheap Hglobals HsegmentsAuth Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
-  · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
-    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe_pureexact using [∗ #] => ⟨hagree, hinBounds, hglobals, hsegments,
-      tableHeapAgrees_empty _,
-      elementSegmentHeapAgrees_empty _,
-      runtimeModuleSingletonAgrees config.store.runtime hwf,
-      fun id env hm => by simp [get?_empty] at hm⟩
-  · iapply hwp
-    isplitl_exact Hpoints
-    · isplitl [HglobalPoints]
-      · unfold globalPointsTo
-        iexact HglobalPoints
-      · isplitl [HsegmentPoints]
-        · unfold dataSegmentPointsTo
-          iexact HsegmentPoints
-        · unfold runtimeModuleOwn
-          isplitl [HruntimeWP]
-          · unfold runtimeModuleElem; iexact HruntimeWP
-          · unfold currentInstanceOwnN; iexact HinstanceFrag
-
-theorem wasm_smallStep_heap_globals_segments_runtime_store_partiallyMeets
-    [WasmSmallStepGpreS α]
-    (config : Config α)
-    (σ : WasmHeapMap (Option UInt8))
-    (globalσ : WasmGlobalMap Value)
-    (dataSegmentσ : WasmDataSegmentMap (Option (List UInt8)))
-    (post : List Value → MachineStore α → Prop)
-    (hagree : heapAgreesWithMem σ (storeResolve config.store))
-    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
-    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
-    (hsegments :
-      dataSegmentHeapAgrees dataSegmentσ config.store.wasm.dataSegments)
-    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
-      (([∗map] address ↦ value ∈ σ,
-          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-            address (DFrac.own 1) value) ∗
-        ([∗map] index ↦ value ∈ globalσ,
-          globalPointsTo index value) ∗
-        ([∗map] index ↦ value ∈ dataSegmentσ,
-          dataSegmentPointsTo index value) ∗
-        runtimeModuleOwn config.store.runtime.entry
-          config.store.runtime.currentModule) ⊢
-        WP config.expr @ Stuckness.NotStuck; ⊤
-          {{ values,
-            ∀ (store : MachineStore α) (_observations : List StepKind),
-              stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
-              ⌜post values store⌝ }}) :
-    PartiallyMeets config post :=
-  adequate_to_partiallyMeets config post
-    (wasm_smallStep_heap_globals_segments_runtime_store_adequacy
-      config σ globalσ dataSegmentσ post hagree hinBounds hglobals
-      hsegments hwf hwp)
 
 /-- Fully state-sensitive adequacy including authoritative table ownership.
 This is the entry point for proofs using `table.get`/`table.set`: each owned
@@ -1595,14 +1346,10 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
   isplitl [Hheap Hglobals HsegmentsAuth HtablesAuth
       HelementSegmentsAuth HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists dataSegmentσ
-    iexists tableσ
-    iexists elementSegmentσ
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists σ, globalσ, dataSegmentσ, tableσ, elementSegmentσ,
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe_pureexact using [∗ #] => ⟨hagree, hinBounds, hglobals, hsegments,
       htables,
@@ -1627,6 +1374,85 @@ theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
               isplitl [HruntimeWP]
               · unfold runtimeModuleElem; iexact HruntimeWP
               · unfold currentInstanceOwnN; iexact HinstanceFrag
+
+/-- State-sensitive adequacy with explicit authoritative ownership of passive
+data-segment status in addition to memory, globals, and the runtime module.
+Derived from
+`wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy` at
+`tableσ, elementSegmentσ := ∅`: the two theorems share one resource
+footprint, differing only in whether the caller owns tables. -/
+theorem wasm_smallStep_heap_globals_segments_runtime_store_adequacy
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (dataSegmentσ : WasmDataSegmentMap (Option (List UInt8)))
+    (post : List Value → MachineStore α → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hsegments :
+      dataSegmentHeapAgrees dataSegmentσ config.store.wasm.dataSegments)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        ([∗map] index ↦ value ∈ dataSegmentσ,
+          dataSegmentPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values,
+            ∀ (store : MachineStore α) (_observations : List StepKind),
+              stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
+              ⌜post values store⌝ }}) :
+    adequate Stuckness.NotStuck config.expr config.store post := by
+  apply wasm_smallStep_heap_globals_segments_tables_runtime_store_adequacy
+    config σ globalσ dataSegmentσ ∅ ∅ post
+    hagree hinBounds hglobals hsegments
+    (tableHeapAgrees_empty _) (elementSegmentHeapAgrees_empty _) hwf
+  intro gs
+  simp only [BI.BigSepM.bigSepM_empty.to_eq]
+  iintro ⟨Hpoints, Hglobals, Hsegments, _Htables, _Helems, HruntimeModule⟩
+  iapply hwp
+  iframe Hpoints Hglobals Hsegments HruntimeModule
+
+theorem wasm_smallStep_heap_globals_segments_runtime_store_partiallyMeets
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (dataSegmentσ : WasmDataSegmentMap (Option (List UInt8)))
+    (post : List Value → MachineStore α → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hglobals : globalHeapAgrees globalσ config.store.wasm.globals)
+    (hsegments :
+      dataSegmentHeapAgrees dataSegmentσ config.store.wasm.dataSegments)
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        ([∗map] index ↦ value ∈ globalσ,
+          globalPointsTo index value) ∗
+        ([∗map] index ↦ value ∈ dataSegmentσ,
+          dataSegmentPointsTo index value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+          config.store.runtime.currentModule) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values,
+            ∀ (store : MachineStore α) (_observations : List StepKind),
+              stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
+              ⌜post values store⌝ }}) :
+    PartiallyMeets config post :=
+  adequate_to_partiallyMeets config post
+    (wasm_smallStep_heap_globals_segments_runtime_store_adequacy
+      config σ globalσ dataSegmentσ post hagree hinBounds hglobals
+      hsegments hwf hwp)
 
 theorem wasm_smallStep_heap_globals_segments_tables_runtime_store_partiallyMeets
     [WasmSmallStepGpreS α]
@@ -1755,71 +1581,6 @@ theorem wasm_smallStep_heap_globals_runtime_partiallyMeets
     (wasm_smallStep_heap_globals_runtime_adequacy config σ globalσ φ
       hagree hinBounds hglobals hwf hwp)
 
-/-- Call-capable partial-correctness wrapper with authoritative byte footprint,
-persistent runtime module ownership, and exclusive instance ownership. -/
-theorem wasm_smallStep_heap_runtime_instance_adequacy
-    [WasmSmallStepGpreS α]
-    (config : Config α)
-    (σ : WasmHeapMap (Option UInt8))
-    (φ : List Value → Prop)
-    (hagree : heapAgreesWithMem σ (storeResolve config.store))
-    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
-    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
-    (hwp : ∀ [WasmSmallStepGS .hasLC α],
-      (([∗map] address ↦ value ∈ σ,
-          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-            address (DFrac.own 1) value) ∗
-        runtimeModuleOwn config.store.runtime.entry
-            config.store.runtime.currentModule) ⊢
-        WP config.expr @ Stuckness.NotStuck; ⊤
-          {{ values, ⌜φ values⌝ }}) :
-    adequate Stuckness.NotStuck config.expr config.store
-      (fun values _ => φ values) := by
-  refine wp_adequacy (GF := WasmHeapGF α) Stuckness.NotStuck
-    config.expr config.store φ ?_
-  intro inv κs
-  wasm_alloc_memory_ghosts config from σ
-  wasm_alloc_empty_heap_maps
-  wasm_install_heap_map_instances
-  wasm_alloc_current_runtime_module config
-  wasm_alloc_empty_host_envs
-  wasm_alloc_host_state config
-  iclear HhostStateFrag
-  wasm_alloc_current_instance config
-  wasm_alloc_fixed_runtime_resources config
-  letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
-  iclear Hmeta
-  imodintro
-  iexists (fun store _observations =>
-    stateInterp (GF := WasmHeapGF α) store 0 [] 0)
-  iexists (fun _ => iprop(True))
-  dsimp only
-  wasm_build_machine_aux config
-  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc]
-  · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
-    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
-    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth HhostState Hexc
-    ipureexact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
-      dataSegmentHeapAgrees_empty _,
-      tableHeapAgrees_empty _,
-      elementSegmentHeapAgrees_empty _,
-      runtimeModuleSingletonAgrees config.store.runtime hwf,
-      fun id env hm => by simp [get?_empty] at hm⟩
-  · iapply hwp
-    isplitl_exact Hpoints
-    · unfold runtimeModuleOwn
-      isplitl [HruntimeWP]
-      · unfold runtimeModuleElem; iexact HruntimeWP
-      · unfold currentInstanceOwnN; iexact HinstanceFrag
-
 /-- Combined heap + runtimeInstances adequacy. Provides heap pointsTo,
 runtimeModuleOwn, and runtimeInstancesOwn. Use when a proof needs both
 cross-instance dispatch (`wp_callCrossInstance`) and memory access (`wp_store8`). -/
@@ -1879,14 +1640,13 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists (∅ : WasmGlobalMap Value)
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (∅ : WasmHostEnvMap (HostEnv α))
+    iexists σ, (∅ : WasmGlobalMap Value),
+      (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (∅ : WasmHostEnvMap (HostEnv α))
     wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstancesState HinstanceState HhostEnvAuth HhostState Hexc
     ipureexact ⟨hagree, hinBounds, globalHeapAgrees_empty _,
@@ -1904,6 +1664,35 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
         · unfold currentInstanceOwnN; iexact HinstanceFrag
       · unfold runtimeInstancesOwn
         iexact HruntimeInstancesWP
+
+/-- Call-capable partial-correctness wrapper with authoritative byte footprint,
+persistent runtime module ownership, and exclusive instance ownership.
+Derived from `wasm_smallStep_heap_runtime_instances_adequacy` by discarding
+the persistent `runtimeInstancesOwn` fact it additionally provides. -/
+theorem wasm_smallStep_heap_runtime_instance_adequacy
+    [WasmSmallStepGpreS α]
+    (config : Config α)
+    (σ : WasmHeapMap (Option UInt8))
+    (φ : List Value → Prop)
+    (hagree : heapAgreesWithMem σ (storeResolve config.store))
+    (hinBounds : heapAddressesInBounds σ (storeResolve config.store))
+    (hwf : config.store.runtime.entry.id < config.store.runtime.instances.size)
+    (hwp : ∀ [WasmSmallStepGS .hasLC α],
+      (([∗map] address ↦ value ∈ σ,
+          pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+            address (DFrac.own 1) value) ∗
+        runtimeModuleOwn config.store.runtime.entry
+            config.store.runtime.currentModule) ⊢
+        WP config.expr @ Stuckness.NotStuck; ⊤
+          {{ values, ⌜φ values⌝ }}) :
+    adequate Stuckness.NotStuck config.expr config.store
+      (fun values _ => φ values) := by
+  apply wasm_smallStep_heap_runtime_instances_adequacy config σ φ
+    hagree hinBounds hwf
+  intro gs
+  iintro ⟨Hpoints, HruntimeModule, _HruntimeInstances⟩
+  iapply hwp
+  iframe Hpoints HruntimeModule
 
 theorem wasm_smallStep_heap_runtime_instances_partiallyMeets
     [WasmSmallStepGpreS α]

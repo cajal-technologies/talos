@@ -86,23 +86,10 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
   | _ n IH =>
     intro st s hInv hμ
     refine wp_of_body_dispatch (hStep st s hInv) ?_ ?_ ?_ ?_ ?_
-    · -- Forwarded continuations: the loop is transparent to them.
-      intro f cont hcont hbody
-      cases cont <;>
-        first
-          | exact (hcont : False).elim
-          | rw [exec_loop_cons_unfold, hbody]
-    · intro cont hcont hQ
-      cases cont <;>
-        first
-          | exact (hcont : False).elim
-          | exact hQ
+    -- Forwarded continuations: the loop is transparent to them.
+    wp_dispatch_fwd exec_loop_cons_unfold
     · -- Fall-through leaves the loop and carries on with `rest`.
-      intro N st' s' hQ hstable
-      refine wp_of_eventually_eq (N := N + 1) ?_ hQ
-      intro fuel hfuel
-      obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      rw [exec_loop_cons_unfold, hstable f (by omega)]
+      wp_dispatch_exit exec_loop_cons_unfold
     · -- `br 0` re-enters the loop: the invariant holds again on the trimmed
       -- stack and the measure has dropped, so the induction hypothesis applies.
       -- The re-entry is the one place where the two sides run at different
@@ -142,11 +129,7 @@ theorem wp_loop_cons {ps rs : Nat} {body rest : Program} {Q : Assertion α}
         rw [← h_eq]
         exact hN_inner (f+1) (by omega)
     · -- An outer break sheds one level and propagates.
-      intro N k st' s' hQ hstable
-      refine wp_of_eventually_const (N := N + 1) (cont := .Break k st' s') ?_ hQ
-      intro fuel hfuel
-      obtain ⟨f, rfl⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
-      rw [exec_loop_cons_unfold, hstable f (by omega)]
+      wp_dispatch_break exec_loop_cons_unfold
 
 /-- For any fuel, executing a single `.br 0` is either `OutOfFuel` (when fuel = 0)
     or `Break 0 st s` (when fuel ≥ 1). -/

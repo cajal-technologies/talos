@@ -145,4 +145,44 @@ theorem wp_of_body_dispatch {α : Type} {m : Module} {env : HostEnv α}
       | ReturnCall _ _ _ => exact absurd trivial hfwd
       | Throwing _ _ _ _ => exact absurd trivial hfwd
 
+/-! ### `wp_of_body_dispatch` call-site tactics.
+
+`wp_block_cons`, `wp_iff_cons` and `wp_loop_cons` all discharge `refine
+wp_of_body_dispatch _ ?_ ?_ ?_ ?_ ?_` the same way: every arm below is
+justified by the construct's own one-step `exec` unfolding lemma
+(`exec_block_cons`, `exec_iff_cons hStack`, `exec_loop_cons_unfold`, …) and
+nothing else varies. Each tactic takes that lemma as its only argument. -/
+
+/-- `hFwd`/`hQFwd`: passthrough continuations forward through `execLemma`
+unchanged, and their postcondition is the identity. Consumes both goals. -/
+macro "wp_dispatch_fwd " execLemma:Lean.Parser.Tactic.rwRule : tactic =>
+  `(tactic|
+    (· intro f cont hcont hbody
+       cases cont <;> first | exact (hcont : False).elim | rw [$execLemma, hbody]
+     · intro cont hcont hQ
+       cases cont <;> first | exact (hcont : False).elim | exact hQ))
+
+/-- An `hFall`/`hBreak0`-shaped goal: control leaves the construct at the
+current fuel and `rest` takes over on the stabilised continuation, via
+`execLemma`. -/
+macro "wp_dispatch_exit " execLemma:Lean.Parser.Tactic.rwRule : tactic =>
+  `(tactic|
+    (intro N st' s' hQ hstable
+     refine wp_of_eventually_eq (N := N + 1) ?_ hQ
+     intro fuel hfuel
+     obtain ⟨f, hfuelEq⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+     subst hfuelEq
+     rw [$execLemma, hstable f (by omega)]))
+
+/-- The `hBreakSucc` goal: an outer break sheds one level and propagates,
+via `execLemma`. -/
+macro "wp_dispatch_break " execLemma:Lean.Parser.Tactic.rwRule : tactic =>
+  `(tactic|
+    (intro N k st' s' hQ hstable
+     refine wp_of_eventually_const (N := N + 1) (cont := .Break k st' s') ?_ hQ
+     intro fuel hfuel
+     obtain ⟨f, hfuelEq⟩ : ∃ f, fuel = f + 1 := ⟨fuel - 1, by omega⟩
+     subst hfuelEq
+     rw [$execLemma, hstable f (by omega)]))
+
 end Wasm
