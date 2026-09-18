@@ -320,7 +320,7 @@ private theorem twp_func8_hash [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_shrUI64 twp_constI64
-    twp_andI64 twp_constI64 twp_mulI64]
+    twp_andI64_bits twp_constI64 twp_mulI64]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   isimp only [wrapWasm, toUInt32_hashU32Low, shrU64Wasm25, htag]
@@ -653,7 +653,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
       isimp only [if_neg hkey]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
-        twp_andI64]
+        twp_andI64_bits]
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
@@ -866,7 +866,7 @@ private theorem twp_func8_probe [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_constI64 twp_xorI64 twp_localGet twp_constI64
-      twp_addI64 twp_andI64 twp_constI64 twp_andI64]
+      twp_addI64 twp_andI64_bits twp_constI64 twp_andI64_bits]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     isimp only [swarMatchTag_wasm, hipos]
@@ -968,7 +968,7 @@ private theorem twp_func8_probe [WasmSmallStepGS hlc Universal.State]
       wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       wasm_twp_pures [twp_localGet twp_localGet twp_constI64 twp_shlI64
-        twp_andI64 twp_constI64 twp_andI64]
+        twp_andI64_bits twp_constI64 twp_andI64_bits]
       isimp only [shl64Wasm1, swarMatchEmpty_wasm]
       by_cases hemp : Table.matchEmpty (Table.groupAt t
           (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.1.step).pos)
@@ -1505,8 +1505,8 @@ private theorem twp_func8_erase [WasmSmallStepGS hlc Universal.State]
       · iexact Hs1
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
-  wasm_twp_pures [twp_localGet twp_constI64 twp_shlI64 twp_andI64
-    twp_constI64 twp_andI64 twp_ctzI64 twp_wrapI64 twp_const twp_shrU]
+  wasm_twp_pures [twp_localGet twp_constI64 twp_shlI64 twp_andI64_bits
+    twp_constI64 twp_andI64_bits twp_ctzI64 twp_wrapI64 twp_const twp_shrU]
   isimp only [shl64Wasm1, swarMatchEmpty_wasm, wrapWasm, shrU32Wasm3,
     htrailU]
   -- the group one width below the bucket
@@ -1543,8 +1543,8 @@ private theorem twp_func8_erase [WasmSmallStepGS hlc Universal.State]
       · iexact Hs2
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
-  wasm_twp_pures [twp_localGet twp_constI64 twp_shlI64 twp_andI64
-    twp_constI64 twp_andI64 twp_clzI64 twp_wrapI64 twp_const twp_shrU]
+  wasm_twp_pures [twp_localGet twp_constI64 twp_shlI64 twp_andI64_bits
+    twp_constI64 twp_andI64_bits twp_clzI64 twp_wrapI64 twp_const twp_shrU]
   isimp only [shl64Wasm1, swarMatchEmpty_wasm, wrapWasm, shrU32Wasm3,
     hleadU]
   wasm_twp_pures [twp_add twp_const]
@@ -1984,7 +1984,7 @@ private theorem twp_func8_singleton_probe
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64 twp_xorI64 twp_localGet twp_constI64
-    twp_addI64 twp_andI64 twp_constI64 twp_andI64]
+    twp_addI64 twp_andI64_bits twp_constI64 twp_andI64_bits]
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   isimp only [swarMatchTag_wasm, htag0]
@@ -1996,7 +1996,7 @@ private theorem twp_func8_singleton_probe
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_localGet twp_constI64 twp_shlI64
-    twp_andI64 twp_constI64 twp_andI64]
+    twp_andI64_bits twp_constI64 twp_andI64_bits]
   isimp only [shl64Wasm1, swarMatchEmpty_wasm]
   iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hne0])
   iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)

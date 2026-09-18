@@ -306,7 +306,7 @@ theorem twp_func9_hash [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_shrUI64 twp_constI64
-    twp_andI64 twp_constI64 twp_mulI64]
+    twp_andI64_bits twp_constI64 twp_mulI64]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   isimp only [wrapWasm, toUInt32_hashU32Low, shrU64Wasm25, htag]
@@ -542,7 +542,7 @@ theorem twp_func17_hash [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_constI64 twp_shrUI64 twp_constI64
-    twp_andI64 twp_constI64 twp_mulI64]
+    twp_andI64_bits twp_constI64 twp_mulI64]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   isimp only [wrapWasm, toUInt32_hashU32Low, shrU64Wasm25, htag]

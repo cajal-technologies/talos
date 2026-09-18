@@ -38,8 +38,8 @@ namespace Wasm.SmallStep
 macro_rules
   | `(tactic| wasm_twp_pures [twp_addI64 $rest:ident*]) =>
       `(tactic| iapply twp_addI64; wasm_twp_pures [$rest:ident*])
-  | `(tactic| wasm_twp_pures [twp_andI64 $rest:ident*]) =>
-      `(tactic| iapply twp_andI64; wasm_twp_pures [$rest:ident*])
+  | `(tactic| wasm_twp_pures [twp_andI64_bits $rest:ident*]) =>
+      `(tactic| iapply twp_andI64_bits; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_xorI64 $rest:ident*]) =>
       `(tactic| iapply twp_xorI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_rotlI64 $rest:ident*]) =>

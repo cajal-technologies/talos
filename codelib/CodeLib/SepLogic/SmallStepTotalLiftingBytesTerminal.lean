@@ -10,6 +10,11 @@ cannot apply them.  This module states the same five rules in the
 terminal-generic form of `CodeLib.SepLogic.SmallStepTotalLifting`, so they
 apply under every `TerminalView`.  The proofs of the four byte rules follow
 `twp_load32` and `twp_store32`, and `twp_drop_gen` is one pure step.
+
+PR #235 states the same rules in `SmallStepTotalLiftingBytes` under the
+instance names `activeTerminalLanguageBytes` and `activeTerminalIrisGSBytes`.
+The two instances here carry the suffix `Terminal` so that the two PRs merge
+in either order.  Delete this module when that PR lands.
 -/
 
 namespace Wasm.SmallStep
@@ -23,12 +28,12 @@ variable {hlc : outParam HasLC} {α : Type}
 variable [WasmSmallStepGS hlc α]
 variable {Terminal : Type}
 variable [view : TerminalView α Terminal]
-local instance (priority := high) activeTerminalLanguageBytes :
+local instance (priority := high) activeTerminalLanguageBytesTerminal :
     Language (Expr α) (MachineStore α) StepKind Terminal :=
   TerminalView.canonicalLanguage
-local instance (priority := high) activeTerminalIrisGSBytes :
+local instance (priority := high) activeTerminalIrisGSBytesTerminal :
     @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
-      activeTerminalLanguageBytes (WasmHeapGF α) :=
+      activeTerminalLanguageBytesTerminal (WasmHeapGF α) :=
   { numLatersPerStep _ := 0
     forkPost _ := iprop(True)
     stateInterp_mono _ _ _ _ := by iintro $ }

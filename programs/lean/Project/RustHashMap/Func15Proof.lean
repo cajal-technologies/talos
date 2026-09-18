@@ -341,7 +341,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
       isimp only [if_neg hkey]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
-        twp_andI64]
+        twp_andI64_bits]
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
@@ -808,7 +808,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_localGet twp_constI64 twp_shrUI64]
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub]
-  wasm_twp_pures [twp_constI64 twp_andI64 twp_constI64 twp_mulI64]
+  wasm_twp_pures [twp_constI64 twp_andI64_bits twp_constI64 twp_mulI64]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub]
   -- `local 13 := ctrl`, `local 14 := 0`, `local 15 := 0`
@@ -913,7 +913,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_constI64 twp_xorI64 twp_localGet twp_constI64 twp_addI64
-      twp_andI64 twp_constI64 twp_andI64]
+      twp_andI64_bits twp_constI64 twp_andI64_bits]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
     isimp only [ProbeStop.swarMatchTag_wasm, hipos]
@@ -982,7 +982,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
             iexact Hgroup
           · iexact Hpost
       -- WAT 4396 to 4399: `local 5 := match_empty_or_deleted`
-      wasm_twp_pures [twp_localGet twp_constI64 twp_andI64]
+      wasm_twp_pures [twp_localGet twp_constI64 twp_andI64_bits]
       wasm_twp_localSet [List.set, List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub]
       -- WAT 4400 to 4404: a candidate is recorded on the first special group only
@@ -1125,7 +1125,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
 
           -- WAT 4419 to 4427: `match_empty` decides between the write and the next window
           wasm_twp_pures [twp_block twp_localGet twp_localGet twp_constI64 twp_shlI64
-            twp_andI64 twp_constI64]
+            twp_andI64_bits twp_constI64]
           isimp only [shl64Wasm1]
           by_cases hme : Table.matchEmpty (Table.groupAt t
               (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos) = true
@@ -1277,7 +1277,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
 
         -- WAT 4419 to 4427: `match_empty` decides between the write and the next window
         wasm_twp_pures [twp_block twp_localGet twp_localGet twp_constI64 twp_shlI64
-          twp_andI64 twp_constI64]
+          twp_andI64_bits twp_constI64]
         isimp only [shl64Wasm1]
         by_cases hme : Table.matchEmpty (Table.groupAt t
             (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos) = true

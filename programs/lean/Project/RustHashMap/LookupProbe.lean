@@ -383,7 +383,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
-        twp_andI64]
+        twp_andI64_bits]
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
@@ -564,7 +564,7 @@ theorem twp_func9_probe [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_constI64 twp_xorI64 twp_localGet twp_constI64
-      twp_addI64 twp_andI64 twp_constI64 twp_andI64]
+      twp_addI64 twp_andI64_bits twp_constI64 twp_andI64_bits]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     isimp only [swarMatchTag_wasm, hipos]
@@ -647,7 +647,7 @@ theorem twp_func9_probe [WasmSmallStepGS hlc Universal.State]
           (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos,
             Table.IsCtrl b := hlayout.isCtrl_groupAt hclean hposLt
       wasm_twp_pures [twp_localGet twp_localGet twp_constI64 twp_shlI64
-        twp_andI64 twp_constI64 twp_andI64]
+        twp_andI64_bits twp_constI64 twp_andI64_bits]
       isimp only [shl64Wasm1, swarMatchEmpty_wasm]
       by_cases hemp : Table.matchEmpty (Table.groupAt t
           (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos) = true
@@ -1033,7 +1033,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
       isimp only [if_neg hkey]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
-        twp_andI64]
+        twp_andI64_bits]
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
@@ -1256,7 +1256,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_constI64 twp_xorI64 twp_localGet twp_constI64
-      twp_addI64 twp_andI64 twp_constI64 twp_andI64]
+      twp_addI64 twp_andI64_bits twp_constI64 twp_andI64_bits]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     isimp only [swarMatchTag_wasm, hipos]
@@ -1420,7 +1420,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
       wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       wasm_twp_pures [twp_localGet twp_localGet twp_constI64 twp_shlI64
-        twp_andI64 twp_constI64 twp_andI64]
+        twp_andI64_bits twp_constI64 twp_andI64_bits]
       isimp only [shl64Wasm1, swarMatchEmpty_wasm]
       by_cases hemp : Table.matchEmpty (Table.groupAt t
           (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.1.step).pos)

@@ -92,7 +92,11 @@ wasm_twp_pure_rule twp_addI64 {lhs rhs : UInt64} :
   .addI64, .i64 rhs :: .i64 lhs :: values =>
     .i64 (lhs + rhs) :: values := Step.addI64
 
-wasm_twp_pure_rule twp_andI64 {lhs rhs : UInt64} :
+-- The same statement as `twp_andI64` in PR #235, under a suffix so that the
+-- two PRs merge in either order.  Delete this copy and its two
+-- `wasm_twp_pures` cases in `Project.RustHashMap.BitPures` and
+-- `Project.RustHashMap.LookupPures` when that PR lands.
+wasm_twp_pure_rule twp_andI64_bits {lhs rhs : UInt64} :
   .andI64, .i64 rhs :: .i64 lhs :: values =>
     .i64 (lhs &&& rhs) :: values := Step.andI64
 

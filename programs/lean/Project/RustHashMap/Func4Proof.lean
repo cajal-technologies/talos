@@ -622,7 +622,7 @@ private theorem twp_advance [WasmSmallStepGS hlc Universal.State]
         · isplitl_pureexact hgbound
           · iexact Hword
         · iexact Hpost
-    wasm_twp_pures [twp_constI64 twp_andI64]
+    wasm_twp_pures [twp_constI64 twp_andI64_bits]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_constI64]
@@ -764,7 +764,7 @@ private theorem twp_peel [WasmSmallStepGS hlc Universal.State]
       · isplitl_pureexact hgbound
         · iexact Hword
       · iexact Hpost
-  wasm_twp_pures [twp_constI64 twp_andI64]
+  wasm_twp_pures [twp_constI64 twp_andI64_bits]
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_constI64]
@@ -1242,7 +1242,7 @@ private theorem twp_pushLoop [WasmSmallStepGS hlc Universal.State]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [List.take_zero, List.nil_append]
       -- the iterator step
-      wasm_twp_pures [twp_localGet twp_localGet twp_andI64]
+      wasm_twp_pures [twp_localGet twp_localGet twp_andI64_bits]
       isimp only [UInt64.and_comm (m' + 18446744073709551615) m']
       wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
@@ -2508,7 +2508,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                 iapply Wasm.SmallStep.twp_eqz (result := 0)
                   (by rw [if_neg hzne])
                 wasm_twp_pures [twp_brIfZero twp_localGet twp_constI64
-                  twp_addI64 twp_localGet twp_andI64]
+                  twp_addI64 twp_localGet twp_andI64_bits]
                 wasm_twp_localSet [List.set, List.length_cons,
                   List.length_nil, Nat.reduceAdd, Nat.reduceSub]
                 wasm_twp_pures [twp_const]

@@ -969,7 +969,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
   ihave Hgroup :=
     wordMove64 (haddr (Table.probeSeq n hsh 0).pos) $$ Hgroup
   ihave Hctrl := Hclose $$ Hgroup
-  wasm_twp_pures [twp_constI64 twp_andI64]
+  wasm_twp_pures [twp_constI64 twp_andI64_bits]
   isimp only [ProbeStop.swarMatchEmptyOrDeleted_wasm]
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
@@ -1067,7 +1067,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
       ihave Hgroup :=
         wordMove64 (haddr (Table.probeSeq n hsh (k + 1)).pos) $$ Hgroup
       ihave Hctrl := Hclose $$ Hgroup
-      wasm_twp_pures [twp_constI64 twp_andI64]
+      wasm_twp_pures [twp_constI64 twp_andI64_bits]
       isimp only [ProbeStop.swarMatchEmptyOrDeleted_wasm]
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
@@ -1332,7 +1332,7 @@ theorem twp_resize_adv [WasmSmallStepGS hlc Universal.State]
         wordMove64 (UInt32.add_zero
           (ctrlOld + UInt32.ofNat (8 * (i.1 + 1)))).symm $$ Hgroup
       ihave Hctrl := Hclose $$ Hgroup
-      wasm_twp_pures [twp_constI64 twp_andI64]
+      wasm_twp_pures [twp_constI64 twp_andI64_bits]
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       wasm_twp_pures [twp_constI64]
@@ -1527,7 +1527,7 @@ theorem twp_resize_fix [WasmSmallStepGS hlc Universal.State]
       hgf.1 hgf.2.1 hgf.2.2.1 hgf.2.2.2.1 hgf.2.2.2.2.1
       hgf.2.2.2.2.2.1 hgf.2.2.2.2.2.2.1 hgf.2.2.2.2.2.2.2 with Hgroup
     ihave Hctrl := Hclose $$ Hgroup
-    wasm_twp_pures [twp_constI64 twp_andI64 twp_ctzI64 twp_wrapI64
+    wasm_twp_pures [twp_constI64 twp_andI64_bits twp_ctzI64 twp_wrapI64
       twp_const twp_shrU]
     isimp only [ProbeStop.swarMatchEmptyOrDeleted_wasm, wrapWasm,
       shrU32Wasm3, ProbeStop.ctzByte_of_wasm hmask0 hlow0]
@@ -1690,7 +1690,7 @@ theorem twp_resize_write [WasmSmallStepGS hlc Universal.State]
     hlayout.slotAt_eq_none hidx (by rw [hempty]; decide)
   simp only [writePhase, walkLocals, rawLocals]
   -- WAT 4045 to 4048: the mask step
-  wasm_twp_pures [twp_localGet twp_localGet twp_andI64]
+  wasm_twp_pures [twp_localGet twp_localGet twp_andI64_bits]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   -- WAT 4049 to 4056: the tag byte at the insert index
@@ -2408,7 +2408,7 @@ theorem twp_resize_hoist [WasmSmallStepGS hlc Universal.State]
     hfg.1 hfg.2.1 hfg.2.2.1 hfg.2.2.2.1
     hfg.2.2.2.2.1 hfg.2.2.2.2.2.1 hfg.2.2.2.2.2.2.1
     hfg.2.2.2.2.2.2.2 with Hg
-  wasm_twp_pures [twp_constI64 twp_xorI64 twp_constI64 twp_andI64]
+  wasm_twp_pures [twp_constI64 twp_xorI64 twp_constI64 twp_andI64_bits]
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet]

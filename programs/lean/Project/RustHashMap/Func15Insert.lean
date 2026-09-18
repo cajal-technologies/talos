@@ -800,7 +800,7 @@ theorem twp_fix_insert [WasmSmallStepGS hlc Universal.State]
       hgf.1 hgf.2.1 hgf.2.2.1 hgf.2.2.2.1 hgf.2.2.2.2.1
       hgf.2.2.2.2.2.1 hgf.2.2.2.2.2.2.1 hgf.2.2.2.2.2.2.2 with Hgroup
     ihave Hctrl := Hclose $$ Hgroup
-    wasm_twp_pures [twp_constI64 twp_andI64 twp_ctzI64 twp_wrapI64 twp_const
+    wasm_twp_pures [twp_constI64 twp_andI64_bits twp_ctzI64 twp_wrapI64 twp_const
       twp_shrU]
     isimp only [ProbeStop.swarMatchEmptyOrDeleted_wasm, wrapWasm, shrU32Wasm3,
       ProbeStop.ctzByte_of_wasm hmask hlow]
