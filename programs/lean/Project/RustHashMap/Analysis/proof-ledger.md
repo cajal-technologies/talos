@@ -396,7 +396,8 @@ the exports whose direct-call closure reaches it, and the file that
 proves it. `table only` marks a function that only the indirect-call
 table names. No proof reaches one of those. Every `call_indirect` sits in
 an `excluded edge` body (absolute 71 and 75) or in a `not called` body
-(absolute 105 and 106). `BodyContracts.lean` resolves the live sites in
+(absolute 105 and 106), and no proof enters those bodies.
+`BodyContracts.lean` resolves the live sites in
 absolute 71 and 75 to the three leaves absolute 76, 88 and 95:
 `table[1]` is the target of the `call_indirect` in absolute 71, and
 `table[9]` and `table[14]` are the targets of the `call_indirect` at
