@@ -1,7 +1,7 @@
 import Interpreter.Wasm.Host.Universal
 
 /-!
-# The partial contract shape a stdio program shares
+# The contract shapes a stdio program shares
 
 A Talos stdio program reads its whole input, computes, and writes one answer.
 An export whose allocation grows with that input can reach an allocation

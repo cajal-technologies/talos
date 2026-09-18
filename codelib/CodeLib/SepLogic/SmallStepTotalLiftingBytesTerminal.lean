@@ -13,8 +13,12 @@ apply under every `TerminalView`.  The proofs of the four byte rules follow
 
 PR #235 states the same rules in `SmallStepTotalLiftingBytes` under the
 instance names `activeTerminalLanguageBytes` and `activeTerminalIrisGSBytes`.
-The two instances here carry the suffix `Terminal` so that the two PRs merge
-in either order.  Delete this module when that PR lands.
+The two instances here carry the suffix `Terminal` so that neither merge
+order declares a name twice.  That PR names the five rules without the
+suffix `_gen`, and the statements are the same.  When that PR merges, delete
+this module and point its importers at
+`CodeLib.SepLogic.SmallStepTotalLiftingBytes`.  Then drop the suffix `_gen`
+at the use sites under `Project.RustHashMap`.
 -/
 
 namespace Wasm.SmallStep

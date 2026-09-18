@@ -57,9 +57,12 @@ There are two.  A normal return leaves the map in the slot.  A failed
 allocation inside `RandomState::new` or inside `reserve_rehash_inner`
 raises the terminal `talos.oom` host trap.  The capacity overflow panic of
 `func 17` is a third exit of the compiled code.  The precondition
-`len.toNat ≤ maxTableCapacity` kills it: each of the four guards compares
-against 2147483640, 536870911 or 536870910, and `Func14Proof.lean` closes
-them with `twp_gtU (result := 0)`.
+`len.toNat ≤ maxTableCapacity` and the empty start table kill it.  Five
+guards stand in front of the three `call 97` sites.  Two are wrap checks
+with no constant, at WAT 3041 and 3677.  Three compare against 536870911,
+536870910 and 2147483640, at WAT 3082, 3096 and 3681.  `Func14Proof.lean`
+closes the wrap checks with `twp_ltU (result := 0)` and the bound checks
+with `twp_gtU (result := 0)`.
 -/
 
 namespace Project.RustHashMap.CollectContract

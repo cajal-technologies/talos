@@ -97,8 +97,8 @@ The path returns normally, so 160 is the true maximum for a run that does
 not trap.  There is no slack.
 
 `func 48` picks between `f49` and `f50` on bit 0 of its third argument at
-WAT line 9426, and `func 51` passes the folded constant `0 & 1` there at
-WAT lines 9593 to 9596, so `f49` is dead and `f50` is the live arm.  Both
+WAT line 9426.  `func 51` passes the folded constant `0 & 1` there at WAT
+lines 9593 to 9596, so `f49` is dead and `f50` is the live arm.  Both
 frames are 16 bytes.
 
 The other branch of `func 55` is `f55(+16) f56(+32)`, which is 48 bytes.
@@ -340,8 +340,8 @@ The error arm calls absolute `func 52`, which turns the `io::Error` into
 the error that the output slot takes.  That call opens a subtree of 14
 bodies and 325 WAT lines: 34 to 41, 45 to 47, 52, 53 and 54.  Each one is
 small, and the largest is 63 lines.  The accepting arm of the decoder
-reaches none of them.  `Project.RustHashMap.DecodeErrorContract` states the
-call as `Func49Spec`, and `Project.RustHashMap.Func49Proof` proves it. -/
+reaches none of them.  `Project.RustHashMap.DecodeErrorContracts.Func49Spec`
+states the call, and `Project.RustHashMap.Func49Proof` proves it. -/
 def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
   ∀ (sp out hdr ptr len : UInt32)
     (heapId : GName) (bytes outBefore below dataBytes : List UInt8)

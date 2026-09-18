@@ -11,7 +11,7 @@ set_option maxHeartbeats 0
 This module connects an `EntrySpec` call contract of one export wrapper to
 the two public contracts `Project.RustHashMap.Spec.WritesOrOOM` and
 `Project.RustHashMap.Spec.TerminatesWritingOrOOM`.  It is a port of
-`Project.Mergesort.Adequacy` with three changes:
+`Project.Mergesort.Adequacy` with three changes, and it adds a total bridge:
 
 * The bridge is generic in the export name, the wrapper index, and the
   expected output function.  One theorem serves the five exports.
@@ -597,8 +597,9 @@ theorem remove_of_func29
 
 The same `EntrySpec` gives termination through the frontier frontend.  The
 proof of `entry_terminatesWithOutcome_of_spec` is the proof of
-`entry_partiallyMeets_of_spec` without the step `twp.to_wp` that drops the
-termination half of the total WP. -/
+`entry_partiallyMeets_of_spec` with two changes.  It introduces the `hlc`
+binder of the frontier frontend.  It omits the step `twp.to_wp`, which drops
+the termination half of the total WP. -/
 
 /-- Generic total bridge for one concrete export call: the run terminates in
 a `.done` or `.trapped` outcome that `entryPost` classifies. -/

@@ -27,9 +27,10 @@ statement here is about the model, about a word, or about one owned range.
 * The bit bridges, the hash flattening and the address bridges are copies
   of lemmas in `BitPures.lean`, `Func15Hash.lean`, `Func15Insert.lean`,
   `ProbeStop.lean` and `CollectTail.lean`.  Each copy names its original.
-  They are duplicated rather than imported to keep this file's import
-  surface at the `CodeLib` layer, and `CollectTail.lean` cannot be
-  imported here at all, because it depends on this file.
+  The import closures of `BitPures.lean`, `Func15Hash.lean`,
+  `ProbeStop.lean` and `Func15Insert.lean` do not contain this file, so an
+  import can replace those copies.  `CollectTail.lean` depends on this
+  file, so its copy must stay.
 * The probe lemmas repeat the insert proof as well, with one change.  The
   insert loop runs on a table with room, so it gets its stopping window
   from `1 <= t.growthLeft`.  A lookup runs on a table that `ofEntries`

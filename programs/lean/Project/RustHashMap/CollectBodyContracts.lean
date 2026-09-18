@@ -62,7 +62,7 @@ the proof must show unreachable.  `Func14Spec` takes the bound instead.
 `Func2Spec` carries both facts as pure conjuncts of its precondition, at
 `CollectContract.lean`: `len.toNat ≤ maxTableCapacity` for the capacity
 guards, and `keysBefore[16]? ≠ some 2` for `Func13Spec`, whose guard at
-WAT 2993 to 2997 panics when the thread-local state byte is 2.  The second
+WAT 2993 to 2998 panics when the thread-local state byte is 2.  The second
 one holds at the entry: the one data segment runs from 1048576 to 1049496
 and the state byte is at 1049528, so Wasm zero-initializes it, and the
 module only ever stores 1 there.  `CollectProof.func2_correct` discharges
@@ -195,7 +195,7 @@ guard at WAT 867 to 872 in `func 5` reads it before the call, so a second
 call would see 1 and skip.
 
 CAUTION.  The precondition needs `keysBefore[16]? != some 2`, because the
-guard at WAT 2993 to 2997 panics when the state byte is 2, through
+guard at WAT 2993 to 2998 panics when the state byte is 2, through
 `call 104` and then `unreachable`, which is neither arm.  The guard in
 `func 5` gives only "not 1", so the fact comes from the entry: the one
 data segment ends at 1049496 and the state byte is at 1049528, so it

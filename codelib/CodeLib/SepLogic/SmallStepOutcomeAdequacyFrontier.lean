@@ -13,16 +13,19 @@ allocates the memory ghosts with the maximally permissive frontier and hands
 out neither fragment, so an allocator-aware proof cannot use it.
 
 This module states the total frontend at an explicit frontier.  The proof is
-the proof of the existing total frontend with the four initialization steps of
-the partial `_at` frontend in place of `wasm_alloc_memory_ghosts`, and two more
-frames at the end.
+the proof of the existing total frontend with two changes.  The three ghost
+allocations of the partial `_at` frontend (`genHeap_init`,
+`heapDomain_init_at` and `memoryPages_init`) replace
+`wasm_alloc_memory_ghosts`, and the end has two more frames.
 
 PR #235 states the same two theorems under the names
 `wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_at` and
 `wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_at`.
-The names here carry the suffix `_frontier` so that the two PRs merge in
-either order.  Delete this module when that PR lands and call its `_at`
-theorems.
+The names here carry the suffix `_frontier` so that neither merge order
+declares a name twice.  When that PR merges, delete this module and call its
+`_at` theorems.  PR #238 stacks on #235 and changes the ghost-state
+initialization that this proof copies.  Delete this module at that merge
+also.
 -/
 
 namespace Wasm.SmallStep

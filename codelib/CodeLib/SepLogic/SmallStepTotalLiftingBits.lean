@@ -37,18 +37,27 @@ directly and `twp_clzI64` names `clz64` directly.
 
 ## Why there is no rule for `unreachable`
 
-The map proof needs no rule for `unreachable`.  Every `unreachable` in the
-studied regions stands directly after a call to a function that does not
-return: `call 99`, `call 102`, `call 103`, `call 104` and `call 107` are the
-panic and abort paths that `rustc` emits.  The instruction is the
-terminator of a block that control reaches only after the panic call.  A
-total-correctness proof closes such a block by showing that its guard is
-false, so the step never happens.
+The map proof needs no rule for `unreachable`, because no proof steps that
+instruction.  An `unreachable` in a proved body is one of three kinds.
 
-The contracts carry that obligation.  `Project.RustHashMap.Func14Proof`
-shows the capacity-overflow exit of absolute `func 17` unreachable from the
-precondition bound `len.toNat ≤ maxTableCapacity` of
-`Project.RustHashMap.CollectContract`, not from any allocator behaviour.
+Most stand directly after a call to a function that does not return:
+`call 99`, `call 102`, `call 104` and `call 107` are the panic and abort
+paths that `rustc` emits.  The proof shows that the guard in front of the
+call is false, so control never reaches the block.
+
+Four stand after the `talos.oom` exit.  Absolute `func 59` is `call 2` and
+then `unreachable`, and absolute funcs 58, 61 and 62 each end in `call 59`
+and then `unreachable`.  That arm is live.  Import 2 traps, so the proof
+ends in the `talos.oom` outcome before the `unreachable`, and the contract
+states that outcome.
+
+Two stand after the `end` of a block, with no call in front of them: WAT
+2951 in absolute `func 15` and WAT 8654 in absolute `func 24`.  The proofs
+show that every branch to that label is dead.
+
+The contracts carry those obligations.  `Project.RustHashMap.Func14Proof`
+shows the three capacity-overflow exits of absolute `func 17` unreachable
+from the precondition of `Func14Spec`, not from any allocator behaviour.
 The decoder carries the same obligation for absolute `func 99`.
 
 A rule for `unreachable` could not use `wasm_twp_pure_rule`, because the
@@ -88,10 +97,13 @@ wasm_twp_pure_rule twp_addI64 {lhs rhs : UInt64} :
   .addI64, .i64 rhs :: .i64 lhs :: values =>
     .i64 (lhs + rhs) :: values := Step.addI64
 
--- The same statement as `twp_andI64` in PR #235, under a suffix so that the
--- two PRs merge in either order.  Delete this copy and its two
--- `wasm_twp_pures` cases in `Project.RustHashMap.BitPures` and
--- `Project.RustHashMap.LookupPures` when that PR lands.
+-- The same statement as `twp_andI64` in PR #235, under a suffix so that
+-- neither merge order declares the name twice.  When that PR merges, delete
+-- this copy and its two `wasm_twp_pures` cases in
+-- `Project.RustHashMap.BitPures` and `Project.RustHashMap.LookupPures`.
+-- Then rename `twp_andI64_bits` to `twp_andI64` at its uses in the
+-- `Project.RustHashMap` proof files.  That PR adds the `wasm_twp_pures`
+-- case of `twp_andI64`, so nothing else changes.
 wasm_twp_pure_rule twp_andI64_bits {lhs rhs : UInt64} :
   .andI64, .i64 rhs :: .i64 lhs :: values =>
     .i64 (lhs &&& rhs) :: values := Step.andI64
@@ -171,8 +183,8 @@ variable {Φ : Terminal → IProp (WasmHeapGF α)}
 public theorem `extend8To32_eq` gives.  `signExtend` at
 `Interpreter/Wasm/Semantics.lean:42` is public.
 
-The proofs follow `twp_load8U_gen` at
-`SmallStepTotalLiftingBytesTerminal.lean:38` and `twp_load32` at
+The proofs follow `twp_load8U_gen` in
+`SmallStepTotalLiftingBytesTerminal.lean` and `twp_load32` at
 `SmallStepTotalLifting.lean:860`.  Each rule reuses the state lemma that its
 template uses, so this file adds no state-interpretation lemma.
 -/

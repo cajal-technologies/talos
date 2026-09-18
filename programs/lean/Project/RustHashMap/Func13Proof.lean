@@ -11,7 +11,7 @@ cached-pair branch at WAT 2965 to 2982 never runs and the body takes a
 fresh seed pair from absolute `func 83`.
 
 The body stores the pair at 1049512 and 1049520 and the state byte 1 at
-1049528.  The guard at WAT 2993 to 2997 panics when the state byte is
+1049528.  The guard at WAT 2993 to 2998 panics when the state byte is
 already 2, through `call 104` and then `unreachable`, which is neither arm
 of the contract.  `Func13Spec` takes `keysBefore[16]? != some 2` as a
 precondition for that reason.

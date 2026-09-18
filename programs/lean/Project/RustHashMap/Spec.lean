@@ -31,8 +31,8 @@ Each export has two contracts.  `WritesOrOOM` is partial: it classifies every
 finite terminal execution and does not assert termination.
 `TerminatesWritingOrOOM` is total: the run terminates, and its terminal
 outcome is one of the same two.  `read_all`, the decoder, and the map itself
-all allocate in proportion to the input, so an allocation failure is a
-reachable terminal outcome for every one of these exports, and both contracts
+all allocate in proportion to the input.  As a result, an allocation failure
+is a reachable terminal outcome for each of these exports.  Both contracts
 admit the `talos.oom` host trap as an alternative to a correct write, in the
 shape `Project.Mergesort.Spec` uses.  Fuel, linear memory, and allocator
 state stay hidden.
@@ -219,11 +219,10 @@ the expected bytes written, or the allocator `talos.oom` trap. -/
 
 Informal spec:
 The export reads the whole input as a borsh map of `u32` keys to `u32`
-values, which `mapOf` decodes.  It writes the entry count of that map as
-a borsh `u32`.  It writes nothing when borsh rejects the bytes.  The run
-terminates: it either returns normally with exactly those bytes written,
-or ends in the allocator `talos.oom` trap with the OOM marker raised,
-because the decoder and the map allocate in proportion to the input. -/
+values, which `mapOf` decodes.  It writes the entry count of that map as a
+borsh `u32`.  It writes nothing when borsh rejects the bytes.  The run
+terminates.  It returns normally with exactly those bytes written, or it
+ends in the allocator `talos.oom` trap with the OOM marker raised. -/
 @[spec_of "rust-exported" "rust_hash_map::map_len"]
 def MapLenTotalSpec : Prop :=
   ∀ bytes : List UInt8,
@@ -233,14 +232,12 @@ def MapLenTotalSpec : Prop :=
 `None` when the key is absent.
 
 Informal spec:
-The export reads the input as `key ++ map`, which `keyAndMap` decodes:
-the first four bytes are the `u32` key and the rest is the borsh map.
-It writes the value under that key as a borsh `Option`, and `None` when
-the key has no entry.  It writes nothing when borsh rejects the bytes.
-The run terminates: it either returns normally with exactly those bytes
-written, or ends in the allocator `talos.oom` trap with the OOM marker
-raised, because the decoder and the map allocate in proportion to the
-input. -/
+The export reads the input as `key ++ map`, which `keyAndMap` decodes: the
+first four bytes are the `u32` key and the rest is the borsh map.  It writes
+the value under that key as a borsh `Option`, and `None` when the key has no
+entry.  It writes nothing when borsh rejects the bytes.  The run terminates.
+It returns normally with exactly those bytes written, or it ends in the
+allocator `talos.oom` trap with the OOM marker raised. -/
 @[spec_of "rust-exported" "rust_hash_map::map_get"]
 def MapGetTotalSpec : Prop :=
   ∀ bytes : List UInt8,
@@ -250,12 +247,11 @@ def MapGetTotalSpec : Prop :=
 entry.
 
 Informal spec:
-The export reads the input as `key ++ map`, which `keyAndMap` decodes.
-It writes a borsh `bool` that says whether that key has an entry.  It
-writes nothing when borsh rejects the bytes.  The run terminates: it
-either returns normally with exactly those bytes written, or ends in the
-allocator `talos.oom` trap with the OOM marker raised, because the
-decoder and the map allocate in proportion to the input. -/
+The export reads the input as `key ++ map`, which `keyAndMap` decodes.  It
+writes a borsh `bool` that says whether that key has an entry.  It writes
+nothing when borsh rejects the bytes.  The run terminates.  It returns
+normally with exactly those bytes written, or it ends in the allocator
+`talos.oom` trap with the OOM marker raised. -/
 @[spec_of "rust-exported" "rust_hash_map::map_contains_key"]
 def MapContainsKeyTotalSpec : Prop :=
   ∀ bytes : List UInt8,
@@ -265,15 +261,13 @@ def MapContainsKeyTotalSpec : Prop :=
 after the insertion.
 
 Informal spec:
-The export reads the input as `key ++ value ++ map`, which
-`keyValueAndMap` decodes: the first four bytes are the `u32` key, the
-next four are the `u32` value, and the rest is the borsh map.  It writes
-the displaced value as a borsh `Option`, then the map after the
-insertion, in key order.  It writes nothing when borsh rejects the
-bytes.  The run terminates: it either returns normally with exactly
-those bytes written, or ends in the allocator `talos.oom` trap with the
-OOM marker raised, because the decoder and the map allocate in
-proportion to the input. -/
+The export reads the input as `key ++ value ++ map`, which `keyValueAndMap`
+decodes: the first four bytes are the `u32` key, the next four are the `u32`
+value, and the rest is the borsh map.  It writes the displaced value as a
+borsh `Option`, then the map after the insertion, in key order.  It writes
+nothing when borsh rejects the bytes.  The run terminates.  It returns
+normally with exactly those bytes written, or it ends in the allocator
+`talos.oom` trap with the OOM marker raised. -/
 @[spec_of "rust-exported" "rust_hash_map::map_insert"]
 def MapInsertTotalSpec : Prop :=
   ∀ bytes : List UInt8,
@@ -283,13 +277,11 @@ def MapInsertTotalSpec : Prop :=
 after the removal.
 
 Informal spec:
-The export reads the input as `key ++ map`, which `keyAndMap` decodes.
-It writes the removed value as a borsh `Option`, then the map after the
-removal, in key order.  It writes nothing when borsh rejects the bytes.
-The run terminates: it either returns normally with exactly those bytes
-written, or ends in the allocator `talos.oom` trap with the OOM marker
-raised, because the decoder and the map allocate in proportion to the
-input. -/
+The export reads the input as `key ++ map`, which `keyAndMap` decodes.  It
+writes the removed value as a borsh `Option`, then the map after the
+removal, in key order.  It writes nothing when borsh rejects the bytes.  The
+run terminates.  It returns normally with exactly those bytes written, or it
+ends in the allocator `talos.oom` trap with the OOM marker raised. -/
 @[spec_of "rust-exported" "rust_hash_map::map_remove"]
 def MapRemoveTotalSpec : Prop :=
   ∀ bytes : List UInt8,

@@ -40,8 +40,10 @@ general contracts of the same two bodies: they take the stream and the
 bump heap, they carry an out-of-memory arm, and `Func14ResizeSpec` takes
 a general table rather than the singleton.
 
-The two contracts stay in this module, and nothing in the `collect_entries`
-proof imports them, so the two contract sets stay independent.
+The two contracts stay in this module.  `CollectBodyContracts.lean` does not
+import it, so the collect contracts do not depend on these two.  The proof
+of `collect_entries` does import it, through `Func14Resize.lean`, because
+`Func15Proof.lean` proves `Func15Spec` and `Func15InsertSpec` together.
 
 ## Absolute `func 11` has no dead arm and no frame
 

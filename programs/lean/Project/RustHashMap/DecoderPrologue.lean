@@ -16,9 +16,10 @@ no callee.  The proof of the body can then use them as one step each.
   16-byte output slot with the four words `okTag, 0, 4, 0`.
 
 The rest of the header stage calls absolute `func 52`, the decode-error
-conversion.  `Project.RustHashMap.BodyContracts.Func52Spec` states its
-contract, `Project.RustHashMap.DecodeErrorContracts` names the 14 bodies
-below it, and `Func52Proof.func52_correct` proves it.
+conversion, which is local `func49`.
+`Project.RustHashMap.DecodeErrorContracts.Func49Spec` states its contract,
+the same module names the 14 bodies below it, and
+`Func49Proof.func49_correct` proves it.
 -/
 
 namespace Project.RustHashMap.Decoder
