@@ -267,7 +267,7 @@ hypothesis. The evidence column names the hypothesis.
   contracts of the generated `grow_one` (absolute 26) and `finish_grow`
   (absolute 27) of the pair buffer. `Func24Proof.lean` proves absolute 27
   and `Func23Proof.lean` proves absolute 26 from `Func24Spec`. Row
-  X-F4-CAP of `scope-and-exclusions.md` is the dead capacity arm of
+  X-F26-CAP of `scope-and-exclusions.md` is the dead capacity arm of
   absolute 26.
 - Note W. `Adequacy.lean` holds two bridges over the same `EntrySpec`.
   The partial one applies `twp.to_wp` and the partial frontend, and
@@ -293,9 +293,11 @@ only in notes A and V. They are grouped by what they prove.
   the contracts of the two stdio shims.
 - `EntryContracts.lean`: the `EntrySpec` of each export wrapper and the
   constant `maxTableCapacity`.
-- `BodyContracts.lean`: the contracts of the three functions that the
-  `map_len` tail calls, and the three stack-depth constants.
-- `CollectContract.lean`: `Func2Spec`, the contract of `collect_entries`.
+- `BodyContracts.lean`: `Func1Spec` and `Func52Spec`, the contracts of the
+  decoder and of `borsh::io::Error::new`, and the stack-depth constants
+  `decoderDepth` and `errorNewDepth`.
+- `CollectContract.lean`: `Func2Spec`, the contract of `collect_entries`,
+  and the stack-depth constant `collectDepth`.
 - `HostProof.lean`: the three imports resolved to the universal host, and
   the total-WP contract of the `talos.oom` import.
 - `FrameCells.lean`: a body frame read as word cells.
@@ -337,9 +339,9 @@ only in notes A and V. They are grouped by what they prove.
   absolute 52.
 - `ErrorNewContracts.lean`: the contracts of the eight bodies below
   absolute 55, `borsh::io::Error::new`.
-- `Func31Proof.lean` to `Func40Proof.lean`, without `Func41Proof.lean`:
-  absolute 34 to 43, the drops of the error and its message buffer, the
-  kind test and the `String` conversion.
+- `Func31Proof.lean` to `Func40Proof.lean`: absolute 34 to 43, the drops
+  of the error and its message buffer, the kind test and the `String`
+  conversion.
 - `Func42Proof.lean`, `Func43Proof.lean`, `Func44Proof.lean`: absolute
   45 to 47, the deallocation of the message buffer.
 - `Func50Proof.lean`, `Func51Proof.lean`, `Func53Proof.lean`: absolute
@@ -392,12 +394,14 @@ The frozen binary has 108 functions: three imports and 105 bodies. The
 table gives each absolute index, its Lean local name, its Rust symbol,
 the exports whose direct-call closure reaches it, and the file that
 proves it. `table only` marks a function that only the indirect-call
-table names; no proof reaches one of those, because every reachable
-`call_indirect` resolves to a leaf (see `BodyContracts.lean`).
+table names. No proof reaches one of those, because every `call_indirect`
+sits in an `excluded edge` body (absolute 71 and 75) or in a `not called`
+body (absolute 105 and 106). `BodyContracts.lean` resolves the live sites
+in absolute 71 and 75 to the three leaves absolute 76, 88 and 95.
 `excluded edge` marks a body of the panic and abort subtree, which no
 proof enters: the rows of `scope-and-exclusions.md` show every guard in
-front of it false. `not called` marks a body that no function calls and
-no table entry names.
+front of it false. `not called` marks a body that no table entry names
+and that only `table only` bodies call, so no export reaches it.
 
 The symbols come from the `name` section of the cargo output
 `target/wasm32-unknown-unknown/release/rust_hash_map.wasm`, read with
@@ -410,7 +414,7 @@ The `::h<16 hex digits>` suffix of each symbol and the `[<16 hex digits>]`
 crate disambiguators are dropped; they vary with the build machine and
 the rest does not. Two functions carry the same symbol
 `<alloc::raw_vec::RawVecInner>::finish_grow`; absolute 100 is the live
-one and absolute 74 is not called.
+one, and only absolute 66, which no export reaches, calls absolute 74.
 
 | Absolute | Local | Rust symbol | Reached from | Proof file |
 | ---: | --- | --- | --- | --- |
@@ -490,7 +494,7 @@ one and absolute 74 is not called.
 | 73 | func70 | `std::panicking::panic_handler::{closure#0}` | all five | excluded edge |
 | 74 | func71 | `<alloc::raw_vec::RawVecInner>::finish_grow` | none | not called |
 | 75 | func72 | `std::panicking::panic_with_hook` | all five | excluded edge |
-| 76 | func73 | `std::alloc::default_alloc_error_hook` | table only | table entry, never called |
+| 76 | func73 | `std::alloc::default_alloc_error_hook` | table only | `table[1]`, the target of the `call_indirect` in absolute 71 |
 | 77 | func74 | `__rustc::rust_panic` | all five | excluded edge |
 | 78 | func75 | `__rustc::__rust_abort` | all five | excluded edge |
 | 79 | func76 | `__rustc::rust_begin_unwind` | all five | excluded edge |
@@ -502,14 +506,14 @@ one and absolute 74 is not called.
 | 85 | func82 | `<&str as core::any::Any>::type_id` | table only | table entry, never called |
 | 86 | func83 | `<std::panicking::panic_handler::FormatStringPayload as core::fmt::Display>::fmt` | table only | table entry, never called |
 | 87 | func84 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::get` | table only | table entry, never called |
-| 88 | func85 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::as_str` | table only | table entry, never called |
+| 88 | func85 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::as_str` | table only | `table[9]`, a target of the `call_indirect` at WAT 10488 in absolute 75 |
 | 89 | func86 | `<std::panicking::panic_handler::StaticStrPayload as core::panic::PanicPayload>::take_box` | table only | table entry, never called |
 | 90 | func87 | `<std::panicking::panic_handler::StaticStrPayload as core::fmt::Display>::fmt` | table only | table entry, never called |
 | 91 | func88 | `<alloc::string::String as core::fmt::Write>::write_char` | table only | table entry, never called |
 | 92 | func89 | `<alloc::string::String as core::fmt::Write>::write_str` | table only | table entry, never called |
 | 93 | func90 | `<std::panicking::panic_handler::FormatStringPayload as core::panic::PanicPayload>::get` | table only | table entry, never called |
 | 94 | func91 | `<std::panicking::panic_handler::FormatStringPayload as core::panic::PanicPayload>::take_box` | table only | table entry, never called |
-| 95 | func92 | `<std::panicking::begin_panic::Payload<&str> as core::panic::PanicPayload>::as_str` | table only | table entry, never called |
+| 95 | func92 | `<std::panicking::begin_panic::Payload<&str> as core::panic::PanicPayload>::as_str` | table only | `table[14]`, the other target of that `call_indirect` |
 | 96 | func93 | `<alloc::string::String as core::fmt::Write>::write_fmt` | table only | table entry, never called |
 | 97 | func94 | `<hashbrown::raw::Fallibility>::capacity_overflow` | all five | excluded edge |
 | 98 | func95 | `<hashbrown::raw::Fallibility>::alloc_err` | all five | excluded edge |

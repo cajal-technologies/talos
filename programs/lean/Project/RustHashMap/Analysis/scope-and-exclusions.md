@@ -16,11 +16,14 @@ lines, so they hold for this build only.
   (`programs/rust/rust-toolchain.toml`, alias `build-wasm` in
   `programs/rust/.cargo/config.toml`).
 - Profile: `[profile.release]` has `opt-level = 0`, `lto = false` and
-  `codegen-units = 1`, and `[profile.release.package.rust_hash_map]`
-  sets `opt-level = 3` for this crate alone (`programs/rust/Cargo.toml`).
-  No `panic`, `overflow-checks`, `debug` or `strip` key is set, so cargo's
+  `codegen-units = 1`.  Per-package entries set `opt-level = 3` for
+  `rust_hash_map` and for its dependency `talos-stdio`, whose bodies are
+  absolute functions 59, 63 and 64 (`programs/rust/Cargo.toml`).  No
+  `panic`, `overflow-checks`, `debug` or `strip` key is set, so cargo's
   release defaults apply.
-- Tools: wasm-tools 1.251.0 (`justfile`).  The verifier runs
+- Tools: the verifier runs the `wasm-tools` on the path and checks no
+  version.  wasm-tools 1.252.0 reproduces the frozen WAT.  The `justfile`
+  pins 1.251.0 for the testsuite only.  The verifier runs
   `wasm-tools strip --all` before it prints the WAT
   (`verifier/Verifier/Main.lean`), so the frozen WAT carries no name
   section and every function is an index.  The WAT SHA-256
@@ -28,8 +31,10 @@ lines, so they hold for this build only.
   pinned in `Program.lean`.
 
 Every panic in this binary reaches `core::panicking::panic_fmt`, absolute
-function 104, whose call chain 104, 79, 72, 73, 75, 77, 65, 78 makes no
-call that returns and ends in `unreachable` at every leaf.  The rows below
+function 104.  No function of its call chain 104, 79, 72, 73, 75, 77, 65, 78
+returns to its caller, and every leaf ends in `unreachable`.  Absolute
+function 75 also calls absolute functions 82 and 67 and holds three
+`call_indirect` sites; those calls return into 75.  The rows below
 discharge the guards in front of those calls and in front of the
 allocation-error calls, absolute functions 99 and 102.
 
@@ -62,7 +67,7 @@ function index in `proof-ledger.md` gives the Rust symbol of each index.
 | X-F17-REHASH | 3116-3640 | 3043-3064 | in place | f8 |
 | X-F17-CAP2 | 3107 | 3078-3082 | -> 97 | f19 |
 | X-F17-NULL | 3694 | 3682-3687 | -> 98 | f1 |
-| X-F17-CAP | 3707 | 3678-3681 | -> 97 | f7 |
+| X-F17-CAP | 3707 | 3093-3096, 3674-3677, 3678-3681 | -> 97 | f7, f22 |
 | X-F16-STATE | 3002 | 2993-2998 | -> 104 | f9, f17 |
 | X-F24-ORDER | 8654, 8656-8657 | 5944, 6152, 8396, 8632-8653 | -> 107 | f10 |
 | X-F24-EQUAL | 5758-5976 | 5760-5771 | equal part | f11 |
@@ -70,16 +75,15 @@ function index in `proof-ledger.md` gives the Rust symbol of each index.
 | X-F15-OFFSET | 2951 | 2855 | unreachable | f13 |
 | X-F101-CAP | 11276 | 11266-11271 | -> 99 | f14 |
 | X-F4-NULL | 818 | 586-591 | -> 99 | f1 |
-| X-F4-CAP | 8848 | 8838-8843 | -> 99 | f15 |
+| X-F26-CAP | 8848 | 8838-8843 | -> 99 | f15 |
 | X-F51-CAP | 9611 | 9600-9606 | -> 99 | f21 |
 | X-F83-NULL | 10630 | 10622-10627 | -> 102 | f1 |
 | X-F10-TAG | none | 1798-1800, 1822-1824 | okTag arms | f16 |
 | X-F18-RESIZE | 4314 | 4302-4304 | -> 17 | f18 |
 
-The obligation key names the function that holds the guard.  X-F4-CAP
+The obligation key names the function that holds the guard.  X-F26-CAP
 sits in absolute function 26, which absolute function 4 reaches through
-`call 26` at WAT 772; X-F51-CAP sits in absolute function 51; X-F83-NULL
-sits in absolute function 83.
+`call 26` at WAT 772.
 
 ## Required local facts
 
@@ -107,23 +111,29 @@ sits in absolute function 83.
 - f15. `Func24Spec` always reports the result tag 0, so the guard at
   WAT 8838 to 8843 reads a word that is not 1.  The capacity bound of
   `Func23Spec` makes the new layout valid, which makes `Func24Spec`
-  apply.
+  apply.  Absolute function 4 meets that bound at `call 26` by
+  `Decoder.grow_no_overflow` from the loop fact `CapacityFits`
+  (`DecoderGrow.lean`, `DecoderLoop.lean`).
 - f16. `word1 != okTag` from `Func52Spec` and `Func49Spec`.
 - f17. The single-shot instance never sets the thread state to 2.
 - f18. This edge is live for `map_insert`. It is dead in the collect
   path, where `1 <= growthLeft`.
-- f19. `t.items + additional <= maxTableCapacity = 2 ^ 27`, so the
+- f19. `t.items + additional <= maxTableCapacity = 117440512`, so the
   compiled bound `> 536870911` is false.
 - f20. `t.items + additional < 2 ^ 32`, so the add at WAT 3037 never
   wraps.
 - f21. Absolute function 48 reports the flag word 0 for the error-string
   layout, so the low bit that WAT 9600 to 9606 tests is zero.
+- f22. `capacityToBuckets additional <= 2 ^ 27`, which is `buckets_le` in
+  `Func14Capacity.lean`.  So `buckets - 1 <= 536870910`, and the layout
+  size `(buckets + 8) + 8 * buckets` is at most `9 * 2 ^ 27 + 8`, which
+  does not wrap and is not above 2147483640.
 
 ## Where each row is discharged
 
 - X-D19-NULL: `ContainsKeyRead.twp_contains_key_read_phase`.
 - X-D21-NULL: `GetRead.twp_get_read_phase`.
-- X-D22-NULL: `ReadAllPhase.twp_read_phase`.
+- X-D22-NULL: `ReadAll.twp_read_phase` in `ReadAllPhase.lean`.
 - X-F7-NULL, X-F7-CAP, X-F7-GROW: `Func4Proof.lean`.
 - X-F8-NULL: `Func5Proof.lean`.
 - X-F13-ADD and the `talos.oom` outcome of X-F13-OOM: `Func10Proof.lean`.
@@ -133,18 +143,22 @@ sits in absolute function 83.
   `Func14Resize.func14_resize_correct`; the collect path never reaches
   the guard with items.
 - X-F17-CAP2 and X-F17-CAP: `Func14Proof.func14_correct_of` and
-  `Func14Resize.func14_resize_correct`, with `twp_gtU (result := 0)`.
+  `Func14Resize.func14_resize_correct`, with `twp_gtU (result := 0)` for
+  the three bound checks and `twp_ltU (result := 0)` for the wrap check at
+  WAT 3674 to 3677.
 - X-F17-NULL: `Func14Proof.lean` and `Func14Resize.lean`, with
   `twp_brIf hbaseNonzero`.
-- X-F16-STATE: `Func13Proof.func13_correct`, with `toUInt32_ne_two`.
+- X-F16-STATE: `Func13Proof.func13_correct`, with `toUInt32_ne_two`, from
+  the conjunct f9.  `entryRandomBytes_not_dropping` in `Adequacy.lean`
+  gives f17 at the entry.
 - X-F24-ORDER: `Func21Merge.lean`, with `bimerge_exhausts`.
 - X-F24-EQUAL: `Func21Proof.lean`, with `twp_equal_guard`.
 - X-F24-HEAP: `Func22Proof.func22_correct` proves `Func22Spec`, which
   carries the live edge.
 - X-F15-OFFSET: `Func12Proof.lean`.
 - X-F101-CAP: `Func98Proof.lean`.
-- X-F4-NULL: `DecoderAllocStage.twp_alloc_stage`.
-- X-F4-CAP: `Func23Proof.func23_correct`, with `twp_ne (result := 1)`.
+- X-F4-NULL: `Decoder.twp_alloc_stage` in `DecoderAllocStage.lean`.
+- X-F26-CAP: `Func23Proof.func23_correct`, with `twp_ne (result := 1)`.
 - X-F51-CAP: `Func48Proof.func48_correct`, with `twp_eqz (result := 1)`.
 - X-F83-NULL: `Func80Proof.func80_correct`, with `LiveBlock_ptr_ne_zero`.
 - X-F10-TAG: `Func7Proof.lean`, and the error arms of
