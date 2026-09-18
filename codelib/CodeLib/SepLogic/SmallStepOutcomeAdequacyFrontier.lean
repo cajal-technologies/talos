@@ -35,11 +35,6 @@ open Iris OFE COFE BI Iris.BI Iris.Algebra Iris.ProgramLogic
 open Wasm.SepLogic
 open scoped Outcome
 
-private instance instOutcomeLanguageNoForkFrontier :
-    @LanguageNoFork (Expr α) (MachineStore α) StepKind ObservableOutcome
-      outcomeLanguage where
-  no_fork h := h.1
-
 /-- Outcome-valued total-WP initialization at an explicit heap frontier. -/
 theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome_frontier
     [WasmSmallStepGpreS α]
