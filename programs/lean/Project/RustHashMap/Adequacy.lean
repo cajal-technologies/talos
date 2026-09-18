@@ -1,15 +1,17 @@
 import Project.RustHashMap.EntryContracts
 import CodeLib.SepLogic.SmallStepOutcomeAdequacy
+import CodeLib.SepLogic.SmallStepOutcomeAdequacyFrontier
 
 set_option maxRecDepth 8388608
 set_option maxHeartbeats 0
 
 /-!
-# Partial adequacy for the hash map export calls
+# Adequacy for the hash map export calls
 
 This module connects an `EntrySpec` call contract of one export wrapper to
-the public partial contract `Project.RustHashMap.Spec.WritesOrOOM`.  It is a
-port of `Project.Mergesort.Adequacy` with three changes:
+the two public contracts `Project.RustHashMap.Spec.WritesOrOOM` and
+`Project.RustHashMap.Spec.TerminatesWritingOrOOM`.  It is a port of
+`Project.Mergesort.Adequacy` with three changes:
 
 * The bridge is generic in the export name, the wrapper index, and the
   expected output function.  One theorem serves the five exports.
@@ -19,8 +21,10 @@ port of `Project.Mergesort.Adequacy` with three changes:
   separating conjunction over an open map makes the kernel fold the one
   mebibyte stack into the tree map, and that check does not finish.
 
-The bridge contains no termination argument.  It classifies the finite
-normal and trapping traces; divergence is not excluded.
+The partial bridge classifies the finite normal and trapping traces.  The
+total bridge, through the frontier frontend of
+`CodeLib.SepLogic.SmallStepOutcomeAdequacyFrontier`, also proves termination.
+Both bridges apply the same `EntrySpec`, which is a total-WP contract.
 -/
 
 namespace Project.RustHashMap.Adequacy
@@ -586,6 +590,120 @@ theorem remove_of_func29
   unfold Project.RustHashMap.Spec.MapRemoveSpec
   intro bytes
   exact writesOrOOM_of_spec "map_remove" 32
+    Project.RustHashMap.Spec.removeOutput startCallConfig_remove
+    (fun {_hlc} [_] => hspec) bytes
+
+/-! ## The total bridge
+
+The same `EntrySpec` gives termination through the frontier frontend.  The
+proof of `entry_terminatesWithOutcome_of_spec` is the proof of
+`entry_partiallyMeets_of_spec` without the step `twp.to_wp` that drops the
+termination half of the total WP. -/
+
+/-- Generic total bridge for one concrete export call: the run terminates in
+a `.done` or `.trapped` outcome that `entryPost` classifies. -/
+theorem entry_terminatesWithOutcome_of_spec
+    (index : Nat) (expected : List UInt8 → List UInt8)
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      EntrySpec (hlc := hlc) index expected)
+    (input : List UInt8) :
+    TerminatesWithOutcome (entryConfig index input)
+      (entryPost (expected input)) := by
+  apply wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome_frontier
+      (config := entryConfig index input) (entryHeap) (entryGlobals)
+      heapBase.toNat (entryPost (expected input))
+  · exact (entryHeap_facts index input).1
+  · exact (entryHeap_facts index input).2
+  · exact entryHeap_below_heapBase
+  · exact entryGlobals_agree index input
+  · simp
+  · intro hlc gs
+    iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
+    ihave Hruntime' :
+        runtimeModuleOwn ⟨0⟩ Project.RustHashMap.«module» $$ [Hruntime]
+    · irw_exact [← entryConfig_entry index input,
+        ← entryConfig_currentModule index input] with Hruntime
+    ihave Henv' :
+        hostEnvOwn 0 (Universal.envFor Project.RustHashMap.«module») $$ [Henv]
+    · irw_exact [← entryConfig_entry_id index input,
+        ← entryConfig_currentHost index input] with Henv
+    ihave Hhost' :
+        hostStateOwn (Universal.State.ofInput input) $$ [Hhost]
+    · irw_exact [← entryConfig_host index input] with Hhost
+    iapply twp_entry_of_spec index expected hspec input
+    ihave Hpages' : memoryPagesOwn entryMemory.pages $$ [Hpages]
+    · rw [show entryMemory.pages =
+          (entryConfig index input).store.wasm.mem.pages by rfl]
+      iexact Hpages
+    iframe Hheap Hglobals Hruntime' Henv' Hhost' Hfrontier Hpages'
+
+/-- The public total contract of one export follows from its start
+configuration and its entry contract. -/
+theorem terminatesWritingOrOOM_of_spec
+    (name : String) (index : Nat) (expected : List UInt8 → List UInt8)
+    (hstart : ∀ input : List UInt8,
+      startCallConfig? (Universal.envFor Project.RustHashMap.«module»)
+        Project.RustHashMap.«module» name (Universal.State.ofInput input) =
+        some (entryConfig index input))
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      EntrySpec (hlc := hlc) index expected)
+    (input : List UInt8) :
+    Project.RustHashMap.Spec.TerminatesWritingOrOOM name input
+      (expected input) := by
+  unfold Project.RustHashMap.Spec.TerminatesWritingOrOOM
+    StdioContract.TerminatesWritingOrOOM StdioContract.Runs
+  refine ⟨entryConfig index input, hstart input, ?_⟩
+  exact entry_terminatesWithOutcome_of_spec index expected hspec input
+
+/-! ## The five public total contracts, conditional on the wrapper contracts -/
+
+theorem containsKey_total_of_func25
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      Func25Spec (hlc := hlc)) :
+    Project.RustHashMap.Spec.MapContainsKeyTotalSpec := by
+  unfold Project.RustHashMap.Spec.MapContainsKeyTotalSpec
+  intro bytes
+  exact terminatesWritingOrOOM_of_spec "map_contains_key" 28
+    Project.RustHashMap.Spec.containsKeyOutput startCallConfig_contains_key
+    (fun {_hlc} [_] => hspec) bytes
+
+theorem get_total_of_func26
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      Func26Spec (hlc := hlc)) :
+    Project.RustHashMap.Spec.MapGetTotalSpec := by
+  unfold Project.RustHashMap.Spec.MapGetTotalSpec
+  intro bytes
+  exact terminatesWritingOrOOM_of_spec "map_get" 29
+    Project.RustHashMap.Spec.getOutput startCallConfig_get
+    (fun {_hlc} [_] => hspec) bytes
+
+theorem insert_total_of_func27
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      Func27Spec (hlc := hlc)) :
+    Project.RustHashMap.Spec.MapInsertTotalSpec := by
+  unfold Project.RustHashMap.Spec.MapInsertTotalSpec
+  intro bytes
+  exact terminatesWritingOrOOM_of_spec "map_insert" 30
+    Project.RustHashMap.Spec.insertOutput startCallConfig_insert
+    (fun {_hlc} [_] => hspec) bytes
+
+theorem len_total_of_func28
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      Func28Spec (hlc := hlc)) :
+    Project.RustHashMap.Spec.MapLenTotalSpec := by
+  unfold Project.RustHashMap.Spec.MapLenTotalSpec
+  intro bytes
+  exact terminatesWritingOrOOM_of_spec "map_len" 31
+    Project.RustHashMap.Spec.lenOutput startCallConfig_len
+    (fun {_hlc} [_] => hspec) bytes
+
+theorem remove_total_of_func29
+    (hspec : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+      Func29Spec (hlc := hlc)) :
+    Project.RustHashMap.Spec.MapRemoveTotalSpec := by
+  unfold Project.RustHashMap.Spec.MapRemoveTotalSpec
+  intro bytes
+  exact terminatesWritingOrOOM_of_spec "map_remove" 32
     Project.RustHashMap.Spec.removeOutput startCallConfig_remove
     (fun {_hlc} [_] => hspec) bytes
 

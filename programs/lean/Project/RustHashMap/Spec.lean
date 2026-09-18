@@ -27,12 +27,15 @@ result writes its tag byte `[0]`, so a rejected input and a `None` result stay
 distinguishable.  The encode step cannot fail: an allocation failure raises
 `talos.oom` rather than an `Err`.
 
-The contracts are partial, not total.  `read_all`, the decoder, and the map
-itself all allocate in proportion to the input.  An allocation failure is
-therefore a reachable terminal outcome for every one of these exports.  Each
-contract admits the `talos.oom` host trap as an alternative to a correct
-write, in the shape `Project.Mergesort.Spec` uses.  Fuel, linear memory, and
-allocator state stay hidden.
+Each export has two contracts.  `WritesOrOOM` is partial: it classifies every
+finite terminal execution and does not assert termination.
+`TerminatesWritingOrOOM` is total: the run terminates, and its terminal
+outcome is one of the same two.  `read_all`, the decoder, and the map itself
+all allocate in proportion to the input, so an allocation failure is a
+reachable terminal outcome for every one of these exports, and both contracts
+admit the `talos.oom` host trap as an alternative to a correct write, in the
+shape `Project.Mergesort.Spec` uses.  Fuel, linear memory, and allocator
+state stay hidden.
 -/
 
 namespace Project.RustHashMap.Spec
@@ -54,14 +57,19 @@ theorem universal_env_satisfies :
 
 /-! ## Run shape
 
-Every Talos stdio program shares this shape, so it lives in
-`CodeLib.StdioContract` rather than here.  The one name below fixes
+Every Talos stdio program shares these two shapes, so they live in
+`CodeLib.StdioContract` rather than here.  The two names below fix
 the module, which is the only part a contract adds. -/
 
-/-- The shared shape of all five contracts: a normal return writes exactly
+/-- The partial shape of all five contracts: a normal return writes exactly
 `output`. -/
 def WritesOrOOM (op : String) (input output : List UInt8) : Prop :=
   StdioContract.WritesOrOOM «module» op input output
+
+/-- The total shape of all five contracts: the run terminates, and a normal
+return writes exactly `output`. -/
+def TerminatesWritingOrOOM (op : String) (input output : List UInt8) : Prop :=
+  StdioContract.TerminatesWritingOrOOM «module» op input output
 
 /-! ## Input readers -/
 
@@ -134,7 +142,10 @@ def removeOutput (bytes : List UInt8) : List UInt8 :=
       Borsh.option Borsh.u32 removed ++
         Borsh.hashMap WordCodec.u32le WordCodec.u32le rest
 
-/-! ## Contracts -/
+/-! ## Partial contracts
+
+Each contract classifies every finite terminal execution and asserts no
+termination.  The total contracts below repeat each one with termination. -/
 
 /-- `map_len` writes the entry count.
 
@@ -198,9 +209,96 @@ The run may instead end in the allocator `talos.oom` trap. -/
 def MapRemoveSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "map_remove" bytes (removeOutput bytes)
 
+/-! ## Total contracts
+
+Each contract states the same output as its partial form and adds that the
+run terminates.  The two outcomes are the same: a normal return with exactly
+the expected bytes written, or the allocator `talos.oom` trap. -/
+
+/-- `map_len` terminates and writes the entry count.
+
+Informal spec:
+The export reads the whole input as a borsh map of `u32` keys to `u32`
+values, which `mapOf` decodes.  It writes the entry count of that map as
+a borsh `u32`.  It writes nothing when borsh rejects the bytes.  The run
+terminates: it either returns normally with exactly those bytes written,
+or ends in the allocator `talos.oom` trap with the OOM marker raised,
+because the decoder and the map allocate in proportion to the input. -/
+@[spec_of "rust-exported" "rust_hash_map::map_len"]
+def MapLenTotalSpec : Prop :=
+  ∀ bytes : List UInt8,
+    TerminatesWritingOrOOM "map_len" bytes (lenOutput bytes)
+
+/-- `map_get` terminates and writes the value under the leading key, and
+`None` when the key is absent.
+
+Informal spec:
+The export reads the input as `key ++ map`, which `keyAndMap` decodes:
+the first four bytes are the `u32` key and the rest is the borsh map.
+It writes the value under that key as a borsh `Option`, and `None` when
+the key has no entry.  It writes nothing when borsh rejects the bytes.
+The run terminates: it either returns normally with exactly those bytes
+written, or ends in the allocator `talos.oom` trap with the OOM marker
+raised, because the decoder and the map allocate in proportion to the
+input. -/
+@[spec_of "rust-exported" "rust_hash_map::map_get"]
+def MapGetTotalSpec : Prop :=
+  ∀ bytes : List UInt8,
+    TerminatesWritingOrOOM "map_get" bytes (getOutput bytes)
+
+/-- `map_contains_key` terminates and writes whether the leading key has an
+entry.
+
+Informal spec:
+The export reads the input as `key ++ map`, which `keyAndMap` decodes.
+It writes a borsh `bool` that says whether that key has an entry.  It
+writes nothing when borsh rejects the bytes.  The run terminates: it
+either returns normally with exactly those bytes written, or ends in the
+allocator `talos.oom` trap with the OOM marker raised, because the
+decoder and the map allocate in proportion to the input. -/
+@[spec_of "rust-exported" "rust_hash_map::map_contains_key"]
+def MapContainsKeyTotalSpec : Prop :=
+  ∀ bytes : List UInt8,
+    TerminatesWritingOrOOM "map_contains_key" bytes (containsKeyOutput bytes)
+
+/-- `map_insert` terminates and writes the displaced value beside the map
+after the insertion.
+
+Informal spec:
+The export reads the input as `key ++ value ++ map`, which
+`keyValueAndMap` decodes: the first four bytes are the `u32` key, the
+next four are the `u32` value, and the rest is the borsh map.  It writes
+the displaced value as a borsh `Option`, then the map after the
+insertion, in key order.  It writes nothing when borsh rejects the
+bytes.  The run terminates: it either returns normally with exactly
+those bytes written, or ends in the allocator `talos.oom` trap with the
+OOM marker raised, because the decoder and the map allocate in
+proportion to the input. -/
+@[spec_of "rust-exported" "rust_hash_map::map_insert"]
+def MapInsertTotalSpec : Prop :=
+  ∀ bytes : List UInt8,
+    TerminatesWritingOrOOM "map_insert" bytes (insertOutput bytes)
+
+/-- `map_remove` terminates and writes the removed value beside the map
+after the removal.
+
+Informal spec:
+The export reads the input as `key ++ map`, which `keyAndMap` decodes.
+It writes the removed value as a borsh `Option`, then the map after the
+removal, in key order.  It writes nothing when borsh rejects the bytes.
+The run terminates: it either returns normally with exactly those bytes
+written, or ends in the allocator `talos.oom` trap with the OOM marker
+raised, because the decoder and the map allocate in proportion to the
+input. -/
+@[spec_of "rust-exported" "rust_hash_map::map_remove"]
+def MapRemoveTotalSpec : Prop :=
+  ∀ bytes : List UInt8,
+    TerminatesWritingOrOOM "map_remove" bytes (removeOutput bytes)
+
 /-- Every name the contracts mention starts a call on the generated module.
 A misspelt name would make its contract false, not vacuous:
-`PartiallyRunsWithOutcome` needs a start configuration. -/
+`PartiallyRunsWithOutcome` and `StdioContract.Runs` both need a start
+configuration. -/
 theorem contract_names_start :
     ["map_len", "map_get", "map_contains_key", "map_insert", "map_remove"].all
       (fun op =>
