@@ -1,6 +1,9 @@
 import Project.FloatMinmax.Program
 import Interpreter.Wasm.SmallStep
 
+set_option maxRecDepth 1048576
+set_option maxHeartbeats 4000000
+
 /-!
 # Specification for `float_minmax`
 
@@ -140,11 +143,11 @@ theorem libmMinFold_nil : libmMinFold [] = none := rfl
 theorem naiveMaxFold_nil : naiveMaxFold [] = none := rfl
 theorem libmMaxFold_nil : libmMaxFold [] = none := rfl
 
-theorem isNaN_canonical : isNaN canonicalNaN = true := by native_decide
-theorem isNaN_posZero : isNaN posZero = false := by native_decide
-theorem isNaN_negZero : isNaN negZero = false := by native_decide
-theorem isNaN_posInf : isNaN posInf = false := by native_decide
-theorem isNaN_negInf : isNaN negInf = false := by native_decide
+theorem isNaN_canonical : isNaN canonicalNaN = true := by decide +kernel
+theorem isNaN_posZero : isNaN posZero = false := by decide +kernel
+theorem isNaN_negZero : isNaN negZero = false := by decide +kernel
+theorem isNaN_posInf : isNaN posInf = false := by decide +kernel
+theorem isNaN_negInf : isNaN negInf = false := by decide +kernel
 
 theorem f32Eq_refl_of_notNaN (x : UInt32) (h : isNaN x = false) : f32Eq x x = true := by
   unfold isNaN at h
@@ -152,90 +155,90 @@ theorem f32Eq_refl_of_notNaN (x : UInt32) (h : isNaN x = false) : f32Eq x x = tr
   simp [Wasm.f32Eq, Wasm.f32Ne] at hne ⊢
   rw [hne]
 
-/-! ## Concrete edge cases (checked by `native_decide`) -/
+/-! ## Concrete edge cases (checked by `decide +kernel`) -/
 
 /-- Single finite value: both reductions agree, IEEE equality holds → `1`. -/
-theorem check_single_finite : checkMinOfList [one] = 1 := by native_decide
-theorem check_single_finite_max : checkMaxOfList [one] = 1 := by native_decide
+theorem check_single_finite : checkMinOfList [one] = 1 := by decide +kernel
+theorem check_single_finite_max : checkMaxOfList [one] = 1 := by decide +kernel
 
 /-- Single NaN: both folds are `NaN`, but `NaN == NaN` is `false` → `0`. -/
-theorem check_single_nan_min : checkMinOfList [canonicalNaN] = 0 := by native_decide
-theorem check_single_nan_max : checkMaxOfList [canonicalNaN] = 0 := by native_decide
+theorem check_single_nan_min : checkMinOfList [canonicalNaN] = 0 := by decide +kernel
+theorem check_single_nan_max : checkMaxOfList [canonicalNaN] = 0 := by decide +kernel
 
 /-- NaN first, then finite: naive keeps NaN, libm returns finite → `0`. -/
-theorem check_nan_first_min : checkMinOfList [canonicalNaN, five] = 0 := by native_decide
-theorem check_nan_first_max : checkMaxOfList [canonicalNaN, five] = 0 := by native_decide
+theorem check_nan_first_min : checkMinOfList [canonicalNaN, five] = 0 := by decide +kernel
+theorem check_nan_first_max : checkMaxOfList [canonicalNaN, five] = 0 := by decide +kernel
 
 /-- Finite first, then NaN: both keep the finite (NaN `< x` is false;
 libm returns the non-NaN) → `1`. -/
-theorem check_nan_late_min : checkMinOfList [five, canonicalNaN] = 1 := by native_decide
-theorem check_nan_late_max : checkMaxOfList [five, canonicalNaN] = 1 := by native_decide
+theorem check_nan_late_min : checkMinOfList [five, canonicalNaN] = 1 := by decide +kernel
+theorem check_nan_late_max : checkMaxOfList [five, canonicalNaN] = 1 := by decide +kernel
 
 /-- Multiple NaNs: first NaN dominates naive, libm eventually returns last
 non-NaN if any, otherwise NaN. Here all NaN → both NaN → `0`. -/
-theorem check_multi_nan_min : checkMinOfList [canonicalNaN, canonicalNaN, canonicalNaN] = 0 := by native_decide
-theorem check_multi_nan_max : checkMaxOfList [canonicalNaN, canonicalNaN] = 0 := by native_decide
+theorem check_multi_nan_min : checkMinOfList [canonicalNaN, canonicalNaN, canonicalNaN] = 0 := by decide +kernel
+theorem check_multi_nan_max : checkMaxOfList [canonicalNaN, canonicalNaN] = 0 := by decide +kernel
 
 /-- Signed zeros: bit patterns differ but IEEE `==` treats `+0 == -0`. -/
 theorem naiveMin_plus_neg_zero_bits :
-    naiveMinStep posZero negZero = posZero := by native_decide
+    naiveMinStep posZero negZero = posZero := by decide +kernel
 
 theorem libmMin_plus_neg_zero_bits :
-    libmMin posZero negZero = negZero := by native_decide
+    libmMin posZero negZero = negZero := by decide +kernel
 
 theorem wasmMin_both_zero :
-    wasmMin posZero negZero = negZero := by native_decide
+    wasmMin posZero negZero = negZero := by decide +kernel
 theorem wasmMin_neg_plus_zero :
-    wasmMin negZero posZero = negZero := by native_decide
+    wasmMin negZero posZero = negZero := by decide +kernel
 
 theorem check_zero_pair_min :
-    checkMinOfList [posZero, negZero] = 1 := by native_decide
+    checkMinOfList [posZero, negZero] = 1 := by decide +kernel
 theorem check_zero_pair_min_rev :
-    checkMinOfList [negZero, posZero] = 1 := by native_decide
+    checkMinOfList [negZero, posZero] = 1 := by decide +kernel
 theorem check_zero_pair_max :
-    checkMaxOfList [posZero, negZero] = 1 := by native_decide
+    checkMaxOfList [posZero, negZero] = 1 := by decide +kernel
 theorem check_zero_pair_max_rev :
-    checkMaxOfList [negZero, posZero] = 1 := by native_decide
+    checkMaxOfList [negZero, posZero] = 1 := by decide +kernel
 
 /-- Bit-level inequality despite IEEE equality: the two mins above are `-0`
 vs `+0` at the bit level, but `f32Eq` hides it. -/
 theorem min_zero_bit_inequality :
-    naiveMinStep posZero negZero != libmMin posZero negZero := by native_decide
+    naiveMinStep posZero negZero != libmMin posZero negZero := by decide +kernel
 
 /-- Infinities: ordinary ordered comparisons agree with wasm min/max. -/
-theorem check_infinities_min : checkMinOfList [posInf, negInf] = 1 := by native_decide
-theorem check_infinities_max : checkMaxOfList [posInf, negInf] = 1 := by native_decide
-theorem check_infinities_min_rev : checkMinOfList [negInf, posInf] = 1 := by native_decide
+theorem check_infinities_min : checkMinOfList [posInf, negInf] = 1 := by decide +kernel
+theorem check_infinities_max : checkMaxOfList [posInf, negInf] = 1 := by decide +kernel
+theorem check_infinities_min_rev : checkMinOfList [negInf, posInf] = 1 := by decide +kernel
 
-theorem naiveMin_infinities : naiveMinFold [posInf, negInf] = some negInf := by native_decide
-theorem libmMin_infinities : libmMinFold [posInf, negInf] = some negInf := by native_decide
-theorem wasmMin_infinities : wasmMinFold [posInf, negInf] = some negInf := by native_decide
+theorem naiveMin_infinities : naiveMinFold [posInf, negInf] = some negInf := by decide +kernel
+theorem libmMin_infinities : libmMinFold [posInf, negInf] = some negInf := by decide +kernel
+theorem wasmMin_infinities : wasmMinFold [posInf, negInf] = some negInf := by decide +kernel
 
 /-- Mixed special values: NaN + zero, zero + infinity, etc. -/
-theorem check_mixed_nan_inf_min : checkMinOfList [canonicalNaN, posInf] = 0 := by native_decide
-theorem check_mixed_nan_zero_min : checkMinOfList [canonicalNaN, posZero] = 0 := by native_decide
-theorem check_mixed_zero_inf_min : checkMinOfList [posZero, posInf] = 1 := by native_decide
-theorem check_mixed_negInf_posInf_min : checkMinOfList [negInf, posInf] = 1 := by native_decide
+theorem check_mixed_nan_inf_min : checkMinOfList [canonicalNaN, posInf] = 0 := by decide +kernel
+theorem check_mixed_nan_zero_min : checkMinOfList [canonicalNaN, posZero] = 0 := by decide +kernel
+theorem check_mixed_zero_inf_min : checkMinOfList [posZero, posInf] = 1 := by decide +kernel
+theorem check_mixed_negInf_posInf_min : checkMinOfList [negInf, posInf] = 1 := by decide +kernel
 
 /-- Wasm `f32.min` vs libm `fmin`: they disagree exactly when a NaN is
 present (wasm yields canonical NaN, libm yields the other operand). -/
 theorem wasm_vs_libm_nan_min :
     wasmMin five canonicalNaN = canonicalNaN ∧
     libmMin five canonicalNaN = five := by
-  constructor <;> native_decide
+  constructor <;> decide +kernel
 
 theorem wasm_vs_libm_nan_max :
     wasmMax five canonicalNaN = canonicalNaN ∧
     libmMax five canonicalNaN = five := by
-  constructor <;> native_decide
+  constructor <;> decide +kernel
 
 /-- Equal values and repeated values: reductions preserve the value. -/
-theorem check_repeated_min : checkMinOfList [one, one, one] = 1 := by native_decide
-theorem check_repeated_max : checkMaxOfList [two, two] = 1 := by native_decide
+theorem check_repeated_min : checkMinOfList [one, one, one] = 1 := by decide +kernel
+theorem check_repeated_max : checkMaxOfList [two, two] = 1 := by decide +kernel
 
 /-- Ordinary finite values: both reductions coincide. -/
-theorem check_finite_range_min : checkMinOfList [five, one, two] = 1 := by native_decide
-theorem check_finite_range_max : checkMaxOfList [five, one, two] = 1 := by native_decide
+theorem check_finite_range_min : checkMinOfList [five, one, two] = 1 := by decide +kernel
+theorem check_finite_range_max : checkMaxOfList [five, one, two] = 1 := by decide +kernel
 
 /-! ## One concrete Program → spec execution example
 
@@ -264,8 +267,7 @@ def checkMinConcreteConfig : Wasm.SmallStep.Config Unit :=
         wasm := storeExample } }
 
 theorem checkMin_concrete_example :
-    (Wasm.SmallStep.runSteps 500 checkMinConcreteConfig).result.values? = some [.i32 1] := by
-  native_decide
+    (Wasm.SmallStep.runSteps 500 checkMinConcreteConfig).result.values? = some [.i32 1] := by rfl
 
 /-! ## Pointer/length ABI and explicit TODO
 
