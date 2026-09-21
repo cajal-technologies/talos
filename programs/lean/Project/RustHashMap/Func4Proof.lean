@@ -43,8 +43,8 @@ X-F7-GROW is the `call 13` at WAT 1215, behind the guard at WAT 1203 to
 invariant gives `len < t.items <= cap`, so the guard is false.
 
 X-F7-NULL is the same `call 99` at WAT 1285, reached from the guard at
-WAT 1117 to 1120 after `call 58`.  A live block never starts at address
-zero, so the guard is false.
+WAT 1118 to 1120, which tests the result of `call 58` at WAT 1117.  A live
+block never starts at address zero, so the guard is false.
 
 ## The empty table
 

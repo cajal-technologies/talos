@@ -43,7 +43,8 @@ allocation-error calls, absolute functions 99 and 102.
 The line numbers refer to the frozen WAT file
 `programs/rust/build/rust_hash_map/program.wat`.
 
-The column names are short. `WAT call` is the frozen WAT call.
+The column names are short. `WAT call` is the frozen WAT call, or, for an
+edge that a bare `unreachable` carries, the line of that instruction.
 `Guard` is the originating guard. `Edge` is the excluded edge. The
 source of each edge is the absolute function in the obligation key, so
 the column gives the target only. `Required fact` points into the list

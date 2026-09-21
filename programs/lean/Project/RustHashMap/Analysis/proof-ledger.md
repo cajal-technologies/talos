@@ -156,7 +156,7 @@ hypothesis. The evidence column names the hypothesis.
   `Func21Proof.lean` discharges it with
   `Func21Merge.bimerge_exhausts` of `Func21Merge.lean`. Absolute 107
   therefore needs no proof file.
-- Note L. `Project.lean` imports every file of the hash map proof. The
+- Note L. `Project.lean` imports every proof file of the hash map. The
   sixteen collect files are
   `AlignPow2.lean`, `BitPures.lean`, `Func15Hash.lean`, `ProbeStop.lean`,
   `CollectBodyContracts.lean`, `Func14Capacity.lean`, `Func80Proof.lean`,
@@ -283,7 +283,8 @@ hypothesis. The evidence column names the hypothesis.
 `programs/lean/Project/RustHashMap/` holds 166 Lean files. The 80 files
 below are the ones that the rows and notes above do not describe, or name
 only in notes A and V. They are grouped by what they prove.
-`Project.lean` imports every file.
+`Project.lean` imports every proof file; `Program.lean` arrives through
+them.
 
 ### Contracts and infrastructure
 
@@ -485,7 +486,7 @@ one, and only absolute 66, which no export reaches, calls absolute 74.
 | 59 | func56 | `talos_stdio::allocator::abort_oom` | all five | `ImportProofs.lean` |
 | 60 | func57 | `__rustc::__rust_dealloc` | all five | `Func57Proof.lean` |
 | 61 | func58 | `__rustc::__rust_realloc` | all five | `Func58Proof.lean` |
-| 62 | func59 | `__rustc::__rust_alloc_zeroed` | all five | `Func59Proof.lean` |
+| 62 | func59 | `__rustc::__rust_alloc_zeroed` | none | dead arm of 48, proved anyway in `Func59Proof.lean` |
 | 63 | func60 | `talos_stdio::read` | all five | `ImportProofs.lean` |
 | 64 | func61 | `talos_stdio::write` | all five | `ImportProofs.lean` |
 | 65 | func62 | `__rustc::__rust_start_panic` | all five | excluded edge |

@@ -13,8 +13,9 @@ axiom.  `CodeLib.Examples.MergeSort.StdIO.codec` is the same codec proved by
 
 `Project.Mergesort.Spec` carries an identical copy (`encodeWord`,
 `decodeWord`, `u32Codec`), and `reassembleLE32` below repeats its
-`reassemble32` line for line.  A follow-up can replace both once
-`CodeLib.UInt32` carries a shared reassembly lemma.
+`reassemble32` line for line.  `CodeLib.UInt32` already states the same
+fact as `Nat.reassemble32_of_lt`, and three other files in this package
+call it, so a follow-up can import that module and delete both copies.
 
 Consumer: `CodeLib.RustStd.Vec.Codec`, which puts `u32le` in front of a packed
 `Vec` as its element count.

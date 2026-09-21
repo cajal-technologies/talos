@@ -135,8 +135,11 @@ theorem pairBytes_decodePairs (bytes : List UInt8) (count : Nat)
 
 /-! ## Exchange of two entries -/
 
-/-- Exchange entries `i` and `j`.  An index out of bounds keeps the list
-unchanged, because `List.set` does. -/
+/-- Exchange entries `i` and `j`.  Two indices out of bounds keep the list
+unchanged, because `List.set` does.  One index out of bounds writes
+`(0, 0)` at the other, because `getD` supplies that default.  The lemmas
+below therefore carry `i < ps.length` and `j < ps.length`, and every caller
+goes through them. -/
 def swapAt (ps : List (UInt32 × UInt32)) (i j : Nat) :
     List (UInt32 × UInt32) :=
   (ps.set i (ps.getD j (0, 0))).set j (ps.getD i (0, 0))
