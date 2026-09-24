@@ -579,6 +579,20 @@ theorem validator_accepts_nonnull_element_for_nullable_table :
 theorem validator_accepts_br_on_non_null_refinement :
     validationSucceeds brOnNonNullRefinementValidationModule = true := by cbv
 
+theorem validator_rejects_reversed_memory_limits :
+    validationErrorIs
+      { funcs := [], memory := some { pagesMin := 1, pagesMax := some 0 } }
+      "size minimum must not be greater than maximum" = true := by decide +kernel
+
+theorem validator_rejects_memory32_minimum_over_limit :
+    validationErrorIs { funcs := [], memory := some { pagesMin := 65537 } }
+      "memory size" = true := by decide +kernel
+
+theorem validator_accepts_memory64_above_memory32_limit :
+    validationSucceeds
+      { funcs := [], memory := some {
+          pagesMin := 65537, pagesMax := some 65538, is64 := true } } = true := by decide +kernel
+
 theorem validator_rejects_unknown_data_drop :
     validationErrorIs invalidDataDropModule "unknown data segment" = true := by decide +kernel
 
