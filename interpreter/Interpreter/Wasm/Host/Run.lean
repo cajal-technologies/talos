@@ -220,6 +220,17 @@ def PartiallyRunsExportWithOutcome [Inhabited α]
     SmallStep.PartiallyMeetsOutcome config (fun outcome final =>
       post { outcome := outcome, final := final.wasm })
 
+/-- A total outcome specification of an exported call is also a partial one.
+The start configuration is shared, so this is
+`TerminatesWithOutcome.toPartiallyMeetsOutcome` under `startExportConfig?`. -/
+theorem RunsExportWithOutcome.toPartiallyRunsExportWithOutcome
+    {α : Type} [Inhabited α] {env : HostEnv α} {m : Module} {op : String}
+    {call : ExportCall α} {post : ExportOutcome α → Prop}
+    (run : RunsExportWithOutcome env m op call post) :
+    PartiallyRunsExportWithOutcome env m op call post := by
+  rcases run with ⟨config, hstart, execution⟩
+  exact ⟨config, hstart, execution.toPartiallyMeetsOutcome⟩
+
 /-- Initialize `m` at its export named `op`, running under `env` from host
 state `initial` over the module's own initial memory, globals and tables.
 `none` when `m` exports no such name, or when the entry point that name

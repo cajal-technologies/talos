@@ -7533,8 +7533,8 @@ theorem TerminatesWith.toPartiallyMeets
 /-- The outcome form of `TerminatesWith.toPartiallyMeets`.  A terminating
 execution pins down the outcome and the store, so every other terminal trace
 from the same machine, a trap included, satisfies the same postcondition.
-Without it every `PartiallyMeetsOutcome` theorem has to restate the proof of
-its `TerminatesWithOutcome` twin. -/
+`RunsExportWithOutcome.toPartiallyRunsExportWithOutcome` (`Host/Run.lean`) is
+its export-level form. -/
 theorem TerminatesWithOutcome.toPartiallyMeetsOutcome
     {initial : Config α} {post : ObservableOutcome → MachineStore α → Prop}
     (execution : TerminatesWithOutcome initial post) :
