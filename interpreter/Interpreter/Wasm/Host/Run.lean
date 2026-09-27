@@ -191,10 +191,8 @@ theorem RunsExportWithOutcome.deterministic
   rw [firstStart] at secondStart
   injection secondStart with configEq
   subst secondConfig
-  obtain ⟨outcomeEq, storeEq⟩ :=
+  obtain ⟨rfl, rfl⟩ :=
     SmallStep.steps_outcome_deterministic firstSteps secondSteps
-  subst secondOutcome
-  subst secondStore
   exact
     ⟨{ outcome := firstOutcome, final := firstStore.wasm }, hfirst, hsecond⟩
 
@@ -222,7 +220,8 @@ def PartiallyRunsExportWithOutcome [Inhabited α]
 
 /-- A total outcome specification of an exported call is also a partial one.
 The start configuration is shared, so this is
-`TerminatesWithOutcome.toPartiallyMeetsOutcome` under `startExportConfig?`. -/
+`SmallStep.TerminatesWithOutcome.toPartiallyMeetsOutcome` under
+`startExportConfig?`. -/
 theorem RunsExportWithOutcome.toPartiallyRunsExportWithOutcome
     {α : Type} [Inhabited α] {env : HostEnv α} {m : Module} {op : String}
     {call : ExportCall α} {post : ExportOutcome α → Prop}
