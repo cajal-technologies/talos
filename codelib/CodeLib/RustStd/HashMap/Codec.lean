@@ -90,11 +90,13 @@ theorem length_of_deserializeEntries {kc : WordCodec K} {vc : WordCodec V}
     | some values =>
         rw [hdes] at h
         dsimp only at h
-        split_ifs at h with hcount
-        · have hev : values = entries := by simp at h; exact h
-          subst hev
-          rw [hcount]
-          exact (WordCodec.decodeU32 (bytes.take 4)).toNat_lt
+        split at h
+        · next hcount =>
+            have hev : values = entries := by simp at h; exact h
+            subst hev
+            rw [hcount]
+            exact (WordCodec.decodeU32 (bytes.take 4)).toNat_lt
+        · simp at h
 
 end Wasm.RustStd.HashMap
 
