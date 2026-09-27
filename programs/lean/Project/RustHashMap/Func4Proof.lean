@@ -1011,7 +1011,7 @@ private theorem one_add_ofNat {n : Nat} (h : n + 1 < UInt32.size) :
   omega
 
 /-- Move an owned range between two names of one address.  Copy of
-`Func98Proof.lean:29`. -/
+`Func98Proof.byteSlice_address_eq` (`Func98Proof.lean:29`). -/
 private theorem sliceMove [WasmSmallStepGS hlc Universal.State]
     {address address' : UInt32} {bytes : List UInt8}
     (haddress : address = address') :

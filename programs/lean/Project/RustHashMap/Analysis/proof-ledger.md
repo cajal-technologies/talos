@@ -486,7 +486,7 @@ one, and only absolute 66, which no export reaches, calls absolute 74.
 | 59 | func56 | `talos_stdio::allocator::abort_oom` | all five | `ImportProofs.lean` |
 | 60 | func57 | `__rustc::__rust_dealloc` | all five | `Func57Proof.lean` |
 | 61 | func58 | `__rustc::__rust_realloc` | all five | `Func58Proof.lean` |
-| 62 | func59 | `__rustc::__rust_alloc_zeroed` | none | dead arm of 48, proved anyway in `Func59Proof.lean` |
+| 62 | func59 | `__rustc::__rust_alloc_zeroed` | all five, through 44 | dead arm of 44 (the zeroed flag is the constant 0), proved anyway in `Func59Proof.lean` |
 | 63 | func60 | `talos_stdio::read` | all five | `ImportProofs.lean` |
 | 64 | func61 | `talos_stdio::write` | all five | `ImportProofs.lean` |
 | 65 | func62 | `__rustc::__rust_start_panic` | all five | excluded edge |

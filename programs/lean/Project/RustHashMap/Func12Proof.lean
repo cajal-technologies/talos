@@ -416,8 +416,9 @@ end Slices
 
 /-! ## Address facts of one entry cell -/
 
-/-- Move an owned double word between two names of one address.  Copy of
-`LookupProbe.lean:106`, which is private there. -/
+/-- Move an owned double word between two names of one address.  The same
+statement is private in `Func11Proof.lean` and its siblings; extracting it
+into codelib is a follow-up. -/
 private theorem wordMove64 {α : Type} [WasmHeapGS α]
     {address address' : UInt32} {value : UInt64}
     (haddress : address = address') :
@@ -453,7 +454,7 @@ private theorem offset_facts64 (base offset : UInt32) (o : Nat)
   · simpa using Slices.byteOffset_toNat (base + UInt32.ofNat o) 7 (by omega)
 
 /-- The three address facts that `twp_load32_addr` asks for.  Copy of
-`LookupProbe.lean:111`, which is private there. -/
+`Func20Proof.lean:70`, which is private there. -/
 private theorem addr_facts (addr : UInt32)
     (h : addr.toNat + 4 ≤ UInt32.size) :
     (addr + 1).toNat = addr.toNat + 1 ∧

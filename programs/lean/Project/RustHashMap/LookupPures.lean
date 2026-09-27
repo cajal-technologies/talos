@@ -618,7 +618,7 @@ theorem isFull_h2 (h : UInt64) : isFull (h2 h) = true := by
   exact hlt
 
 /-- A byte that the compiled `match_tag` flags names a full bucket, so the
-slot of that bucket holds a pair.  Copy of `ProbeStop.lean:121`. -/
+slot of that bucket holds a pair.  Copy of `ProbeStop.lean:114`. -/
 theorem slotAt_isSome_of_mem_matchBytes (hw : Layout hash t) (h : UInt64)
     (n : Nat) {j : Nat}
     (hj : j ∈ setBytes (swarMatchTag (h2 h) (groupWord (window t h n)))) :

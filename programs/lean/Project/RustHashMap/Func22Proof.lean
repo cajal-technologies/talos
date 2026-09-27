@@ -401,8 +401,9 @@ private theorem wordMove32 {α : Type} [WasmHeapGS α]
       pointsTo_u32 0 address' value := by
   rw [haddress]
 
-/-- Move an owned double word between two names of one address.  Copy of
-`LookupProbe.lean:106`, which is private there. -/
+/-- Move an owned double word between two names of one address.  The same
+statement is private in `Func11Proof.lean` and its siblings; extracting it
+into codelib is a follow-up. -/
 private theorem wordMove64 {α : Type} [WasmHeapGS α]
     {address address' : UInt32} {value : UInt64}
     (haddress : address = address') :
