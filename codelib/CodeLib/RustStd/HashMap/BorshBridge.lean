@@ -100,7 +100,7 @@ theorem deserialize_eq_some_map_range (codec : WordCodec W) :
         rw [List.length_take]; omega
       have hrest : (bytes.drop codec.width).length = codec.width * count := by
         rw [List.length_drop, hlen, Nat.mul_succ]; omega
-      conv_lhs => rw [← List.take_append_drop codec.width bytes]
+      conv => lhs; rw [← List.take_append_drop codec.width bytes]
       rw [codec.deserialize_append _ _ hchunk, ih _ hrest]
       rw [List.range_succ_eq_map, List.map_cons, List.map_map]
       simp only [Option.map_some, Function.comp_def, List.drop_zero,
@@ -216,12 +216,14 @@ theorem length_and_count_of_deserializeEntries {bytes : List UInt8}
     | some values =>
         rw [hdes] at h
         dsimp only at h
-        split_ifs at h with hcount
-        · have hvalues : values = entries := by simpa using h
-          subst hvalues
-          have hlen := WordCodec.length_of_deserialize_eq_some _ _ _ hdes
-          rw [List.length_drop, pairCodec_u32le_width] at hlen
-          exact ⟨hcount, by rw [headerCount, ← hcount]; omega⟩
+        split at h
+        · next hcount =>
+            have hvalues : values = entries := by simpa using h
+            subst hvalues
+            have hlen := WordCodec.length_of_deserialize_eq_some _ _ _ hdes
+            rw [List.length_drop, pairCodec_u32le_width] at hlen
+            exact ⟨hcount, by rw [headerCount, ← hcount]; omega⟩
+        · simp at h
 
 /-- A short input, or an input whose payload stops before the header says,
 decodes to no map.  The driver rejects it, and so does the model. -/

@@ -1,5 +1,6 @@
 import CodeLib.RustStd.HashMap.ProbeWasm
 import CodeLib.RustStd.HashMap.ResizeWalk
+import Mathlib.Data.Nat.Bitwise
 
 /-!
 # The bit counts, the wrap and the sizing bound that `erase` needs

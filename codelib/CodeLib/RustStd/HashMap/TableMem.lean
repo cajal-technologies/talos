@@ -1,5 +1,6 @@
 import CodeLib.SepLogic.BorshSlice
 import CodeLib.RustStd.HashMap.Swar
+import Mathlib.Data.List.GetD
 
 /-!
 # The `hashbrown` table as owned wasm memory
