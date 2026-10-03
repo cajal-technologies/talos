@@ -17,6 +17,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func8_index :
     Project.Mergesort.module.funcs[8]? =
       some Project.Mergesort.func8Def := by rfl

@@ -141,7 +141,7 @@ theorem decodeSecondPair_valid_reaches
     (hinputLower : 1054000 ≤ inputPtr.toNat)
     (hlen : 2 ≤ len.toNat)
     (hlenRead : store.wasm.mem.read32 (secondIterator + 4) = len)
-    (herrorRead : store.wasm.mem.read32 (secondIterator + 16) = errorPtr)
+    (_herrorRead : store.wasm.mem.read32 (secondIterator + 16) = errorPtr)
     (hchunkRead : store.wasm.mem.read32 (secondIterator + 8) = 2)
     (hptrRead : store.wasm.mem.read32 secondIterator = inputPtr)
     (hindexRead : store.wasm.mem.read32 (secondIterator + 12) = chunkIndex)
@@ -262,7 +262,6 @@ theorem decodeSecondPair_valid_reaches
     intro hz
     have hnat := congrArg UInt32.toNat hz
     change (store.wasm.mem.read32 1048508).toNat = 0 at hnat
-    norm_num at hnat
     omega
   apply Reaches.prepend (Step.brIf hlen0 rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -330,7 +329,7 @@ theorem decodeSecondPair_valid_reaches
     (by decide)]
   norm_num
   rw [Mem.read32_write32_disjoint _ (1048508 : UInt32)
-    (secondIterator + 12) _ (by decide)]
+    (1048516 : UInt32) _ (by decide)]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.shl

@@ -32,7 +32,7 @@ theorem universal_write_function :
 theorem universal_write_return
     (store : Store Universal.State) (length pointer : UInt32)
     (bytes : List UInt8)
-    (hlen : bytes.length = length.toNat)
+    (_hlen : bytes.length = length.toNat)
     (hread : store.mem.readBytes pointer.toNat length.toNat = bytes)
     (hbound : pointer.toNat + length.toNat ≤ store.mem.pages * 65536) :
     (StdIO.writeHost.lift universalStdIOLens).invoke store

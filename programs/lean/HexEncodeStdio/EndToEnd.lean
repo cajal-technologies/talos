@@ -320,9 +320,9 @@ theorem encode_reserve_after_read
       exact List.getElem?_set_eq_of_lt (.i32 1048512) hz)
     (by simp [reserveRequired])
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide)
+      Mem.write32]; decide)
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide)
+      Mem.write32]; decide)
     (by
       simp only [encodeStore, encodeAllocFrameStore]
       rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
@@ -1146,7 +1146,7 @@ theorem encode_after_alloc_terminates
         [] [] 0 [] encodeReserveControls (encodeMainCalls store inputPtr))
       body := by
     apply Reaches.prepend (Step.exitControl rfl)
-    simp [growResultFinal, body, encodeReserveControls]
+    simp [body]
     exact ⟨[], .refl _⟩
   apply TerminatesWith.prependReaches hprefix
   have hinputLen : (UInt32.ofNat input.length).toNat = input.length := by

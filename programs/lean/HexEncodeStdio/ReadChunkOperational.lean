@@ -640,9 +640,9 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend Step.const
   apply ReachesOrOOM.prepend Step.add
   apply ReachesOrOOM.prepend (Step.localGet rfl)
-  rw [show 8 + frame = frame + 8 by bv_normalize (config := { enums := false }),
+  rw [show 8 + frame = frame + 8 from UInt32.add_comm _ _,
     show length + allocatorPtr oldBump 1 =
-      allocatorPtr oldBump 1 + length by bv_normalize (config := { enums := false })]
+      allocatorPtr oldBump 1 + length from UInt32.add_comm _ _]
   apply ReachesOrOOM.prepend (by
     simpa only [setMemory_eq] using
       (Step.memoryCopy32 hdestBound hsourceBound))
@@ -674,7 +674,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend (Step.localGet rfl)
   apply ReachesOrOOM.prepend Step.const
   apply ReachesOrOOM.prepend Step.add
-  rw [show 48 + frame = frame + 48 by bv_normalize (config := { enums := false })]
+  rw [show 48 + frame = frame + 48 from UInt32.add_comm _ _]
   apply ReachesOrOOM.prepend (Step.globalSet (by
     simpa [reserved, globalAt?] using hreservedGlobal))
   rw [setGlobal_zero_eq]

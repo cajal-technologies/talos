@@ -17,6 +17,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func9_index :
     Project.Mergesort.module.funcs[9]? =
       some Project.Mergesort.func9Def := by rfl
@@ -411,7 +414,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
           rw [ite_eq_right hzero] at hfrontierWord
           simpa only [ite_eq_right hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
-  wasm_twp_pures [twp_add] rewriting [show (4294967295 : UInt32) + 4 = 3 by decide, hsumWord]
+  wasm_twp_pures [twp_add] rewriting [hsumWord]
   wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet]
   have hsumNotLt : ¬ UInt32.ofNat (frontier + 3) < (3 : UInt32) := by

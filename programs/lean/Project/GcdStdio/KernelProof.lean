@@ -16,6 +16,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.GcdStdio.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev loopBody : Program := Project.NumIntegerOpt3.Spec.loopBody
 private abbrev innerBody : Program := Project.NumIntegerOpt3.Spec.innerBody
 private abbrev outerBody : Program := Project.NumIntegerOpt3.Spec.gcdOuterBody

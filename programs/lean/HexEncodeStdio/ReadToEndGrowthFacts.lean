@@ -22,7 +22,7 @@ theorem ReadToEndInv.requiredPages_toNat
     {input consumed remaining : List UInt8}
     {store : MachineStore Universal.State}
     {capacity data length bump : UInt32}
-    (h : ReadToEndInv input consumed remaining store capacity data length bump)
+    (_h : ReadToEndInv input consumed remaining store capacity data length bump)
     (hfinishSmall :
       (allocatorFinish (readToEndNewCapacity capacity) 1 bump).toNat <
         2 ^ 31) :

@@ -139,7 +139,6 @@ theorem decodeLoopPair_invalid_high_reaches
     intro hz
     have hnat := congrArg UInt32.toNat hz
     change (store.wasm.mem.read32 1048508).toNat = 0 at hnat
-    norm_num at hnat
     omega
   apply Reaches.prepend (Step.brIf hlen0 rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -207,7 +206,7 @@ theorem decodeLoopPair_invalid_high_reaches
     (by decide)]
   norm_num
   rw [Mem.read32_write32_disjoint _ (1048508 : UInt32)
-    (loopIterator + 12) _ (by decide)]
+    (1048516 : UInt32) _ (by decide)]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.shl

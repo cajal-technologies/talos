@@ -111,7 +111,7 @@ theorem first_nonempty_read_invariant
         0 1 (reserveNewCapacity 0 count 0) 0 allocStore) :
     let entryStore := decodeFrameStore (decodeConfig input).store
     let framed := readToEndFrameStore entryStore readToEndStack
-    let after := readAdapterResultStore
+    let _after := readAdapterResultStore
       (readChunkFrameStore framed firstChunkFrame)
       firstChunkResult firstChunkBuffer bytes
     let count := UInt32.ofNat bytes.length
@@ -186,15 +186,15 @@ theorem first_nonempty_read_invariant
   have hentryStatusCapacity :
       entryStore.wasm.mem.read32 decodeStatusVector = 0 := by
     simp [entryStore, decodeFrameStore, decodeConfig, Mem.read32,
-      Mem.write64, Mem.write32] <;> bv_normalize (config := { enums := false })
+      Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
   have hentryStatusPointer :
       entryStore.wasm.mem.read32 (decodeStatusVector + 4) = 1 := by
     simp [entryStore, decodeFrameStore, decodeConfig, Mem.read32,
-      Mem.write64, Mem.write32] <;> bv_normalize (config := { enums := false })
+      Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
   have hentryStatusLength :
       entryStore.wasm.mem.read32 (decodeStatusVector + 8) = 0 := by
     simp [entryStore, decodeFrameStore, decodeConfig, Mem.read32,
-      Mem.write64, Mem.write32] <;> bv_normalize (config := { enums := false })
+      Mem.write64, Mem.write32]
   have hfinalStatus (addr value : UInt32)
       (haddrLower : 1048540 ≤ addr.toNat)
       (haddrUpper : addr.toNat + 4 ≤ 1048572)
@@ -471,7 +471,6 @@ theorem first_nonempty_read_invariant
   · rw [hbumpNat]
     omega
   · rw [hdataNat]
-    change 1054000 + capacity.toNat ≤ finalStore.wasm.mem.pages * 65536
     change 1054000 + capacity.toNat ≤ allocStore.wasm.mem.pages * 65536
     have hp := hpagesMono
     omega
@@ -511,10 +510,10 @@ theorem first_empty_read_success
   change ReadToEndSuccess [] (decodeAfterReadConfig finalStore)
   have hframedCapacity : framed.wasm.mem.read32 readToEndVector = 0 := by
     simp [framed, readToEndFrameStore, entryStore, decodeFrameStore,
-      Mem.read32, Mem.write64, Mem.write32] <;> bv_normalize (config := { enums := false })
+      Mem.read32, Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
   have hframedData : framed.wasm.mem.read32 (readToEndVector + 4) = 1 := by
     simp [framed, readToEndFrameStore, entryStore, decodeFrameStore,
-      Mem.read32, Mem.write64, Mem.write32] <;> bv_normalize (config := { enums := false })
+      Mem.read32, Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
   have hframedBump : framed.wasm.mem.read32 1053960 = 0 := by
     simp only [framed, entryStore, readToEndFrameStore, decodeFrameStore,
       decodeConfig]
@@ -532,19 +531,19 @@ theorem first_empty_read_success
     · exact (readChunkFrameStore_read32_after_frame framed firstChunkFrame
         readToEndVector (by decide) (by decide) (by decide) (by decide)).trans
         hframedCapacity
-    all_goals simp <;> omega
+    all_goals simp
   have hafterData : after.wasm.mem.read32 (readToEndVector + 4) = 1 := by
     rw [readAdapterResultStore_read32_disjoint]
     · exact (readChunkFrameStore_read32_after_frame framed firstChunkFrame
         (readToEndVector + 4) (by decide) (by decide) (by decide)
         (by decide)).trans hframedData
-    all_goals simp <;> omega
+    all_goals simp
   have hafterBump : after.wasm.mem.read32 1053960 = 0 := by
     rw [readAdapterResultStore_read32_disjoint]
     · exact (readChunkFrameStore_read32_after_frame framed firstChunkFrame
         1053960 (by decide) (by decide) (by decide) (by decide)).trans
         hframedBump
-    all_goals simp <;> omega
+    all_goals simp
   have hfirstCapacity : firstStore.wasm.mem.read32 readToEndVector = 0 :=
     (readChunkFinishedStore_read32_other after readToEndResult
       readToEndVector 0 0 readToEndStack readToEndVector
@@ -584,7 +583,7 @@ theorem first_empty_read_success
         readAdapterResultStore, universalReadStore, readChunkFrameStore,
         framed, readToEndFrameStore, entryStore, decodeFrameStore,
         decodeConfig, Mem.read32, Mem.write64, Mem.write32, Mem.write8,
-        Mem.writeBytes] <;> bv_normalize (config := { enums := false })
+        Mem.writeBytes]; bv_normalize (config := { enums := false })
     all_goals decide
   · simp only [finalStore, readToEndFinishedStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
@@ -592,7 +591,7 @@ theorem first_empty_read_success
         readAdapterResultStore, universalReadStore, readChunkFrameStore,
         framed, readToEndFrameStore, entryStore, decodeFrameStore,
         decodeConfig, Mem.read32, Mem.write64, Mem.write32, Mem.write8,
-        Mem.writeBytes] <;> bv_normalize (config := { enums := false })
+        Mem.writeBytes]; bv_normalize (config := { enums := false })
     all_goals decide
   · simp only [finalStore, readToEndFinishedStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
@@ -600,7 +599,7 @@ theorem first_empty_read_success
         readAdapterResultStore, universalReadStore, readChunkFrameStore,
         framed, readToEndFrameStore, entryStore, decodeFrameStore,
         decodeConfig, Mem.read32, Mem.write64, Mem.write32, Mem.write8,
-        Mem.writeBytes] <;> bv_normalize (config := { enums := false })
+        Mem.writeBytes]
     all_goals decide
   · simp only [finalStore, readToEndFinishedStore]
     rw [Mem.read32_write64_low, Mem.read64_low]
@@ -661,10 +660,10 @@ theorem first_empty_read_outcome
     readToEndStack decodeStack vectorWord 0
   have htag : firstStore.wasm.mem.read8 (readToEndStack + 16) = 4 := by
     simp [firstStore, readChunkFinishedStore, Mem.read8, Mem.write32,
-      Mem.write8] <;> bv_normalize (config := { enums := false })
+      Mem.write8]
   have hcount : firstStore.wasm.mem.read32 (readToEndStack + 20) = 0 := by
     simp [firstStore, readChunkFinishedStore, Mem.read32, Mem.write32,
-      Mem.write8] <;> bv_normalize (config := { enums := false })
+      Mem.write8]
   have hlength : firstStore.wasm.mem.read32 (readToEndStack + 12) = 0 := by
     simp [firstStore, readChunkFinishedStore]
   have hglobal : (globalAt? firstStore 0).isSome = true := by
@@ -719,7 +718,7 @@ theorem first_nonempty_read_outcome
         0 1 (reserveNewCapacity 0 count 0) 0 allocStore) :
     let entryStore := decodeFrameStore (decodeConfig input).store
     let framed := readToEndFrameStore entryStore readToEndStack
-    let after := readAdapterResultStore
+    let _after := readAdapterResultStore
       (readChunkFrameStore framed firstChunkFrame)
       firstChunkResult firstChunkBuffer bytes
     let count := UInt32.ofNat bytes.length

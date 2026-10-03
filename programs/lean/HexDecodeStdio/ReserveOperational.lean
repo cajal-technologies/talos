@@ -652,7 +652,10 @@ theorem reserve_call_outcome
         (allocatorPtr oldBump 1) newCapacity
     have hdata' : postGrow.wasm.mem.read32 ((sp - 16) + 8) =
         allocatorPtr oldBump 1 := by
-      rw [show (sp - 16) + 8 = out + 4 by simp [out]; bv_normalize (config := { enums := false })]
+      rw [show (sp - 16) + 8 = out + 4 by
+        change (sp - 16) + 8 = ((sp - 16) + 4) + 4
+        rw [UInt32.add_assoc]
+        rfl]
       exact growResultOkStore_read_ptr allocStore out
         (allocatorPtr oldBump 1) newCapacity houtNext
     have hpostGlobal : (globalAt? postGrow 0).isSome = true := by

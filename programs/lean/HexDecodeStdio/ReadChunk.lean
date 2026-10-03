@@ -481,7 +481,7 @@ theorem twp_read_chunk_nonempty_fits
     show length + data = data + length by bv_normalize (config := { enums := false })]
   iapply twp_memoryCopy32 (len := UInt32.ofNat chunk.length)
       oldDst chunk (by simpa [hcountToNat] using hdstLen)
-      (by simpa [hcountToNat]) (by simpa [hcountToNat] using hchunkPos)
+      (by simp [hcountToNat]) (by simpa [hcountToNat] using hchunkPos)
       (by simpa [hcountToNat] using hdstNowrap)
       (by simpa [hcountToNat] using hsrcNowrap) $$ Hchunk Hdst
   iintro Hchunk Hdst

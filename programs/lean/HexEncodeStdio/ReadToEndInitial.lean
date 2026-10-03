@@ -80,7 +80,7 @@ theorem first_nonempty_read_invariant
         0 1 (reserveNewCapacity 0 count 0) 0 allocStore) :
     let entryStore := encodeFrameStore input
     let framed := readToEndFrameStore entryStore readToEndStack
-    let after := readAdapterResultStore
+    let _after := readAdapterResultStore
       (readChunkFrameStore framed firstChunkFrame)
       firstChunkResult firstChunkBuffer bytes
     let count := UInt32.ofNat bytes.length
@@ -278,9 +278,7 @@ theorem first_nonempty_read_invariant
     all_goals decide
   · simp only [finalStore, readChunkFinishedStore]
     rw [show readToEndStack + 12 = readToEndVector + 8 by decide]
-    simpa using (Mem.read32_write32_same
-      (((copied.wasm.mem.write32 (readToEndResult + 4) count).write8
-        readToEndResult 4)) (readToEndVector + 8) count)
+    simp
   · have hb := hsuccess.read_bump (by decide)
     simp [finalStore, readChunkFinishedStore, copied, readChunkCopiedStore,
       reserved, reserveFinishStore, reserveVectorStore, postGrow,
@@ -296,7 +294,7 @@ theorem first_nonempty_read_invariant
       rw [Mem.readBytes_write64_disjoint,
         Mem.readBytes_write32_disjoint]
       · exact hentryTable
-      all_goals right <;> decide
+      all_goals right ; decide
     have hchunkTable :
         (readChunkFrameStore framed firstChunkFrame).wasm.mem.readBytes
           1048576 16 = Project.HexEncodeStdio.Hex.asciiTable := by
@@ -304,7 +302,7 @@ theorem first_nonempty_read_invariant
       rw [Mem.readBytes_write64_disjoint, Mem.readBytes_write64_disjoint,
         Mem.readBytes_write64_disjoint, Mem.readBytes_write64_disjoint]
       · exact hframedTable
-      all_goals right <;> decide
+      all_goals right ; decide
     have hafterTable : after.wasm.mem.readBytes 1048576 16 =
         Project.HexEncodeStdio.Hex.asciiTable := by
       simp only [after, readAdapterResultStore, universalReadStore]
@@ -329,7 +327,10 @@ theorem first_nonempty_read_invariant
       Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint,
       Mem.readBytes_write32_disjoint]
     · exact hallocTable
-    all_goals first | left; decide | right; decide | rw [hdataNat]; decide
+    all_goals first
+    | exact Or.inl (by decide)
+    | exact Or.inr (by decide)
+    | rw [hdataNat]; decide
   · have hafterBytes :
         after.wasm.mem.readBytes firstChunkBuffer.toNat bytes.length = bytes := by
       simp only [after, readAdapterResultStore, universalReadStore]
@@ -381,7 +382,6 @@ theorem first_nonempty_read_invariant
   · rw [hbumpNat]
     omega
   · rw [hdataNat]
-    change 1054000 + capacity.toNat ≤ finalStore.wasm.mem.pages * 65536
     change 1054000 + capacity.toNat ≤ allocStore.wasm.mem.pages * 65536
     have hp := hpagesMono
     omega
