@@ -11,7 +11,7 @@ theorem decodeLoopPairInvalidStore_read32_above
     (habove : 1048528 ≤ addr.toNat) :
     (decodeLoopPairInvalidStore store inputPtr len chunkIndex bad index).wasm.mem.read32
         addr = store.wasm.mem.read32 addr := by
-  simp only [decodeLoopPairInvalidStore, decodeLoopPairBaseStore]
+  simp only [decodeLoopPairInvalidStore]
   rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
@@ -80,7 +80,7 @@ theorem DecodeLoopInv.invalid_core_facts
       change store.wasm.mem.pages ≤ 65536
       exact h.pages_upper
     global_eq := by
-      simp only [finalStore, decodeInvalidCoreStore]
+      simp only [decodeInvalidCoreStore]
       have hzero : 0 < paired.wasm.globals.globals.length := by
         apply (getElem?_eq_some_iff.mp (show
           paired.wasm.globals.globals[0]? = some (.i32 coreFrame) by
@@ -209,7 +209,7 @@ theorem decodeLoopPairInvalidStore_vector_fields
     (decodeLoopPairInvalidStore store inputPtr remaining chunkIndex bad index).wasm.mem.read32
         (coreFrame + 60) = capacity := by
   constructor
-  all_goals simp only [decodeLoopPairInvalidStore, decodeLoopPairBaseStore]
+  all_goals simp only [decodeLoopPairInvalidStore]
   · rw [Mem.read32_write8_disjoint_loop, Mem.read32_write8_disjoint_loop,
       Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
       Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
@@ -232,7 +232,7 @@ theorem DecodeLoopInv.invalid_high_call_reaches
     {pending seed hi lo : UInt8}
     (h : DecodeLoopInv input consumed (hi :: lo :: rest) decoded store
       inputCapacity data inputLen ptr capacity outLen bump pending)
-    (hspare : outLen ≠ capacity) (hhi : hexValue hi = none)
+    (_hspare : outLen ≠ capacity) (hhi : hexValue hi = none)
     (returningInstance : ModuleInstanceId)
     (hreturn : returningInstance = store.runtime.entry) :
     let appended := decodeLoopAppendStore store ptr outLen pending
@@ -398,7 +398,7 @@ theorem DecodeLoopInv.invalid_low_call_reaches
     {pending seed hi lo : UInt8} (hiRoute : HexRoute)
     (h : DecodeLoopInv input consumed (hi :: lo :: rest) decoded store
       inputCapacity data inputLen ptr capacity outLen bump pending)
-    (hspare : outLen ≠ capacity) (hhi : hiRoute.valid hi)
+    (_hspare : outLen ≠ capacity) (hhi : hiRoute.valid hi)
     (hlo : hexValue lo = none)
     (returningInstance : ModuleInstanceId)
     (hreturn : returningInstance = store.runtime.entry) :

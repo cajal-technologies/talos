@@ -61,7 +61,7 @@ theorem decode_after_read_to_core_call
     change decodeStack.toNat + 32 + 4 ≤ _
     omega))
   rw [hlen]
-  simp [decodeAfterReadConfig, decodeCoreCallConfig, decodePostReadLocals]
+  simp [decodeCoreCallConfig, decodePostReadLocals]
   exact ⟨[], .refl _⟩
 
 set_option maxRecDepth 100000 in
@@ -78,8 +78,8 @@ theorem decode_core_odd_reaches
       store.wasm.globals.globals[0]? = some (.i32 decodeStack) by
         simpa only [globalAt?, canonicalGlobalIndex_zero] using hglobal)).1
   apply Reaches.prepend (Step.call (fn := func5Def)
-    (by simp [decodeCoreCallConfig, hmod]; decide)
-    (by simp [decodeCoreCallConfig, hmod]; rfl))
+    (by simp [hmod]; decide)
+    (by simp [hmod]; rfl))
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero, func5]
   apply Reaches.prepend (Step.globalGet hglobal)
   apply Reaches.prepend Step.const
@@ -115,7 +115,7 @@ theorem decode_core_odd_reaches
     simpa [globalAt?] using hzero))
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-  simp [decodeCoreCallConfig, decodeAfterCoreConfig, decodeOddStore,
+  simp [decodeAfterCoreConfig, decodeOddStore,
     decodePostReadLocals]
   exact ⟨[], .refl _⟩
 
@@ -249,7 +249,7 @@ theorem decode_core_even_to_first_pair
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  simp [decodeFirstPairConfig, decodeEvenPreparedStore, decodeCoreCallConfig,
+  simp [decodeFirstPairConfig, decodeEvenPreparedStore,
     decodeCoreAfterFirstPair, decodeCoreControls, coreBlockControl,
     decodeCoreInner, decodeCoreOuter4, decodeCoreOuter3, decodeCoreOuter2,
     decodeCoreOuter1, coreStructuredBody, coreFirstInstruction, func5]
@@ -349,7 +349,7 @@ theorem decode_core_invalid_suffix
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 1) rfl)
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp [decodeCoreControls, coreBlockControl]
+  simp [coreBlockControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
@@ -436,17 +436,12 @@ theorem decode_core_invalid_high_first_reaches
   have hlenRead : prepared.wasm.mem.read32 (coreIterator + 4) = len := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint]
-    · simpa using (Mem.read32_write32_same
-        (((store.wasm.mem.write32 coreError 1114114).write64
-          (coreFrame + 48) 2)) (coreFrame + 44) len)
+    · simp
     all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have herrorRead : prepared.wasm.mem.read32 (coreIterator + 16) =
       coreError := by
     simp only [prepared, decodeEvenPreparedStore]
-    simpa using (Mem.read32_write32_same
-      ((((store.wasm.mem.write32 coreError 1114114).write64
-        (coreFrame + 48) 2).write32 (coreFrame + 44) len).write32
-          (coreFrame + 40) data) (coreFrame + 56) coreError)
+    simp
   have hchunkRead : prepared.wasm.mem.read32 (coreIterator + 8) = 2 := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
@@ -457,10 +452,7 @@ theorem decode_core_invalid_high_first_reaches
   have hptrRead : prepared.wasm.mem.read32 coreIterator = data := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint]
-    · simpa using (Mem.read32_write32_same
-        (((store.wasm.mem.write32 coreError 1114114).write64
-          (coreFrame + 48) 2).write32 (coreFrame + 44) len)
-        (coreFrame + 40) data)
+    · simp
     all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hindexRead : prepared.wasm.mem.read32 (coreIterator + 12) = 0 := by
     simp only [prepared, decodeEvenPreparedStore]
@@ -581,17 +573,12 @@ theorem decode_core_invalid_low_first_reaches
   have hlenRead : prepared.wasm.mem.read32 (coreIterator + 4) = len := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint]
-    · simpa using (Mem.read32_write32_same
-        (((store.wasm.mem.write32 coreError 1114114).write64
-          (coreFrame + 48) 2)) (coreFrame + 44) len)
+    · simp
     all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have herrorRead : prepared.wasm.mem.read32 (coreIterator + 16) =
       coreError := by
     simp only [prepared, decodeEvenPreparedStore]
-    simpa using (Mem.read32_write32_same
-      ((((store.wasm.mem.write32 coreError 1114114).write64
-        (coreFrame + 48) 2).write32 (coreFrame + 44) len).write32
-          (coreFrame + 40) data) (coreFrame + 56) coreError)
+    simp
   have hchunkRead : prepared.wasm.mem.read32 (coreIterator + 8) = 2 := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
@@ -602,10 +589,7 @@ theorem decode_core_invalid_low_first_reaches
   have hptrRead : prepared.wasm.mem.read32 coreIterator = data := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint]
-    · simpa using (Mem.read32_write32_same
-        (((store.wasm.mem.write32 coreError 1114114).write64
-          (coreFrame + 48) 2).write32 (coreFrame + 44) len)
-        (coreFrame + 40) data)
+    · simp
     all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hindexRead : prepared.wasm.mem.read32 (coreIterator + 12) = 0 := by
     simp only [prepared, decodeEvenPreparedStore]
@@ -712,7 +696,7 @@ def decodeCoreFirstResultBody : Program :=
 def decodeCoreAfterInitialAlloc : Program := decodeCoreFirstResultBody.drop 16
 
 def decodeInitialAllocConfig (store : MachineStore Universal.State)
-    (data len : UInt32) (byte : UInt8) : Config Universal.State :=
+    (data _len : UInt32) (byte : UInt8) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 8, .i32 1],
       [.i32 coreFrame, .i32 1, .i32 byte.toUInt32],
       [.i32 1, .i32 8]⟩,
@@ -854,17 +838,12 @@ theorem decode_core_valid_first_to_alloc_reaches
   have hlenRead : prepared.wasm.mem.read32 (coreIterator + 4) = len := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint]
-    · simpa using (Mem.read32_write32_same
-        (((store.wasm.mem.write32 coreError 1114114).write64
-          (coreFrame + 48) 2)) (coreFrame + 44) len)
+    · simp
     all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have herrorRead : prepared.wasm.mem.read32 (coreIterator + 16) =
       coreError := by
     simp only [prepared, decodeEvenPreparedStore]
-    simpa using (Mem.read32_write32_same
-      ((((store.wasm.mem.write32 coreError 1114114).write64
-        (coreFrame + 48) 2).write32 (coreFrame + 44) len).write32
-          (coreFrame + 40) data) (coreFrame + 56) coreError)
+    simp
   have hchunkRead : prepared.wasm.mem.read32 (coreIterator + 8) = 2 := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
@@ -875,10 +854,7 @@ theorem decode_core_valid_first_to_alloc_reaches
   have hptrRead : prepared.wasm.mem.read32 coreIterator = data := by
     simp only [prepared, decodeEvenPreparedStore]
     rw [Mem.read32_write32_disjoint]
-    · simpa using (Mem.read32_write32_same
-        (((store.wasm.mem.write32 coreError 1114114).write64
-          (coreFrame + 48) 2).write32 (coreFrame + 44) len)
-        (coreFrame + 40) data)
+    · simp
     all_goals norm_num [UInt32.toNat_add, UInt32.toNat_ofNat]
   have hindexRead : prepared.wasm.mem.read32 (coreIterator + 12) = 0 := by
     simp only [prepared, decodeEvenPreparedStore]
@@ -1001,7 +977,7 @@ theorem decode_core_valid_first_to_alloc_reaches
     htag hpayload herrorPtr' hmarker' hremaining hchunk'
 
 def decodeAfterInitialAllocConfig (store : MachineStore Universal.State)
-    (data len : UInt32) (byte : UInt8) (ptr : UInt32)
+    (data _len : UInt32) (byte : UInt8) (ptr : UInt32)
     (returningInstance : ModuleInstanceId) :
     Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 8, .i32 1],
@@ -1082,7 +1058,7 @@ def decodeInitialVectorStore (store : MachineStore Universal.State)
   { store with wasm := { store.wasm with mem := mem6 } }
 
 def decodeSecondPairConfig (store : MachineStore Universal.State)
-    (data len ptr : UInt32) (byte : UInt8)
+    (data _len ptr : UInt32) (byte : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 8, .i32 1],
       [.i32 coreFrame, .i32 ptr, .i32 byte.toUInt32],
@@ -1188,8 +1164,7 @@ theorem decode_core_empty_reaches
   apply hprefix.trans
   have hlen : (decodeEvenPreparedStore store data 0).wasm.mem.read32
       (coreIterator + 4) = 0 := by
-    simp [decodeEvenPreparedStore, Mem.read32, Mem.write32, Mem.write64] <;>
-      bv_normalize (config := { enums := false })
+    simp [decodeEvenPreparedStore, Mem.read32, Mem.write32, Mem.write64]
   have hmarker : (decodePairEmptyStore
       (decodeEvenPreparedStore store data 0)).wasm.mem.read32 coreError =
       1114114 := by
@@ -1271,7 +1246,7 @@ theorem decode_core_empty_reaches
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.br rfl)
-  simp [decodeCoreControls, coreBlockControl]
+  simp [coreBlockControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add

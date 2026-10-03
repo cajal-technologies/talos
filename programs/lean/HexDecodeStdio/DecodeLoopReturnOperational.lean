@@ -7,7 +7,7 @@ open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
 
 def decodePostLoopConfig (store : MachineStore Universal.State)
-    (data len ptr capacity outLen : UInt32) (seed : UInt8)
+    (data _len ptr capacity outLen : UInt32) (seed : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 capacity, .i32 outLen],
       [.i32 coreFrame, .i32 ptr, .i32 seed.toUInt32], []⟩,
@@ -132,7 +132,7 @@ theorem decode_post_loop_success_reaches
     omega))
   rw [setMemory_eq]
   apply Reaches.prepend (Step.br rfl)
-  simp [decodeCoreControls, coreBlockControl]
+  simp [coreBlockControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
@@ -161,7 +161,7 @@ theorem dealloc_noop_reaches
   apply Reaches.prepend (Step.call (fn := func14Def)
     (by simp [hmod]; decide) (by simp [hmod]; rfl))
   simp [func14Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func14]
+    func14]
   apply Reaches.prepend (Step.returnFromCallFallthrough (by simp))
   exact ⟨[], .refl _⟩
 
@@ -236,11 +236,11 @@ theorem decode_post_loop_invalid_reaches
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.call (fn := func14Def)
     (by simp [hmod]; decide)
-    (by simp [hmod, decodeInvalidFieldsStore]; rfl))
+    (by simp [hmod]; rfl))
   simp [func14Def, Function.toLocals, Function.numParams, func14]
   apply Reaches.prepend (Step.returnFromCallFallthrough (by simp))
   apply Reaches.prepend (Step.br rfl)
-  simp [decodeCoreControls, coreBlockControl]
+  simp [coreBlockControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add

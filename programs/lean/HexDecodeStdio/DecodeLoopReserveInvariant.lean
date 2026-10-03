@@ -101,7 +101,7 @@ theorem decodeLoopReservedStore_readBytes_above
     Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint,
     Mem.readBytes_write32_disjoint]
   all_goals right
-  all_goals first | exact le_trans (by decide) habove | omega
+  all_goals exact le_trans (by decide) habove
 
 theorem decodeLoopReservedStore_capacity
     (store : MachineStore Universal.State) (oldBump newCapacity : UInt32) :
@@ -343,22 +343,15 @@ theorem DecodeLoopInv.after_reserve
         have hp := h.input_before_output
         have hd := h.data_lower
         omega)).trans houtputCopied
-  · change outLen.toNat ≤
-      (reserveNewCapacity outLen 1 capacity).toNat
-    rw [h.reserve_new_capacity_toNat hfull, hfull]
+  · rw [h.reserve_new_capacity_toNat hfull, hfull]
     omega
-  · change 0 < (reserveNewCapacity outLen 1 capacity).toNat
-    rw [h.reserve_new_capacity_toNat hfull]
+  · rw [h.reserve_new_capacity_toNat hfull]
     have hc := h.capacity_pos
     omega
-  · change 8 ≤ (reserveNewCapacity outLen 1 capacity).toNat
-    rw [h.reserve_new_capacity_toNat hfull]
+  · rw [h.reserve_new_capacity_toNat hfull]
     have hc := h.capacity_min
     omega
-  · change (allocatorPtr bump 1).toNat +
-      (reserveNewCapacity outLen 1 capacity).toNat =
-        (allocatorFinish (reserveNewCapacity outLen 1 capacity) 1 bump).toNat
-    rw [h.reserve_allocator_ptr, h.reserve_finish_toNat hfull,
+  · rw [h.reserve_allocator_ptr, h.reserve_finish_toNat hfull,
       h.reserve_new_capacity_toNat hfull]
   · change (allocatorFinish
       (reserveNewCapacity outLen 1 capacity) 1 bump).toNat ≤
