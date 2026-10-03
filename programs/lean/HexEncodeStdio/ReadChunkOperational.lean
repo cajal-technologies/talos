@@ -281,7 +281,7 @@ theorem read_chunk_after_read_fits
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.geU (result := 0) (by
-    simp only [if_neg (UInt32.not_le.mpr hcountLt)]))
+    simp only [ite_eq_right (UInt32.not_le.mpr hcountLt)]))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
@@ -579,7 +579,7 @@ theorem read_chunk_after_read_reserve
   apply ReachesOrOOM.prepend (Step.localTee rfl)
   apply ReachesOrOOM.prepend Step.const
   apply ReachesOrOOM.prepend (Step.geU (result := 0) (by
-    simp only [if_neg (UInt32.not_le.mpr hcountLt)]))
+    simp only [ite_eq_right (UInt32.not_le.mpr hcountLt)]))
   apply ReachesOrOOM.prepend Step.brIfZero
   apply ReachesOrOOM.prepend Step.block
   apply ReachesOrOOM.prepend Step.block

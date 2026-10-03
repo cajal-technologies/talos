@@ -80,7 +80,7 @@ theorem decodeWrapperReserveFacts (length capacity : UInt32)
   · omega
   constructor
   · simp only [reallocatorCopyLen]
-    rw [if_neg]
+    rw [ite_eq_right]
     intro hlt
     have hn := UInt32.lt_iff_toNat_lt.mp hlt
     rw [hnew] at hn
@@ -408,7 +408,7 @@ theorem decodeSuccessOutputStore_readBytes
       simp [hzero]
     subst bytes
     simp only [List.length_nil, Nat.zero_add]
-    simp only [decodeSuccessOutputStore, hzero, if_true,
+    simp only [decodeSuccessOutputStore, hzero, ite_true,
       decodeSuccessLengthStore]
     rw [Mem.readBytes_write32_disjoint]
     · simp [Mem.readBytes, Mem.read8] at hstatus ⊢
@@ -416,14 +416,14 @@ theorem decodeSuccessOutputStore_readBytes
     · right
       change 1048552 ≤ destination.toNat
       exact hdestinationLower
-  · simp only [decodeSuccessOutputStore, hzero, if_false,
+  · simp only [decodeSuccessOutputStore, hzero, ite_false,
       decodeSuccessLengthStore, decodeSuccessCopiedStore]
     rw [Mem.readBytes_write32_disjoint]
     · rw [Mem.readBytes_succ, hnext, ← hlength,
         Mem.readBytes_copy_destination, hlength, hsource]
       congr 1
       simp only [Mem.copy, Mem.read8]
-      rw [if_neg]
+      rw [ite_eq_right]
       · exact hstatus
       · omega
     · right

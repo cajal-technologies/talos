@@ -114,7 +114,7 @@ theorem twp_universal_write {hlc : HasLC}
       rw [hresolve]
       simp only [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift]
       simp only [StdIO.writeHost, StdIO.writeResult]
-      rw [if_pos]
+      rw [ite_eq_left]
       · simp [Store.focus, Store.mapHost, Store.unfocus, newWasm, newHost,
           afterWrite, hread, hlen, HhostPhysical]
       · simp only [StdIO.rangeInBounds, StdIO.byteCapacity]

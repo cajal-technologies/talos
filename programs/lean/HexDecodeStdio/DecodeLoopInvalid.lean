@@ -182,7 +182,7 @@ theorem DecodeLoopInv.appended_pair_reads
   · simp only [decodeLoopAppendStore]
     rw [Mem.read8_write32_disjoint_core]
     · simp only [Mem.read8, Mem.write8]
-      rw [if_neg hwrite0]
+      rw [ite_eq_right hwrite0]
       exact hp.1
     · exact Or.inr (by
         have ha : (coreFrame + 68).toNat + 4 = 1048504 := by decide
@@ -191,7 +191,7 @@ theorem DecodeLoopInv.appended_pair_reads
   · simp only [decodeLoopAppendStore]
     rw [Mem.read8_write32_disjoint_core]
     · simp only [Mem.read8, Mem.write8]
-      rw [if_neg hwrite1]
+      rw [ite_eq_right hwrite1]
       exact hp.2
     · exact Or.inr (by
         have ha : (coreFrame + 68).toNat + 4 = 1048504 := by decide

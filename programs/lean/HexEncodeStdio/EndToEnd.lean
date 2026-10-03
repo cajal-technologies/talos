@@ -117,7 +117,7 @@ theorem encode_allocation_capacity (input : List UInt8)
   apply UInt32.toNat_inj.mp
   simp only [reserveNewCapacity, reserveCandidate, reserveRequired,
     reserveDoubled, UInt32.zero_add, UInt32.zero_shiftLeft]
-  rw [if_pos haddPos]
+  rw [ite_eq_left haddPos]
   split
   next hgt =>
     rw [UInt32.toNat_ofNat_of_lt' (by

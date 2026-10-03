@@ -292,13 +292,13 @@ theorem ByteGrowSuccess.preserves_read_to_end_length
   | freshGrow hzero memory previousPages hgrow => contradiction
   | reallocNoGrow hnonzero hfit =>
       simp only [reallocatorResultStore, hinv.allocator_ptr,
-        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, if_false]
+        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, ite_false]
       rw [Mem.read32_copy_before _ _ _ _ _ hbefore]
       exact (Mem.read32_write32_disjoint _ 1053960
         (readToEndStack + 12) _ (Or.inl hbumpDisjoint)).trans hinv.length_eq
   | reallocGrow hnonzero memory previousPages hgrow =>
       simp only [reallocatorResultStore, hinv.allocator_ptr,
-        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, if_false]
+        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, ite_false]
       rw [Mem.read32_copy_before _ _ _ _ _ hbefore]
       simp only [allocatorBumpStore, allocatorGrownStore]
       rw [Mem.read32_write32_disjoint _ 1053960
@@ -329,12 +329,12 @@ theorem ByteGrowSuccess.preserves_read32_before_metadata
   | freshGrow hzero memory previousPages hgrow => contradiction
   | reallocNoGrow hnonzero hfit =>
       simp only [reallocatorResultStore, hinv.allocator_ptr,
-        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, if_false]
+        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, ite_false]
       rw [Mem.read32_copy_before _ _ _ _ _ hbefore]
       exact Mem.read32_write32_disjoint _ 1053960 addr _ (Or.inl haddr)
   | reallocGrow hnonzero memory previousPages hgrow =>
       simp only [reallocatorResultStore, hinv.allocator_ptr,
-        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, if_false]
+        hinv.copy_length, hcapacityNe, hinv.bump_ne_zero, or_false, ite_false]
       rw [Mem.read32_copy_before _ _ _ _ _ hbefore]
       simp only [allocatorBumpStore, allocatorGrownStore]
       rw [Mem.read32_write32_disjoint _ 1053960 addr _ (Or.inl haddr)]

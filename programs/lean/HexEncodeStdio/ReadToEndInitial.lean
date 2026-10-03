@@ -19,16 +19,16 @@ theorem first_capacity_toNat (bytes : List UInt8) (hnil : bytes ≠ [])
     exact List.length_pos_iff.mpr hnil
   simp only [reserveNewCapacity, reserveCandidate, reserveRequired,
     reserveDoubled, UInt32.zero_add, UInt32.zero_shiftLeft]
-  rw [if_pos (UInt32.pos_iff_ne_zero.mpr (by
+  rw [ite_eq_left (UInt32.pos_iff_ne_zero.mpr (by
     intro hz
     rw [hz] at hpos
     simp at hpos))]
   by_cases hgt : (UInt32.ofNat bytes.length) > 8
-  · rw [if_pos hgt, max_eq_left]
+  · rw [ite_eq_left hgt, max_eq_left]
     · exact hcountNat
     · have hn := UInt32.le_iff_toNat_le.mp (UInt32.le_of_lt hgt)
       simpa [hcountNat] using hn
-  · rw [if_neg hgt, max_eq_right]
+  · rw [ite_eq_right hgt, max_eq_right]
     · decide
     · have hnnot : ¬(8 : UInt32).toNat <
           (UInt32.ofNat bytes.length).toNat := by
@@ -60,7 +60,7 @@ theorem Mem.read32_write8_disjoint (m : Mem) (address writeAddress : UInt32)
       writeAddress.toNat + 1 ≤ address.toNat) :
     (m.write8 writeAddress value).read32 address = m.read32 address := by
   simp only [Mem.read32, Mem.write8]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals rcases h with hbefore | hafter <;> omega
 
 set_option maxHeartbeats 1200000 in

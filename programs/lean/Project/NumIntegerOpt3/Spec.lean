@@ -75,7 +75,7 @@ theorem mod3_gcd_zero_smallStep (a b : UInt64) (hz : a = 0 ∨ b = 0) :
   · have hb : b = 0 := hz.resolve_left ha
     subst b
     wasm_wp_pures [wp_localGet]
-    wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg ha])
+    wasm_wp_next wp_eqzI64 (result := 0) (by rw [ite_eq_right ha])
     wasm_wp_pures [wp_brIfZero wp_localGet]
     wasm_wp_next wp_eqzI64 (result := 1) (by decide)
     wasm_wp_next wp_brIf (by decide) rfl
@@ -225,7 +225,7 @@ theorem gcdLoopBody_smallStep_wp
       UInt64.stein_step_y x y hxne hyne hxodd hyodd hgt hxyne
     by_cases hxy' : x = y'
     · change x = (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
-      wasm_wp_next wp_eqI64 (result := 1) (by rw [if_pos hxy'])
+      wasm_wp_next wp_eqI64 (result := 1) (by rw [ite_eq_left hxy'])
       wasm_wp_next wp_brIf (by decide) rfl
       simp only [gcdInnerFrame, List.take_nil, List.nil_append]
       rw [← hxy']
@@ -237,7 +237,7 @@ theorem gcdLoopBody_smallStep_wp
         (hrecombine x hxGcd)
       itrivial
     · change x ≠ (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
-      wasm_wp_next wp_eqI64 (result := 0) (by rw [if_neg hxy'])
+      wasm_wp_next wp_eqI64 (result := 0) (by rw [ite_eq_right hxy'])
       wasm_wp_pures [wp_brIfZero wp_br] using [gcdLoopFrame, List.take_nil, List.nil_append]
       simp only [loopBody]
       ispecialize IH $$ %x %
@@ -282,7 +282,7 @@ theorem gcdInner_smallStep_wp
   have hbodd : bo.toNat % 2 = 1 := by
     simpa [bo, oddPart_toNat] using UInt64.shr_ctz_toNat_odd p1 hp1
   by_cases hab : ao = bo
-  · wasm_wp_next wp_eqI64 (result := 1) (by rw [if_pos hab])
+  · wasm_wp_next wp_eqI64 (result := 1) (by rw [ite_eq_left hab])
     wasm_wp_next wp_brIf (by decide) rfl
     simp only [gcdInnerFrame, List.take_nil, List.nil_append]
     have haoGcd : ao.toNat = Nat.gcd ao.toNat bo.toNat := by
@@ -290,7 +290,7 @@ theorem gcdInner_smallStep_wp
     iapply finishGcd_smallStep_wp outerBody ao bo shared expected
       (hrecombine ao haoGcd)
     itrivial
-  · wasm_wp_next wp_eqI64 (result := 0) (by rw [if_neg hab])
+  · wasm_wp_next wp_eqI64 (result := 0) (by rw [ite_eq_right hab])
     wasm_wp_pures [wp_brIfZero]
     wasm_wp_next wp_loop
     simp only [List.drop_nil]
@@ -336,7 +336,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
     wasm_wp_pures [wp_localGet]
     wasm_wp_finish_value
     ipureexact (by simp)
-  · wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg ha])
+  · wasm_wp_next wp_eqzI64 (result := 0) (by rw [ite_eq_right ha])
     wasm_wp_pures [wp_brIfZero wp_localGet]
     by_cases hb : b = 0
     · subst b
@@ -346,7 +346,7 @@ theorem mod3_gcd_smallStep (a b : UInt64) :
       wasm_wp_pures [wp_localGet]
       wasm_wp_finish_value
       ipureexact (by simp)
-    · wasm_wp_next wp_eqzI64 (result := 0) (by rw [if_neg hb])
+    · wasm_wp_next wp_eqzI64 (result := 0) (by rw [ite_eq_right hb])
       wasm_wp_pures [wp_brIfZero wp_localGet wp_ctzI64 wp_localSet]
       simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
         List.set]
@@ -536,7 +536,7 @@ theorem gcdInner_equal_steps
   simp only [List.set]
   wasm_steps [(.localGet rfl), (.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  wasm_steps [(.eqI64 (result := 1) (by rw [if_pos heq])), (.brIf (by decide) rfl), (.localGet rfl),
+  wasm_steps [(.eqI64 (result := 1) (by rw [ite_eq_left heq])), (.brIf (by decide) rfl), (.localGet rfl),
     (.localGet rfl), .shlI64, (.localSet rfl), (.exitControl rfl), (.localGet rfl)]
   exact Steps.single .finish
 
@@ -681,7 +681,7 @@ theorem gcdLoop_exit_y
   simp only [List.set]
   wasm_steps [(.localGet rfl), .ctzI64, .shrUI64, (.localTee rfl)]
   simp only [List.set]
-  wasm_steps [(.eqI64 (result := 1) (by rw [if_pos hnext])), (.brIf (by decide) rfl),
+  wasm_steps [(.eqI64 (result := 1) (by rw [ite_eq_left hnext])), (.brIf (by decide) rfl),
     (.localGet rfl), (.localGet rfl), .shlI64, (.localSet rfl), (.exitControl rfl), (.localGet rfl)]
   exact Steps.single .finish
 
@@ -807,9 +807,9 @@ theorem inner_wp (env : HostEnv Unit) (st0 : Store Unit) (shared p0 p1 : UInt64)
   have hbN : bo.toNat = p1.toNat >>> (ctz64 64 p1 % 64) := oddPart_toNat p1
   by_cases hab : ao = bo
   · -- Odd parts already equal: break out with local 0 = ao.
-    rw [if_pos hab]; exact (hQ ao bo (by rw [← haN, ← hbN, ← hab, Nat.gcd_self])).2
+    rw [ite_eq_left hab]; exact (hQ ao bo (by rw [← haN, ← hbN, ← hab, Nat.gcd_self])).2
   · -- Odd parts differ: run the subtract-and-halve loop.
-    rw [if_neg hab]
+    rw [ite_eq_right hab]
     pick
     apply wp_loop_cons
       (Inv := fun st s =>
@@ -825,38 +825,38 @@ theorem inner_wp (env : HostEnv Unit) (st0 : Store Unit) (shared p0 p1 : UInt64)
       drive
       by_cases hgt : y < x
       · -- x > y: fall through the inner block to the x-branch (x := oddPart (x - y)).
-        rw [if_pos hgt]
+        rw [ite_eq_left hgt]
         pick
         obtain ⟨hne', hodd', hgcd', hdec⟩ := UInt64.stein_step_x x y hxne hyne hxodd hyodd hgt
         by_cases hxy2 : (x - y) >>> (UInt64.ofNat (ctz64 64 (x - y)) % 64) = y
         · -- x' = y: the loop falls through; copy y into local 0 and finish.
-          rw [if_neg (not_not_intro hxy2)]
+          rw [ite_eq_right (not_not_intro hxy2)]
           pick
           refine (hQ y y ?_).1
           have hh : (x - y).toNat >>> (ctz64 64 (x - y) % 64) = y.toNat := by
             rw [← oddPart_toNat, hxy2]
           rw [← haN, ← hbN, ← hgcd, ← hgcd', hh, Nat.gcd_self]
         · -- x' ≠ y: continue the loop with (x', y).
-          rw [if_pos hxy2]
+          rw [ite_eq_left hxy2]
           pick
           refine ⟨⟨trivial, _, y, rfl, hne', hyne, ?_, hyodd, hxy2, ?_⟩, ?_⟩
           · rw [oddPart_toNat]; exact hodd'
           · rw [oddPart_toNat]; exact hgcd'.trans hgcd
           · rw [oddPart_toNat]; omega
       · -- x < y: stay in the inner block, y-branch (y := oddPart (y - x)).
-        rw [if_neg hgt]
+        rw [ite_eq_right hgt]
         pick
         obtain ⟨hne', hodd', hgcd', hdec⟩ := UInt64.stein_step_y x y hxne hyne hxodd hyodd hgt hxyne
         by_cases hxy2 : x = (y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64)
         · -- x = y': break out of the loop with local 0 = x.
-          rw [if_pos hxy2]
+          rw [ite_eq_left hxy2]
           pick
           refine (hQ x ((y - x) >>> (UInt64.ofNat (ctz64 64 (y - x)) % 64)) ?_).2
           have hh : (y - x).toNat >>> (ctz64 64 (y - x) % 64) = x.toNat := by
             rw [← oddPart_toNat, ← hxy2]
           rw [← haN, ← hbN, ← hgcd, ← hgcd', hh, Nat.gcd_self]
         · -- x ≠ y': continue the loop with (x, y').
-          rw [if_neg hxy2]
+          rw [ite_eq_right hxy2]
           pick
           refine ⟨⟨trivial, x, _, rfl, hxne, hne', hxodd, ?_, hxy2, ?_⟩, ?_⟩
           · rw [oddPart_toNat]; exact hodd'
@@ -920,24 +920,24 @@ theorem mod3_gcd (env : HostEnv Unit) (st0 : Store Unit) (a b : UInt64) :
   drive
   by_cases hb : b = 0
   · -- b = 0: exit early, the result `a ||| b = a ||| 0 = a = gcd a 0`.
-    rw [if_pos hb]
+    rw [ite_eq_left hb]
     pick
     subst hb
     refine ⟨?_, trivial⟩
     rw [show UInt64.toNat 0 = 0 from rfl, Nat.gcd_zero_right, UInt64.ofNat_toNat,
         show a ||| (0 : UInt64) = a from by apply UInt64.toNat.inj; rw [UInt64.toNat_or]; simp]
-  · rw [if_neg hb]
+  · rw [ite_eq_right hb]
     pick
     by_cases ha : a = 0
     · -- a = 0: exit early, the result `a ||| b = 0 ||| b = b = gcd 0 b`.
-      rw [if_pos ha]
+      rw [ite_eq_left ha]
       pick
       subst ha
       refine ⟨?_, trivial⟩
       rw [show UInt64.toNat 0 = 0 from rfl, Nat.gcd_zero_left, UInt64.ofNat_toNat,
           show (0 : UInt64) ||| b = b from by apply UInt64.toNat.inj; rw [UInt64.toNat_or]; simp]
     · -- both nonzero: compute the shared power of two, run the inner block, recombine.
-      rw [if_neg ha]
+      rw [ite_eq_right ha]
       pick
       apply wp_block_cons
       refine inner_wp env st0 _ b a [] _ hb ha ?_

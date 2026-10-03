@@ -14,7 +14,7 @@ theorem Mem.readBytes_copy_before (m : Mem) (off len dst src count : Nat)
   · intro i hleft hright
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range, Mem.copy]
-    rw [if_neg]
+    rw [ite_eq_right]
     omega
 
 theorem ByteGrowSuccess.realloc_preserves_readBytes_before
@@ -33,12 +33,12 @@ theorem ByteGrowSuccess.realloc_preserves_readBytes_before
   | freshGrow hzero memory previousPages hgrow => contradiction
   | reallocNoGrow hnonzero hfit =>
       simp only [reallocatorResultStore, hptr, hcopyLength, holdCapacity,
-        or_false, if_false]
+        or_false, ite_false]
       rw [Mem.readBytes_copy_before _ _ _ _ _ _ hbefore]
       exact Mem.readBytes_write32_disjoint _ _ _ _ _ (Or.inr hbumpWord)
   | reallocGrow hnonzero memory previousPages hgrow =>
       simp only [reallocatorResultStore, hptr, hcopyLength, holdCapacity,
-        or_false, if_false, allocatorGrownStore, allocatorBumpStore]
+        or_false, ite_false, allocatorGrownStore, allocatorBumpStore]
       rw [Mem.readBytes_copy_before _ _ _ _ _ _ hbefore]
       rw [Mem.readBytes_write32_disjoint _ _ _ _ _ (Or.inr hbumpWord)]
       simp only [Mem.readBytes, Mem.grow_success_bytes_eq _ _ _ _ _ hgrow]
@@ -58,12 +58,12 @@ theorem ByteGrowSuccess.realloc_preserves_read32_before
   | freshGrow hzero memory previousPages hgrow => contradiction
   | reallocNoGrow hnonzero hfit =>
       simp only [reallocatorResultStore, hptr, hcopyLength, holdCapacity,
-        or_false, if_false]
+        or_false, ite_false]
       rw [Mem.read32_copy_before _ _ _ _ _ hbefore]
       exact Mem.read32_write32_disjoint _ _ _ _ (Or.inl hbumpWord)
   | reallocGrow hnonzero memory previousPages hgrow =>
       simp only [reallocatorResultStore, hptr, hcopyLength, holdCapacity,
-        or_false, if_false, allocatorGrownStore, allocatorBumpStore]
+        or_false, ite_false, allocatorGrownStore, allocatorBumpStore]
       rw [Mem.read32_copy_before _ _ _ _ _ hbefore]
       rw [Mem.read32_write32_disjoint _ _ _ _ (Or.inl hbumpWord)]
       exact Mem.grow_success_read32_eq _ _ _ _ _ hgrow addr

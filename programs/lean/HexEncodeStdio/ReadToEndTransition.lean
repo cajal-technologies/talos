@@ -78,7 +78,7 @@ theorem Mem.read32_fill_before (m : Mem) (destination count : Nat)
     (value : UInt8) :
     (m.fill destination count value).read32 address = m.read32 address := by
   simp only [Mem.read32, Mem.fill]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals omega
 
 theorem Mem.read32_fill_disjoint (m : Mem) (destination count : Nat)
@@ -87,7 +87,7 @@ theorem Mem.read32_fill_disjoint (m : Mem) (destination count : Nat)
       destination + count ≤ address.toNat) (value : UInt8) :
     (m.fill destination count value).read32 address = m.read32 address := by
   simp only [Mem.read32, Mem.fill]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals rcases h with hbefore | hafter <;> omega
 
 private theorem reassemble_low_nat (v : Nat) :
@@ -224,7 +224,7 @@ theorem Mem.readBytes_write64_disjoint (m : Mem) (off len : Nat)
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
       Mem.write64]
-    rw [if_neg, if_neg, if_neg, if_neg, if_neg, if_neg, if_neg, if_neg]
+    rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
     all_goals rcases h with hafter | hbefore <;> omega
 
 def readToEndAppliedStore (store : MachineStore Universal.State)

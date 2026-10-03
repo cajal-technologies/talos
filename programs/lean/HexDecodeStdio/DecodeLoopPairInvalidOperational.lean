@@ -228,8 +228,8 @@ theorem decodeLoopPair_invalid_high_reaches
   change (store.wasm.mem.read32 1048504).toNat ≠ 1048509 at hhi5
   change (store.wasm.mem.read32 1048504).toNat ≠ 1048510 at hhi6
   change (store.wasm.mem.read32 1048504).toNat ≠ 1048511 at hhi7
-  rw [if_neg hhi0, if_neg hhi1, if_neg hhi2, if_neg hhi3,
-    if_neg hhi4, if_neg hhi5, if_neg hhi6, if_neg hhi7]
+  rw [ite_eq_right hhi0, ite_eq_right hhi1, ite_eq_right hhi2, ite_eq_right hhi3,
+    ite_eq_right hhi4, ite_eq_right hhi5, ite_eq_right hhi6, ite_eq_right hhi7]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add

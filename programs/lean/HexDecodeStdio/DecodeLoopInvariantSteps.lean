@@ -24,7 +24,7 @@ theorem Mem.readBytes_write8_append (m : Mem) (off len : Nat)
       rw [List.getElem?_eq_getElem hprefix'] at holdAt
       simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
         Mem.write8]
-      rw [if_neg (by omega)]
+      rw [ite_eq_right (by omega)]
       exact Option.some.inj holdAt
     · have hieq : i = len := by omega
       subst i
@@ -138,7 +138,7 @@ theorem Mem.read32_write8_disjoint_loop (m : Mem)
       writeAddr.toNat + 1 ≤ readAddr.toNat) :
     (m.write8 writeAddr value).read32 readAddr = m.read32 readAddr := by
   simp only [Mem.read32, Mem.write8]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals rcases h with hbefore | hafter <;> omega
 
 theorem DecodeLoopInv.appended_read32_scratch

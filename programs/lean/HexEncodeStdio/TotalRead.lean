@@ -227,7 +227,7 @@ theorem twp_universal_read {hlc : HasLC}
         StdIO.readHost, StdIO.readResult]
       simp only [Store.focus, Store.mapHost]
       rw [hhostActual]
-      rw [if_pos (by
+      rw [ite_eq_left (by
         simp only [StdIO.rangeInBounds, StdIO.byteCapacity]
         apply decide_eq_true
         simpa only [read, bytesRead] using hcapNat)]

@@ -2601,7 +2601,7 @@ private theorem geometricHistory_reallocate_from_eight (n : Nat) :
   rw [hfold]
   congr 1
   simp only [geometricMetadata,
-    show ¬n + 8 = n + 9 by omega, if_false,
+    show ¬n + 8 = n + 9 by omega, ite_false,
     liveMeta, retiredMeta]
   norm_num
   apply insert_overwrite_commute
@@ -3066,7 +3066,7 @@ theorem GeometricVecFacts.reserveSuccess
       have hpowPositive : 0 < 2 ^ exponent := Nat.pow_pos (by omega)
       rw [hcapacity] at hzeroNat; omega
     unfold VecReserveHistory at hreserveHistory
-    rw [if_neg hcapacityNe] at hreserveHistory
+    rw [ite_eq_right hcapacityNe] at hreserveHistory
     rcases hreserveHistory with ⟨oldId, holdLookup, hfinalHistory⟩
     have holdId : oldId = exponent - 8 :=
       geometricHistory_live_unique exponent oldId hexponentLower

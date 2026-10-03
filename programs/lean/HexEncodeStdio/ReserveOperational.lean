@@ -362,7 +362,7 @@ theorem reserve_to_grow_call
   have hsum' : length + additional ≥ additional := by
     simpa only [reserveRequired] using hsum
   apply Reaches.prepend (Step.geU (result := 1)
-    (Eq.symm (if_pos hsum')))
+    (Eq.symm (ite_eq_left hsum')))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp []
   apply Reaches.prepend (Step.localGet rfl)

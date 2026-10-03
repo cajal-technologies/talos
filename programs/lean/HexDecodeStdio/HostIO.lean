@@ -44,7 +44,7 @@ theorem universal_write_return
                   output := store.host.stdio.output ++ bytes } } } := by
   simp only [HostFn.lift, StdIO.writeHost, StdIO.writeResult,
     Store.focus, Store.mapHost, universalStdIOLens]
-  rw [if_pos]
+  rw [ite_eq_left]
   · simp only [Store.unfocus, Store.mapHost]
     rw [hread]
   · simp only [StdIO.rangeInBounds]
@@ -67,7 +67,7 @@ theorem universal_read_return
   subst bytes
   simp only [HostFn.lift, StdIO.readHost, StdIO.readResult,
     Store.focus, Store.mapHost, universalStdIOLens]
-  rw [if_pos]
+  rw [ite_eq_left]
   · rfl
   · simp only [StdIO.rangeInBounds]
     exact decide_eq_true hbound

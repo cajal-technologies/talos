@@ -1739,7 +1739,7 @@ theorem read_to_end_after_read_full_double
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.ltS (result := 0)
-    (if_neg (by simpa using hchunkNonnegative)).symm)
+    (ite_eq_right (by simpa using hchunkNonnegative)).symm)
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
@@ -1805,7 +1805,7 @@ theorem read_to_end_after_read_full_saturate
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.ltS (result := 1)
-    (if_pos (by simpa using hchunkNegative)).symm)
+    (ite_eq_left (by simpa using hchunkNegative)).symm)
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const

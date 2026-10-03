@@ -118,7 +118,7 @@ theorem writeBytes_encodeWord (mem : Mem) (base value : UInt32) :
     · subst i; simp
     by_cases h3 : i = base.toNat + 3
     · subst i; simp
-    rw [dif_neg (by omega)]
+    erw [dite_eq_right (by omega)]
     simp [h0, h1, h2, h3]
 
 /-- Packed stream serialization and the word-array model used by the
@@ -354,7 +354,7 @@ theorem read_bounded (input : List UInt8) :
   have hbuffer : (UInt32.ofNat bufferBytes).toNat = bufferBytes :=
     UInt32.toNat_ofNat_of_lt' (by decide)
   rw [hbuffer]
-  rw [if_pos (by
+  rw [ite_eq_left (by
     simp only [Wasm.StdIO.rangeInBounds, source, initial_byteCapacity]
     apply decide_eq_true
     have htake : (input.take bufferBytes).length ≤ bufferBytes :=
@@ -400,7 +400,7 @@ theorem read_fits (input : List UInt32)
   rw [hbuffer]
   rw [List.take_of_length_le hfit]
   simp only [serialize_length] at hfit
-  rw [if_pos (by
+  rw [ite_eq_left (by
     simp only [Wasm.StdIO.rangeInBounds, source, initial_byteCapacity]
     apply decide_eq_true
     simpa only [serialize_length, show (0 : UInt32).toNat = 0 by decide,
@@ -941,7 +941,7 @@ theorem run_correct (fuel : Nat) (input : List UInt32) (bytes : List UInt8)
   simp only [guard] at hrun
   rw [encodedLength_words input hfit] at hrun
   simp only [Bind.bind, Option.bind] at hrun
-  simp only [if_true, Pure.pure] at hrun
+  simp only [ite_true, Pure.pure] at hrun
   generalize hsortResult : executeSort fuel (afterRead input)
       (mergeSortArguments source scratch input.length []) = sortResult at hrun
   cases sortResult with
@@ -1049,7 +1049,7 @@ theorem complete : Complete := by
     simp only [guard]
     rw [encodedLength_words input hfit]
     simp only [Bind.bind, Option.bind]
-    simp only [if_true, Pure.pure]
+    simp only [ite_true, Pure.pure]
     rw [hsort]
     simp only []
     rw [hwrite]
