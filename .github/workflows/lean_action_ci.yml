@@ -24,6 +24,11 @@ jobs:
           build-args: "--wfail"
           use-mathlib-cache: true
       - name: Audit all interpreter and CodeLib declarations
+        # Kernel checking a decoded-WAT example can use several GB on Lean
+        # 4.34.1. Keep Lake's workers bounded so concurrent examples do not
+        # exhaust the macOS runner's memory and stall the audit build.
+        env:
+          LEAN_NUM_THREADS: "1"
         run: |
           python3 scripts/axiom-audit.py interpreter --report interpreter-axioms.json
           python3 scripts/axiom-audit.py codelib --report codelib-axioms.json
@@ -111,6 +116,9 @@ jobs:
           # imports it, so every example file must be listed there.
           build-args: Interpreter runner
           use-mathlib-cache: true
+        # This build reaches the same memory-heavy examples as the audit.
+        env:
+          LEAN_NUM_THREADS: "1"
       - name: Install just
         uses: taiki-e/install-action@just
       - name: Runner smoke test
