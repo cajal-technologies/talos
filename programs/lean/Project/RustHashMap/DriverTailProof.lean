@@ -53,6 +53,9 @@ open Project.RustHashMap.DriverTail
 open Project.RustHashMap.ReadAll
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The control frames of the tail -/
 
 /-- The outermost block of the tail.  Its continuation is the stack

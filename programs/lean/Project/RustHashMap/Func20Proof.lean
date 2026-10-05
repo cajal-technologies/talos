@@ -63,6 +63,9 @@ open Project.RustHashMap.Contracts
 open Project.RustHashMap.SortContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Address and word bridges -/
 
 /-- The three address facts that `twp_load32_addr` asks for.  Copy of

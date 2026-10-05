@@ -57,6 +57,9 @@ open Project.RustHashMap.LookupProbe
 open Project.RustHashMap.MapOpContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The shape of the body -/
 
 /-- The walk over the match mask, WAT 2133 to 2162. -/

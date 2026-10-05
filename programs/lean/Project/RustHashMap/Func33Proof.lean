@@ -27,6 +27,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DropErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The mask of the flag keeps a set flag. -/
 private theorem and_one_one : (1 : UInt32) &&& 1 = 1 := by decide
 

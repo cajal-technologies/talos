@@ -25,6 +25,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 set_option maxHeartbeats 2000000 in
 /-- The error return writes the error into the output slot and frees the
 pair buffer. -/

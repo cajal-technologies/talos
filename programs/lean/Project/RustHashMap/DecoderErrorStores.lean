@@ -31,6 +31,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The 1, 1, 2 split of a four-word record. -/
 private theorem ser4_split112 (w0 w1 w2 w3 : UInt32) :
     WordCodec.u32le.serialize [w0, w1, w2, w3] =

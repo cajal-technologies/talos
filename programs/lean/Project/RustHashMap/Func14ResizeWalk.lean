@@ -49,6 +49,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.LookupPures
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The hoisted block, WAT 3752 to 3795 -/
 
 /-- The six words that WAT 3752 to 3795 computes once, above the loop.

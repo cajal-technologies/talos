@@ -68,6 +68,9 @@ open Project.RustHashMap.SortModels
 open Project.RustHashMap.SortPures
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Word arithmetic -/
 
 private theorem ofNat_toNat {k : Nat} (h : k < UInt32.size) :

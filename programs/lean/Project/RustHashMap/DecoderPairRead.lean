@@ -31,6 +31,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- `.const 4294967288` is minus eight. -/
 private theorem sub_eight (x : UInt32) : x + 4294967288 = x - 8 := by
   have hmax : (4294967288 : UInt32) = 0 - 8 := by decide

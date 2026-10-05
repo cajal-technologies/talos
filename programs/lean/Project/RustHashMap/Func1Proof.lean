@@ -42,6 +42,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.Decoder
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The frame pointer of the decoder, as a number. -/
 private theorem sub64_toNat (sp : UInt32) (h : 64 ≤ sp.toNat) :
     (sp - 64).toNat = sp.toNat - 64 := by

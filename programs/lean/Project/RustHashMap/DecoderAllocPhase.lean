@@ -39,6 +39,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.PairGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The frame, in pieces -/
 
 /-- The 64 frame bytes, as the pad, the three vector words, and the

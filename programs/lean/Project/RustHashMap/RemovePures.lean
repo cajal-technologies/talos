@@ -55,6 +55,9 @@ open Project.RustHashMap.KeyDecoderContract
 open Project.RustHashMap.LookupPures
 open Project.RustHashMap.VecGrow
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The byte view of the answer slot -/
 
 /-- What the eight raw bytes of an `Option<u32>` out-parameter say.  The

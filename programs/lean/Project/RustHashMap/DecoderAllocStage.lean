@@ -35,6 +35,9 @@ open Project.RustHashMap.DecodeErrorContracts
 open Project.RustHashMap.PairGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The continuation of the allocation stage.  The first arm is the
 accepting exit, where the output slot holds the tag and the three vector
 words.  The second arm is the error exit, which both error paths of the

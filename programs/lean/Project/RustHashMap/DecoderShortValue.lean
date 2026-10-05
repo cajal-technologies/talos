@@ -35,6 +35,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DecodeErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The short-input arm of the value read, without the branch that leaves
 the loop and the dead branch after it. -/
 def shortValueBuild : Program :=

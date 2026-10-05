@@ -62,6 +62,9 @@ open Project.RustHashMap.InsertTailDefs
 open Project.RustHashMap.InsertTailContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The input length fits in a word -/
 
 /-- Read the input length bound out of the read-phase result and keep the

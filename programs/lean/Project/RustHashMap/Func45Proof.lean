@@ -34,6 +34,9 @@ open Project.RustHashMap.ErrorNewContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The 64-bit widening of a 32-bit word keeps its value. -/
 private theorem toNat_ofNat_u32 (w : UInt32) :
     (UInt64.ofNat w.toNat).toNat = w.toNat := by

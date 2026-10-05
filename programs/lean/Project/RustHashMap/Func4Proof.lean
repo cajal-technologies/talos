@@ -75,6 +75,9 @@ open Project.RustHashMap.VecGrow
 open Project.RustHashMap.EntriesContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The shape of the compiled body -/
 
 /-- `repeat(0x80)` as the compiled code writes it. -/

@@ -28,6 +28,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.RustHashMap.Contracts
 open Project.RustHashMap.BodyContracts
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Read a byte slice of `4 * count` bytes as `count` word cells.  The word
 list is the decoded view of the bytes, and its length comes out with it. -/
 theorem ByteSlice_as_cells [WasmHeapGS Universal.State]

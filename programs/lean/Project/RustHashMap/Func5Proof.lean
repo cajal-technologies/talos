@@ -82,6 +82,9 @@ open Project.RustHashMap.GrowContract
 open Project.RustHashMap.EntriesContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The shape of the compiled body -/
 
 /-- The `Some` arm of the option, WAT 1328 to 1342. -/

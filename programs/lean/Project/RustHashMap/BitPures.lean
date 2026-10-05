@@ -31,6 +31,9 @@ five: 13, 16, 17, 21 and 32.  One bridge per amount turns the unfolded form
 into the model one.
 -/
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 namespace Wasm.SmallStep
 
 /-! ## The missing `wasm_twp_pures` cases -/

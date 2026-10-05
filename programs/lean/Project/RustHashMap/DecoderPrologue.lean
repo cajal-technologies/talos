@@ -36,6 +36,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DecodeErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 set_option maxHeartbeats 2000000 in
 /-- The frame of the decoder.  The body keeps 64 bytes of the region below
 the caller and lends the rest to its callees. -/

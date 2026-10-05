@@ -30,6 +30,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.PairGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Words of the loop -/
 
 /-- The length word of the vector steps by one. -/

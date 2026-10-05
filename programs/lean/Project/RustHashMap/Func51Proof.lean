@@ -23,6 +23,9 @@ open Project.RustHashMap.Contracts
 open Project.RustHashMap.DropErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- A byte survives the mask with 255. -/
 private theorem byte_and_255 (byte : UInt8) :
     byte.toUInt32 &&& 255 = byte.toUInt32 := by

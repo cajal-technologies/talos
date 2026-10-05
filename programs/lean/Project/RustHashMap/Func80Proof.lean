@@ -41,6 +41,9 @@ open Project.RustHashMap.CollectBodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The layout of the one-byte allocation at WAT 10623 to 10625. -/
 def seedLayout : AllocLayout := { size := 1, alignment := 1 }
 

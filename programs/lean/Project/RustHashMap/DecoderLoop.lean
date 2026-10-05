@@ -87,6 +87,9 @@ open Project.RustHashMap.VecGrow
 open Project.RustHashMap.PairGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The capacity bound -/
 
 /-- The allocator fact that the loop carries.  See the module docstring. -/

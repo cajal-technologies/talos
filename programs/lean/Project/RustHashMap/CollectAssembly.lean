@@ -72,6 +72,9 @@ open Project.RustHashMap.CollectPrologue
 open Project.RustHashMap.CollectReserve
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The compiled body sits at local index 2. -/
 private theorem func2_index :
     Project.RustHashMap.«module».funcs[2]? =

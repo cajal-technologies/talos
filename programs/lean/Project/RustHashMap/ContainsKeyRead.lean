@@ -35,6 +35,9 @@ open Project.RustHashMap.VecGrow
 open Project.RustHashMap.ReadAll
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Slices of the frame -/
 
 /-- The three regions of the 304-byte driver frame: the head, the vector

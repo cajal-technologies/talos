@@ -32,6 +32,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The key slot is four bytes below the value slot. -/
 private theorem key_addr (x : UInt32) : 4294967292 + (x + 4) = x := by
   rw [UInt32.add_comm, sub_four, UInt32.add_sub_cancel]

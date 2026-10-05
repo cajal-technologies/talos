@@ -28,6 +28,9 @@ open Project.RustHashMap.ErrorNewContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Read the non-null fact of a live block without giving up ownership.
 The null arm of the body at WAT line 9150 is dead because of it. -/
 theorem LiveBlock_ptr_ne_zero [WasmSmallStepGS hlc Universal.State]

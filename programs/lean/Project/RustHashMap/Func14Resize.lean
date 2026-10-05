@@ -45,6 +45,9 @@ open Project.RustHashMap.Func14ResizeWalk
 open Project.RustHashMap.MapOpContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 variable [WasmSmallStepGS hlc Universal.State]
 
 /-- The normal arm of `Func14ResizeSpec`, as an open proposition.  The

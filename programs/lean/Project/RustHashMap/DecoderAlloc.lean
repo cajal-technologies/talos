@@ -36,6 +36,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The capacity of the pair buffer.  The body caps the declared count at
 512 pairs. -/
 def pairCapacity (count : UInt32) : UInt32 :=

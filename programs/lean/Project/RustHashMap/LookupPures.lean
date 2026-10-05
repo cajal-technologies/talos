@@ -51,6 +51,9 @@ answer when it is zero.  `find_eq_none_of_items_zero` closes that arm: a
 `WF` table with no item has no slot, so the model lookup is `none` too.
 -/
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 namespace Wasm.SmallStep
 
 /-! ## The missing `wasm_twp_pures` cases

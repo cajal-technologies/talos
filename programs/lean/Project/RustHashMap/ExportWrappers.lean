@@ -30,6 +30,9 @@ open Project.RustHashMap.Contracts
 open Project.RustHashMap.EntryContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The four driver contracts -/
 
 /-- Local `func16`, absolute index 19, the `map_contains_key` driver.  It

@@ -34,6 +34,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DecodeErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- `.const 4294967292` is minus four.  The compiled body adds it where the
 source subtracts four. -/
 theorem sub_four (x : UInt32) : x + 4294967292 = x - 4 := by

@@ -64,6 +64,9 @@ open Project.RustHashMap.DriverTail
 open Project.RustHashMap.DriverTailProof
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The suffixes of the code
 
 Each call needs the code that follows it as an explicit argument, so each

@@ -29,6 +29,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.RustHashMap.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Allocator arithmetic and history -/
 
 structure AllocLayout where
@@ -283,7 +286,6 @@ theorem allocatorRequiredPages_toNat (finish : UInt32)
     show (16 : UInt32).toNat % 32 = 16 by decide,
     Nat.shiftRight_eq_div_pow]
   norm_num
-  rw [show (65535 : UInt32).toNat = 65535 by decide]
   norm_num at hsum
   rw [Nat.mod_eq_of_lt hsum]
 
@@ -316,7 +318,6 @@ theorem allocatorRequiredPages_le_signedLimit (finish : UInt32)
     show (16 : UInt32).toNat % 32 = 16 by decide,
     Nat.shiftRight_eq_div_pow]
   norm_num
-  rw [show (65535 : UInt32).toNat = 65535 by decide]
   norm_num at hsum
   simpa only [Nat.mod_eq_of_lt hsum] using hquotle
 
@@ -359,7 +360,8 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
     rw [UInt32.toNat_sub_of_le _ _ hleWords, hpagesWord]
   unfold Mem.grow
   simp only [hdelta, Nat.add_sub_of_le (Nat.le_of_lt hneed)]
-  norm_num [Module.memoryHardCap]; omega
+  norm_num [Module.memoryHardCap]
+  exact ite_eq_left (by omega)
 
 /-- The frozen module declares no maximum, so its declaration-level cap is
 the interpreter's i32 hard cap. -/

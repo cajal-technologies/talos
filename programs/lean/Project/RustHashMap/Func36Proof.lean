@@ -32,6 +32,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DropErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The fragments of the body -/
 
 /-- The body of the loop, WAT lines 9033 to 9048. -/

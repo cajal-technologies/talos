@@ -66,6 +66,9 @@ open Project.RustHashMap.SortModels
 open Project.RustHashMap.SortPures
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Word and address bridges -/
 
 /-- `.const 4294967288` is minus eight.  Copy of `LookupPures.lean:304`,

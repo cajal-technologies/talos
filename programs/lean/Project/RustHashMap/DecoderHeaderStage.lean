@@ -39,6 +39,9 @@ open Project.RustHashMap.DecodeErrorContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- A branch of depth `n + 1` steps over the frame on top. -/
 private theorem branchTarget_succ (arity depth : Nat) (frame : ControlFrame)
     (controls : List ControlFrame) (values : List Value) :

@@ -78,6 +78,9 @@ open Project.RustHashMap.ContainsKeyTailProof
 open Project.RustHashMap.TailShared
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The shape of the epilogue -/
 
 /-- The stack epilogue in literal form.  WAT lines 465 to 468. -/

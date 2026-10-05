@@ -32,6 +32,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.LookupPures
 open Project.RustHashMap.DriverTail
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The address of a shallower region inside a deeper one.  The shallow
 depth is a general `Nat`, because the callee depth of a tail is not a
 numeral. -/

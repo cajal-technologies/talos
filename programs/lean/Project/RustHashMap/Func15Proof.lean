@@ -70,6 +70,9 @@ open Project.RustHashMap.ProbeStop
 open Project.RustHashMap.Func15Insert
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The index of the probe loop family.  `step` and `cand` carry the model
 state; the other nine fields are the machine words of the locals that the
 loop changes.  Locals 5, 7, 9, 10 and 16 are dead at the loop head, so the

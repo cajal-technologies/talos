@@ -22,6 +22,9 @@ open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic Wasm.SmallStep
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The resolved host functions -/
 
 def readHost : HostFn Universal.State :=

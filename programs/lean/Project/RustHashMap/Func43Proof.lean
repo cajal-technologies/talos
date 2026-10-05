@@ -36,6 +36,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DropErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The middle cell of a three-word slot after one store. -/
 private theorem set_middle (a b c d : UInt32) :
     [a, b, c].set 1 d = [a, d, c] := rfl

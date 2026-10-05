@@ -48,6 +48,9 @@ open Project.RustHashMap.GrowContract
 open Project.RustHashMap.Func98Proof
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func10_index :
     Project.RustHashMap.«module».funcs[10]? =
       some Project.RustHashMap.func10Def := by rfl

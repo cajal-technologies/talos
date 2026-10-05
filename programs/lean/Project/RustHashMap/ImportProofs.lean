@@ -20,6 +20,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.RustHashMap.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev readImport : ImportDecl :=
   { «module» := "stdio", name := "read",
     params := [.i32, .i32], results := [.i32] }

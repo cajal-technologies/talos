@@ -34,6 +34,9 @@ open Project.RustHashMap.ErrorNewContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Open a live block for one refill of a known size.
 `LiveBlock_bytesFocus` drops the length of the old bytes, and the
 `memory.copy` rule asks for it. -/

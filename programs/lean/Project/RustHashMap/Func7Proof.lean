@@ -10,6 +10,9 @@ import Project.RustHashMap.DriverTailProof
 Local `func7`, absolute `func 10`, reads an input shaped `key ++ map`.
 -/
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 namespace Wasm.SmallStep
 
 section keyDecoderStore

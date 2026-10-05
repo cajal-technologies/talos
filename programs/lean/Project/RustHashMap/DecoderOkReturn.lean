@@ -27,6 +27,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- A one-word list is not empty. -/
 private theorem one_pos (w : UInt32) : 0 < ([w] : List UInt32).length := by
   simp

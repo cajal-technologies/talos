@@ -40,6 +40,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.Func14Capacity
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The control blocks of the body
 
 The body is a nest of seven blocks with three more inside it.  Only about

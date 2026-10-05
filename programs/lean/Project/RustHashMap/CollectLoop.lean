@@ -24,6 +24,9 @@ open Project.RustHashMap.CollectBodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The pair buffer as a word array -/
 
 /-- The pair buffer read as words: each entry gives its key and then its

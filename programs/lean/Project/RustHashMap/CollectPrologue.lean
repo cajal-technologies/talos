@@ -57,6 +57,9 @@ open Project.RustHashMap.CollectLoop
 open Project.RustHashMap.CollectTail
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The stack that `collect_entries` lends to its callees.  Its own frame is
 48 bytes of the 192 that `collectDepth` names. -/
 def collectBelowDepth : Nat := 144

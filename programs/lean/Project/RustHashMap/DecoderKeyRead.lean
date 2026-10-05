@@ -31,6 +31,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The key read, without the compare and the two branches. -/
 def keyStores : Program :=
   [.localGet 1, .localGet 5, .const 4294967292, .add, .localTee 12,

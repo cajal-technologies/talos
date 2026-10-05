@@ -43,6 +43,9 @@ open Project.RustHashMap.VecGrow
 open Project.RustHashMap.PairGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Read the size of a live block without giving it up. -/
 private theorem LiveBlock_size [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (allocationId : Nat) (ptr : UInt32)

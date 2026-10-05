@@ -27,6 +27,9 @@ open Project.RustHashMap.BodyContracts
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Two offsets from one base add. -/
 private theorem frame_step4 (frame a b : UInt32) (h : a + 4 = b) :
     frame + a + 4 = frame + b := by

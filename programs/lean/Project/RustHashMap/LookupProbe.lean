@@ -74,6 +74,9 @@ open Project.RustHashMap.LookupPures
 open Project.RustHashMap.LookupHash
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The index and the invariant of both loops -/
 
 /-- The index of the probe-loop family.  `step` is the window number of the

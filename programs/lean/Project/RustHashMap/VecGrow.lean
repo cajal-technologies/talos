@@ -34,6 +34,9 @@ open Project.RustHashMap.AllocatorContracts
 open Project.RustHashMap.EntryContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The vector storage -/
 
 /-- The two-word RawVec header: the capacity at `header` and the pointer at

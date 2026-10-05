@@ -27,6 +27,9 @@ through `twp_store32` and `wordMove` carries the word between `addr` and
 `addr + 0`.
 -/
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 namespace Wasm.SmallStep
 
 open Iris Iris.ProgramLogic Language.Notation

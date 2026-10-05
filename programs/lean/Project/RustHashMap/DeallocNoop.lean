@@ -36,6 +36,9 @@ open Project.RustHashMap.Allocator
 open Project.RustHashMap.AllocatorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Local `func57`, absolute index 60, seen as a no-op.  The three
 arguments are arbitrary.  The caller keeps every resource it had. -/
 def Func57NoopSpec [WasmSmallStepGS hlc Universal.State] : Prop :=

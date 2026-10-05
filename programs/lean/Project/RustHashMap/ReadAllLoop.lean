@@ -22,6 +22,9 @@ open Project.RustHashMap.EntryContracts
 open Project.RustHashMap.VecGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## One loop iteration -/
 
 private theorem ofNat_succ_wrap (k : Nat) :

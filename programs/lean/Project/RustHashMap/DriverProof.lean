@@ -43,6 +43,9 @@ open Project.RustHashMap.DriverTailProof
 open Project.RustHashMap.ReadAll
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The two entry contracts -/
 
 /-- Absolute function 22, the `map_len` driver.  It takes the same entry

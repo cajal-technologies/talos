@@ -37,6 +37,9 @@ open Project.RustHashMap.Allocator
 open Project.RustHashMap.EntryContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Initial Wasm state, with only the public input stream varied. -/
 def entryInitialStore (input : List UInt8) : Store Universal.State :=
   { (Project.RustHashMap.«module».initialStore : Store Universal.State) with

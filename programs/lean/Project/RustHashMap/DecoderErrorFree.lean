@@ -34,6 +34,9 @@ open Project.RustHashMap.DeallocNoop
 open Project.RustHashMap.FrameCells
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- The free of the pair buffer. -/
 def errorFree : Program :=
   [.localGet 2, .load32 4, .localTee 3, .eqz, .br_if 0, .localGet 8,

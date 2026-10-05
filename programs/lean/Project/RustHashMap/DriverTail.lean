@@ -38,6 +38,9 @@ open Project.RustHashMap.CollectContract
 open Project.RustHashMap.ReadAll
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## The stack region the tail carries -/
 
 /-- The deepest stack that a callee of the tail takes below the driver

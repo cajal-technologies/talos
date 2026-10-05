@@ -27,6 +27,9 @@ open Project.RustHashMap.DecodeErrorContracts
 open Project.RustHashMap.PairGrow
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 set_option maxHeartbeats 2000000 in
 /-- The pair loop keeps the loop invariant and stops. -/
 theorem twp_pair_loop [WasmSmallStepGS hlc Universal.State]

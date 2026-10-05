@@ -47,6 +47,9 @@ open Project.RustHashMap.CollectLoop
 open Project.RustHashMap.CollectPrologue
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Arithmetic of the pair buffer -/
 
 /-- The shift by three is the multiplication by eight. -/

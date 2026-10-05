@@ -65,6 +65,9 @@ open Project.RustHashMap.SortPures
 open Project.RustHashMap.HeapModel
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Word arithmetic -/
 
 /-- Setting the low bit of an even number adds one. -/

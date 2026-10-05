@@ -49,6 +49,9 @@ open Project.RustHashMap.FrameCells
 open Project.RustHashMap.DecodeErrorContracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-! ## Word blocks of a four-word record
 
 Each `i32` rule takes one word and each `i64` rule takes two, so a 16-byte

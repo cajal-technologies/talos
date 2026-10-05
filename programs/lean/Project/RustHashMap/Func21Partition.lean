@@ -75,6 +75,9 @@ open Project.RustHashMap.SortContracts
 open Project.RustHashMap.Func21Defs
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 set_option maxRecDepth 40000
 
 /-! ## The pure model of the cyclic partition

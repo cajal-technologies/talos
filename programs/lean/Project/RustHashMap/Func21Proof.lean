@@ -96,6 +96,9 @@ open Project.RustHashMap.Func21Partition
 open Project.RustHashMap.Func21Region
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 set_option maxRecDepth 40000
 
 /-! ## The index of the module -/
