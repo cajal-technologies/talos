@@ -72,7 +72,9 @@ def compare(records, versions, baseline):
                 errors.append(f"{name}: new or changed {verdict}: {record['engines']}")
     # A fixed gap must be removed, so the old exception cannot conceal its return later.
     for name in exceptions.keys() - observed["exceptions"].keys():
-        errors.append(f"{name}: stale baseline exception; remove it after review.")
+        errors.append(f"{name}: stale baseline exception: this case now agrees with V8 (or is no longer "
+                      "generated); delete its entry from differential/baseline.json. Do not re-record "
+                      "the whole baseline for this.")
     return errors
 
 
