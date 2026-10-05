@@ -202,7 +202,7 @@ theorem DecodeLoopInv.input_pair_reads
     store.wasm.mem.read8
         ((data + UInt32.ofNat consumed.length) + 1) = lo := by
   constructor
-  · convert h.input_read 0 (by simp) using 1 <;> simp
+  · convert h.input_read 0 (by simp) using 1 ; simp
   · have hr := h.input_read 1 (by simp)
     have hadd :
         data + UInt32.ofNat (consumed.length + 1) =

@@ -357,7 +357,7 @@ theorem reserve_to_grow_call
   have hsum' : length + additional ≥ additional := by
     simpa only [reserveRequired] using hsum
   apply Reaches.prepend (Step.geU (result := 1)
-    (Eq.symm (if_pos hsum')))
+    (Eq.symm (ite_eq_left hsum')))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp []
   apply Reaches.prepend (Step.localGet rfl)
@@ -652,7 +652,10 @@ theorem reserve_call_outcome
         (allocatorPtr oldBump 1) newCapacity
     have hdata' : postGrow.wasm.mem.read32 ((sp - 16) + 8) =
         allocatorPtr oldBump 1 := by
-      rw [show (sp - 16) + 8 = out + 4 by simp [out]; bv_normalize (config := { enums := false })]
+      rw [show (sp - 16) + 8 = out + 4 by
+        change (sp - 16) + 8 = ((sp - 16) + 4) + 4
+        rw [UInt32.add_assoc]
+        rfl]
       exact growResultOkStore_read_ptr allocStore out
         (allocatorPtr oldBump 1) newCapacity houtNext
     have hpostGlobal : (globalAt? postGrow 0).isSome = true := by

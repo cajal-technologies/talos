@@ -294,7 +294,7 @@ theorem reallocator_grow_failure_traps
     simpa [allocatorFinish, allocatorPtr, UInt32.sub_eq_add_neg]
       using hnegative
   apply TrapsWith.prepend
-    (Step.ltS (result := 0) (if_neg hnegative').symm)
+    (Step.ltS (result := 0) (ite_eq_right hnegative').symm)
   apply TrapsWith.prepend Step.brIfZero
   apply TrapsWith.prepend Step.block
   apply TrapsWith.prepend (Step.localGet rfl)
@@ -307,7 +307,7 @@ theorem reallocator_grow_failure_traps
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   apply TrapsWith.prepend (Step.localTee rfl)
   have hneed' : ¬
       ((65535 + (newSize + ((allocatorBase oldBump +
@@ -316,7 +316,7 @@ theorem reallocator_grow_failure_traps
     simpa [allocatorRequiredPages, allocatorFinish, allocatorPtr,
       UInt32.sub_eq_add_neg] using hneed
   apply TrapsWith.prepend
-    (Step.leU (result := 0) (if_neg hneed').symm)
+    (Step.leU (result := 0) (ite_eq_right hneed').symm)
   apply TrapsWith.prepend Step.brIfZero
   apply TrapsWith.prepend (Step.localGet rfl)
   apply TrapsWith.prepend (Step.localGet rfl)
@@ -429,7 +429,7 @@ theorem reallocator_no_grow_steps
     simpa [allocatorFinish, allocatorPtr, UInt32.sub_eq_add_neg]
       using hnegative
   apply Reaches.prepend
-    (Step.ltS (result := 0) (if_neg hnegative').symm)
+    (Step.ltS (result := 0) (ite_eq_right hnegative').symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
@@ -442,7 +442,7 @@ theorem reallocator_no_grow_steps
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   apply Reaches.prepend (Step.localTee rfl)
   have henough' :
       ((65535 + (newSize + ((allocatorBase oldBump +
@@ -451,7 +451,7 @@ theorem reallocator_no_grow_steps
     simpa [allocatorRequiredPages, allocatorFinish, allocatorPtr,
       UInt32.sub_eq_add_neg] using henough
   apply Reaches.prepend
-    (Step.leU (result := 1) (if_pos henough').symm)
+    (Step.leU (result := 1) (ite_eq_left henough').symm)
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)
@@ -464,7 +464,7 @@ theorem reallocator_no_grow_steps
   apply Reaches.prepend (Step.eqz rfl)
   by_cases hptr :
       (allocatorBase oldBump + (0xffffffff + align)) &&& (0 - align) = 0
-  · rw [if_pos hptr]
+  · rw [ite_eq_left hptr]
     have hptrDef : allocatorPtr oldBump align = 0 := by
       simpa [allocatorPtr] using hptr
     have hptrNeg :
@@ -473,10 +473,10 @@ theorem reallocator_no_grow_steps
     apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-    simp only [reallocatorResultStore, hptrDef, true_or, if_true]
+    simp only [reallocatorResultStore, hptrDef, true_or, ite_true]
     simp [allocatorBumpStore, allocatorFinish, allocatorPtr, hptrNeg]
     exact ⟨[], .refl _⟩
-  · rw [if_neg hptr]
+  · rw [ite_eq_right hptr]
     have hptrDef : allocatorPtr oldBump align ≠ 0 := by
       simpa [allocatorPtr] using hptr
     have hptrNeg :
@@ -498,14 +498,14 @@ theorem reallocator_no_grow_steps
     apply Reaches.prepend (Step.localTee rfl)
     apply Reaches.prepend (Step.eqz rfl)
     by_cases hlen : reallocatorCopyLen oldSize newSize = 0
-    · rw [if_pos hlen]
+    · rw [ite_eq_left hlen]
       apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
       simp only [reallocatorResultStore, hptrDef, hlen]
       simp [allocatorBumpStore, allocatorFinish, allocatorPtr]
       exact ⟨[], .refl _⟩
-    · rw [if_neg hlen]
+    · rw [ite_eq_right hlen]
       apply Reaches.prepend Step.brIfZero
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.localGet rfl)
@@ -524,7 +524,7 @@ theorem reallocator_no_grow_steps
       apply Reaches.prepend (Step.exitControl rfl)
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-      simp only [reallocatorResultStore, hptrDef, hlen, or_false, if_false]
+      simp only [reallocatorResultStore, hptrDef, hlen, or_false, ite_false]
       simp [allocatorBumpStore, allocatorFinish, allocatorPtr]
       exact ⟨[], .refl _⟩
 
@@ -621,7 +621,7 @@ theorem reallocator_grow_success_steps
     simpa [allocatorFinish, allocatorPtr, UInt32.sub_eq_add_neg]
       using hnegative
   apply Reaches.prepend
-    (Step.ltS (result := 0) (if_neg hnegative').symm)
+    (Step.ltS (result := 0) (ite_eq_right hnegative').symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.block
   apply Reaches.prepend (Step.localGet rfl)
@@ -634,7 +634,7 @@ theorem reallocator_grow_success_steps
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   apply Reaches.prepend (Step.localTee rfl)
   have hneed' : ¬
       ((65535 + (newSize + ((allocatorBase oldBump +
@@ -643,7 +643,7 @@ theorem reallocator_grow_success_steps
     simpa [allocatorRequiredPages, allocatorFinish, allocatorPtr,
       UInt32.sub_eq_add_neg] using hneed
   apply Reaches.prepend
-    (Step.leU (result := 0) (if_neg hneed').symm)
+    (Step.leU (result := 0) (ite_eq_right hneed').symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -668,7 +668,7 @@ theorem reallocator_grow_success_steps
   apply Reaches.prepend (Step.eqz rfl)
   by_cases hptr :
       (allocatorBase oldBump + (0xffffffff + align)) &&& (0 - align) = 0
-  · rw [if_pos hptr]
+  · rw [ite_eq_left hptr]
     have hptrDef : allocatorPtr oldBump align = 0 := by
       simpa [allocatorPtr] using hptr
     have hptrNeg :
@@ -677,11 +677,11 @@ theorem reallocator_grow_success_steps
     apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-    simp only [reallocatorResultStore, hptrDef, true_or, if_true]
+    simp only [reallocatorResultStore, hptrDef, true_or, ite_true]
     simp [allocatorBumpStore,  allocatorFinish,
       allocatorPtr, hptrNeg]
     exact ⟨[], .refl _⟩
-  · rw [if_neg hptr]
+  · rw [ite_eq_right hptr]
     have hptrDef : allocatorPtr oldBump align ≠ 0 := by
       simpa [allocatorPtr] using hptr
     have hptrNeg :
@@ -703,7 +703,7 @@ theorem reallocator_grow_success_steps
     apply Reaches.prepend (Step.localTee rfl)
     apply Reaches.prepend (Step.eqz rfl)
     by_cases hlen : reallocatorCopyLen oldSize newSize = 0
-    · rw [if_pos hlen]
+    · rw [ite_eq_left hlen]
       apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
@@ -711,7 +711,7 @@ theorem reallocator_grow_success_steps
       simp [allocatorBumpStore,  allocatorFinish,
         allocatorPtr]
       exact ⟨[], .refl _⟩
-    · rw [if_neg hlen]
+    · rw [ite_eq_right hlen]
       apply Reaches.prepend Step.brIfZero
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.localGet rfl)
@@ -729,7 +729,7 @@ theorem reallocator_grow_success_steps
       apply Reaches.prepend (Step.exitControl rfl)
       apply Reaches.prepend (Step.localGet rfl)
       apply Reaches.prepend (Step.returnFromCallExplicit rfl)
-      simp only [reallocatorResultStore, hptrDef, hlen, or_false, if_false]
+      simp only [reallocatorResultStore, hptrDef, hlen, or_false, ite_false]
       simp [allocatorBumpStore,  allocatorFinish,
         allocatorPtr]
       exact ⟨[], .refl _⟩

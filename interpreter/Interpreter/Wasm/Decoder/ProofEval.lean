@@ -38,7 +38,8 @@ cbv_simproc ↓ boolIteChecked (@ite _ _ _ _ _) := fun e => do
   let some (ty, b, value) := c.eq? | return ← originalBoolIte e
   unless ty.isConstOf ``Bool && value.isConstOf ``Bool.true do
     return ← originalBoolIte e
-  let levels := e.getAppFn.constLevels!
+  -- Simprocs may receive an expression whose head is not a literal constant.
+  let levels := [← getLevel α]
   let proof := mkAppN (mkConst ``boolIte_eq_cond levels) #[α, b, inst, t, f]
   let result ← Sym.share <| mkAppN (mkConst ``cond levels) #[α, b, t, f]
   -- A pre-simproc result proceeds to application simplification; it does not

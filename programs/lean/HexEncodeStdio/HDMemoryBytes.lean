@@ -52,7 +52,7 @@ private theorem Mem.writeBytes_nil_eq (mem : Mem) (offset : Nat) :
     simp only [Mem.writeBytes, List.length_nil, Nat.add_zero]
     congr
     funext i
-    rw [dif_neg (by omega)]
+    rw [dite_eq_right (by omega)]
 
 private theorem Mem.writeBytes_singleton_eq (mem : Mem) (addr : UInt32)
     (b : UInt8) :
@@ -65,7 +65,7 @@ private theorem Mem.writeBytes_singleton_eq (mem : Mem) (addr : UInt32)
     by_cases h : i = addr.toNat
     · subst i
       simp
-    · rw [dif_neg (by omega), if_neg h]
+    · rw [dite_eq_right (by omega), ite_eq_right h]
 
 private theorem Mem.writeBytes_cons_eq (mem : Mem) (addr : UInt32)
     (b : UInt8) (bs : List UInt8)

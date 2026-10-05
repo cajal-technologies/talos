@@ -21,6 +21,11 @@ scalar.  On the way in, borsh accepts entries in any order and keeps
 the last value of a repeated key, so the header count and what `map_len`
 writes can differ; `HashMap.ofEntries` is that step in the model.
 
+The hasher's `RandomState` seed is a constant of the wasm target: the module
+imports no source of randomness (`module_imports`), so every run of an export
+on the same input is the same execution.  The seed fixes where keys land in
+the table, but only the sort makes the written bytes independent of it.
+
 `borsh::from_slice` rejects trailing bytes, so an input is accepted only when
 it is exactly one encoded value.  Every rejection writes nothing.  A `None`
 result writes its tag byte `[0]`, so a rejected input and a `None` result stay

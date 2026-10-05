@@ -25,6 +25,9 @@ private abbrev oomImport : ImportDecl :=
 theorem oomImport_index :
     Project.Mergesort.module.imports[2] = oomImport := by rfl
 
+-- The generic terminal and outcome Iris adapters are definitionally equal,
+-- but their instance definitions must unfold during proof-mode matching.
+set_option backward.isDefEq.respectTransparency false in
 /-- Authoritative total-WP contract for reachable calls to import 2,
 `talos.oom`.  Its implementation has no return or throw outcome for the valid
 zero-argument call. -/
@@ -129,6 +132,7 @@ def acceptancePost (flag : Bool)
     outcome = .trapped (.host OOM.trapMessage) ∧
       store.wasm.host = WrapperProof.afterOom acceptanceHost
 
+set_option backward.isDefEq.respectTransparency false in
 /-- One principal caller contract covers normal completion and exact OOM
 without reopening the host implementation in the caller. -/
 theorem twp_acceptanceCaller

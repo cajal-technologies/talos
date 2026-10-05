@@ -96,7 +96,7 @@ theorem decodeStatusAllocatedStore_facts
     exact hallocGlobal
   have hlength : finalStore.wasm.mem.read32 (decodeStatusVector + 8) = 0 := by
     simp only [finalStore, decodeStatusAllocatedStore, reserveFinishStore,
-      reserveVectorStore, postGrow, pushGrowOkStore]
+      reserveVectorStore, pushGrowOkStore]
     rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
       Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
       Mem.read32_write32_disjoint]
@@ -116,8 +116,6 @@ theorem decodeStatusAllocatedStore_facts
           have hbumpSigned := hfacts.bump_signed
           norm_num [UInt32.size] at hbumpSigned ⊢
           omega) (by
-          change (reserveFrameStore store (decodeStack - 16)).wasm.mem.pages <
-            UInt32.size
           change store.wasm.mem.pages < UInt32.size
           have hp := hfacts.pages_upper
           norm_num [UInt32.size]
@@ -225,8 +223,8 @@ theorem decode_error_to_status_alloc
           [decodeStatusControl5, decodeStatusControl4, decodeStatusControl3,
             decodeStatusControl2, decodeStatusControl1], []⟩, store⟩ := by
   simp only [decodeAfterCoreConfig, decodeAfterCore, decodeAfterRead, func9,
-    List.drop, decodeStatusBody1, decodeStatusBody2, decodeStatusBody3,
-    decodeStatusBody4, decodeStatusBody5, firstBlockBody]
+    List.drop
+    ]
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
@@ -273,8 +271,8 @@ theorem decode_success_to_status_alloc
           [decodeStatusControl4, decodeStatusControl3, decodeStatusControl2,
             decodeStatusControl1], []⟩, store⟩ := by
   simp only [decodeAfterCoreConfig, decodeAfterCore, decodeAfterRead, func9,
-    List.drop, decodeStatusBody1, decodeStatusBody2, decodeStatusBody3,
-    decodeStatusBody4, decodeStatusBody5, firstBlockBody]
+    List.drop
+    ]
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
@@ -348,9 +346,9 @@ theorem decode_error_odd_after_alloc_reaches
   apply Reaches.prepend (Step.select (selected := .i32 1) (by decide))
   apply Reaches.prepend (Step.brTable rfl)
   simp [decodeStatusControl1, decodeStatusControl2, decodeStatusControl3,
-    decodeStatusControl4, decodeStatusControl5, decodeStatusBody1,
-    decodeStatusBody2, decodeStatusBody3, decodeStatusBody4,
-    decodeStatusBody5, firstBlockBody, decodeAfterStatus, decodeAfterCore,
+    decodeStatusBody1,
+    decodeStatusBody2, decodeStatusBody3,
+    firstBlockBody, decodeAfterStatus, decodeAfterCore,
     decodeAfterRead, func9]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
@@ -368,10 +366,9 @@ theorem decode_error_odd_after_alloc_reaches
   rw [setMemory_eq]
   apply Reaches.prepend (Step.br rfl)
   simp [decodeCommonConfig, decodeStatusReadyStore, decodeAfterStatus,
-    decodeAfterCore, decodeAfterRead, func9, decodeStatusControl1,
-    decodeStatusControl2, decodeStatusControl3, decodeStatusControl4,
-    decodeStatusControl5, decodeStatusBody1, decodeStatusBody2,
-    decodeStatusBody3, decodeStatusBody4, decodeStatusBody5, firstBlockBody]
+    decodeAfterCore, decodeAfterRead, func9
+
+    ]
   exact ⟨[], .refl _⟩
 
 set_option maxRecDepth 100000 in
@@ -411,15 +408,14 @@ theorem decode_error_invalid_after_alloc_reaches
   have hgt : 4293853185 + bad > bad := by
     apply UInt32.lt_iff_toNat_lt.mpr
     simp [UInt32.toNat_add]
-    norm_num [UInt32.size] at hbad ⊢
     omega
   apply Reaches.prepend (Step.gtU (result := 1) (by simp [hgt]))
   apply Reaches.prepend (Step.select (selected := .i32 0) (by simp))
   apply Reaches.prepend (Step.brTable rfl)
   simp [decodeStatusControl1, decodeStatusControl2, decodeStatusControl3,
-    decodeStatusControl4, decodeStatusControl5, decodeStatusBody1,
+    decodeStatusControl4, decodeStatusBody1,
     decodeStatusBody2, decodeStatusBody3, decodeStatusBody4,
-    decodeStatusBody5, firstBlockBody, decodeAfterStatus, decodeAfterCore,
+    firstBlockBody, decodeAfterStatus, decodeAfterCore,
     decodeAfterRead, func9]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
@@ -437,10 +433,9 @@ theorem decode_error_invalid_after_alloc_reaches
   rw [setMemory_eq]
   apply Reaches.prepend (Step.br rfl)
   simp [decodeCommonConfig, decodeStatusReadyStore, decodeAfterStatus,
-    decodeAfterCore, decodeAfterRead, func9, decodeStatusControl1,
-    decodeStatusControl2, decodeStatusControl3, decodeStatusControl4,
-    decodeStatusControl5, decodeStatusBody1, decodeStatusBody2,
-    decodeStatusBody3, decodeStatusBody4, decodeStatusBody5, firstBlockBody]
+    decodeAfterCore, decodeAfterRead, func9
+
+    ]
   exact ⟨[], .refl _⟩
 
 theorem decode_status_ready_terminates
@@ -530,9 +525,9 @@ theorem decode_invalid_wrapper_outcome
       apply TerminatesWith.prependReaches (hprefix.trans (hreach.trans hstatus))
       exact hterm.mono (by
         intro values final h
-        simp only [decodeOutput, heven, ↓reduceIte, hdecode]
+        simp only [decodeOutput, heven, hdecode]
         rcases h with ⟨rfl, hout⟩
-        exact ⟨rfl, by simpa [hout]⟩)
+        exact ⟨rfl, by simp [hout]⟩)
   · right
     exact TrapsWith.prependReaches hprefix htrap
 

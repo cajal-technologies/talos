@@ -19,7 +19,7 @@ theorem isEmpty_chunk :
     controls calls len vs
   simp only [toV_u32, List.cons_append, List.nil_append]
   by_cases hlen : len = 0
-  · simp only [isEmptyValue, hlen, if_true]
+  · simp only [isEmptyValue, hlen, ite_true]
     iintro Hwp
     wasm_wp_pures [wp_const]
     wasm_wp_next Wasm.SmallStep.wp_eq (result := 1) (by simp)
@@ -27,7 +27,7 @@ theorem isEmpty_chunk :
     iapply Wasm.SmallStep.wp_and
     rw [show (1 &&& 1 : UInt32) = 1 by decide]
     ilater_exact Hwp
-  · simp only [isEmptyValue, hlen, if_false]
+  · simp only [isEmptyValue, hlen, ite_false]
     iintro Hwp
     wasm_wp_pures [wp_const]
     wasm_wp_next Wasm.SmallStep.wp_eq (result := 0) (by simp [hlen])

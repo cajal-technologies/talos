@@ -143,35 +143,74 @@ def sum32Output (bytes : List UInt8) : List UInt8 :=
 
 /-! ## Contracts -/
 
-/-- `vec_len` writes the element count. -/
+/-- `vec_len` writes the element count.
+
+Informal spec:
+The export reads the whole input as a borsh `Vec<u32>`, which `vecOf`
+decodes.  It writes the element count as a borsh `u32`.  It writes nothing
+when borsh rejects the bytes.  The run may instead end in the allocator
+`talos.oom` trap, because the decoder allocates in proportion to the
+input. -/
 @[spec_of "rust-exported-partial" "rust_vec::vec_len"]
 def VecLenSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "vec_len" bytes (lenOutput bytes)
 
-/-- `vec_push` writes the vector with the leading word appended. -/
+/-- `vec_push` writes the vector with the leading word appended.
+
+Informal spec:
+The export reads the input as `value ++ vec`, which `wordAndVec` decodes:
+the first four bytes are the `u32` value and the rest is the borsh vector.
+It writes the vector with that value appended, as a borsh `Vec<u32>`.  It
+writes nothing when borsh rejects the bytes.  The run may instead end in
+the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_vec::vec_push"]
 def VecPushSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "vec_push" bytes (pushOutput bytes)
 
-/-- `vec_pop` writes the removed element beside the remaining vector. -/
+/-- `vec_pop` writes the removed element beside the remaining vector.
+
+Informal spec:
+The export reads the whole input as a borsh `Vec<u32>`, which `vecOf`
+decodes.  It writes the last element as a borsh `Option` (`None` on an
+empty vector), then the remaining vector.  It writes nothing when borsh
+rejects the bytes.  The run may instead end in the allocator `talos.oom`
+trap. -/
 @[spec_of "rust-exported-partial" "rust_vec::vec_pop"]
 def VecPopSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "vec_pop" bytes (popOutput bytes)
 
 /-- `vec_get` writes the element that the leading index selects, and `None`
 when the index is out of bounds.  The Rust source reads through `Vec::get`, so
-no index panic is compiled into the module. -/
+no index panic is compiled into the module.
+
+Informal spec:
+The export reads the input as `index ++ vec`, which `wordAndVec` decodes.
+It writes the element at that index as a borsh `Option`, and `None` when
+the index is out of bounds.  It writes nothing when borsh rejects the
+bytes.  The run may instead end in the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_vec::vec_get"]
 def VecGetSpec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "vec_get" bytes (getOutput bytes)
 
-/-- `vec_contains` writes whether the leading word occurs in the vector. -/
+/-- `vec_contains` writes whether the leading word occurs in the vector.
+
+Informal spec:
+The export reads the input as `needle ++ vec`, which `wordAndVec` decodes.
+It writes a borsh `bool` that says whether the needle occurs in the
+vector.  It writes nothing when borsh rejects the bytes.  The run may
+instead end in the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_vec::vec_contains"]
 def VecContainsSpec : Prop :=
   ∀ bytes : List UInt8,
     WritesOrOOM "vec_contains" bytes (containsOutput bytes)
 
-/-- `vec_sum32` writes the wrapping sum of every element. -/
+/-- `vec_sum32` writes the wrapping sum of every element.
+
+Informal spec:
+The export reads the whole input as a borsh `Vec<u32>`, which `vecOf`
+decodes.  It writes the sum of the elements modulo `2 ^ 32` as a borsh
+`u32`.  It writes nothing when borsh rejects the bytes.  The run may
+instead end in the allocator `talos.oom` trap. -/
 @[spec_of "rust-exported-partial" "rust_vec::vec_sum32"]
 def VecSum32Spec : Prop :=
   ∀ bytes : List UInt8, WritesOrOOM "vec_sum32" bytes (sum32Output bytes)

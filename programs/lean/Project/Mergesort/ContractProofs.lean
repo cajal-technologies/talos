@@ -22,6 +22,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 /-- Claim a fresh physical range while taking a generated constant step.
 The claim is a ghost-only update, so the Wasm store and the instruction's
 ordinary transition are unchanged.  All reachable allocator bodies share

@@ -65,4 +65,17 @@ def decodeOrDefault (wat : String) : Wasm.Module :=
   | .ok m => m
   | .error _ => default
 
+/-- Use a canonical error type in the matcher's motive. `cbv` unfolds the
+decoder's `Err` alias to `String`; comparing that normalized matcher with the
+original equation can make the kernel evaluate the whole decoder again. -/
+private def moduleOrDefault (result : Except String Wasm.Module) : Wasm.Module :=
+  match result with
+  | .ok m => m
+  | .error _ => default
+
+/-- Keep decoder evaluation in the proof-producing evaluator. This equation
+is checked symbolically, before any concrete WAT input is substituted. -/
+@[cbv_eval] private theorem decodeOrDefault_eq (wat : String) :
+    decodeOrDefault wat = moduleOrDefault (Wasm.Decoder.Wat.decode wat) := by rfl
+
 end Wasm.Examples
