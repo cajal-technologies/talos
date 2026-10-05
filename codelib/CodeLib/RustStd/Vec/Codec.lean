@@ -77,8 +77,8 @@ theorem deserialize_serialize (codec : WordCodec W) (values : List W)
           (WordCodec.u32le.encode (UInt32.ofNat values.length))).toNat
     rw [WordCodec.u32le.decode_encode]
     exact (UInt32.toNat_ofNat_of_lt hbound).symm
-  rw [deserialize, if_neg (by simp [serialize_length]), hdrop,
+  rw [deserialize, ite_eq_right (by simp [serialize_length]), hdrop,
     codec.deserialize_serialize]
-  exact if_pos hcount
+  exact ite_eq_left hcount
 
 end Wasm.RustStd.Vec
