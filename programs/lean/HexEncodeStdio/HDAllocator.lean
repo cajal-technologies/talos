@@ -304,14 +304,14 @@ theorem twp_allocator
       ((if oldBump = 0 then 1054000 else oldBump) +
           (0xffffffff + align : UInt32)) <
         (0xffffffff + align : UInt32)
-  · rw [if_pos hoverflow₁]
+  · rw [ite_eq_left hoverflow₁]
     ihave ⟨Hruntime₁, Henv₁, Hhost₁, Hbump₁, Hcont₁⟩ :=
       BI.and_elim_l $$ Hoverflow₁
     iapply twp_brIf (by decide) rfl
     simp
     iapply twp_oom_wrapper_locals host (stack := []) (code := [.unreachable])
     iframe
-  · rw [if_neg hoverflow₁]
+  · rw [ite_eq_right hoverflow₁]
     ihave ⟨Hruntime₁, Henv₁, Hhost₁, Hbump₁, Hcont₁⟩ :=
       BI.and_elim_r $$ Hoverflow₁
     iapply twp_brIfZero
@@ -340,14 +340,14 @@ theorem twp_allocator
             (0xffffffff + align : UInt32)) &&& (0 - align))) <
           (((if oldBump = 0 then 1054000 else oldBump) +
             (0xffffffff + align : UInt32)) &&& (0 - align))
-    · rw [if_pos hoverflow₂]
+    · rw [ite_eq_left hoverflow₂]
       ihave ⟨Hruntime₂, Henv₂, Hhost₂, Hbump₂, Hcont₂⟩ :=
         BI.and_elim_l $$ Hoverflow₂
       iapply twp_brIf (by decide) rfl
       simp
       iapply twp_oom_wrapper_locals host (stack := []) (code := [.unreachable])
       iframe
-    · rw [if_neg hoverflow₂]
+    · rw [ite_eq_right hoverflow₂]
       ihave ⟨Hruntime₂, Henv₂, Hhost₂, Hbump₂, Hcont₂⟩ :=
         BI.and_elim_r $$ Hoverflow₂
       iapply twp_brIfZero
@@ -367,14 +367,14 @@ theorem twp_allocator
           (size + (((if oldBump = 0 then 1054000 else oldBump) +
             (0xffffffff + align : UInt32)) &&& (0 - align))).toInt32 <
             UInt32.toInt32 0
-      · rw [if_pos hnegative]
+      · rw [ite_eq_left hnegative]
         ihave ⟨Hruntime₃, Henv₃, Hhost₃, Hbump₃, Hcont₃⟩ :=
           BI.and_elim_l $$ Hsigned
         iapply twp_brIf (by decide) rfl
         simp
         iapply twp_oom_wrapper_locals host (stack := []) (code := [.unreachable])
         iframe
-      · rw [if_neg hnegative]
+      · rw [ite_eq_right hnegative]
         ihave ⟨Hruntime₃, Henv₃, Hhost₃, Hbump₃, Hcont₃⟩ :=
           BI.and_elim_r $$ Hsigned
         iapply twp_brIfZero
@@ -395,7 +395,7 @@ theorem twp_allocator
           HmemorySize
         iintro %pages ⟨Hruntime₄, Henv₃, Hhost₃, Hbump₃, Hcont₃⟩
         rw [module_memIs64]
-        simp only [sizeValue, Bool.false_eq_true, if_false]
+        simp only [sizeValue, Bool.false_eq_true, ite_false]
         iapply twp_localTee rfl
         iapply twp_leU rfl
         ihave Henough :
@@ -412,7 +412,7 @@ theorem twp_allocator
               (((if oldBump = 0 then 1054000 else oldBump) +
                 (0xffffffff + align : UInt32)) &&& (0 - align)))) >>>
               (16 % 32)) ≤ UInt32.ofNat pages
-        · rw [if_pos henough]
+        · rw [ite_eq_left henough]
           ihave ⟨Hruntime₅, Henv₅, Hhost₅, Hbump₅, Hcont₅⟩ :=
             BI.and_elim_l $$ Henough
           iapply twp_brIf (by decide) rfl
@@ -428,7 +428,7 @@ theorem twp_allocator
           isimp only [Finish, zero_sub] at Hcont₅
           iapply Hcont₅
           iframe
-        · rw [if_neg henough]
+        · rw [ite_eq_right henough]
           ihave ⟨Hruntime₅, Henv₅, Hhost₅, Hbump₅, Hcont₅⟩ :=
             BI.and_elim_r $$ Henough
           iapply twp_brIfZero
@@ -457,7 +457,7 @@ theorem twp_allocator
               [Hruntime₆ Henv₅ Hhost₅ Hbump₅ Hcont₅]
           · isplit <;> iframe
           by_cases hgrow : growResult ≠ (0xffffffff : UInt32)
-          · rw [if_pos hgrow]
+          · rw [ite_eq_left hgrow]
             ihave ⟨Hruntime₇, Henv₇, Hhost₇, Hbump₇, Hcont₇⟩ :=
               BI.and_elim_l $$ Hgrow
             iapply twp_brIf (by decide) rfl
@@ -473,7 +473,7 @@ theorem twp_allocator
             isimp only [Finish, zero_sub] at Hcont₇
             iapply Hcont₇
             iframe
-          · rw [if_neg hgrow]
+          · rw [ite_eq_right hgrow]
             ihave ⟨Hruntime₇, Henv₇, Hhost₇, Hbump₇, Hcont₇⟩ :=
               BI.and_elim_r $$ Hgrow
             iapply twp_brIfZero

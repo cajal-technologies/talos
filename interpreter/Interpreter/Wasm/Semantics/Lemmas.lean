@@ -159,17 +159,17 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
         · cases v with
           | i32 c =>
             by_cases hc : c ≠ 0
-            · simp only [if_pos hc]
+            · simp only [ite_eq_left hc]
               have hexec : exec k m st { s with values := vs } thn env ≠ .OutOfFuel := by
                 intro h
                 apply hne
-                simp only [execOne.eq_def, hvals, if_pos hc, h]
+                simp only [execOne.eq_def, hvals, ite_eq_left hc, h]
               rw [ihExec m env st { s with values := vs } thn k' hk' hexec]
-            · simp only [if_neg hc]
+            · simp only [ite_eq_right hc]
               have hexec : exec k m st { s with values := vs } els env ≠ .OutOfFuel := by
                 intro h
                 apply hne
-                simp only [execOne.eq_def, hvals, if_neg hc, h]
+                simp only [execOne.eq_def, hvals, ite_eq_right hc, h]
               rw [ihExec m env st { s with values := vs } els k' hk' hexec]
           | i64 _ => rfl
           | f32 _ => rfl
@@ -221,12 +221,12 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                         · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
                             intro h; apply hne
                             simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
-                              hfn, hty, if_pos hsig, h]
+                              hfn, hty, ite_eq_left hsig, h]
                           simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
-                            hfn, hty, if_pos hsig,
+                            hfn, hty, ite_eq_left hsig,
                             ihRun m env fid st rest k' hk' hrun]
                         · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
-                            hfn, hty, if_neg hsig]
+                            hfn, hty, ite_eq_right hsig]
                 | anyref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
           | f32 _    => simp only [execOne.eq_def, hvals, hv]
           | f64 _    => simp only [execOne.eq_def, hvals, hv]
@@ -259,12 +259,12 @@ theorem fuel_mono_aux : ∀ (f₁ : Nat),
                         · have hrun : run k m fid st rest env ≠ .OutOfFuel := by
                             intro h; apply hne
                             simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
-                              hfn, hty, if_pos hsig, h]
+                              hfn, hty, ite_eq_left hsig, h]
                           simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
-                            hfn, hty, if_pos hsig,
+                            hfn, hty, ite_eq_left hsig,
                             ihRun m env fid st rest k' hk' hrun]
                         · simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot', hr,
-                            hfn, hty, if_neg hsig]
+                            hfn, hty, ite_eq_right hsig]
                 | anyref _ => simp only [execOne.eq_def, hvals, hv, htbl, hslot, hslot']
           | anyref _ => simp only [execOne.eq_def, hvals, hv]
       | tryTable ps rs catches body _ _ =>
@@ -430,7 +430,7 @@ theorem exec_iff_cons
        | other                => other) := by
   simp only [exec, execOne.eq_def, hStack]
   by_cases hc : c ≠ 0
-  · simp only [if_pos hc]
+  · simp only [ite_eq_left hc]
     cases exec fuel m st { s with values := vs } thn env with
     | Fallthrough _ _ => rfl
     | Break n _ _ => cases n <;> rfl
@@ -440,7 +440,7 @@ theorem exec_iff_cons
     | OutOfFuel => rfl
     | ReturnCall _ _ _ => rfl
     | Throwing _ _ _ _ => rfl
-  · simp only [if_neg hc]
+  · simp only [ite_eq_right hc]
     cases exec fuel m st { s with values := vs } els env with
     | Fallthrough _ _ => rfl
     | Break n _ _ => cases n <;> rfl
@@ -510,7 +510,7 @@ theorem exec_callIndirect_cons {α : Type}
        | .Invalid msg    => .Invalid msg
        | .OutOfFuel      => .OutOfFuel
        | .Thrown tag targs st' => .Throwing tag targs st' s) := by
-  simp only [exec, execOne.eq_def, hStack, hTbl, hSlot, hFn, hTy, if_pos hSig]
+  simp only [exec, execOne.eq_def, hStack, hTbl, hSlot, hFn, hTy, ite_eq_left hSig]
   rcases run fuel m fid st vs0 env with _ | _ | _ | _ | _ <;> rfl
 
 /-! ## `run` characterisation -/

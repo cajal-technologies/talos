@@ -42,7 +42,7 @@ theorem grow_result_negative
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.ltS (result := 1) (Eq.symm (if_pos hneg)))
+    (Step.ltS (result := 1) (Eq.symm (ite_eq_left hneg)))
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp [growResultErrorTail, growResultOuterControl]
   apply Reaches.prepend (Step.localGet rfl)

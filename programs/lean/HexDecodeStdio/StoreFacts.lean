@@ -10,7 +10,7 @@ theorem Mem.read8_writeBytes_disjoint (m : Mem) (off : Nat)
     (h : addr.toNat < off ∨ off + bytes.length ≤ addr.toNat) :
     (m.writeBytes off bytes).read8 addr = m.read8 addr := by
   simp only [Mem.writeBytes, Mem.read8]
-  rw [dif_neg]
+  rw [dite_eq_right]
   omega
 
 theorem Mem.read32_writeBytes_disjoint (m : Mem) (off : Nat)
@@ -18,7 +18,7 @@ theorem Mem.read32_writeBytes_disjoint (m : Mem) (off : Nat)
     (h : addr.toNat + 4 ≤ off ∨ off + bytes.length ≤ addr.toNat) :
     (m.writeBytes off bytes).read32 addr = m.read32 addr := by
   simp only [Mem.writeBytes, Mem.read32]
-  rw [dif_neg, dif_neg, dif_neg, dif_neg]
+  rw [dite_eq_right, dite_eq_right, dite_eq_right, dite_eq_right]
   all_goals omega
 
 theorem Mem.grow_success_bytes_eq (m memory : Mem) (delta : UInt32)
@@ -91,7 +91,7 @@ theorem readAdapterResultStore_read32_disjoint
   rw [Mem.read32_write32_disjoint _ (out + 4) addr _ (by
         rcases hcount with h | h <;> omega)]
   simp only [Mem.read32, Mem.write8]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   · exact Mem.read32_writeBytes_disjoint _ _ _ _ hbuffer
   all_goals omega
 

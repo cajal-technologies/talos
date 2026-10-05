@@ -121,7 +121,7 @@ theorem twp_decodePair_valid
     (hchunkAddr : Offset32Facts iterator 8)
     (hptrAddr : Offset32Facts iterator 0)
     (hindexAddr : Offset32Facts iterator 12)
-    (hinput0 : (inputPtr + 0).toNat = inputPtr.toNat)
+    (_hinput0 : (inputPtr + 0).toNat = inputPtr.toNat)
     (hinput1 : (inputPtr + 1).toNat = inputPtr.toNat + 1)
     (hout1 : (out + 1).toNat = out.toNat + 1)
     (hiRoute loRoute : HexRoute)

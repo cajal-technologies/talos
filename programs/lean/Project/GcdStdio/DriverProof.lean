@@ -19,6 +19,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.GcdStdio.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev HeapIProp := IProp (WasmHeapGF Universal.State)
 
 def successBody : Program :=

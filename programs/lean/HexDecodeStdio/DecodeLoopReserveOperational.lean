@@ -9,7 +9,7 @@ def decodeCoreLoopReserveBody : Program :=
   coreStructuredBody (coreFirstInstruction decodeCoreLoopBody)
 
 def decodeLoopReserveConfig (store : MachineStore Universal.State)
-    (data len ptr outLen : UInt32) (seed pending : UInt8)
+    (data _len ptr outLen : UInt32) (seed pending : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 pending.toUInt32, .i32 outLen],
       [.i32 coreFrame, .i32 ptr, .i32 seed.toUInt32],
@@ -188,7 +188,7 @@ theorem decode_loop_after_reserve_append
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
-  simp [decodeLoopCallConfig, decodeLoopAppendStore, reserved,
+  simp [decodeLoopCallConfig, decodeLoopAppendStore,
     decodeCoreLoopBody, decodeCoreLoopControl, decodeCoreAfterLoop,
     coreBlockControl]
   exact ⟨[], .refl _⟩

@@ -31,7 +31,7 @@ theorem universal_write_function :
 theorem universal_write_return
     (store : Store Universal.State) (length pointer : UInt32)
     (bytes : List UInt8)
-    (hlen : bytes.length = length.toNat)
+    (_hlen : bytes.length = length.toNat)
     (hread : store.mem.readBytes pointer.toNat length.toNat = bytes)
     (hbound : pointer.toNat + length.toNat ≤ store.mem.pages * 65536) :
     (StdIO.writeHost.lift universalStdIOLens).invoke store
@@ -43,7 +43,7 @@ theorem universal_write_return
                   output := store.host.stdio.output ++ bytes } } } := by
   simp only [HostFn.lift, StdIO.writeHost, StdIO.writeResult,
     Store.focus, Store.mapHost, universalStdIOLens]
-  rw [if_pos]
+  rw [ite_eq_left]
   · simp only [Store.unfocus, Store.mapHost]
     rw [hread]
   · simp only [StdIO.rangeInBounds]
@@ -66,7 +66,7 @@ theorem universal_read_return
   subst bytes
   simp only [HostFn.lift, StdIO.readHost, StdIO.readResult,
     Store.focus, Store.mapHost, universalStdIOLens]
-  rw [if_pos]
+  rw [ite_eq_left]
   · rfl
   · simp only [StdIO.rangeInBounds]
     exact decide_eq_true hbound

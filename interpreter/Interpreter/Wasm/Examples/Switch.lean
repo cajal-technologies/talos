@@ -99,7 +99,7 @@ theorem switch_steps (i : UInt32) :
     apply Steps.cons (.brTable (by
       simpa [hi, switchInnerFrame, switchMiddleFrame, switchOuterFrame]
         using hbranch))
-    simp only [switchResult, hi, if_pos]
+    simp only [switchResult, hi, ite_eq_left]
     apply Steps.cons .const
     simpa [switchResult, hi, switchConfig] using
       (Steps.cons .returnFromFunction
@@ -113,7 +113,7 @@ theorem switch_steps (i : UInt32) :
       apply Steps.cons (.brTable (by
         simpa [hi, switchInnerFrame, switchMiddleFrame, switchOuterFrame]
           using hbranch))
-      simp only [switchResult, hi, if_true]
+      simp only [switchResult, hi, ite_true]
       apply Steps.cons .const
       simpa [switchResult, hi, switchConfig] using
         (Steps.cons .returnFromFunction

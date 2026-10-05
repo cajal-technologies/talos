@@ -114,7 +114,7 @@ theorem twp_universal_write {hlc : HasLC}
       rw [hresolve]
       simp only [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift]
       simp only [StdIO.writeHost, StdIO.writeResult]
-      rw [if_pos]
+      rw [ite_eq_left]
       · simp [Store.focus, Store.mapHost, Store.unfocus, newWasm, newHost,
           afterWrite, hread, hlen, HhostPhysical]
       · simp only [StdIO.rangeInBounds, StdIO.byteCapacity]
@@ -125,7 +125,7 @@ theorem twp_universal_write {hlc : HasLC}
     iexists [], newWasm
     isplit
     · ipureintro
-      convert hinvoke using 1 <;> rfl
+      convert hinvoke using 1; rfl
     isplitl [Hbytes Hhost]
     · isplitl [Hbytes]
       · iexact Hbytes
@@ -444,7 +444,6 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
   have hlength_ne : length ≠ 0 := by
     intro hzero
     have hz : length.toNat = 0 := congrArg UInt32.toNat hzero
-    norm_num at hz
     omega
   iapply twp_block
   rw [writeOuterBody_eq]

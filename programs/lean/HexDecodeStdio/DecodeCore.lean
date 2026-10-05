@@ -89,7 +89,7 @@ theorem twp_decode_odd
     {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (out inputPtr len sp : UInt32) (oldResult : UInt64)
     (hodd : len &&& (1 : UInt32) ≠ 0)
-    (hsp : 96 ≤ sp.toNat)
+    (_hsp : 96 ≤ sp.toNat)
     (hout : out.toNat + 8 ≤ UInt32.size)
     (callerLocals : Locals) (stack : List Value) (code : Program)
     (arity : Nat) (remainder : List Value)

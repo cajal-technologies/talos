@@ -179,12 +179,12 @@ theorem func15_realloc_outcome {hlc : HasLC}
   iapply twp_memorySize_framed «module» ⟨0⟩ _ $$ HmemorySize
   iintro %pages ⟨Hruntime, Henv, Hhost, Hbump, Hold, Hnew, Hnext⟩
   rw [module_memIs64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   iapply twp_localTee rfl
   iapply twp_leU rfl
   by_cases henough :
       ((65535 + (newSize + ptr)) >>> (16 % 32)) ≤ UInt32.ofNat pages
-  · rw [if_pos henough]
+  · rw [ite_eq_left henough]
     iapply twp_brIf (by decide) rfl
     simp
     iapply twp_const

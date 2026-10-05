@@ -4,7 +4,7 @@ import Init.Internal.Order.While
 import Init.Data.List.SplitOn.Basic
 
 -- Evaluate `while` through Lean's checked unfolding equation.
-attribute [cbv_eval] whileM_eq_of_monadTail
+attribute [cbv_eval] Lean.Loop.forIn_eq_of_monadTail
 
 /-!
 # WAT decoder
