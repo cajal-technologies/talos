@@ -588,6 +588,11 @@ theorem validator_rejects_memory32_minimum_over_limit :
     validationErrorIs { funcs := [], memory := some { pagesMin := 65537 } }
       "memory size" = true := by decide +kernel
 
+theorem validator_rejects_memory32_maximum_over_limit :
+    validationErrorIs
+      { funcs := [], memory := some { pagesMin := 0, pagesMax := some 65537 } }
+      "memory size" = true := by decide +kernel
+
 theorem validator_accepts_memory64_above_memory32_limit :
     validationSucceeds
       { funcs := [], memory := some {
