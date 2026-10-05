@@ -435,7 +435,6 @@ theorem func3_correct_of [WasmSmallStepGS hlc Universal.State]
     rw [insertWrapDepth_eq] at hspLow; exact hspLow
   have h16 : (16 : UInt32) ≤ sp := by
     apply UInt32.le_iff_toNat_le.mpr
-    show (16 : UInt32).toNat ≤ sp.toNat
     have h : (16 : UInt32).toNat = 16 := rfl
     omega
   have hframeNat : (sp - 16).toNat = sp.toNat - 16 := by
