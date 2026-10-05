@@ -20223,10 +20223,10 @@ memory64.wast:35 assert_invalid pass
 memory64.wast:39 assert_invalid pass
 memory64.wast:43 assert_invalid pass
 memory64.wast:49 assert_invalid pass
-memory64.wast:54 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:58 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:63 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:67 assert_invalid skipped:assert_invalid: not rejected
+memory64.wast:54 assert_invalid pass
+memory64.wast:58 assert_invalid pass
+memory64.wast:63 assert_invalid pass
+memory64.wast:67 assert_invalid pass
 memory64.wast:71 module pass
 memory64.wast:159 assert_return pass
 memory64.wast:160 assert_return pass

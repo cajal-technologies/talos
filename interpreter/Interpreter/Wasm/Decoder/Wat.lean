@@ -2536,9 +2536,12 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   -- 64-bit memories may declare page bounds past 2^32; clamp them into
   -- the UInt32 fields. The effective grow ceiling (`Module.memoryCap`,
   -- 65536 pages) sits far below the clamp, so semantics are unaffected.
+  -- The spec's memory64 limit (2^48 pages) is checked here, before the
+  -- clamp erases it; the memory32 limit (65536) is `MemDecl.checkLimits`.
   let parsePages (s : String) : Except Err UInt32 :=
     if is64 then do
       let n ← parseUnsignedNat (stripUnderscores s)
+      if n > 2 ^ 48 then throw "memory size"
       .ok (UInt32.ofNat (Nat.min n 0xFFFFFFFF))
     else parseU32 s
   match xs with
