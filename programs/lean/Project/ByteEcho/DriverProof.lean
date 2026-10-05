@@ -21,6 +21,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.ByteEcho.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev HeapIProp := IProp (WasmHeapGF Universal.State)
 
 /-! ## Outcome-generic `i32.store8`
