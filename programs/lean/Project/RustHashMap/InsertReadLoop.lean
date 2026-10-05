@@ -92,11 +92,11 @@ open Project.RustHashMap.EntryContracts
 open Project.RustHashMap.VecGrow
 open Project.RustHashMap.ReadAll (FrameMap insertMap insertMap_wf
   cell_facts vec_addr vec_facts ByteSlice_byteFocus VecStorage_length_le
+  pointsTo_u32_address_eq VecU8_initialized_eq)
+open scoped Wasm.SmallStep.Outcome
 
 -- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
 set_option backward.isDefEq.respectTransparency false
-  pointsTo_u32_address_eq VecU8_initialized_eq)
-open scoped Wasm.SmallStep.Outcome
 
 /-! ## The generated program fragments -/
 

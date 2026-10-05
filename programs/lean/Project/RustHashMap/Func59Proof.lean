@@ -416,7 +416,7 @@ theorem func59_correct [WasmSmallStepGS hlc Universal.State] :
           rw [ite_eq_right hzero] at hfrontierWord
           simpa only [ite_eq_right hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
-  wasm_twp_pures [twp_add] rewriting [show (4294967295 : UInt32) + 4 = 3 by decide, hsumWord]
+  wasm_twp_pures [twp_add] rewriting [hsumWord]
   wasm_twp_localTee [List.length]
   wasm_twp_pures [twp_localGet]
   have hsumNotLt : ¬ UInt32.ofNat (frontier + 3) < (3 : UInt32) := by

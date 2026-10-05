@@ -72,11 +72,11 @@ open Project.RustHashMap.EntryContracts
 open Project.RustHashMap.VecGrow
 open Project.RustHashMap.ReadAll (FrameMap insertMap insertMap_wf
   readPrologue ByteSlice_split_at ByteSlice_header_as_words
+  pointsTo_u32_pair_as_u64 pointsTo_u32_address_eq vec_addr)
+open scoped Wasm.SmallStep.Outcome
 
 -- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
 set_option backward.isDefEq.respectTransparency false
-  pointsTo_u32_pair_as_u64 pointsTo_u32_address_eq vec_addr)
-open scoped Wasm.SmallStep.Outcome
 
 /-! ## Slices of the frame -/
 
