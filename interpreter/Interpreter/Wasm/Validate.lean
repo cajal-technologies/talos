@@ -585,6 +585,8 @@ def Module.checkInterface (m : Module) : Except String Unit := do
     if (m.tableDecl? index).isNone then throw "unknown table"
   for (_, index) in m.memoryExports do
     if (m.memoryDecl? index).isNone then throw "unknown memory"
+  for (_, index) in m.tagExports do
+    if m.tags[index]?.isNone then throw "unknown tag"
   let names :=
     m.exports.map (·.name) ++
     m.globalExports.map (·.1) ++
