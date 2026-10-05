@@ -54,7 +54,7 @@ theorem read_to_end_after_read_recursive
     apply UInt32.toNat_ofNat_of_lt'
     have hle := hinv.bytes_length_le_target (chunk := chunk)
     have hle' : bytes.length ≤ target.toNat := by
-      simpa [hbytes, htarget] using hle
+      simp [hbytes]
     have ht := hinv.target_le_spare (chunk := chunk)
     have hc := hinv.capacity_small
     have ht' : target.toNat ≤ capacity.toNat := by
@@ -65,7 +65,7 @@ theorem read_to_end_after_read_recursive
   have hcountLe : count ≤ target := by
     apply UInt32.le_iff_toNat_le.mpr
     rw [hcountNat]
-    simpa [hbytes] using List.length_take_le target.toNat remaining
+    simp [hbytes]
   have hlengthBound : readToEndStack.toNat + 12 + 4 ≤
       readStore.wasm.mem.pages * 65536 := by
     have hp : 17 ≤ readStore.wasm.mem.pages := by
@@ -111,7 +111,7 @@ theorem read_to_end_after_read_recursive
       rw [List.length_drop]
       have hpos : 0 < bytes.length := List.length_pos_iff.mpr hempty
       have hle : bytes.length ≤ remaining.length := by
-        simpa [hbytes] using List.length_take_le target.toNat remaining
+        simp [hbytes]
       omega
     have hnextLength : (length + count).toNat =
         length.toNat + count.toNat := by

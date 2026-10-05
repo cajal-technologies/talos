@@ -1245,7 +1245,7 @@ theorem twp_mergeMainLoop
             UInt32.toNat_ofNat_of_lt' hmidSize]
           exact hiNext
         iapply twp_geU (result := 0)
-          (by rw [if_neg (UInt32.not_le.mpr hiNextU)])
+          (by rw [ite_eq_right (UInt32.not_le.mpr hiNextU)])
         wasm_twp_pures [twp_localTee]
         wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
         have hlengthLt := hlayout.length_lt
@@ -1275,7 +1275,7 @@ theorem twp_mergeMainLoop
         have hge :
             UInt32.ofNat (state.i + 1) ≥ UInt32.ofNat mid := by
           rw [hiEq]; exact le_refl (UInt32.ofNat mid)
-        iapply twp_geU (result := 1) (by rw [if_pos hge])
+        iapply twp_geU (result := 1) (by rw [ite_eq_left hge])
         wasm_twp_pures [twp_localTee]
         iapply twp_brIf (by decide) (by rfl)
         simp only [sortLocals, List.length, List.set, List.take_zero,
@@ -1315,7 +1315,7 @@ theorem twp_mergeMainLoop
           UInt32.toNat_ofNat_of_lt' hmidSize]
         exact hiState
       iapply twp_geU (result := 0)
-        (by rw [if_neg (UInt32.not_le.mpr hiU)])
+        (by rw [ite_eq_right (UInt32.not_le.mpr hiU)])
       wasm_twp_pures [twp_localTee]
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
       by_cases hjNext : state.j + 1 < input.length
@@ -1348,7 +1348,7 @@ theorem twp_mergeMainLoop
               UInt32.ofNat (input.length - mid) := by
           rw [hjEq]
           rw [UInt32.lt_iff_toNat_lt]; exact Nat.lt_irrefl _
-        iapply twp_ltU (result := 0) (by rw [if_neg hnotRelative])
+        iapply twp_ltU (result := 0) (by rw [ite_eq_right hnotRelative])
         wasm_twp_pures [twp_brIfZero twp_br]
         simp only [sortLocals, List.length, List.set, List.take_zero,
           List.nil_append, sortRecursiveGuardFrame, emptyBlockFrame]
@@ -1452,7 +1452,7 @@ theorem twp_mergeLeftRemainder
         UInt32.toNat_ofNat_of_lt' hlayout.length_lt,
         UInt32.toNat_ofNat_of_lt' (Nat.lt_trans hkLt hlayout.length_lt)]
       omega
-    iapply twp_gtU (result := 1) (by rw [if_pos hkU])
+    iapply twp_gtU (result := 1) (by rw [ite_eq_left hkU])
     iapply twp_select (selected := .i32 (UInt32.ofNat input.length))
       (by simp)
     wasm_twp_pures [twp_sub twp_localSet]
@@ -1547,7 +1547,7 @@ theorem twp_mergeLeftRemainder
         (List.getElem?_eq_getElem hiCurrentLen)
       rw [mergeLeftLoopBody_shape]
       wasm_twp_pures [twp_localGet twp_localGet]
-      iapply twp_eq (result := 0) (by rw [if_neg hcounterNe])
+      iapply twp_eq (result := 0) (by rw [ite_eq_right hcounterNe])
       wasm_twp_pures [twp_brIfZero]
       iapply twp_copyPointerAt
         (params := [.i32 source, .i32 (UInt32.ofNat input.length),
@@ -1638,7 +1638,7 @@ theorem twp_mergeLeftRemainder
               -(UInt32.ofNat state.r + 1) := by
           rw [UInt32.ofNat_succ]
           simpa [UInt32.zero_sub] using hne
-        iapply twp_ne (result := 1) (by rw [if_pos hne])
+        iapply twp_ne (result := 1) (by rw [ite_eq_left hne])
         iapply twp_brIf (by decide) (by rfl)
         simp only [List.take_zero, List.nil_append]
         ispecialize Hrec $$
@@ -1661,7 +1661,7 @@ theorem twp_mergeLeftRemainder
               0 - UInt32.ofNat (state.r + 1)) := by
           intro hne
           exact hne heq
-        iapply twp_ne (result := 0) (by rw [if_neg hnotne])
+        iapply twp_ne (result := 0) (by rw [ite_eq_right hnotne])
         wasm_twp_pures [twp_brIfZero]
         iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
         simp only [List.take_zero, List.nil_append]
@@ -1778,7 +1778,7 @@ theorem twp_mergeRightRemainder
         UInt32.toNat_ofNat_of_lt' hlengthDiffSize]
       omega
     iapply twp_geU (result := 0)
-      (by rw [if_neg (UInt32.not_le.mpr hjRelative)])
+      (by rw [ite_eq_right (UInt32.not_le.mpr hjRelative)])
     wasm_twp_pures [twp_brIfZero]
     have hkEqJ : k = j := by omega
     have hkLt : k < input.length := by omega
@@ -1806,7 +1806,7 @@ theorem twp_mergeRightRemainder
         UInt32.toNat_ofNat_of_lt' hlayout.length_lt,
         UInt32.toNat_ofNat_of_lt' (by omega)]
       omega
-    iapply twp_gtU (result := 0) (by rw [if_neg hnotGt])
+    iapply twp_gtU (result := 0) (by rw [ite_eq_right hnotGt])
     iapply twp_select (selected := .i32 (UInt32.ofNat input.length))
       (by simp)
     wasm_twp_pures [twp_localSet]
@@ -1901,7 +1901,7 @@ theorem twp_mergeRightRemainder
         (List.getElem?_eq_getElem hjCurrent)
       rw [mergeRightLoopBody_shape]
       wasm_twp_pures [twp_localGet twp_localGet]
-      iapply twp_eq (result := 0) (by rw [if_neg hcounterNe])
+      iapply twp_eq (result := 0) (by rw [ite_eq_right hcounterNe])
       wasm_twp_pures [twp_brIfZero]
       iapply twp_copyPointerAt
         (params := [.i32 source, .i32 (UInt32.ofNat input.length),
@@ -2322,7 +2322,7 @@ theorem twp_sort
         UInt32.toNat_ofNat_of_lt' hlengthSize,
         UInt32.toNat_ofNat_of_lt' (Nat.lt_trans hmidLt hlengthSize)]
       omega
-    iapply twp_ltU (result := 0) (by rw [if_neg hscratchNotLt])
+    iapply twp_ltU (result := 0) (by rw [ite_eq_right hscratchNotLt])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet twp_localGet]
     have hleftLength' : left.length = input.length / 2 := by simpa only [mid] using hleftLength
     rw [← hleftLength']

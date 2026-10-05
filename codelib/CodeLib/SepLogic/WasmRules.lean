@@ -277,7 +277,7 @@ theorem store_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option 
       refine ⟨mem.write8 addr new_v, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write8, Mem.read8, haddr_ne, hm_eq] using hread
-    · exact ⟨m, by simp [if_neg hid, hm], hread⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hread⟩
 
 theorem store_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr : UInt32) (new_v : UInt8)
@@ -299,7 +299,7 @@ theorem store_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Opti
       refine ⟨mem.write8 addr new_v, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write8, hm_eq] using hlt
-    · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hlt⟩
 
 /-- Adding a sparse ghost key for an already-existing physical byte preserves
 heap/memory agreement.  Unlike `store_sound`, this changes no physical memory;
@@ -353,7 +353,7 @@ theorem grow_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option M
       have hbytes : memory.bytes = mem.bytes := by rw [← hmemory]
       simpa [Mem.read8, hbytes, ← hm_eq] using hread
     · contradiction
-  · exact ⟨m, by simp [if_neg hid, hm], hread⟩
+  · exact ⟨m, by simp [ite_eq_right hid, hm], hread⟩
 
 set_option maxRecDepth 4000 in
 /-- Existing ghost addresses stay in bounds after successful growth. -/
@@ -378,7 +378,7 @@ theorem grow_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
         hpages.symm ▸ Nat.le_add_right mem.pages delta.toNat
       exact Nat.lt_of_lt_of_le hlt (Nat.mul_le_mul_right 65536 hle)
     · contradiction
-  · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+  · exact ⟨m, by simp [ite_eq_right hid, hm], hlt⟩
 
 /-- The concrete four-byte fill used by the manual small-step example is the
 same physical update as storing the repeated byte as a little-endian word. -/
@@ -552,7 +552,7 @@ theorem store16_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       refine ⟨mem.write16 addr value, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write16, Mem.read8, n0, n1, hm_eq] using hread
-    · exact ⟨m, by simp [if_neg hid, hm], hread⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hread⟩
 
 theorem store16_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr value : UInt32)
@@ -579,7 +579,7 @@ theorem store16_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Op
       refine ⟨mem.write16 addr value, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write16, hm_eq] using hlt
-    · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hlt⟩
 
 def store32Heap (σ : WasmHeapMap (Option UInt8)) (memId : Nat) (addr value : UInt32) :
     WasmHeapMap (Option UInt8) :=
@@ -770,7 +770,7 @@ theorem store32_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       refine ⟨mem.write32 addr value, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write32, Mem.read8, n0, n1, n2, n3, hm_eq] using hread
-    · exact ⟨m, by simp [if_neg hid, hm], hread⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hread⟩
 
 theorem store32_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr value : UInt32)
@@ -808,7 +808,7 @@ theorem store32_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Op
       refine ⟨mem.write32 addr value, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write32, hm_eq] using hlt
-    · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hlt⟩
 
 /-- Claiming a word already present in physical memory preserves agreement. -/
 theorem insert_physical_word32_sound
@@ -1113,7 +1113,7 @@ theorem store64_sound (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Optio
       refine ⟨mem.write64 addr value, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write64, Mem.read8, n0, n1, n2, n3, n4, n5, n6, n7, hm_eq] using hread
-    · exact ⟨m, by simp [if_neg hid, hm], hread⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hread⟩
 
 theorem store64_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Option Mem)
     (memId : Nat) (mem : Mem) (addr : UInt32) (value : UInt64)
@@ -1165,7 +1165,7 @@ theorem store64_inBounds (σ : WasmHeapMap (Option UInt8)) (resolve : Nat → Op
       refine ⟨mem.write64 addr value, ?_, ?_⟩
       · simp [hid]
       · simpa [Mem.write64, hm_eq] using hlt
-    · exact ⟨m, by simp [if_neg hid, hm], hlt⟩
+    · exact ⟨m, by simp [ite_eq_right hid, hm], hlt⟩
 
 -- single-memory-0 wrappers for the common case where resolve = (fun id => if id = 0 then some mem else none)
 theorem store32_sound0 (σ : WasmHeapMap (Option UInt8))

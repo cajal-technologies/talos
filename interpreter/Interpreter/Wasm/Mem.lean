@@ -130,7 +130,7 @@ theorem Mem.fill_zero (m : Mem) (offset : Nat) (val : UInt8) :
   | mk pages bytes =>
     simp only [Mem.fill, Nat.add_zero]
     congr 1; funext i
-    exact if_neg (by omega)
+    exact ite_eq_right (by omega)
 
 theorem Mem.fill_read8_in (m : Mem) (offset len : Nat) (val : UInt8) (i : UInt32)
     (h : offset ≤ i.toNat ∧ i.toNat < offset + len) :
@@ -147,11 +147,11 @@ theorem Mem.write8_fill_eq (m : Mem) (addr : UInt32) (n : Nat) (val : UInt8) :
     (m.write8 addr val).fill (addr.toNat + 1) n val = m.fill addr.toNat (n + 1) val := by
   cases m; simp only [Mem.fill, Mem.write8]; congr 1; funext i
   by_cases h1 : addr.toNat + 1 ≤ i ∧ i < addr.toNat + 1 + n
-  · rw [if_pos h1, if_pos ⟨by omega, by omega⟩]
-  · rw [if_neg h1]
+  · rw [ite_eq_left h1, ite_eq_left ⟨by omega, by omega⟩]
+  · rw [ite_eq_right h1]
     by_cases h2 : i = addr.toNat
-    · subst h2; rw [if_pos rfl, if_pos (by omega)]
-    · rw [if_neg h2, if_neg (fun ⟨h3, h4⟩ => h1 ⟨by omega, by omega⟩)]
+    · subst h2; rw [ite_eq_left rfl, ite_eq_left (by omega)]
+    · rw [ite_eq_right h2, ite_eq_right (fun ⟨h3, h4⟩ => h1 ⟨by omega, by omega⟩)]
 
 /-- Copy `len` bytes from `[src, src+len)` to `[dst, dst+len)`. The
 result is defined pointwise — for an address `i` in the destination
@@ -213,21 +213,21 @@ theorem Mem.writeBytes_append (m : Mem) (offset : Nat) (xs ys : List UInt8) :
     simp only [List.length_append]
     by_cases hy : offset + xs.length ≤ i ∧
         i < offset + xs.length + ys.length
-    · rw [dif_pos hy]
+    · rw [dite_eq_left hy]
       have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by omega
-      rw [dif_pos hall]
+      rw [dite_eq_left hall]
       rw [List.getElem_append_right (by omega)]
       congr 1
       omega
-    · rw [dif_neg hy]
+    · rw [dite_eq_right hy]
       by_cases hx : offset ≤ i ∧ i < offset + xs.length
-      · rw [dif_pos hx]
+      · rw [dite_eq_left hx]
         have hall : offset ≤ i ∧ i < offset + (xs.length + ys.length) := by omega
-        rw [dif_pos hall]
+        rw [dite_eq_left hall]
         rw [List.getElem_append_left (by omega)]
-      · rw [dif_neg hx]
+      · rw [dite_eq_right hx]
         have hall : ¬(offset ≤ i ∧ i < offset + (xs.length + ys.length)) := by omega
-        rw [dif_neg hall]
+        rw [dite_eq_right hall]
 
 /-- Writing an empty byte list leaves memory unchanged. -/
 @[simp] theorem Mem.writeBytes_nil (m : Mem) (offset : Nat) :
@@ -237,7 +237,7 @@ theorem Mem.writeBytes_append (m : Mem) (offset : Nat) (xs ys : List UInt8) :
       simp only [Mem.writeBytes, List.length_nil, Nat.add_zero]
       congr
       funext i
-      rw [dif_neg (by omega)]
+      rw [dite_eq_right (by omega)]
 
 /-- Writing a nonempty byte list is a single-byte write followed by the tail.
 The bound identifies the natural offset with its `UInt32` address. -/
@@ -257,7 +257,7 @@ theorem Mem.writeBytes_cons (m : Mem) (offset : Nat) (b : UInt8)
       · subst i
         simp
       · simp only [hi, ↓reduceIte]
-        rw [dif_neg (by omega)]
+        rw [dite_eq_right (by omega)]
 
 /-- Read `len` bytes starting at byte offset `offset`. Used by the
 cross-memory `memory.copy`; the caller checks bounds. -/
@@ -295,7 +295,7 @@ theorem Mem.writeBytesFrom_read8_in (m : Mem) (dst : Nat) (src : List UInt8)
     (hin : dst ≤ i.toNat ∧ i.toNat < dst + len)
     (hbound : srcOff + (i.toNat - dst) < src.length) :
     (m.writeBytesFrom dst src srcOff len).read8 i = src[srcOff + (i.toNat - dst)] := by
-  simp only [Mem.writeBytesFrom, Mem.read8, if_pos hin,
+  simp only [Mem.writeBytesFrom, Mem.read8, ite_eq_left hin,
              List.getElem?_eq_getElem hbound, Option.getD_some]
 
 theorem Mem.writeBytesFrom_read8_out (m : Mem) (dst : Nat) (src : List UInt8)

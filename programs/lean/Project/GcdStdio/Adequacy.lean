@@ -21,6 +21,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.GcdStdio.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev HeapIProp := IProp (WasmHeapGF Universal.State)
 
 def entryInitialStore (a b : UInt64) : Store Universal.State :=
@@ -373,7 +376,7 @@ private theorem twp_entry [WasmSmallStepGS hlc Universal.State]
   iapply twp_localGet rfl
   iapply twp_select (selected := .i32 heapBase) (by decide)
   iapply twp_add
-  rw [show heapBase + ((4294967295 : UInt32) + 1) = heapBase by decide]
+  simp only [UInt32.add_zero]
   iapply twp_localTee rfl
   simp only [List.length]
   iapply twp_localGet rfl

@@ -20,15 +20,15 @@ theorem Mem.readBytes_write8_append (m : Mem) (off len : Nat)
       rw [List.getElem_append_left hprefix']
       have holdAt := congrArg (fun xs => xs[i]?) hbytes
       simp only [Mem.readBytes, List.getElem?_map, List.getElem?_range,
-        hprefix, ↓reduceDIte, Option.map_some] at holdAt
+        hprefix, Option.map_some] at holdAt
       rw [List.getElem?_eq_getElem hprefix'] at holdAt
       simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
         Mem.write8]
-      rw [if_neg (by omega)]
+      rw [ite_eq_right (by omega)]
       exact Option.some.inj holdAt
     · have hieq : i = len := by omega
       subst i
-      simpa [Mem.readBytes, Mem.write8, haddr, ← hlen]
+      simp [Mem.readBytes, Mem.write8, haddr, ← hlen]
 
 theorem DecodeLoopInv.append_address
     {input consumed remaining decoded : List UInt8}
@@ -138,7 +138,7 @@ theorem Mem.read32_write8_disjoint_loop (m : Mem)
       writeAddr.toNat + 1 ≤ readAddr.toNat) :
     (m.write8 writeAddr value).read32 readAddr = m.read32 readAddr := by
   simp only [Mem.read32, Mem.write8]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals rcases h with hbefore | hafter <;> omega
 
 theorem DecodeLoopInv.appended_read32_scratch
@@ -165,7 +165,7 @@ theorem DecodeLoopInv.appended_vector_length
     {store : MachineStore Universal.State}
     {inputCapacity data inputLen ptr capacity outLen bump : UInt32}
     {pending : UInt8}
-    (h : DecodeLoopInv input consumed remaining decoded store inputCapacity
+    (_h : DecodeLoopInv input consumed remaining decoded store inputCapacity
       data inputLen ptr capacity outLen bump pending) :
     (decodeLoopAppendStore store ptr outLen pending).wasm.mem.read32
         (coreFrame + 68) = 1 + outLen := by
@@ -393,7 +393,7 @@ theorem DecodeLoopInv.after_valid_pair_no_grow
       · decide
     all_goals decide
   · rw [decodeLoopPairValidStore_pointer]
-    simp [inputPtr, List.length_append, UInt32.ofNat_add]
+    simp [List.length_append, UInt32.ofNat_add]
     ac_rfl
   · rw [decodeLoopPairValidStore_index]
     exact hindexNext
