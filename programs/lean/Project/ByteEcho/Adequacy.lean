@@ -207,21 +207,21 @@ theorem prefix_steps (b : UInt8) :
   rw [entryStore_module, entryStore_mem, entryMemory_pages]
   exact Steps.refl _
 
-@[simp] theorem afterSizeConfig_entry (b : UInt8) :
+@[local simp] theorem afterSizeConfig_entry (b : UInt8) :
     (afterSizeConfig b).store.runtime.entry = ⟨0⟩ := by rfl
 
-@[simp] theorem afterSizeConfig_entry_id (b : UInt8) :
+@[local simp] theorem afterSizeConfig_entry_id (b : UInt8) :
     (afterSizeConfig b).store.runtime.entry.id = 0 := by rfl
 
-@[simp] theorem afterSizeConfig_currentModule (b : UInt8) :
+@[local simp] theorem afterSizeConfig_currentModule (b : UInt8) :
     (afterSizeConfig b).store.runtime.currentModule =
       Project.ByteEcho.module := by rfl
 
-@[simp] theorem afterSizeConfig_currentHost (b : UInt8) :
+@[local simp] theorem afterSizeConfig_currentHost (b : UInt8) :
     (afterSizeConfig b).store.runtime.currentHost =
       Universal.envFor Project.ByteEcho.module := by rfl
 
-@[simp] theorem afterSizeConfig_host (b : UInt8) :
+@[local simp] theorem afterSizeConfig_host (b : UInt8) :
     (afterSizeConfig b).store.wasm.host = Universal.State.ofInput [b] := by rfl
 
 /-! ## Physical resources at the split point -/

@@ -259,8 +259,11 @@ theorem twp_afterAlloc
   iapply Wasm.SmallStep.twp_call Project.ByteEcho.module 7
       Project.ByteEcho.func4Def (by decide) func4_index $$ Hmodule
   iintro Hmodule
-  simp [Project.ByteEcho.func4Def, Project.ByteEcho.func4,
-    Function.toLocals, Function.numParams]
+  simp only [Function.toLocals, Function.numParams, Project.ByteEcho.func4Def,
+    Project.ByteEcho.func4, List.length_cons, List.length_nil, zero_add,
+    Nat.reduceAdd, List.take_succ_cons, List.take_nil, List.reverse_cons,
+    List.reverse_nil, List.nil_append, List.cons_append, List.map_nil,
+    List.drop_succ_cons, List.drop_nil]
   iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hmodule
   iintro Hmodule
   simp only [List.take_zero, List.nil_append]
