@@ -183,7 +183,8 @@ echo "differential: miscast  = $(git rev-parse --short HEAD)   oracle = v8 (node
 if (( ci )); then
     # Keep user-supplied output/baseline paths relative to the repository.
     cd "$ROOT"
-    python3 -B "$ROOT/scripts/differential-ci.py" --miscast "$miscast" "${args[@]}"
+    # ${args[@]+...}: bash 3.2 (macOS) treats an empty array as unbound under set -u.
+    python3 -B "$ROOT/scripts/differential-ci.py" --miscast "$miscast" ${args[@]+"${args[@]}"}
 else
     python3 -B -m miscast --sut custom --oracles v8 "${args[@]}"
     echo "differential: reproducers under $miscast/work/repro/"
