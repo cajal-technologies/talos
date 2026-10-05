@@ -17,6 +17,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func5_index :
     Project.Mergesort.module.funcs[5]? =
       some Project.Mergesort.func5Def := by rfl
@@ -331,12 +334,12 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       (selected := .i32 (UInt32.ofNat frontier)) (by
         split
         · rename_i hnonzero
-          rw [if_pos hnonzero] at hfrontierWord
-          simpa only [if_pos hnonzero] using
+          rw [ite_eq_left hnonzero] at hfrontierWord
+          simpa only [ite_eq_left hnonzero] using
             congrArg Value.i32 hfrontierWord.symm
         · rename_i hzero
-          rw [if_neg hzero] at hfrontierWord
-          simpa only [if_neg hzero, heapBase] using
+          rw [ite_eq_right hzero] at hfrontierWord
+          simpa only [ite_eq_right hzero, heapBase] using
             congrArg Value.i32 hfrontierWord.symm)
   wasm_twp_pures [twp_add] rewriting [hsumWord]
   wasm_twp_localTee [List.length]
@@ -349,7 +352,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       UInt32.toNat_ofNat_of_lt' (by
         exact Nat.lt_of_le_of_lt hpadSmall (by decide))]
     omega
-  iapply twp_ltU (result := 0) (by rw [if_neg hsumNotLt])
+  iapply twp_ltU (result := 0) (by rw [ite_eq_right hsumNotLt])
   wasm_twp_pures [twp_brIfZero]
   let base : UInt32 :=
     UInt32.ofNat (frontier + (layout.alignment - 1)) &&&
@@ -393,7 +396,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
-    rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
+    rw [ite_eq_right (UInt32.not_lt.mpr hbaseLeFinish)])
   wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
   by_cases hfinishFails : ¬ finishNat < 2147483648
   · have hfinishHigh : 2147483648 ≤ finishNat := by omega
@@ -404,16 +407,16 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       change (if 2 * finish.toNat < 4294967296 then
         (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
       omega
-    iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
+    iapply twp_ltS (result := 1) (by rw [ite_eq_left hfinishNegative])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_zero, List.nil_append]
     simp [ValueType.zero]
     rw [hsumWord]
     have hclassify : classifyBump frontier layout = .oom := by
       unfold classifyBump
-      rw [dif_pos hsumBound]
+      rw [dite_eq_left hsumBound]
       simp only
-      rw [if_neg]
+      rw [ite_eq_right]
       intro hsuccess
       exact hfinishFails hsuccess.2
     isimp only [AllocContinuation, hclassify] at Hcont
@@ -449,14 +452,14 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
       change ¬ (if 2 * finish.toNat < 4294967296 then
         (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
       omega
-    iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
+    iapply twp_ltS (result := 0) (by rw [ite_eq_right hfinishNonnegative])
     wasm_twp_pures [twp_brIfZero]
     have hclassify :
         classifyBump frontier layout = .success base finish := by
       unfold classifyBump
-      rw [dif_pos hsumBound]
+      rw [dite_eq_left hsumBound]
       simp only
-      rw [if_pos ⟨hfinishWordBound, hfinishSigned⟩]
+      rw [ite_eq_left ⟨hfinishWordBound, hfinishSigned⟩]
     isimp only [AllocContinuation, hclassify] at Hcont
     wasm_twp_pures [twp_localGet twp_const twp_add]
     rw [UInt32.add_comm (65535 : UInt32) finish]
@@ -502,7 +505,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
     wasm_twp_pures [twp_localTee]
     simp
     by_cases hfits : allocatorRequiredPages finish ≤ pages.toUInt32
-    · iapply twp_leU (result := 1) (by rw [if_pos hfits])
+    · iapply twp_leU (result := 1) (by rw [ite_eq_left hfits])
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.nil_append]
       have hpagesWord : pages.toUInt32.toNat ≤ pages := by
@@ -520,7 +523,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
           remainder controls calls s E Φ hfrontierLow hwf hvalid
           halignmentCases hclassify hbaseFresh hallocWord hfinishExact hphysical
       iframe Hruntime Hcursor Hfrontier Hauth Hretired Hmeasured Hstreams Hnormal
-    · iapply twp_leU (result := 0) (by rw [if_neg hfits])
+    · iapply twp_leU (result := 0) (by rw [ite_eq_right hfits])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
       let delta := allocatorRequiredPages finish - pages.toUInt32
       ihave HgrowFrame : iprop(

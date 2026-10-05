@@ -11,8 +11,8 @@ path = "../interpreter"
 name = "iris"
 git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-# Pin upstream master (total weakest preconditions from iris-lean#554 now merged).
-rev = "728a17140939e49af9236f7cb0d037da9ec52435"
+# Pin the upstream Lean 4.34.1 migration (iris-lean#702).
+rev = "04b7689c294bb1dd6401e2dd53b337871934ea47"
 
 [[lean_lib]]
 name = "CodeLib"

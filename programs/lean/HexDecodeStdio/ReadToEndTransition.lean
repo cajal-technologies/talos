@@ -78,7 +78,7 @@ theorem Mem.read32_fill_before (m : Mem) (destination count : Nat)
     (value : UInt8) :
     (m.fill destination count value).read32 address = m.read32 address := by
   simp only [Mem.read32, Mem.fill]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals omega
 
 theorem Mem.read32_fill_disjoint (m : Mem) (destination count : Nat)
@@ -87,7 +87,7 @@ theorem Mem.read32_fill_disjoint (m : Mem) (destination count : Nat)
       destination + count ≤ address.toNat) (value : UInt8) :
     (m.fill destination count value).read32 address = m.read32 address := by
   simp only [Mem.read32, Mem.fill]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals rcases h with hbefore | hafter <;> omega
 
 private theorem reassemble_low_nat (v : Nat) :
@@ -152,7 +152,7 @@ private theorem reassemble_high_nat (b0 b1 b2 b3 b4 b5 b6 b7 : Nat)
       simp only [show (32 + i < 64) by omega, show 32+i-40 = i-8 by omega, show ¬ (48 ≤ 32+i) by omega,
         show ¬ (56 ≤ 32+i) by omega, show ¬ (16 ≤ i) by omega, show ¬ (24 ≤ i) by omega,
         hi, h,  decide_true, decide_false, Bool.false_and, Bool.and_false, Bool.or_false,
-        Bool.false_or, Bool.true_and, show (40:Nat) ≤ 32+i by omega, show (8:Nat) ≤ i by omega]
+        Bool.false_or, Bool.true_and, show (40:Nat) ≤ 32+i by omega]
     rcases Nat.lt_or_ge i 24 with h3i | h3i
     · rw [hbit b0 (32+i) h0 (by omega), hbit b1 (32+i-8) h1 (by omega),
         hbit b2 (32+i-16) h2 (by omega), hbit b3 (32+i-24) h3 (by omega),
@@ -224,7 +224,7 @@ theorem Mem.readBytes_write64_disjoint (m : Mem) (off len : Nat)
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
       Mem.write64]
-    rw [if_neg, if_neg, if_neg, if_neg, if_neg, if_neg, if_neg, if_neg]
+    rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
     all_goals rcases h with hafter | hbefore <;> omega
 
 def readToEndAppliedStore (store : MachineStore Universal.State)
@@ -240,7 +240,7 @@ theorem ReadToEndInv.bytes_length_le_target
     {input consumed remaining : List UInt8}
     {store : MachineStore Universal.State}
     {capacity data length bump chunk : UInt32}
-    (h : ReadToEndInv input consumed remaining store capacity data length bump) :
+    (_h : ReadToEndInv input consumed remaining store capacity data length bump) :
     (remaining.take (readToEndTarget chunk capacity length).toNat).length ≤
       (readToEndTarget chunk capacity length).toNat := by
   simp
@@ -711,32 +711,28 @@ theorem read_to_end_return_success
     0 [] [] [] decodeInputVector readToEndStack chunk capacity data length
     filled target count decodeStack vectorWord
     (by simp [readToEndLengthStore]) rfl
-    (by change readToEndStack.toNat + 12 + 4 ≤
-        store.wasm.mem.pages * 65536
+    (by
         have hp : 17 ≤ store.wasm.mem.pages := by
           simpa [readToEndLengthStore] using hinv.pages_lower
         change 1048512 ≤ store.wasm.mem.pages * 65536
         omega)
-    (by change readToEndStack.toNat + 4 + 8 ≤
-        store.wasm.mem.pages * 65536
+    (by
         have hp : 17 ≤ store.wasm.mem.pages := by
           simpa [readToEndLengthStore] using hinv.pages_lower
         change 1048508 ≤ store.wasm.mem.pages * 65536
         omega)
-    (by change decodeInputVector.toNat + 8 + 4 ≤
-        store.wasm.mem.pages * 65536
+    (by
         have hp : 17 ≤ store.wasm.mem.pages := by
           simpa [readToEndLengthStore] using hinv.pages_lower
         change 1048564 ≤ store.wasm.mem.pages * 65536
         omega)
-    (by change decodeInputVector.toNat + 8 ≤
-        store.wasm.mem.pages * 65536
+    (by
         have hp : 17 ≤ store.wasm.mem.pages := by
           simpa [readToEndLengthStore] using hinv.pages_lower
         change 1048560 ≤ store.wasm.mem.pages * 65536
         omega)
     (by decide)
-    (by simpa [updated, hinv.global_eq])
+    (by simp [hinv.global_eq])
     (by bv_normalize (config := { enums := false }))
   apply ReachesOrOOM.of_reaches (by
     simpa [updated, vectorWord, finalStore, decodeAfterReadConfig] using hreach)

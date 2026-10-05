@@ -17,7 +17,7 @@ def decodeCoreLoopControl : ControlFrame :=
     belowStack := [] }
 
 def decodeAfterPairConfig (store : MachineStore Universal.State)
-    (data len ptr : UInt32) (seed pending : UInt8)
+    (data _len ptr : UInt32) (seed _pending : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 8, .i32 1],
       [.i32 coreFrame, .i32 ptr, .i32 seed.toUInt32], []⟩,
@@ -32,7 +32,7 @@ def decodeAfterPairConfig (store : MachineStore Universal.State)
        returningInstance := returningInstance }]⟩, store⟩
 
 def decodeLoopHeadConfig (store : MachineStore Universal.State)
-    (data len ptr outLen : UInt32) (seed pending : UInt8)
+    (data _len ptr outLen : UInt32) (seed pending : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 pending.toUInt32, .i32 outLen],
       [.i32 coreFrame, .i32 ptr, .i32 seed.toUInt32], []⟩,
@@ -90,7 +90,7 @@ def decodeLoopAppendStore (store : MachineStore Universal.State)
   { store with wasm := { store.wasm with mem := mem1 } }
 
 def decodeLoopCallConfig (store : MachineStore Universal.State)
-    (data len ptr outLen : UInt32) (seed pending : UInt8)
+    (data _len ptr outLen : UInt32) (seed pending : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   let nextLen := 1 + outLen
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 pending.toUInt32, .i32 nextLen],
@@ -243,12 +243,12 @@ theorem decode_loop_pair_valid_next
       Mem.read8, Mem.write8]
   rw [show coreFrame + 8 = loopPairOut by decide, htag]
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-  simp [decodeLoopHeadConfig, paired, next, decodeCoreLoopBody,
+  simp [decodeLoopHeadConfig, next, decodeCoreLoopBody,
     decodeCoreLoopControl, decodeCoreAfterLoop, coreBlockControl]
   exact ⟨[], .refl _⟩
 
 def decodeAfterLoopPairConfig (store : MachineStore Universal.State)
-    (data len ptr outLen : UInt32) (seed pending : UInt8)
+    (data _len ptr outLen : UInt32) (seed pending : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 pending.toUInt32,
         .i32 (1 + outLen)],
@@ -265,7 +265,7 @@ def decodeAfterLoopPairConfig (store : MachineStore Universal.State)
        returningInstance := returningInstance }]⟩, store⟩
 
 def decodeLoopExitConfig (store : MachineStore Universal.State)
-    (data len ptr outLen : UInt32) (seed payload : UInt8)
+    (data _len ptr outLen : UInt32) (seed payload : UInt8)
     (returningInstance : ModuleInstanceId) : Config Universal.State :=
   ⟨.running ⟨⟨[.i32 decodeResultOut, .i32 payload.toUInt32,
         .i32 (1 + outLen)],

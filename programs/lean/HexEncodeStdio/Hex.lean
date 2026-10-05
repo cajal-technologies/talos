@@ -135,7 +135,6 @@ theorem encode_take_high (bytes : List UInt8) (i : Nat)
     _ = (encode (bytes.take i) ++ encodeByte bytes[i]).take
         (2 * i + 1) := by
       rw [encode_take_succ bytes i hi]
-      rfl
     _ = encode (bytes.take i) ++ [hexDigit (bytes[i].toNat / 16)] :=
       (encode_prefix_high bytes i hi).symm
 

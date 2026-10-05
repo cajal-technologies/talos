@@ -31,45 +31,32 @@ theorem decodeWrapperReserveFacts (length capacity : UInt32)
     · omega
     · norm_num [UInt32.size] at hupper ⊢
       omega
-  have hdoubled : ((8 : UInt32) <<< 1).toNat = 16 := by decide
   have hdoubledEq : ((8 : UInt32) <<< 1) = 16 := by decide
   have hnew : (reserveNewCapacity 1 length 8).toNat =
       max (length.toNat + 1) 16 := by
-    simp only [reserveNewCapacity, reserveCandidate, reserveRequired,
-      reserveDoubled]
-    split
-    · rename_i hcandidate
-      split
-      · rename_i _
-        have hn := UInt32.lt_iff_toNat_lt.mp hcandidate
-        rw [hdoubledEq, hrequired] at hn
-        norm_num at hn
-        have h16 : (16 : UInt32).toNat = 16 := by decide
-        rw [h16] at hn
-        rw [hrequired]
-        omega
-      · rename_i hnotEight
-        exfalso
-        apply hnotEight
-        apply UInt32.lt_iff_toNat_lt.mpr
-        rw [hrequired]
-        have h8 : (8 : UInt32).toNat = 8 := by decide
-        rw [h8]
-        omega
-    · rename_i hnotRequired
-      split
-      · rw [hdoubled]
-        symm
-        apply max_eq_right
-        by_contra hno
-        apply hnotRequired
-        apply UInt32.lt_iff_toNat_lt.mpr
-        rw [hrequired, hdoubled]
-        omega
-      · rename_i hnotEight
-        exfalso
-        apply hnotEight
-        decide
+    simp +instances only [reserveNewCapacity, reserveCandidate, reserveRequired,
+      reserveDoubled, hdoubledEq]
+    have hlarge : (8 : UInt32) < 1 + length := by
+      apply UInt32.lt_iff_toNat_lt.mpr
+      rw [hrequired]
+      change 8 < length.toNat + 1
+      omega
+    by_cases hcandidate : (16 : UInt32) < 1 + length
+    · simp only [ite_eq_left hcandidate, ite_eq_left hlarge, hrequired]
+      symm
+      apply max_eq_left
+      have hn := UInt32.lt_iff_toNat_lt.mp hcandidate
+      rw [hrequired] at hn
+      change 16 < length.toNat + 1 at hn
+      omega
+    · simp only [ite_eq_right hcandidate, show (16 : UInt32) > 8 from by decide,
+        ite_true]
+      symm
+      apply max_eq_right
+      have hn := UInt32.not_lt.mp hcandidate
+      have hn' := UInt32.le_iff_toNat_le.mp hn
+      rw [hrequired] at hn'
+      exact hn'
   change (1 + length).toNat = length.toNat + 1 ∧ _
   rw [hrequired, hnew]
   constructor
@@ -80,14 +67,11 @@ theorem decodeWrapperReserveFacts (length capacity : UInt32)
   · omega
   constructor
   · simp only [reallocatorCopyLen]
-    rw [if_neg]
+    rw [ite_eq_right]
     intro hlt
     have hn := UInt32.lt_iff_toNat_lt.mp hlt
     rw [hnew] at hn
-    norm_num at hn ⊢
-    have h8 : (8 : UInt32).toNat = 8 := by decide
-    rw [h8] at hn
-    omega
+    norm_num at hn
   · omega
 
 def decodeSuccessOuterControl : ControlFrame :=
@@ -121,10 +105,10 @@ theorem decode_status_allocated_preserves_output
     (store allocStore : MachineStore Universal.State)
     (source capacity outLen bump : UInt32) (bytes : List UInt8)
     (hbytes : store.wasm.mem.readBytes source.toNat bytes.length = bytes)
-    (hlen : outLen.toNat = bytes.length)
-    (hfits : outLen.toNat ≤ capacity.toNat)
+    (_hlen : outLen.toNat = bytes.length)
+    (_hfits : outLen.toNat ≤ capacity.toNat)
     (hsource : 1054000 ≤ source.toNat)
-    (hend : source.toNat + capacity.toNat = bump.toNat)
+    (_hend : source.toNat + capacity.toNat = bump.toNat)
     (hsuccess : ByteGrowSuccess
       (reserveFrameStore store (decodeStack - 16)) 0 1 8 bump allocStore) :
     (decodeStatusAllocatedStore allocStore bump).wasm.mem.readBytes
@@ -185,7 +169,7 @@ theorem decode_success_after_alloc_to_blocks
     change 1048552 ≤ store.wasm.mem.pages * 65536
     omega))
   rw [setMemory_eq]
-  simp [decodeStatusReadyStore, Locals.set?]
+  simp [decodeStatusReadyStore]
   exact ⟨[], .refl _⟩
 
 def decodeSuccessOutputStore (store : MachineStore Universal.State)
@@ -231,10 +215,9 @@ theorem decode_success_small_reaches_common
   have hsmallWord : outLen ≤ (7 : UInt32) := by
     apply UInt32.le_iff_toNat_le.mpr
     simpa using hsmall
-  simp only [decodeSuccessBlocks, decodeSuccessOuterBody,
-    decodeSuccessMiddleBody, decodeSuccessInnerBody, firstBlockBody,
-    decodeSuccessTail, decodeSuccessOuterContinuation,
-    decodeSuccessMiddleContinuation, decodeSuccessAfterAlloc,
+  simp only [decodeSuccessBlocks,
+    firstBlockBody,
+    decodeSuccessAfterAlloc,
     decodeStatusBody4, decodeStatusBody3, decodeStatusBody2,
     decodeStatusBody1, decodeAfterCore, decodeAfterRead, func9, List.drop]
   apply Reaches.prepend Step.block
@@ -259,8 +242,7 @@ theorem decode_success_small_reaches_common
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.eqz (result := 1) rfl)
     apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
-    simp [decodeSuccessOuterControl, decodeSuccessMiddleControl,
-      decodeSuccessInnerControl]
+    simp
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.localGet rfl)
     apply Reaches.prepend (Step.localGet rfl)
@@ -277,8 +259,8 @@ theorem decode_success_small_reaches_common
       apply Reaches.prepend (Step.eqz (result := 1) (by simp [hcapZero]))
       apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
       change Reaches _ (decodeCommonConfig finished data capacity 0 1 source)
-      simp [decodeStatusControl1, decodeStatusControl2, decodeStatusControl3,
-        decodeStatusControl4, decodeCommonConfig, decodeSuccessOutputStore,
+      simp [decodeStatusControl1,
+        decodeCommonConfig,
         finished]
       exact ⟨[], .refl _⟩
     · apply Reaches.prepend (Step.localGet rfl)
@@ -298,8 +280,8 @@ theorem decode_success_small_reaches_common
       refine hdealloc.trans ?_
       apply Reaches.prepend (Step.br rfl)
       change Reaches _ (decodeCommonConfig finished data capacity 0 1 source)
-      simp [decodeStatusControl1, decodeStatusControl2, decodeStatusControl3,
-        decodeStatusControl4, decodeCommonConfig, decodeSuccessOutputStore,
+      simp [decodeStatusControl1,
+        decodeCommonConfig,
         finished]
       exact ⟨[], .refl _⟩
   · apply Reaches.prepend (Step.localGet rfl)
@@ -379,8 +361,8 @@ theorem decode_success_small_reaches_common
             decodeStatusReadyStore] using hfacts.runtime_module)
     refine hdealloc.trans ?_
     apply Reaches.prepend (Step.br rfl)
-    simp [decodeStatusControl1, decodeStatusControl2, decodeStatusControl3,
-      decodeStatusControl4, decodeCommonConfig, decodeSuccessOutputStore,
+    simp [decodeStatusControl1,
+      decodeCommonConfig, decodeSuccessOutputStore,
       decodeSuccessLengthStore, finished, copied, decodeSuccessCopiedStore,
       ready, hzero]
     exact ⟨[], .refl _⟩
@@ -408,7 +390,7 @@ theorem decodeSuccessOutputStore_readBytes
       simp [hzero]
     subst bytes
     simp only [List.length_nil, Nat.zero_add]
-    simp only [decodeSuccessOutputStore, hzero, if_true,
+    simp only [decodeSuccessOutputStore, hzero, ite_true,
       decodeSuccessLengthStore]
     rw [Mem.readBytes_write32_disjoint]
     · simp [Mem.readBytes, Mem.read8] at hstatus ⊢
@@ -416,14 +398,14 @@ theorem decodeSuccessOutputStore_readBytes
     · right
       change 1048552 ≤ destination.toNat
       exact hdestinationLower
-  · simp only [decodeSuccessOutputStore, hzero, if_false,
+  · simp only [decodeSuccessOutputStore, hzero, ite_false,
       decodeSuccessLengthStore, decodeSuccessCopiedStore]
     rw [Mem.readBytes_write32_disjoint]
     · rw [Mem.readBytes_succ, hnext, ← hlength,
         Mem.readBytes_copy_destination, hlength, hsource]
       congr 1
-      simp only [Mem.copy, Mem.read8]
-      rw [if_neg]
+      simp only [Mem.copy]
+      rw [ite_eq_right]
       · exact hstatus
       · omega
     · right
@@ -470,8 +452,8 @@ theorem decode_success_large_to_reserve
     have h7 : (7 : UInt32).toNat = 7 := by decide
     rw [h7] at hn
     omega
-  simp only [decodeSuccessBlocks, decodeSuccessOuterBody,
-    decodeSuccessMiddleBody, decodeSuccessInnerBody, firstBlockBody,
+  simp only [decodeSuccessBlocks,
+    firstBlockBody,
     decodeSuccessAfterAlloc, decodeStatusBody4, decodeStatusBody3,
     decodeStatusBody2, decodeStatusBody1, decodeAfterCore, decodeAfterRead,
     func9, List.drop]
@@ -535,7 +517,7 @@ theorem decode_success_after_reserve_reaches_common
   rw [hlength]
   apply Reaches.prepend (Step.localSet rfl)
   apply Reaches.prepend (Step.br rfl)
-  simp [decodeSuccessInnerControl, decodeSuccessMiddleControl]
+  simp [decodeSuccessMiddleControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.eqz (result := 0) (by simp [hnonzero]))
   apply Reaches.prepend Step.brIfZero
@@ -578,8 +560,8 @@ theorem decode_success_after_reserve_reaches_common
           decodeSuccessCopiedStore] using hruntime)
   refine hdealloc.trans ?_
   apply Reaches.prepend (Step.br rfl)
-  simp [decodeStatusControl1, decodeStatusControl2, decodeStatusControl3,
-    decodeStatusControl4, decodeCommonConfig, decodeSuccessOutputStore,
+  simp [decodeStatusControl1,
+    decodeCommonConfig, decodeSuccessOutputStore,
     decodeSuccessLengthStore, finished, copied, decodeSuccessCopiedStore,
     hnonzero]
   exact ⟨[], .refl _⟩
@@ -700,7 +682,6 @@ theorem decode_success_small_wrapper_outcome
         ready.wasm.mem.pages * 65536 := by
       change source.toNat + outLen.toNat ≤ allocStore.wasm.mem.pages * 65536
       exact le_trans hsourceBound (Nat.mul_le_mul_right 65536 (by
-        change store.wasm.mem.pages ≤ allocStore.wasm.mem.pages
         exact hsuccess.pages_mono))
     have hdestinationReadyBound : (1 + statusPtr).toNat + outLen.toNat ≤
         ready.wasm.mem.pages * 65536 := by
@@ -1145,7 +1126,6 @@ theorem decode_success_large_wrapper_outcome
           exact ha.pages_lower
         omega)
       (by
-        change ready.wasm.mem.pages ≤ 65536
         change allocated.wasm.mem.pages ≤ 65536
         exact ha.pages_upper)
       (UInt32.toInt32_not_negative_of_small _ hnewSigned')
@@ -1298,7 +1278,6 @@ theorem decode_success_large_wrapper_outcome
         exact le_trans (by
           change source.toNat + outLen.toNat ≤ ready.wasm.mem.pages * 65536
           exact le_trans hsourceBound (Nat.mul_le_mul_right 65536 (by
-            change store.wasm.mem.pages ≤ ready.wasm.mem.pages
             exact le_trans hsuccess.pages_mono (by rfl))))
           (Nat.mul_le_mul_right 65536 halloc2Pages)
       have hnext : (1 + newPtr).toNat = newPtr.toNat + 1 := by
@@ -1426,7 +1405,6 @@ theorem decode_success_large_wrapper_outcome
         (by rw [hfinalRuntime]; exact hreservedRuntime)
         (by
           rw [hfinalRuntime]
-          change reserved.runtime.currentHost = Universal.envFor «module»
           change allocStore2.runtime.currentHost = Universal.envFor «module»
           rw [hsuccess2.runtime_eq]
           simpa [reserveFrameStore, ready, decodeStatusReadyStore] using

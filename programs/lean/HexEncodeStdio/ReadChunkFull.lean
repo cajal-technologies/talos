@@ -147,7 +147,7 @@ theorem read_chunk_first_outcome
   have hafterEnv : after.runtime.currentHost = Universal.envFor «module» := by
     simpa [after] using henv
   by_cases hempty : bytes = []
-  · simp only [if_pos hempty]
+  · simp only [ite_eq_left hempty]
     have hcountZero : count = 0 := by simp [count, hempty]
     have hsuffix := read_chunk_after_read_eof after outerParams
       outerLocalValues stack code arity remainder controls calls
@@ -158,7 +158,7 @@ theorem read_chunk_first_outcome
       (by rw [hafterPages]; decide) (by rw [hafterPages]; decide)
       (by simp [hafterGlobal])
     exact ReachesOrOOM.of_reaches hsuffix (by rfl)
-  · simp only [if_neg hempty]
+  · simp only [ite_eq_right hempty]
     have hcountNe : count ≠ 0 := by
       intro hz
       have : count.toNat = 0 := congrArg UInt32.toNat hz
@@ -274,7 +274,7 @@ theorem read_chunk_first_outcome
         change ¬(if 2 * (reserveNewCapacity 0 count 0).toNat < 2^32
           then ((reserveNewCapacity 0 count 0).toNat : Int)
           else (reserveNewCapacity 0 count 0).toNat - 2^32) < 0
-        rw [if_pos]
+        rw [ite_eq_left]
         · omega
         · omega)
       (by decide) (by rw [hafterPages]; decide) (by decide) (by decide)

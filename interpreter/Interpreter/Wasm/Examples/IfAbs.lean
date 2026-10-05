@@ -51,13 +51,13 @@ theorem ifAbs_steps (x : UInt32) :
   wasm_steps [(.localGet rfl), .const, (.ltS rfl), (.iff rfl)]
   by_cases hneg : x.toInt32 < (0 : UInt32).toInt32
   · have hneg' : x.toInt32 < 0 := by simpa using hneg
-    simp only [if_pos hneg]
+    simp only [ite_eq_left hneg]
     wasm_steps [.const, (.localGet rfl), .sub, (.exitControl rfl), .finish]
     simpa [ifAbsConfig, ifAbsResult, hneg, hneg'] using
       (Steps.refl
         (⟨.done [.i32 (0 - x)], (ifAbsConfig x).store⟩ : Config Unit))
   · have hneg' : ¬x.toInt32 < 0 := by simpa using hneg
-    simp only [if_neg hneg]
+    simp only [ite_eq_right hneg]
     wasm_steps [(.localGet rfl), (.exitControl rfl), .finish]
     simpa [ifAbsConfig, ifAbsResult, hneg, hneg'] using
       (Steps.refl

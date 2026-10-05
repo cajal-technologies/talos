@@ -77,7 +77,7 @@ theorem write_all_nonempty_reaches
   apply Reaches.prepend (Step.call (fn := func8Def)
     (by rw [hmod]; decide) (by rw [hmod]; rfl))
   simp only [func8Def, Function.toLocals, Function.numParams,
-    ValueType.zero, func8]
+    func8]
   apply Reaches.prepend (Step.globalGet hglobal)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.sub
@@ -158,7 +158,6 @@ theorem write_all_nonempty_reaches
     simp only [written, writeAdapterResultStore]
     rw [Project.HexDecodeStdio.Mem.read8_write32_disjoint_core _
       (frame + 4) frame length (Or.inl (by
-        change frame.toNat < (frame + 4).toNat
         simpa only [frame, hframe4] using
           (show (sp - 16).toNat < (sp - 16).toNat + 4 by omega)))]
     simp [Mem.read8, Mem.write8]
@@ -178,12 +177,7 @@ theorem write_all_nonempty_reaches
     rw [hwrittenPages]
     change (sp - 16).toNat + 1 ≤ store.wasm.mem.pages * 65536
     omega))
-  change Reaches
-    ⟨.running ⟨⟨_, _,
-      [.i32 ((writeAdapterResultStore framed frame bytes length).wasm.mem.read8
-        (frame + 0)).toUInt32]⟩, _, _, _, _, _⟩,
-      writeAdapterResultStore framed frame bytes length⟩ _
-  simp only [UInt32.add_zero, hwrittenTag]
+  simp only [UInt32.add_zero]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.eq (result := 1) (by
@@ -218,7 +212,7 @@ theorem write_all_nonempty_reaches
   simp
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.br rfl)
-  simp [writeAllLoopControl, writeAllOuterControl]
+  simp [writeAllOuterControl]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
@@ -230,8 +224,8 @@ theorem write_all_nonempty_reaches
     simpa [globalAt?] using hwzero))
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.returnFromCallFallthrough (by
-    simp [written, framed, writeAdapterResultStore, writeAllFrameStore]))
-  simp [writeAllResultStore, written, framed, writeAllFrameStore,
+    simp [framed, writeAdapterResultStore, writeAllFrameStore]))
+  simp [writeAllResultStore, framed, writeAllFrameStore,
     writeAdapterResultStore, resumeCaller]
   exact ⟨[], .refl _⟩
 

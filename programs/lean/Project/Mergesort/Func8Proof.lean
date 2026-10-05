@@ -17,6 +17,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func8_index :
     Project.Mergesort.module.funcs[8]? =
       some Project.Mergesort.func8Def := by rfl
@@ -568,7 +571,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         change ¬ (if 2 * finish.toNat < 4294967296 then
           (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
         omega
-      iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
+      iapply twp_ltS (result := 0) (by rw [ite_eq_right hfinishNonnegative])
       wasm_twp_pures [twp_brIfZero twp_block twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (65535 : UInt32) finish]
       wasm_twp_pures [twp_const twp_shrU] rewriting [show (16 : UInt32) % 32 = 16 by decide]
@@ -611,7 +614,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       iapply twp_leU (result := if allocatorRequiredPages finish ≤
         UInt32.ofNat pages then 1 else 0) rfl
       by_cases hcapacity : allocatorRequiredPages finish ≤ UInt32.ofNat pages
-      · rw [if_pos hcapacity]
+      · rw [ite_eq_left hcapacity]
         iapply twp_brIf (by decide) (by rfl)
         simp only [List.take_zero, List.nil_append, Nat.reduceAdd, Nat.reduceSub,
           List.set, List.drop_zero]
@@ -640,7 +643,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
             hphysical
         iframe Hruntime Hcursor Hfrontier Hauth Hretired Hpages Hblock Hstreams
           Hnormal
-      · rw [if_neg hcapacity]
+      · rw [ite_eq_right hcapacity]
         wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
         let delta := allocatorRequiredPages finish - UInt32.ofNat pages
         ihave HgrowFrame : iprop(
@@ -840,7 +843,7 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
       have hbaseLeFinish : base ≤ finishWord := by
         rw [UInt32.le_iff_toNat_le_toNat, hbaseNat, hfinishNat]; omega
       iapply twp_ltU (result := 0) (by
-        rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
+        rw [ite_eq_right (UInt32.not_lt.mpr hbaseLeFinish)])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
       have hnotSigned : ¬ frontier + newLayout.size < 2147483648 := by
         intro hsigned
@@ -856,9 +859,9 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
             .success base finishWord := by
           unfold classifyBump
           simp only [hnewAlignment, Nat.reduceSubDiff, Nat.add_zero]
-          rw [dif_pos hfrontierBound]
+          rw [dite_eq_left hfrontierBound]
           rw [hrawBase]
-          rw [if_pos ⟨by simpa [hbaseNat] using hend,
+          rw [ite_eq_left ⟨by simpa [hbaseNat] using hend,
             by simpa [hbaseNat] using hsigned⟩]
           rw [hrawFinish]
         rw [hdecision] at hsuccess; contradiction
@@ -870,8 +873,8 @@ theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
         change (if 2 * finishWord.toNat < 4294967296 then
           (finishWord.toNat : Int)
           else (finishWord.toNat : Int) - 4294967296) < 0
-        rw [if_neg (by rw [hfinishNat]; omega)]; omega
-      iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
+        rw [ite_eq_right (by rw [hfinishNat]; omega)]; omega
+      iapply twp_ltS (result := 1) (by rw [ite_eq_left hfinishNegative])
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.nil_append]
       ihave Hbump : BumpHeap heapId storedCursor frontier history $$
