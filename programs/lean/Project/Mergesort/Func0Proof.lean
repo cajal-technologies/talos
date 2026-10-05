@@ -18,6 +18,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func0_index :
     Project.Mergesort.module.funcs[0]? =
       some Project.Mergesort.func0Def := by rfl
@@ -388,7 +391,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_const twp_localGet twp_sub]
   have hcapacityGuard : newCapacity ≤ (2147483648 : UInt32) - 1 := by
     rw [UInt32.le_iff_toNat_le_toNat]; exact hnewUpper
-  iapply twp_leU (result := 1) (by rw [if_pos hcapacityGuard])
+  iapply twp_leU (result := 1) (by rw [ite_eq_left hcapacityGuard])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_block twp_block twp_block twp_block]
@@ -537,7 +540,7 @@ theorem func0_correct_of [WasmSmallStepGS hlc Universal.State]
         · omega
         · exact oldCapacity.toBitVec.isLt
       wasm_twp_pures [twp_localGet]
-      iapply twp_eqz (by rw [if_neg holdNonzero])
+      iapply twp_eqz (by rw [ite_eq_right holdNonzero])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet twp_mul]
       rw [show oldCapacity * (1 : UInt32) = oldCapacity by bv_normalize]
       wasm_twp_pures [twp_localGet twp_localGet]

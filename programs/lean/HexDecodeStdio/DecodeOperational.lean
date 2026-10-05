@@ -209,9 +209,9 @@ theorem decode_to_first_chunk_outcome (input : List UInt8) :
       decide)
     (by rfl) hframedPages
     (by simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> bv_normalize (config := { enums := false }))
+      Mem.write32]; bv_normalize (config := { enums := false }))
     (by simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> bv_normalize (config := { enums := false }))
+      Mem.write32]; bv_normalize (config := { enums := false }))
     (by simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
       Mem.write32])
     (by

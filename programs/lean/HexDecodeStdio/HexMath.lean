@@ -7,48 +7,54 @@ open Project.HexStdio.Spec
 
 theorem decimal_route (c : UInt8)
     (h : 48 ≤ c.toNat ∧ c.toNat ≤ 57) : HexRoute.decimal.valid c := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num at h
-  all_goals norm_num [HexRoute.valid]
-  all_goals bv_normalize (config := { enums := false })
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [HexRoute.valid] <;> decide +kernel
 
 theorem lower_route (c : UInt8)
     (h : 97 ≤ c.toNat ∧ c.toNat ≤ 102) : HexRoute.lower.valid c := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num at h
-  all_goals norm_num [HexRoute.valid]
-  all_goals bv_normalize (config := { enums := false })
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [HexRoute.valid] <;> decide +kernel
 
 theorem upper_route (c : UInt8)
     (h : 65 ≤ c.toNat ∧ c.toNat ≤ 70) : HexRoute.upper.valid c := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num at h
-  all_goals norm_num [HexRoute.valid]
-  all_goals bv_normalize (config := { enums := false })
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [HexRoute.valid] <;> decide +kernel
 
 theorem decimal_nibble (c : UInt8)
     (h : 48 ≤ c.toNat ∧ c.toNat ≤ 57) :
     (HexRoute.decimal.nibble c).toNat = c.toNat - 48 := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num at h
-  all_goals norm_num [HexRoute.nibble]
-  all_goals decide
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [HexRoute.nibble] <;> decide +kernel
 
 theorem lower_nibble (c : UInt8)
     (h : 97 ≤ c.toNat ∧ c.toNat ≤ 102) :
     (HexRoute.lower.nibble c).toNat = c.toNat - 97 + 10 := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num at h
-  all_goals norm_num [HexRoute.nibble]
-  all_goals decide
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [HexRoute.nibble] <;> decide +kernel
 
 theorem upper_nibble (c : UInt8)
     (h : 65 ≤ c.toNat ∧ c.toNat ≤ 70) :
     (HexRoute.upper.nibble c).toNat = c.toNat - 65 + 10 := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num at h
-  all_goals norm_num [HexRoute.nibble]
-  all_goals decide
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [HexRoute.nibble] <;> decide +kernel
 
 theorem hexValue_some_route (c : UInt8) (n : Nat)
     (h : hexValue c = some n) :
@@ -72,18 +78,22 @@ set_option maxHeartbeats 2000000 in
 theorem hexValue_of_route_valid (route : HexRoute) (c : UInt8)
     (h : route.valid c) :
     hexValue c = some (route.nibble c).toNat := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  cases route <;> interval_cases n <;>
-    norm_num [HexRoute.valid, HexRoute.nibble, hexValue] at h ⊢ <;>
-    bv_normalize (config := { enums := false })
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  cases route <;> interval_cases n <;> revert h <;>
+    simp only [HexRoute.valid, HexRoute.nibble, hexValue] <;> decide +kernel
 
 theorem hexValue_none_tests (c : UInt8) (h : hexValue c = none) :
     ¬ (((4294967231 + c.toUInt32) &&& 255) < 6) ∧
     ¬ (((4294967199 + c.toUInt32) &&& 255) < 6) ∧
     ¬ (((4294967248 + c.toUInt32) &&& 255) < 10) := by
-  rcases c with ⟨⟨n, hn⟩⟩
-  interval_cases n <;> norm_num [hexValue] at h
-  all_goals bv_normalize (config := { enums := false })
+  have hc : c = UInt8.ofNat c.toNat := UInt8.ofNat_toNat.symm
+  have hn := c.toNat_lt
+  generalize c.toNat = n at hc hn
+  subst c
+  interval_cases n <;> revert h <;> simp only [hexValue] <;> decide +kernel
 
 /-- Combining two four-bit route values is exactly the byte construction in
 the mathematical decoder. -/

@@ -22,10 +22,10 @@ theorem decode_append_even (left right : List UInt8)
         exact heven
       simp only [List.cons_append, decode]
       rw [ih right hrest]
-      cases hhi : hexValue hi <;> simp [hhi]
-      cases hlo : hexValue lo <;> simp [hlo]
-      cases hp : decode rest <;> simp [hp]
-      cases hr : decode right <;> simp [hr, List.append_assoc]
+      cases hexValue hi <;> simp
+      cases hexValue lo <;> simp
+      cases decode rest <;> simp
+      cases decode right <;> simp
 
 theorem byte_from_div_mod (byte : UInt8) :
     16 * UInt8.ofNat (byte.toNat / 16) + UInt8.ofNat (byte.toNat % 16) =
@@ -45,8 +45,8 @@ theorem decode_append_valid_pair (pref rest decoded : List UInt8)
     decode (pref ++ hi :: lo :: rest) =
       (decode rest).map (fun suffix => decoded ++ byte :: suffix) := by
   rw [decode_append_even pref (hi :: lo :: rest) heven, hprefix]
-  simp only [decode, hhi, hlo, Option.bind_some, Option.map_eq_map]
-  cases hrest : decode rest <;> simp [hrest]
+  simp only [decode, hhi, hlo, Option.bind_some]
+  cases decode rest <;> simp
   exact byte_from_div_mod byte
 
 theorem decode_append_invalid_high (pref rest decoded : List UInt8)
@@ -68,7 +68,7 @@ theorem decode_append_invalid_low (pref rest decoded : List UInt8)
   simp [decode, hhi, hlo]
 
 theorem decode_append_empty (pref decoded : List UInt8)
-    (heven : pref.length % 2 = 0)
+    (_heven : pref.length % 2 = 0)
     (hprefix : decode pref = some decoded) :
     decode pref = some decoded := hprefix
 

@@ -276,18 +276,18 @@ theorem func0_body_to_ret_smallStep_wp
       wp_localGet]
     cases hnan : f32Ne x x
     · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
-      simp only [hnan, Bool.false_eq_true, if_false]
+      simp only [hnan, Bool.false_eq_true, ite_false]
       wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_wp_pures [wp_brIfZero wp_localGet wp_scalarFloat0]
       cases hge : f32Ge x 1325400064
       · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
-        simp only [hge, Bool.false_eq_true, if_false]
+        simp only [hge, Bool.false_eq_true, ite_false]
         wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
         wasm_wp_pures [wp_brIfZero wp_br] using [List.take, List.drop, List.nil_append]
         wasm_wp_pures [wp_localGet wp_scalarFloat0]
         cases hlt : f32Lt x 3472883712
         · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
-          simp only [hlt, Bool.false_eq_true, if_false]
+          simp only [hlt, Bool.false_eq_true, ite_false]
           wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
           wasm_wp_pures [wp_brIfZero wp_br] using [List.take, List.nil_append]
           wasm_wp_pures [wp_localGet wp_localGet]
@@ -306,7 +306,7 @@ theorem func0_body_to_ret_smallStep_wp
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
               iapply_frame hreturn (i32TruncSatF32S x) rfl
         · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
-          simp only [hlt, if_true]
+          simp only [hlt, ite_true]
           wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
           wasm_wp_next wp_brIf (by decide) rfl
           simp only [List.take, List.nil_append]
@@ -326,7 +326,7 @@ theorem func0_body_to_ret_smallStep_wp
               iintro ⟨⟨HR, Hglobal⟩, Hword⟩
               iapply_frame hreturn 2147483648 heq.symm
       · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
-        simp only [hge, if_true]
+        simp only [hge, ite_true]
         wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
         wasm_wp_next wp_brIf (by decide) rfl
         simp only [List.take, List.drop, List.nil_append]
@@ -346,7 +346,7 @@ theorem func0_body_to_ret_smallStep_wp
             iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply_frame hreturn 2147483647 heq.symm
     · wasm_wp_next wp_scalarFloat2 rfl rfl rfl
-      simp only [hnan, if_true]
+      simp only [hnan, ite_true]
       wasm_wp_pures [wp_const wp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
       wasm_wp_next wp_brIf (by decide) rfl
       simp only [List.take, List.drop, List.nil_append]
@@ -495,18 +495,18 @@ theorem twp_func0_body_to_ret
     twp_localGet]
   cases hnan : f32Ne x x
   · iapply twp_scalarFloat2 rfl rfl rfl
-    simp only [hnan, Bool.false_eq_true, if_false]
+    simp only [hnan, Bool.false_eq_true, ite_false]
     wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
     wasm_twp_pures [twp_brIfZero twp_localGet twp_scalarFloat0]
     cases hge : f32Ge x 1325400064
     · iapply twp_scalarFloat2 rfl rfl rfl
-      simp only [hge, Bool.false_eq_true, if_false]
+      simp only [hge, Bool.false_eq_true, ite_false]
       wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
       wasm_twp_pures [twp_brIfZero twp_br] using [List.take, List.drop, List.nil_append]
       wasm_twp_pures [twp_localGet twp_scalarFloat0]
       cases hlt : f32Lt x 3472883712
       · iapply twp_scalarFloat2 rfl rfl rfl
-        simp only [hlt, Bool.false_eq_true, if_false]
+        simp only [hlt, Bool.false_eq_true, ite_false]
         wasm_twp_pures [twp_const twp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
         wasm_twp_pures [twp_brIfZero twp_br] using [List.take, List.nil_append]
         wasm_twp_pures [twp_localGet twp_localGet]
@@ -522,7 +522,7 @@ theorem twp_func0_body_to_ret
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply_frame hreturn (i32TruncSatF32S x) rfl
       · iapply twp_scalarFloat2 rfl rfl rfl
-        simp only [hlt, if_true]
+        simp only [hlt, ite_true]
         wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
         iapply twp_brIf (by decide) rfl
         simp only [List.take, List.nil_append]
@@ -539,7 +539,7 @@ theorem twp_func0_body_to_ret
           · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
             iapply_frame hreturn 2147483648 heq.symm
     · iapply twp_scalarFloat2 rfl rfl rfl
-      simp only [hge, if_true]
+      simp only [hge, ite_true]
       wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
       iapply twp_brIf (by decide) rfl
       simp only [List.take, List.drop, List.nil_append]
@@ -556,7 +556,7 @@ theorem twp_func0_body_to_ret
         · iintro ⟨⟨HR, Hglobal⟩, Hword⟩
           iapply_frame hreturn 2147483647 heq.symm
   · iapply twp_scalarFloat2 rfl rfl rfl
-    simp only [hnan, if_true]
+    simp only [hnan, ite_true]
     wasm_twp_pures [twp_const twp_and] rewriting [show (1 &&& 1 : UInt32) = 1 by decide]
     iapply twp_brIf (by decide) rfl
     simp only [List.take, List.drop, List.nil_append]

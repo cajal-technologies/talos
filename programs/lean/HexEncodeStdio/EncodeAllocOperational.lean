@@ -68,7 +68,7 @@ theorem encode_call_to_reserve
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.sub
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.globalSet (by simpa [hglobal]))
+  apply Reaches.prepend (Step.globalSet (by simp [hglobal]))
   rw [setGlobal_zero_eq]
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const

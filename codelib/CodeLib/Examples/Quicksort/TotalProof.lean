@@ -67,8 +67,8 @@ theorem twp_partitionScanStep
   iapply_frame_intro twp_loadAt hjLen hfit rfl rfl as Harray
   wasm_twp_pures [twp_ltU]
   by_cases hlt : pivot < current[j]'hjLen
-  · simp only [if_pos hlt]
-    wasm_twp_pures [twp_iff] using [if_pos (by decide : (1 : UInt32) ≠ 0)]
+  · simp only [ite_eq_left hlt]
+    wasm_twp_pures [twp_iff] using [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
     ihave Hthen := BI.and_elim_l $$ Hbranches
     wasm_twp_pures [twp_exitControl]
     have hjValue : 1 + UInt32.ofNat j = UInt32.ofNat (j + 1) := by
@@ -86,8 +86,8 @@ theorem twp_partitionScanStep
     iapply Hthen
     isplitr_pureexact hlt
     iframe
-  · simp only [if_neg hlt]
-    wasm_twp_pures [twp_iff] using [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+  · simp only [ite_eq_right hlt]
+    wasm_twp_pures [twp_iff] using [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
     ihave Helse := BI.and_elim_r $$ Hbranches
     have htmp_set :
         (partitionLocals arr lo hi pivot i j hiMinusOne tmp
@@ -203,8 +203,8 @@ theorem twp_partitionScanLoop
     wasm_twp_pures [twp_eqz]
     by_cases hj : state.j < hiMinusOne
     · have hlt := hjCmp.mpr hj
-      simp only [if_pos hlt]
-      simp only [if_neg (by decide : (1 : UInt32) ≠ 0)]
+      simp only [ite_eq_left hlt]
+      simp only [ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
       wasm_twp_pures [twp_brIfZero]
       iapply twp_partitionScanStep arr input state.values lo hi state.i state.j hiMinusOne
         pivot state.tmp hstate hj hjLen hiLen hfitState
@@ -230,7 +230,7 @@ theorem twp_partitionScanLoop
         isplitr_pureexact hstate.swapStep (by omega) (by rwa [getElem!_pos state.values state.j hjLen])
         iframe
     · have hlt := mt hjCmp.mp hj
-      simp only [if_neg hlt]
+      simp only [ite_eq_right hlt]
       have hjEq : state.j = hiMinusOne := by omega
       iapply Wasm.SmallStep.twp_brIf (by decide) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -470,8 +470,8 @@ private theorem twp_quicksortBody_aux
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
     have hloSub : UInt32.ofNat hi - UInt32.ofNat hi = 0 := by simp
     simp only [hloSub]
-    wasm_twp_pures [twp_const twp_ltU] using [if_pos (by decide : (0 : UInt32) < 2)]
-    wasm_twp_pures [twp_iff] using [if_pos (by decide : (1 : UInt32) ≠ 0)]
+    wasm_twp_pures [twp_const twp_ltU] using [ite_eq_left (by decide : (0 : UInt32) < 2)]
+    wasm_twp_pures [twp_iff] using [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
     wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
     have hpure0 : input.length = input.length ∧ input.take hi = input.take hi ∧
         input.drop hi = input.drop hi ∧ Sorted [] := by
@@ -501,8 +501,8 @@ private theorem twp_quicksortBody_aux
     · have h_lt_u32 : UInt32.ofNat (hi - lo) < 2 := by
         have h2 : (2 : UInt32).toNat = 2 := rfl
         rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hdiffSize, h2]; exact hbase
-      simp only [if_pos h_lt_u32]
-      wasm_twp_pures [twp_iff] using [if_pos (by decide : (1 : UInt32) ≠ 0)]
+      simp only [ite_eq_left h_lt_u32]
+      wasm_twp_pures [twp_iff] using [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       wasm_twp_return_from_call Hruntime [List.take_zero, List.nil_append]
       have hpure_base : input.length = input.length ∧ input.take lo = input.take lo ∧
           input.drop hi = input.drop hi ∧ Sorted (segment input lo hi) ∧
@@ -513,8 +513,8 @@ private theorem twp_quicksortBody_aux
         have h2 : (2 : UInt32).toNat = 2 := rfl
         rw [UInt32.lt_iff_toNat_lt, UInt32.toNat_ofNat_of_lt' hdiffSize, h2]; omega
       have hlohi_strict : lo < hi := by omega
-      simp only [if_neg h_not_lt]
-      wasm_twp_pures [twp_iff] using [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+      simp only [ite_eq_right h_not_lt]
+      wasm_twp_pures [twp_iff] using [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
       wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
       wasm_twp_bind Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction himports_p

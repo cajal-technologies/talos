@@ -54,7 +54,7 @@ theorem DecodeLoopInv.reserve_new_capacity_toNat
     omega
   simp only [reserveNewCapacity, reserveCandidate, reserveRequired,
     reserveDoubled, hfull]
-  rw [if_neg hcandidate, if_pos height]
+  rw [ite_eq_right hcandidate, ite_eq_left height]
   exact hshift
 
 theorem DecodeLoopInv.reserve_new_capacity_eq
@@ -84,7 +84,7 @@ theorem DecodeLoopInv.reserve_copy_length
     reallocatorCopyLen capacity (reserveNewCapacity outLen 1 capacity) =
       capacity := by
   simp only [reallocatorCopyLen]
-  rw [if_neg]
+  rw [ite_eq_right]
   intro hlt
   have hn := UInt32.lt_iff_toNat_lt.mp hlt
   rw [h.reserve_new_capacity_toNat hfull] at hn
