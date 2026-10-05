@@ -987,7 +987,6 @@ theorem allocatorRequiredPages_toNat (finish : UInt32)
     show (16 : UInt32).toNat % 32 = 16 by decide,
     Nat.shiftRight_eq_div_pow]
   norm_num
-  rw [show (65535 : UInt32).toNat = 65535 by decide]
   norm_num at hsum
   rw [Nat.mod_eq_of_lt hsum]
 
@@ -1020,7 +1019,6 @@ theorem allocatorRequiredPages_le_signedLimit (finish : UInt32)
     show (16 : UInt32).toNat % 32 = 16 by decide,
     Nat.shiftRight_eq_div_pow]
   norm_num
-  rw [show (65535 : UInt32).toNat = 65535 by decide]
   norm_num at hsum
   simpa only [Nat.mod_eq_of_lt hsum] using hquotle
 
@@ -1063,7 +1061,8 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
     rw [UInt32.toNat_sub_of_le _ _ hleWords, hpagesWord]
   unfold Mem.grow
   simp only [hdelta, Nat.add_sub_of_le (Nat.le_of_lt hneed)]
-  norm_num [Module.memoryHardCap]; omega
+  simp only [Module.memoryHardCap]
+  exact ite_eq_left (by omega)
 
 /-- The frozen module declares no maximum, so its declaration-level cap is
 the interpreter's i32 hard cap. -/
@@ -2601,7 +2600,7 @@ private theorem geometricHistory_reallocate_from_eight (n : Nat) :
   rw [hfold]
   congr 1
   simp only [geometricMetadata,
-    show ¬n + 8 = n + 9 by omega, if_false,
+    show ¬n + 8 = n + 9 by omega, ite_false,
     liveMeta, retiredMeta]
   norm_num
   apply insert_overwrite_commute
@@ -3030,8 +3029,8 @@ theorem GeometricVecFacts.reserveSuccess
       · rw [hcapacityNat]; norm_num [selectedCapacity]
       · rw [hcapacityNat]; norm_num [selectedCapacity]
       · omega
-      · rw [hnewPtrNat]; norm_num [vectorBlockBase]
-      · rw [hfinish]; norm_num [selectedCapacity, vectorBlockBase]
+      · rw [hnewPtrNat]; decide +kernel
+      · rw [hfinish]; decide +kernel
       · rw [hreserveHistory, hnewPtrBase]; norm_num [selectedCapacity]; rfl
   · rcases hshort with
       ⟨hremaining, _hlength, _htotal, _hcapacity, _hptr,
@@ -3066,7 +3065,7 @@ theorem GeometricVecFacts.reserveSuccess
       have hpowPositive : 0 < 2 ^ exponent := Nat.pow_pos (by omega)
       rw [hcapacity] at hzeroNat; omega
     unfold VecReserveHistory at hreserveHistory
-    rw [if_neg hcapacityNe] at hreserveHistory
+    rw [ite_eq_right hcapacityNe] at hreserveHistory
     rcases hreserveHistory with ⟨oldId, holdLookup, hfinalHistory⟩
     have holdId : oldId = exponent - 8 :=
       geometricHistory_live_unique exponent oldId hexponentLower
@@ -3081,7 +3080,8 @@ theorem GeometricVecFacts.reserveSuccess
       have heq : exponent = 29 := by omega
       rw [hnewPtrNat, hfrontierNext, hselected] at hendSigned
       subst exponent
-      norm_num [vectorBlockBase, heapBase, UInt32.toNat] at hendSigned
+      exact (by decide +kernel :
+        ¬ (vectorBlockBase (29 + 1) + 2 ^ (29 + 1) < 2147483648)) hendSigned
     right
     right
     refine ⟨exponent + 1, by omega, hexponentNextUpper, ?_, ?_, ?_,

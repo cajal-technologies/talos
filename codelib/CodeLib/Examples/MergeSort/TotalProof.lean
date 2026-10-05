@@ -135,9 +135,9 @@ theorem twp_mergeMainStep
   simp only [List.cons_append, List.nil_append]
   iapply Wasm.SmallStep.twp_ltU (α := α) rfl
   by_cases hxy : input[i]'hiLen < input[j]'hjLen
-  · simp only [if_pos hxy]
+  · simp only [ite_eq_left hxy]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
-    simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
+    simp only [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
     ihave Hthen := BI.and_elim_l $$ Hbranches
     iapply twp_copyAt (α := α) hiLen hkLen hlayout.source_fits
       (by simpa [hinv.2.2.2.2.2] using hlayout.temporary_fits)
@@ -176,9 +176,9 @@ theorem twp_mergeMainStep
     iapply Hthen
     isplitr_pureexact hxy
     iframe
-  · simp only [if_neg hxy]
+  · simp only [ite_eq_right hxy]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
-    simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+    simp only [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
     ihave Helse := BI.and_elim_r $$ Hbranches
     iapply twp_copyAt (α := α) hjLen hkLen hlayout.source_fits
       (by simpa [hinv.2.2.2.2.2] using hlayout.temporary_fits)
@@ -325,7 +325,7 @@ theorem twp_mergeMainLoop
     iapply Wasm.SmallStep.twp_eqz (α := α) rfl
     by_cases hi : state.i < mid
     · by_cases hj : state.j < right
-      · simp only [hiCmp, hjCmp, if_pos hi, if_pos hj]
+      · simp only [hiCmp, hjCmp, ite_eq_left hi, ite_eq_left hj]
         have hiLen : state.i < input.length := by omega
         have hjLen : state.j < input.length := by omega
         have hkInput : state.k < input.length :=
@@ -333,7 +333,7 @@ theorem twp_mergeMainLoop
         have hkLen : state.k < state.scratch.length := by
           simpa only [hdata.2.2.2.2.2.1] using hkInput
         simp only [UInt32.mul_one,
-          if_neg (by decide : (1 : UInt32) ≠ 0)]
+          ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
         iapply Wasm.SmallStep.twp_brIfZero (α := α)
         iapply twp_mergeMainStep (α := α) source temporary input state.scratch
           left mid right state.i state.j state.k state.emitted
@@ -372,7 +372,7 @@ theorem twp_mergeMainLoop
               (List.getElem?_eq_getElem hiLen)
               (List.getElem?_eq_getElem hjLen) hxy
           iframe
-      · simp only [hiCmp, hjCmp, if_pos hi, if_neg hj]
+      · simp only [hiCmp, hjCmp, ite_eq_left hi, ite_eq_right hj]
         have hjEq : state.j = right := by omega
         subst right
         simp only [UInt32.zero_mul]
@@ -385,7 +385,7 @@ theorem twp_mergeMainLoop
         isimp only [mergeLocals] at Hdone
         isimp only [mergeLocals]
         iexact Hdone
-    · simp only [hiCmp, if_neg hi]
+    · simp only [hiCmp, ite_eq_right hi]
       have hiEq : state.i = mid := by omega
       subst mid
       simp only [UInt32.mul_zero]
@@ -645,7 +645,7 @@ theorem twp_mergeLeftLoop
     simp only [List.cons_append, List.nil_append]
     iapply Wasm.SmallStep.twp_eqz (α := α) rfl
     by_cases hi : state.i < mid
-    · simp only [hiCmp, if_pos hi]
+    · simp only [hiCmp, ite_eq_left hi]
       have hjEq : state.j = right := by
         rcases hstateExhausted with hEq | hEq
         · omega
@@ -656,7 +656,7 @@ theorem twp_mergeLeftLoop
       have hiLen : state.i < input.length := by omega
       have hkInput : state.k < input.length := by omega
       have hkLen : state.k < state.scratch.length := by simpa only [hdata.2.2.2.2.2.1] using hkInput
-      simp only [if_neg (by decide : (1 : UInt32) ≠ 0)]
+      simp only [ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       iapply twp_mergeLeftStep (α := α) source temporary input state.scratch
         left mid right state.i state.j state.k
@@ -677,7 +677,7 @@ theorem twp_mergeLeftLoop
           (List.getElem?_eq_getElem hiLen))
       isplitr_pureexact Or.inr hjEq
       iframe
-    · simp only [hiCmp, if_neg hi]
+    · simp only [hiCmp, ite_eq_right hi]
       have hiEq : state.i = mid := by omega
       subst mid
       iapply Wasm.SmallStep.twp_brIf (α := α) (by decide) rfl
@@ -776,8 +776,8 @@ theorem twp_mergeRightLoop
     simp only [List.cons_append, List.nil_append]
     iapply Wasm.SmallStep.twp_eqz (α := α) rfl
     by_cases hj : state.j < right
-    · simp only [hjCmp, if_pos hj,
-        if_neg (by decide : (1 : UInt32) ≠ 0)]
+    · simp only [hjCmp, ite_eq_left hj,
+        ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
       have hjLen : state.j < input.length := by omega
       have hkInput : state.k < input.length := by omega
       have hkLen : state.k < state.scratch.length := by simpa only [hdata.2.2.2.2.2.1] using hkInput
@@ -799,7 +799,7 @@ theorem twp_mergeRightLoop
       isplitr_pureexact hstate.takeRemainingRight hj
           (List.getElem?_eq_getElem hjLen)
       iframe
-    · simp only [hjCmp, if_neg hj]
+    · simp only [hjCmp, ite_eq_right hj]
       have hjEq : state.j = right := by omega
       subst right
       iapply Wasm.SmallStep.twp_brIf (α := α) (by decide) rfl
@@ -950,8 +950,8 @@ theorem twp_mergeCopyLoop
     simp only [List.cons_append, List.nil_append]
     iapply Wasm.SmallStep.twp_eqz (α := α) rfl
     by_cases hk : state.k < right
-    · simp only [hkCmp, if_pos hk,
-        if_neg (by decide : (1 : UInt32) ≠ 0)]
+    · simp only [hkCmp, ite_eq_left hk,
+        ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
       have hkInput : state.k < input.length := by omega
       have hkCurrent := hcopyState.k_lt_length hk
       have hkScratch : state.k < scratch.length := by simpa only [hscratchLength] using hkInput
@@ -993,7 +993,7 @@ theorem twp_mergeCopyLoop
             state.k + 1 - left = (state.k - left) + 1 := by omega
         rw [hsub, List.take_succ_eq_append_getElem hkMerged])
       iframe
-    · simp only [hkCmp, if_neg hk]
+    · simp only [hkCmp, ite_eq_right hk]
       have hkEq : state.k = right := by omega
       have hcopiedEq : state.copied = merged := by
         rw [hcopiedState, hkEq, ← hmergedLength, List.take_length]
@@ -1284,17 +1284,17 @@ theorem twp_mergeSortPrepareRight
     rw [UInt32.toNat_ofNat_of_lt' hrightCandidate,
       UInt32.toNat_ofNat_of_lt' hcountSize]
   by_cases hright : left + width * 2 < count
-  · simp only [hcandidateCmp, if_pos hright]
+  · simp only [hcandidateCmp, ite_eq_left hright]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
-    simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
+    simp only [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
     simp only [List.take_zero, List.nil_append,
       Nat.min_eq_left (Nat.le_of_lt hright)]
     simp only [List.drop_zero]
     iexact Hcont
-  · simp only [hcandidateCmp, if_neg hright]
+  · simp only [hcandidateCmp, ite_eq_right hright]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
-    simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+    simp only [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.twp_localGet (α := α) rfl
     iapply Wasm.SmallStep.twp_localSet (α := α) rfl
     simp only [
@@ -1405,9 +1405,9 @@ theorem twp_mergeSortPrepare
     rw [UInt32.toNat_ofNat_of_lt' hleftWidth,
       UInt32.toNat_ofNat_of_lt' hcountSize]
   by_cases hmid : left + width < count
-  · simp only [hcandidateCmp, if_pos hmid]
+  · simp only [hcandidateCmp, ite_eq_left hmid]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
-    simp only [if_pos (by decide : (1 : UInt32) ≠ 0)]
+    simp only [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.twp_exitControl (α := α) rfl
     simp only [List.take_zero, List.nil_append,
       Nat.min_eq_left (Nat.le_of_lt hmid)]
@@ -1421,9 +1421,9 @@ theorem twp_mergeSortPrepare
       count width left (left + width) oldRight
       htwoWidth hrightCandidate hcountSize rfl
     iexact Hcont
-  · simp only [hcandidateCmp, if_neg hmid]
+  · simp only [hcandidateCmp, ite_eq_right hmid]
     iapply Wasm.SmallStep.twp_iff (α := α) rfl
-    simp only [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+    simp only [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
     iapply Wasm.SmallStep.twp_localGet (α := α) rfl
     iapply Wasm.SmallStep.twp_localSet (α := α) rfl
     simp only [Nat.min_eq_right (by omega : count ≤ left + width)]
@@ -1639,8 +1639,8 @@ theorem twp_mergeSortInnerLoop
     · have hcmp :
           UInt32.ofNat (state.pass * (2 * width)) <
             UInt32.ofNat count := by simpa only [left] using hleftCmp.mpr hleftCount
-      simp only [if_pos hcmp,
-        if_neg (by decide : (1 : UInt32) ≠ 0)]
+      simp only [ite_eq_left hcmp,
+        ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       have hfourCount := hlayout.source_fits
       have hleftWidth : left + width < UInt32.size := by omega
@@ -1715,7 +1715,7 @@ theorem twp_mergeSortInnerLoop
     · have hcmp :
           ¬UInt32.ofNat (state.pass * (2 * width)) <
             UInt32.ofNat count := by simpa only [left] using (mt hleftCmp.mp hleftCount)
-      simp only [if_neg hcmp]
+      simp only [ite_eq_right hcmp]
       iapply Wasm.SmallStep.twp_brIf (α := α) (by decide) rfl
       simp only [List.take_zero, List.nil_append,
         List.drop_zero]
@@ -1862,8 +1862,8 @@ theorem twp_mergeSortOuterLoop
     · have hcmp :
           UInt32.ofNat state.width < UInt32.ofNat count :=
         hwidthCmp.mpr hwidthCount'
-      simp only [if_pos hcmp,
-        if_neg (by decide : (1 : UInt32) ≠ 0)]
+      simp only [ite_eq_left hcmp,
+        ite_eq_right (by decide : (1 : UInt32) ≠ 0)]
       iapply Wasm.SmallStep.twp_brIfZero (α := α)
       simp only [mergeSortOuterStep, List.cons_append,
         List.nil_append, List.append_assoc]
@@ -1928,7 +1928,7 @@ theorem twp_mergeSortOuterLoop
     · have hcmp :
           ¬UInt32.ofNat state.width < UInt32.ofNat count :=
         mt hwidthCmp.mp hwidthCount'
-      simp only [if_neg hcmp]
+      simp only [ite_eq_right hcmp]
       iapply Wasm.SmallStep.twp_brIf (α := α) (by decide) rfl
       simp only [List.take_zero, List.nil_append,
         List.drop_zero]

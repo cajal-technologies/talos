@@ -99,7 +99,7 @@ theorem Mem.read32_copy_before (mem : Mem) (destination source length : Nat)
     (address : UInt32) (hbefore : address.toNat + 4 ≤ destination) :
     (mem.copy destination source length).read32 address = mem.read32 address := by
   simp only [Mem.read32, Mem.copy]
-  rw [if_neg, if_neg, if_neg, if_neg]
+  rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
   all_goals omega
 
 @[simp] theorem allocatorBumpStore_memoryCap
@@ -304,7 +304,7 @@ theorem ReadToEndInv.copy_length
     (h : ReadToEndInv input consumed remaining store capacity data length bump) :
     reallocatorCopyLen capacity (readToEndNewCapacity capacity) = capacity := by
   simp only [reallocatorCopyLen]
-  rw [if_neg]
+  rw [ite_eq_right]
   intro hlt
   have hn := UInt32.lt_iff_toNat_lt.mp hlt
   have hgrow := readToEndNewCapacity_gt capacity h.capacity_small

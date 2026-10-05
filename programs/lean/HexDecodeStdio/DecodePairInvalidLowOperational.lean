@@ -140,7 +140,6 @@ theorem decodePair_invalid_low_reaches
     intro hz
     have hnat := congrArg UInt32.toNat hz
     change (store.wasm.mem.read32 1048476).toNat = 0 at hnat
-    norm_num at hnat
     omega
   apply Reaches.prepend (Step.brIf hlen0 rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -208,7 +207,7 @@ theorem decodePair_invalid_low_reaches
     (by decide)]
   norm_num
   rw [Mem.read32_write32_disjoint _ (1048476 : UInt32)
-    (coreIterator + 12) _ (by decide)]
+    (1048484 : UInt32) _ (by decide)]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.shl
@@ -229,8 +228,8 @@ theorem decodePair_invalid_low_reaches
   change (store.wasm.mem.read32 1048472).toNat ≠ 1048477 at hhi5
   change (store.wasm.mem.read32 1048472).toNat ≠ 1048478 at hhi6
   change (store.wasm.mem.read32 1048472).toNat ≠ 1048479 at hhi7
-  rw [if_neg hhi0, if_neg hhi1, if_neg hhi2, if_neg hhi3,
-    if_neg hhi4, if_neg hhi5, if_neg hhi6, if_neg hhi7]
+  rw [ite_eq_right hhi0, ite_eq_right hhi1, ite_eq_right hhi2, ite_eq_right hhi3,
+    ite_eq_right hhi4, ite_eq_right hhi5, ite_eq_right hhi6, ite_eq_right hhi7]
   apply Reaches.prepend (Step.localTee rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend Step.add
@@ -321,8 +320,8 @@ theorem decodePair_invalid_low_reaches
     change (store.wasm.mem.read32 1048472 + 1).toNat ≠ 1048477 at hlo5
     change (store.wasm.mem.read32 1048472 + 1).toNat ≠ 1048478 at hlo6
     change (store.wasm.mem.read32 1048472 + 1).toNat ≠ 1048479 at hlo7
-    rw [if_neg hlo0, if_neg hlo1, if_neg hlo2, if_neg hlo3,
-      if_neg hlo4, if_neg hlo5, if_neg hlo6, if_neg hlo7]
+    rw [ite_eq_right hlo0, ite_eq_right hlo1, ite_eq_right hlo2, ite_eq_right hlo3,
+      ite_eq_right hlo4, ite_eq_right hlo5, ite_eq_right hlo6, ite_eq_right hlo7]
     apply Reaches.prepend (Step.localTee rfl)
     apply Reaches.prepend Step.const
     apply Reaches.prepend Step.add

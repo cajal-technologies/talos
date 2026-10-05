@@ -13,7 +13,7 @@ theorem Mem.readBytes_fill_before (m : Mem) (off len fillOff fillLen : Nat)
   · intro i hleft hright
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range, Mem.fill]
-    rw [if_neg]
+    rw [ite_eq_right]
     omega
 
 theorem Mem.readBytes_writeBytes_append (m : Mem) (off oldLen : Nat)
@@ -36,7 +36,7 @@ theorem Mem.readBytes_writeBytes_append (m : Mem) (off oldLen : Nat)
       rw [List.getElem?_eq_getElem hprefix'] at holdAt
       simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
         Mem.writeBytes]
-      rw [dif_neg (by omega)]
+      rw [dite_eq_right (by omega)]
       exact Option.some.inj holdAt
     · have hright' : oldBytes.length ≤ i := by
         rw [holdLen]
@@ -44,7 +44,7 @@ theorem Mem.readBytes_writeBytes_append (m : Mem) (off oldLen : Nat)
       rw [List.getElem_append_right hright']
       simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
         Mem.writeBytes]
-      rw [dif_pos (by omega)]
+      rw [dite_eq_left (by omega)]
       congr 1
       omega
 
@@ -58,7 +58,7 @@ theorem Mem.readBytes_writeBytes_disjoint (m : Mem) (off len writeOff : Nat)
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
       Mem.writeBytes]
-    rw [dif_neg]
+    rw [dite_eq_right]
     rcases h with hbefore | hafter <;> omega
 
 theorem Mem.readBytes_write8_disjoint (m : Mem) (off len : Nat)
@@ -71,7 +71,7 @@ theorem Mem.readBytes_write8_disjoint (m : Mem) (off len : Nat)
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
       Mem.write8]
-    rw [if_neg]
+    rw [ite_eq_right]
     rcases h with hafter | hbefore <;> omega
 
 theorem Mem.readBytes_write32_disjoint (m : Mem) (off len : Nat)
@@ -84,7 +84,7 @@ theorem Mem.readBytes_write32_disjoint (m : Mem) (off len : Nat)
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
       Mem.write32]
-    rw [if_neg, if_neg, if_neg, if_neg]
+    rw [ite_eq_right, ite_eq_right, ite_eq_right, ite_eq_right]
     all_goals rcases h with hafter | hbefore <;> omega
 
 theorem Mem.readBytes_copy_before (m : Mem) (off len destination source count : Nat)
@@ -96,7 +96,7 @@ theorem Mem.readBytes_copy_before (m : Mem) (off len destination source count : 
   · intro i hleft hright
     have hi : i < len := by simpa [Mem.readBytes] using hleft
     simp only [Mem.readBytes, List.getElem_map, List.getElem_range, Mem.copy]
-    rw [if_neg]
+    rw [ite_eq_right]
     omega
 
 theorem readToEndFillStore_preserves_prefix
@@ -177,7 +177,7 @@ theorem ByteGrowSuccess.realloc_preserves_byte
   | freshGrow hzero memory previousPages hnotfit hgrow hfinishNonnegative => contradiction
   | reallocNoGrow hnonzero hfit =>
       simp only [reallocatorResultStore, hptr, hcopyLength,
-        holdCapacity, or_false, if_false]
+        holdCapacity, or_false, ite_false]
       rw [Mem.copy_read8_in]
       · have hsrcIndex : oldPtr.toNat +
             ((allocatorPtr oldBump 1 + UInt32.ofNat i).toNat -
@@ -197,7 +197,7 @@ theorem ByteGrowSuccess.realloc_preserves_byte
         omega
   | reallocGrow hnonzero memory previousPages hgrow =>
       simp only [reallocatorResultStore, hptr, hcopyLength,
-        holdCapacity, or_false, if_false, allocatorGrownStore]
+        holdCapacity, or_false, ite_false, allocatorGrownStore]
       rw [Mem.copy_read8_in]
       · have hsrcIndex : oldPtr.toNat +
             ((allocatorPtr oldBump 1 + UInt32.ofNat i).toNat -

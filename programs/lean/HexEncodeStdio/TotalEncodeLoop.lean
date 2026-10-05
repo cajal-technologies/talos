@@ -89,7 +89,7 @@ abbrev loopSaved {input : List UInt8} (state : EncodeLoopState input) : UInt32 :
       ((input[state.byteIndex]'state.byteIndex_lt).toNat % 16)).toUInt32
   | true => Project.HexEncodeStdio.TotalIterator.sentinel
 
-abbrev loopLocals (result stackPtr output : UInt32)
+abbrev loopLocals (result stackPtr _output : UInt32)
     {input : List UInt8} (state : EncodeLoopState input) : Locals :=
   encodeLocals result (UInt32.ofNat (loopPosition state))
     (loopDigit state).toUInt32 stackPtr state.oldLen state.oldAscii state.dest 0 0
@@ -103,7 +103,7 @@ abbrev encodeCapacityNat (input : List UInt8) : Nat :=
 prefix is constrained; the unused allocation tail is deliberately framed. -/
 abbrev encodeLoopInvariant {hlc : HasLC} {α : Type}
     [WasmSmallStepGS hlc α]
-    (result stackPtr output source : UInt32) (input : List UInt8)
+    (_result stackPtr output source : UInt32) (input : List UInt8)
     (Finish : IProp (WasmHeapGF α)) (state : EncodeLoopState input) :
     IProp (WasmHeapGF α) := iprop%
   runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» ∗
@@ -128,7 +128,7 @@ abbrev encodeLoopInvariant {hlc : HasLC} {α : Type}
 theorem u32_ofNat_succ {n : Nat} (h : n + 1 < UInt32.size) :
     UInt32.ofNat n + 1 = UInt32.ofNat (n + 1) := by
   have _ := h
-  simpa using (UInt32.ofNat_add n 1).symm
+  simp
 
 theorem u32_room {i capacity : Nat} (hi : i < capacity)
     (hcapacity : capacity < UInt32.size) :
@@ -213,11 +213,11 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
     {Φ : List Value → IProp (WasmHeapGF α)}
     (result stackPtr output capacity position : UInt32)
     (oldLen oldAscii oldDest tmp1 tmp2 : UInt32)
-    (digit oldByte : UInt8) (out : List UInt8) (i n : Nat)
+    (digit _oldByte : UInt8) (out : List UInt8) (i n : Nat)
     (hdigit : digit = Project.HexStdio.Spec.hexDigit n) (hn : n < 16)
     (hpos : i < out.length)
     (hposition : position = UInt32.ofNat i)
-    (hnext : position + 1 = UInt32.ofNat (i + 1))
+    (_hnext : position + 1 = UInt32.ofNat (i + 1))
     (hroom : (1 : UInt32) ≤ capacity - position)
     (hstack : stackPtr.toNat + 20 < UInt32.size)
     {arity : Nat} {remainder : List Value}
@@ -275,7 +275,7 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
   iapply twp_localGet rfl
   iapply twp_brIf (by decide) rfl
   have hnext' : UInt32.ofNat i + 1 = UInt32.ofNat (i + 1) := by
-    simpa [hposition] using hnext
+    simp
   rw [hposition]
   simp only [encodeLocals,  UInt32.add_comm (UInt32.ofNat i) output]
   ihave Hfocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus_update
@@ -729,7 +729,7 @@ theorem func6_encode_loop {hlc : HasLC} {α : Type}
       simp only [loopLocals, loopPosition, loopDigit]
       have hposWord : (2 : UInt32) * UInt32.ofNat byteIndex =
           UInt32.ofNat (2 * byteIndex) := by
-        simpa using (UInt32.ofNat_mul 2 byteIndex).symm
+        simp
       iapply func6_encode_loop_step_even result stackPtr output
         (UInt32.ofNat (encodeCapacityNat input))
         (UInt32.ofNat (2 * byteIndex))

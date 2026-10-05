@@ -587,7 +587,10 @@ theorem push_reserve_initial_outcome
       exact UInt32.add_ofNat_toNat_noWrap out 8 (by decide) (by omega)
     have hptrRead : postGrow.wasm.mem.read32 (frame + 8) =
         allocatorPtr oldBump 1 := by
-      rw [show frame + 8 = out + 4 by simp [out]; bv_normalize (config := { enums := false })]
+      rw [show frame + 8 = out + 4 by
+        change frame + 8 = (frame + 4) + 4
+        rw [UInt32.add_assoc]
+        rfl]
       exact pushGrowOkStore_read_ptr allocStore out
         (allocatorPtr oldBump 1) 8 hout4NoWrap hout8NoWrap
     have hpostGlobal : (globalAt? postGrow 0).isSome = true := by

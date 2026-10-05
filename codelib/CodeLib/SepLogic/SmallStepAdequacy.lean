@@ -128,8 +128,8 @@ theorem wp_store_adequacy
   dsimp only
   imodintro
   iframe
-  isplitl [Hwp]
-  · iapply_frame BigSepL2.bigSepL2_singleton
+  isplitl
+  · exact BigSepL2.bigSepL2_nil_affine
   iintro %_ %_ %Heq %_ %HNS Hstate Hwptp _
   iapply fupd_mask_intro_discard empty_subset
   icases BigSepL2.bigSepL2_cons_inv_right $$ Hwptp with
