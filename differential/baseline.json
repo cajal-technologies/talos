@@ -556,7 +556,7 @@
   },
   "schema": 1,
   "versions": {
-    "lean": "leanprover/lean4:v4.32.2",
+    "lean": "leanprover/lean4:v4.34.1",
     "miscast": "125d25b69b20462fe03505b30eb281851f0be3a8",
     "node": "v24.13.0",
     "node-flags": [

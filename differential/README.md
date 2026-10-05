@@ -105,7 +105,10 @@ contract canaries. The comparison step has a 10-minute limit; the job allows
 `baseline.json` records the tool versions, a count and hash of the complete case
 inputs, and any individually explained exceptions. The gate fails on a new or
 changed disagreement, lost coverage, tool drift, or a stale exception. A fixed
-exception must be removed so it cannot later hide the same regression. Existing
+exception must be removed so it cannot later hide the same regression: when a
+runner fix makes a case agree with V8, the gate reports it as a stale baseline
+exception, and the fix is to delete that entry from `baseline.json` (not to
+re-record the whole baseline). Existing
 semantic disagreements are recorded individually, as proposed in
 [#152](https://github.com/cajal-technologies/talos/pull/152); every new
 or changed soundness failure fails the gate. Crashes, timeouts, and unreadable
@@ -127,8 +130,10 @@ that API boundary when changing the miscast revision.
 
 ### Initial baseline
 
-The baseline was measured with a freshly built runner at Talos
-`78f9d08d46bcda1e4ddf794a697a18cccc59ba0f`, using the versions and V8 flag above.
+The baseline was first measured with a freshly built runner at Talos
+`78f9d08d46bcda1e4ddf794a697a18cccc59ba0f` (Lean v4.32.2), and re-recorded after
+merging main at `64690614` (Lean v4.34.1, #262), using the versions and V8 flag
+above. The re-recording observed the same 64 exceptions with identical outcomes.
 It covers **620 cases**: 194 generated `all` cases, 300 `recgroup` cases, 38
 invalid modules, one Talos seed and its 70 mutations, and 17 upstream seeds.
 
@@ -136,7 +141,7 @@ invalid modules, one Talos seed and its 70 mutations, and 17 upstream seeds.
 | --- | ---: | --- |
 | Agreement | 556 | Matching values, traps, or validation rejection |
 | `SOUNDNESS` | 27 | 26 invalid-module acceptances and one subtype-depth implementation-limit disagreement |
-| `completeness` | 10 | Element-segment probes trap with out-of-bounds table access in Talos |
+| `completeness` | 10 | Element-segment probes trap with out-of-bounds table access in Talos (the runner does not evaluate GC element-segment items; #259 fixes this and must delete these 10 entries) |
 | `sut-reject` | 22 | Decoder rejects named data segments or a table declaration accepted by V8 |
 | `sut-unsup` | 5 | Invalid modules exit with diagnostics the validation classifier cannot recognize |
 
