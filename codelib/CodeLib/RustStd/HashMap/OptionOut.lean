@@ -68,7 +68,7 @@ theorem optionU32At_of_words (memId : Nat) (addr : UInt32)
       pointsTo_u32 memId (addr + 4) payload) ⊢ optionU32At memId addr o := by
   cases o with
   | none =>
-    simp only [Option.isSome_none, Bool.false_eq_true, if_false, optionU32At]
+    simp only [Option.isSome_none, Bool.false_eq_true, ite_false, optionU32At]
     iintro ⟨Htag, Hpad⟩
     iexists payload
     isplitl [Htag]
@@ -77,7 +77,7 @@ theorem optionU32At_of_words (memId : Nat) (addr : UInt32)
   | some v =>
     have hv : payload = v := hpayload v rfl
     subst hv
-    simp only [Option.isSome_some, if_true, optionU32At]
+    simp only [Option.isSome_some, ite_true, optionU32At]
     iintro ⟨Htag, Hpayload⟩
     isplitl [Htag]
     · iexact Htag

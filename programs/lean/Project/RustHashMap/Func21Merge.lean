@@ -104,10 +104,10 @@ private theorem mergeTake_taken_length
       omega
     | x :: xs, y :: ys =>
       by_cases h : lt y x
-      · simp only [mergeTake, h, if_true, List.length_cons,
+      · simp only [mergeTake, h, ite_true, List.length_cons,
           ih (x :: xs) ys, List.length_cons]
         omega
-      · simp only [mergeTake, h, if_false, Bool.false_eq_true,
+      · simp only [mergeTake, h, ite_false, Bool.false_eq_true,
           List.length_cons, ih xs (y :: ys), List.length_cons]
         omega
 
@@ -143,10 +143,10 @@ private theorem mergeTake_add
       rw [show i + 1 + j = (i + j) + 1 from by omega]
       simp only [mergeTake]
       by_cases h : lt y x
-      · simp only [h, if_true]
+      · simp only [h, ite_true]
         simp only [ih j (x :: xs) ys]
         simp
-      · simp only [h, if_false, Bool.false_eq_true]
+      · simp only [h, ite_false, Bool.false_eq_true]
         simp only [ih j xs (y :: ys)]
         simp
 
@@ -254,15 +254,15 @@ private theorem mergeTake_spec
           omega
         · simp only [List.length_cons] at hab ⊢
           omega
-        · simp only [mergeTake, hc, if_true, h1]
-        · simp only [mergeTake, hc, if_true, h2, List.drop_succ_cons]
-        · simp only [mergeTake, hc, if_true]
+        · simp only [mergeTake, hc, ite_true, h1]
+        · simp only [mergeTake, hc, ite_true, h2, List.drop_succ_cons]
+        · simp only [mergeTake, hc, ite_true]
           refine List.Perm.trans (List.Perm.cons y h3) ?_
           refine List.Perm.symm ?_
           simp only [List.take_succ_cons]
           exact (List.perm_middle (a := y) (l₁ := (x :: xs).take a)
             (l₂ := ys.take b))
-        · simp only [mergeTake, hc, if_true]
+        · simp only [mergeTake, hc, ite_true]
           refine List.pairwise_cons.mpr ⟨?_, h4⟩
           intro z hz
           have hz' : z ∈ (x :: xs).take a ++ ys.take b := h3.mem_iff.mp hz
@@ -270,7 +270,7 @@ private theorem mergeTake_spec
           · exact hyall z (List.mem_of_mem_take hz1)
           · exact hyys z (List.mem_of_mem_take hz2)
         · intro u hu v hv
-          simp only [mergeTake, hc, if_true] at hu
+          simp only [mergeTake, hc, ite_true] at hu
           simp only [List.drop_succ_cons] at hv
           rcases List.mem_cons.mp hu with rfl | hu'
           · rcases List.mem_append.mp hv with hv1 | hv2
@@ -292,13 +292,13 @@ private theorem mergeTake_spec
           omega
         · simp only [List.length_cons] at hab ⊢
           omega
-        · simp only [mergeTake, hc, if_false, Bool.false_eq_true, h1,
+        · simp only [mergeTake, hc, ite_false, Bool.false_eq_true, h1,
             List.drop_succ_cons]
-        · simp only [mergeTake, hc, if_false, Bool.false_eq_true, h2]
-        · simp only [mergeTake, hc, if_false, Bool.false_eq_true]
+        · simp only [mergeTake, hc, ite_false, Bool.false_eq_true, h2]
+        · simp only [mergeTake, hc, ite_false, Bool.false_eq_true]
           simp only [List.take_succ_cons, List.cons_append]
           exact List.Perm.cons x h3
-        · simp only [mergeTake, hc, if_false, Bool.false_eq_true]
+        · simp only [mergeTake, hc, ite_false, Bool.false_eq_true]
           refine List.pairwise_cons.mpr ⟨?_, h4⟩
           intro z hz
           have hz' : z ∈ xs.take a ++ (y :: ys).take b := h3.mem_iff.mp hz
@@ -306,7 +306,7 @@ private theorem mergeTake_spec
           · exact hxxs z (List.mem_of_mem_take hz1)
           · exact hxall z (List.mem_of_mem_take hz2)
         · intro u hu v hv
-          simp only [mergeTake, hc, if_false, Bool.false_eq_true] at hu
+          simp only [mergeTake, hc, ite_false, Bool.false_eq_true] at hu
           simp only [List.drop_succ_cons] at hv
           rcases List.mem_cons.mp hu with rfl | hu'
           · rcases List.mem_append.mp hv with hv1 | hv2
@@ -900,16 +900,16 @@ private theorem shl_flag (P : Prop) [Decidable P] :
     (if P then (0 : UInt32) else 1) <<< ((3 : UInt32) % 32)
       = if P then 0 else 8 := by
   by_cases h : P
-  · rw [if_pos h, if_pos h]; decide
-  · rw [if_neg h, if_neg h]; decide
+  · rw [ite_eq_left h, ite_eq_left h]; decide
+  · rw [ite_eq_right h, ite_eq_right h]; decide
 
 /-- `i32.shl` of a `lt_u` flag by three. -/
 private theorem shl_flag' (P : Prop) [Decidable P] :
     (if P then (1 : UInt32) else 0) <<< ((3 : UInt32) % 32)
       = if P then 8 else 0 := by
   by_cases h : P
-  · rw [if_pos h, if_pos h]; decide
-  · rw [if_neg h, if_neg h]; decide
+  · rw [ite_eq_left h, ite_eq_left h]; decide
+  · rw [ite_eq_right h, ite_eq_right h]; decide
 
 /-- A one element list of a choice is the choice of two one element
 lists. -/
@@ -1009,15 +1009,15 @@ private theorem twp_pick_pair [WasmSmallStepGS hlc Universal.State]
     (selected := if P then Value.i32 addr1 else Value.i32 addr2)
     (select_flag _ _ _).symm
   by_cases h : P
-  · isimp only [if_pos h] at Hcont
-    isimp only [if_pos h]
+  · isimp only [ite_eq_left h] at Hcont
+    isimp only [ite_eq_left h]
     iapply twp_read_pair hk1 hlen hroom h1
     isplitl_exact Hbuf
     iintro Hbuf
     ihave Hgo := Hcont $$ Hbuf
     iexact Hgo
-  · isimp only [if_neg h] at Hcont
-    isimp only [if_neg h]
+  · isimp only [ite_eq_right h] at Hcont
+    isimp only [ite_eq_right h]
     iapply twp_read_pair hk2 hlen hroom h2
     isplitl_exact Hbuf
     iintro Hbuf
@@ -1069,9 +1069,9 @@ private theorem keyLt_if {β : Type _} (a b : UInt32 × UInt32)
     (u v : β) : (if keyLt b a then u else v)
       = if b.1 < a.1 then u else v := by
   by_cases h : b.1 < a.1
-  · rw [if_pos h, if_pos (show keyLt b a = true by
+  · rw [ite_eq_left h, ite_eq_left (show keyLt b a = true by
       simp only [keyLt, decide_eq_true_eq]; exact h)]
-  · rw [if_neg h, if_neg (show ¬ (keyLt b a = true) by
+  · rw [ite_eq_right h, ite_eq_right (show ¬ (keyLt b a = true) by
       simp only [keyLt, decide_eq_true_eq]; exact h)]
 
 /-- The model backward test, written with `i32.lt_u`. -/
@@ -1079,9 +1079,9 @@ private theorem keyGt_if {β : Type _} (x y : UInt32 × UInt32)
     (u v : β) : (if keyGt y x then u else v)
       = if x.1 < y.1 then u else v := by
   by_cases h : x.1 < y.1
-  · rw [if_pos h, if_pos (show keyGt y x = true by
+  · rw [ite_eq_left h, ite_eq_left (show keyGt y x = true by
       simp only [keyGt, decide_eq_true_eq]; exact h)]
-  · rw [if_neg h, if_neg (show ¬ (keyGt y x = true) by
+  · rw [ite_eq_right h, ite_eq_right (show ¬ (keyGt y x = true) by
       simp only [keyGt, decide_eq_true_eq]; exact h)]
 
 /-- Two distinct keys give the same arm under either strict test.  The
@@ -1090,18 +1090,18 @@ keeps the left one, and `NodupKeys` rules a tie out. -/
 private theorem flip_if {β : Type _} (x y : UInt32) (hne : x ≠ y)
     (u v : β) : (if y < x then u else v) = (if x < y then v else u) := by
   by_cases h : x < y
-  · rw [if_pos h, if_neg (UInt32.not_lt.mpr (UInt32.le_of_lt h))]
+  · rw [ite_eq_left h, ite_eq_right (UInt32.not_lt.mpr (UInt32.le_of_lt h))]
   · have h2 : y.toNat ≤ x.toNat :=
       UInt32.le_iff_toNat_le.mp (UInt32.not_lt.mp h)
     have h4 : x.toNat ≠ y.toNat := fun hc => hne (UInt32.toNat_inj.mp hc)
-    rw [if_pos (UInt32.lt_iff_toNat_lt.mpr (by omega)), if_neg h]
+    rw [ite_eq_left (UInt32.lt_iff_toNat_lt.mpr (by omega)), ite_eq_right h]
 
 /-- `i32.ge_u` is the negation of `i32.lt_u`. -/
 private theorem ge_if {β : Type _} (a b : UInt32) (u v : β) :
     (if b ≥ a then u else v) = (if b < a then v else u) := by
   by_cases h : b < a
-  · rw [if_pos h, if_neg (UInt32.not_le.mpr h)]
-  · rw [if_neg h, if_pos (UInt32.not_lt.mp h)]
+  · rw [ite_eq_left h, ite_eq_right (UInt32.not_le.mpr h)]
+  · rw [ite_eq_right h, ite_eq_left (UInt32.not_lt.mp h)]
 
 /-- The head of a suffix is the entry at that index. -/
 private theorem getElem_of_drop (l : List (UInt32 × UInt32)) {k : Nat}
@@ -1621,10 +1621,10 @@ private theorem twp_merge_loop [WasmSmallStepGS hlc Universal.State]
       rw [hstepU]
       simp only [keyLt_if]
       by_cases hp : B.1 < A.1
-      · rw [if_pos hp, if_pos hp, List.length_cons, hlu1len,
+      · rw [ite_eq_left hp, ite_eq_left hp, List.length_cons, hlu1len,
           show m - (m - a - 1 + 1) = a from by omega]
         exact UInt32.zero_add _
-      · rw [if_neg hp, if_neg hp, hlu1len,
+      · rw [ite_eq_right hp, ite_eq_right hp, hlu1len,
           show m - (m - a - 1) = a + 1 from by omega]
         exact addr_next buf a
     have e13 : (if B.1 < A.1 then (8 : UInt32) else 0)
@@ -1635,11 +1635,11 @@ private theorem twp_merge_loop [WasmSmallStepGS hlc Universal.State]
       rw [hstepU]
       simp only [keyLt_if]
       by_cases hp : B.1 < A.1
-      · rw [if_pos hp, if_pos hp, hru1len,
+      · rw [ite_eq_left hp, ite_eq_left hp, hru1len,
           show len.toNat - (len.toNat - m - b - 1) = m + b + 1 from by
             omega]
         exact addr_next buf (m + b)
-      · rw [if_neg hp, if_neg hp, List.length_cons, hru1len,
+      · rw [ite_eq_right hp, ite_eq_right hp, List.length_cons, hru1len,
           show len.toNat - (len.toNat - m - b - 1 + 1) = m + b from by
             omega]
         exact UInt32.zero_add _
@@ -1651,9 +1651,9 @@ private theorem twp_merge_loop [WasmSmallStepGS hlc Universal.State]
       rw [hstepD]
       simp only [keyGt_if, ← flip_if X.1 Y.1 hXY dl1 (X :: dl1)]
       by_cases hq : Y.1 < X.1
-      · rw [if_pos hq, if_pos hq, hdl1len]
+      · rw [ite_eq_left hq, ite_eq_left hq, hdl1len]
         exact UInt32.add_comm _ _
-      · rw [if_neg hq, if_neg hq, List.length_cons, hdl1len,
+      · rw [ite_eq_right hq, ite_eq_right hq, List.length_cons, hdl1len,
           show m - c - 1 + 1 = m - c from by omega,
           show m - c = (m - c - 1) + 1 from by omega,
           addr_back buf (m - c - 1)]
@@ -1666,11 +1666,11 @@ private theorem twp_merge_loop [WasmSmallStepGS hlc Universal.State]
       rw [hstepD]
       simp only [keyGt_if, ← flip_if X.1 Y.1 hXY (Y :: dr1) dr1]
       by_cases hq : Y.1 < X.1
-      · rw [if_pos hq, if_pos hq, List.length_cons, hdr1len,
+      · rw [ite_eq_left hq, ite_eq_left hq, List.length_cons, hdr1len,
           show m + (len.toNat - m - d - 1 + 1) = (len.toNat - d - 1) + 1
             from by omega, addr_back buf (len.toNat - d - 1)]
         exact UInt32.zero_add _
-      · rw [if_neg hq, if_neg hq, hdr1len,
+      · rw [ite_eq_right hq, ite_eq_right hq, hdr1len,
           show m + (len.toNat - m - d - 1) = len.toNat - d - 1 from by
             omega]
         exact UInt32.add_comm _ _
@@ -1913,7 +1913,7 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
           simp only [List.length_nil, Nat.zero_add] at hexU
           omega
         refine ⟨?_, ?_, ?_⟩
-        · rw [hstep, if_neg (show ¬ a < m - c from by omega), hBe]
+        · rw [hstep, ite_eq_right (show ¬ a < m - c from by omega), hBe]
         · intro hp
           omega
         · intro _
@@ -1935,21 +1935,21 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
         rw [hUp] at hstep
         rw [hstep] at hexU
         by_cases hBA : B.1 < A.1
-        · simp only [keyLt_if, if_pos hBA, List.length_cons,
+        · simp only [keyLt_if, ite_eq_left hBA, List.length_cons,
             hlu1len] at hexU
           refine ⟨?_, ?_, ?_⟩
           · rw [hstep]
-            simp only [keyLt_if, if_pos hBA,
-              if_neg (show ¬ a < m - c from by omega), hBe]
+            simp only [keyLt_if, ite_eq_left hBA,
+              ite_eq_right (show ¬ a < m - c from by omega), hBe]
           · intro hp
             omega
           · intro _
             omega
-        · simp only [keyLt_if, if_neg hBA, hlu1len] at hexU
+        · simp only [keyLt_if, ite_eq_right hBA, hlu1len] at hexU
           refine ⟨?_, ?_, ?_⟩
           · rw [hstep]
-            simp only [keyLt_if, if_neg hBA,
-              if_pos (show a < m - c from by omega), hAe]
+            simp only [keyLt_if, ite_eq_right hBA,
+              ite_eq_left (show a < m - c from by omega), hAe]
           · intro _
             omega
           · intro hp
@@ -1960,20 +1960,20 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
         = buf + UInt32.ofNat (8 * (len.toNat - d)) := by
       by_cases hp : a < m - c
       · have h1 := hacP1 hp
-        rw [if_pos hp, show len.toNat - d = m + b from by omega]
+        rw [ite_eq_left hp, show len.toNat - d = m + b from by omega]
         exact UInt32.zero_add _
       · have h1 := hacP2 hp
-        rw [if_neg hp, show len.toNat - d = m + b + 1 from by omega]
+        rw [ite_eq_right hp, show len.toNat - d = m + b + 1 from by omega]
         exact addr_next buf (m + b)
     have e6 : (if a < m - c then (8 : UInt32) else 0)
           + (buf + UInt32.ofNat (8 * a))
         = buf + UInt32.ofNat (8 * (m - c)) := by
       by_cases hp : a < m - c
       · have h1 := hacP1 hp
-        rw [if_pos hp, show m - c = a + 1 from by omega]
+        rw [ite_eq_left hp, show m - c = a + 1 from by omega]
         exact addr_next buf a
       · have h1 := hacP2 hp
-        rw [if_neg hp, show m - c = a from by omega]
+        rw [ite_eq_right hp, show m - c = a from by omega]
         exact UInt32.zero_add _
     have h6 : buf + UInt32.ofNat (8 * (m - lu.length))
         = buf + UInt32.ofNat (8 * a) := by
@@ -2005,7 +2005,7 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
     -- WAT 8606: the parity test gives one, so the middle step runs
     iapply Wasm.SmallStep.twp_eqz (result := 0)
       (by
-        rw [if_neg (show (len &&& 1) ≠ (0 : UInt32) from by
+        rw [ite_eq_right (show (len &&& 1) ≠ (0 : UInt32) from by
           intro hcn
           have h0 : (len &&& 1).toNat = 0 := by rw [hcn]; rfl
           rw [and_one_toNat] at h0
@@ -2067,13 +2067,13 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
     -- WAT 8632 to 8641: both pointer checks fail
     wasm_twp_pures [twp_localGet twp_localGet]
     iapply Wasm.SmallStep.twp_ne (result := 0)
-      (by rw [if_neg (show ¬ (buf + UInt32.ofNat (8 * (m - c))
+      (by rw [ite_eq_right (show ¬ (buf + UInt32.ofNat (8 * (m - c))
         ≠ buf + UInt32.ofNat (8 * (m - c))) from fun hcn => hcn rfl)])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
     isimp only [back_forth]
     iapply Wasm.SmallStep.twp_ne (result := 0)
-      (by rw [if_neg (show ¬ (buf + UInt32.ofNat (8 * (len.toNat - d))
+      (by rw [ite_eq_right (show ¬ (buf + UInt32.ofNat (8 * (len.toNat - d))
         ≠ buf + UInt32.ofNat (8 * (len.toNat - d)))
         from fun hcn => hcn rfl)])
     iapply Wasm.SmallStep.twp_brIfZero
@@ -2083,7 +2083,7 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     iapply Wasm.SmallStep.twp_eqz (result := 0)
-      (by rw [if_neg (ofNat_ne_zero (8 * len.toNat) (by omega)
+      (by rw [ite_eq_right (ofNat_ne_zero (8 * len.toNat) (by omega)
         (by omega))])
     iapply Wasm.SmallStep.twp_brIfZero
     -- WAT 8648 to 8651: the frame goes back to the buffer
@@ -2131,7 +2131,7 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
     have hbd : b + d = len.toNat - m := by omega
     iapply Wasm.SmallStep.twp_eqz (result := 1)
       (by
-        rw [if_pos (show (len &&& 1) = (0 : UInt32) from by
+        rw [ite_eq_left (show (len &&& 1) = (0 : UInt32) from by
           apply UInt32.toNat_inj.mp
           rw [and_one_toNat, show (0 : UInt32).toNat = 0 from rfl]
           omega)])
@@ -2153,13 +2153,13 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
     -- WAT 8632 to 8641: both pointer checks fail
     wasm_twp_pures [twp_localGet twp_localGet]
     iapply Wasm.SmallStep.twp_ne (result := 0)
-      (by rw [if_neg (show ¬ (buf + UInt32.ofNat (8 * (m - lu.length))
+      (by rw [ite_eq_right (show ¬ (buf + UInt32.ofNat (8 * (m - lu.length))
         ≠ buf + UInt32.ofNat (8 * dl.length)) from fun hc => hc h67)])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
     isimp only [back_forth]
     iapply Wasm.SmallStep.twp_ne (result := 0)
-      (by rw [if_neg (show
+      (by rw [ite_eq_right (show
         ¬ (buf + UInt32.ofNat (8 * (len.toNat - ru.length))
           ≠ buf + UInt32.ofNat (8 * (m + dr.length)))
         from fun hc => hc h138)])
@@ -2170,7 +2170,7 @@ private theorem twp_merge_tail [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     iapply Wasm.SmallStep.twp_eqz (result := 0)
-      (by rw [if_neg (ofNat_ne_zero (8 * len.toNat) (by omega)
+      (by rw [ite_eq_right (ofNat_ne_zero (8 * len.toNat) (by omega)
         (by omega))])
     iapply Wasm.SmallStep.twp_brIfZero
     -- WAT 8648 to 8651: the frame goes back to the buffer

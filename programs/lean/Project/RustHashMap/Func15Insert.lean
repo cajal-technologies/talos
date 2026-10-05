@@ -230,7 +230,7 @@ theorem insertAt_growthLeft (t : Table UInt32 UInt32) {i : Nat} (tag : UInt8)
     (kv : UInt32 × UInt32) (hempty : t.ctrlAt i = Table.EMPTY) :
     (Table.insertAt t i tag kv).growthLeft = t.growthLeft - 1 := by
   simp only [Table.insertAt, Table.setCtrl, hempty, Table.isEmpty, beq_self_eq_true,
-    if_true]
+    ite_true]
 
 theorem sub_eight_add_four (x : UInt32) : x - 8 + 4 = x - 4 := by
   apply UInt32.toNat_inj.mp
@@ -272,7 +272,7 @@ theorem insertAt_fields (t : Table UInt32 UInt32) {i : Nat} (tag : UInt8)
         items := t.items + 1,
         growthLeft := t.growthLeft - 1 } := by
   simp only [Table.insertAt, Table.setCtrl, hempty, Table.isEmpty, beq_self_eq_true,
-    if_true]
+    ite_true]
 
 /-! ## The locals of the probe loop -/
 
@@ -754,13 +754,13 @@ theorem twp_fix_insert [WasmSmallStepGS hlc Universal.State]
   · -- the candidate byte is special, so it is `EMPTY` and the index stands
     have hempty : Table.ctrlAt t c = Table.EMPTY := hcl.1 c hc hsp
     have hlt := (ProbeStop.ltS_signByte (Table.ctrlAt t c)).mpr hsp
-    iapply Wasm.SmallStep.twp_ltS (result := 1) (by rw [if_pos hlt])
+    iapply Wasm.SmallStep.twp_ltS (result := 1) (by rw [ite_eq_left hlt])
     iapply Wasm.SmallStep.twp_brIf (targetCode := contCode)
       (targetControl := controls) (targetValues := ([] : List Value))
       (by decide : (1 : UInt32) ≠ 0) (by rfl)
     have hfix : Table.fixInsertIndex t c = c := by
       unfold Table.fixInsertIndex
-      rw [if_neg (Table.isSpecial_iff.mp hsp)]
+      rw [ite_eq_right (Table.isSpecial_iff.mp hsp)]
     rw [hfix]
     ihave Hgo := Hexit $$
       %((Int32.ofInt (signExtend (Table.ctrlAt t c).toNat 8)).toUInt32)
@@ -777,13 +777,13 @@ theorem twp_fix_insert [WasmSmallStepGS hlc Universal.State]
     have hltFalse :
         ¬ ((Int32.ofInt (signExtend (Table.ctrlAt t c).toNat 8)).toUInt32.toInt32
           < (0 : UInt32).toInt32) := fun h => hsp ((ProbeStop.ltS_signByte _).mp h)
-    iapply Wasm.SmallStep.twp_ltS (result := 0) (by rw [if_neg hltFalse])
+    iapply Wasm.SmallStep.twp_ltS (result := 0) (by rw [ite_eq_right hltFalse])
     iapply Wasm.SmallStep.twp_brIfZero
     obtain ⟨j0, hls0, hj0b, hj0e⟩ :=
       ProbeStop.lowestSpecial_groupAt_zero hwf hcl hg hb8
     have hfix : Table.fixInsertIndex t c = j0 := by
       unfold Table.fixInsertIndex
-      rw [if_pos hfull, hls0, Option.getD_some]
+      rw [ite_eq_left hfull, hls0, Option.getD_some]
     have hmask : Table.swarMatchEmptyOrDeleted
           (Table.groupWord (Table.groupAt t 0)) &&& Table.REP80
         = Table.swarMatchEmptyOrDeleted (Table.groupWord (Table.groupAt t 0)) := by

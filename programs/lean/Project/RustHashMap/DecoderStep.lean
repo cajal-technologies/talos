@@ -292,7 +292,7 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
       · -- the last pair leaves the loop at the accepting return
         have hcount : UInt32.ofNat (st.index + 1) = count := by
           rw [hlast, UInt32.ofNat_toNat]
-        iapply twp_ne (result := 0) (by rw [if_neg (by simp [hcount])])
+        iapply twp_ne (result := 0) (by rw [ite_eq_right (by simp [hcount])])
         iapply twp_brIfZero
         wasm_twp_pures [twp_exitControl]
           using [List.take_zero, List.nil_append]
@@ -322,7 +322,7 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
           have htoNat := congrArg UInt32.toNat heq
           rw [hnextNat] at htoNat
           omega
-        iapply twp_ne (result := 1) (by rw [if_pos hne])
+        iapply twp_ne (result := 1) (by rw [ite_eq_left hne])
         iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
         simp only [List.take_zero, List.nil_append]
         rw [loop_remaining_step, loop_cursor_step]

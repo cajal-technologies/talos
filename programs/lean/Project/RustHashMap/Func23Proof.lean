@@ -133,7 +133,7 @@ theorem func23_correct [WasmSmallStepGS hlc Universal.State] :
           Value.i32 (UInt32.ofNat (2 * capacity.toNat))
         else Value.i32 4) = Value.i32 newCapacity := by
     by_cases hcmp : UInt32.ofNat (2 * capacity.toNat) > (4 : UInt32)
-    · rw [if_pos hcmp, if_pos (by decide : (1 : UInt32) ≠ 0)]
+    · rw [ite_eq_left hcmp, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       have hn : 4 < 2 * capacity.toNat := by
         change (4 : UInt32) < UInt32.ofNat (2 * capacity.toNat) at hcmp
         rw [UInt32.lt_iff_toNat_lt,
@@ -143,7 +143,7 @@ theorem func23_correct [WasmSmallStepGS hlc Universal.State] :
       show Value.i32 (UInt32.ofNat (2 * capacity.toNat)) =
         Value.i32 (UInt32.ofNat newCapacityNat)
       rw [hnewUnfold, max_eq_left (by omega)]
-    · rw [if_neg hcmp, if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+    · rw [ite_eq_right hcmp, ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
       have hn : 2 * capacity.toNat ≤ 4 := by
         change ¬ (4 : UInt32) < UInt32.ofNat (2 * capacity.toNat) at hcmp
         rw [UInt32.lt_iff_toNat_lt,

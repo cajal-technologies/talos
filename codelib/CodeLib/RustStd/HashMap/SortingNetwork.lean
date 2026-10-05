@@ -80,13 +80,13 @@ theorem cmpSwap_eq_set_set (lt : α → α → Bool) (l : List α)
     cmpSwap lt l c =
       (l.set c.1 (cmpMin lt l[c.1] l[c.2])).set c.2
         (cmpMax lt l[c.1] l[c.2]) :=
-  dif_pos ⟨h1, h2⟩
+  dite_eq_left ⟨h1, h2⟩
 
 /-- An index out of range keeps the list. -/
 theorem cmpSwap_of_not_lt (lt : α → α → Bool) (l : List α)
     {c : Comparator} (h : ¬(c.1 < l.length ∧ c.2 < l.length)) :
     cmpSwap lt l c = l :=
-  dif_neg h
+  dite_eq_right h
 
 @[simp] theorem cmpSwap_length (lt : α → α → Bool) (l : List α)
     (c : Comparator) : (cmpSwap lt l c).length = l.length := by
@@ -116,9 +116,9 @@ theorem cmpSwap_perm [DecidableEq α] (lt : α → α → Bool) (l : List α)
   by_cases h : c.1 < l.length ∧ c.2 < l.length
   · rw [cmpSwap_eq_set_set lt l h.1 h.2]
     by_cases hlt : lt l[c.2] l[c.1] = true
-    · rw [minPair_eq, maxPair_eq, if_pos hlt, if_pos hlt]
+    · rw [minPair_eq, maxPair_eq, ite_eq_left hlt, ite_eq_left hlt]
       exact set_set_perm l h.1 h.2
-    · rw [minPair_eq, maxPair_eq, if_neg hlt, if_neg hlt,
+    · rw [minPair_eq, maxPair_eq, ite_eq_right hlt, ite_eq_right hlt,
         List.set_getElem_self h.1]
       rw [List.set_getElem_self h.2]
   · rw [cmpSwap_of_not_lt lt l h]
@@ -420,10 +420,10 @@ theorem zeroOne (net : List Comparator) (n : Nat)
     intro a b
     rw [cmpMin_bool, minPair_eq]
     by_cases hba : b < a
-    · rw [if_pos (by simpa using hba)]
+    · rw [ite_eq_left (by simpa using hba)]
       have key : g b = true → g a = true := hstep b a (UInt32.le_of_lt hba)
       cases hga : g a <;> cases hgb : g b <;> simp_all
-    · rw [if_neg (by simpa using hba)]
+    · rw [ite_eq_right (by simpa using hba)]
       have key : g a = true → g b = true := hstep a b (UInt32.not_lt.mp hba)
       cases hga : g a <;> cases hgb : g b <;> simp_all
   have hmax : ∀ a b : UInt32,
@@ -432,10 +432,10 @@ theorem zeroOne (net : List Comparator) (n : Nat)
     intro a b
     rw [cmpMax_bool, maxPair_eq]
     by_cases hba : b < a
-    · rw [if_pos (by simpa using hba)]
+    · rw [ite_eq_left (by simpa using hba)]
       have key : g b = true → g a = true := hstep b a (UInt32.le_of_lt hba)
       cases hga : g a <;> cases hgb : g b <;> simp_all
-    · rw [if_neg (by simpa using hba)]
+    · rw [ite_eq_right (by simpa using hba)]
       have key : g a = true → g b = true := hstep a b (UInt32.not_lt.mp hba)
       cases hga : g a <;> cases hgb : g b <;> simp_all
   have hmapeq : out.map g = applyNetwork ltBool net (l.map g) :=

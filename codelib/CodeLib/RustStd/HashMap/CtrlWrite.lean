@@ -68,7 +68,7 @@ theorem setCtrl_ctrl_of_le (t : Table K V) {i : Nat} (hb : t.buckets ∣ 2 ^ 32)
     (h8 : 8 ≤ t.buckets) (hi : i < t.buckets) (hi8 : 8 ≤ i) (c : UInt8) :
     (setCtrl t i c).ctrl = t.ctrl.set i c := by
   unfold setCtrl
-  rw [index2_eq_of_le hb h8 hi, if_neg (by omega), List.set_set]
+  rw [index2_eq_of_le hb h8 hi, ite_eq_right (by omega), List.set_set]
 
 /-- Below bucket 8 the mirror is `i + buckets`, at the tail of the control
 bytes, so `setCtrl` changes two bytes. -/
@@ -76,7 +76,7 @@ theorem setCtrl_ctrl_of_lt (t : Table K V) {i : Nat} (hb : t.buckets ∣ 2 ^ 32)
     (h8 : 8 ≤ t.buckets) (hi : i < 8) (c : UInt8) :
     (setCtrl t i c).ctrl = (t.ctrl.set i c).set (i + t.buckets) c := by
   unfold setCtrl
-  rw [index2_eq_of_le hb h8 (by omega), if_pos hi]
+  rw [index2_eq_of_le hb h8 (by omega), ite_eq_left hi]
 
 /-- `setCtrl` keeps the length of the control bytes. -/
 theorem length_setCtrl_ctrl (t : Table K V) (i : Nat) (c : UInt8) :

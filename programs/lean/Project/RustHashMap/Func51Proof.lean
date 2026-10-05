@@ -46,9 +46,9 @@ private theorem compare_result (byteA byteB : UInt8) :
   rw [byte_and_255, byte_and_255]
   by_cases hsame : byteA = byteB
   · subst hsame
-    rw [if_pos rfl, if_pos rfl]
+    rw [ite_eq_left rfl, ite_eq_left rfl]
     decide
-  · rw [if_neg hsame, if_neg (fun heq => hsame (UInt8.toUInt32_inj.mp heq))]
+  · rw [ite_eq_right hsame, ite_eq_right (fun heq => hsame (UInt8.toUInt32_inj.mp heq))]
     decide
 
 private theorem func51_index :

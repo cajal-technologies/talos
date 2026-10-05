@@ -79,7 +79,7 @@ private theorem ofEntries_nil (hash : UInt32 → UInt64) :
     HashMap.Table.ofEntries hash ([] : List (UInt32 × UInt32))
       = HashMap.Table.empty := by
   rw [HashMap.Table.ofEntries_eq_insertAll, List.length_nil,
-    HashMap.Table.insertAll_nil, HashMap.Table.withCapacity, if_pos rfl]
+    HashMap.Table.insertAll_nil, HashMap.Table.withCapacity, ite_eq_left rfl]
 
 /-! ## The shape of the block -/
 
@@ -171,7 +171,7 @@ theorem twp_insert_block
     have hnil : entries = [] := by
       have : entries.length = 0 := by rw [hlen, hzero, UInt32.toNat_zero]
       exact List.eq_nil_of_length_eq_zero this
-    iapply twp_eqz (result := 1) (by rw [if_pos hzero])
+    iapply twp_eqz (result := 1) (by rw [ite_eq_left hzero])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_zero, List.nil_append]
     ihave Hmap : HashMap.Table.HashMapAt 0 (frame + 16) k0 k1
@@ -204,7 +204,7 @@ theorem twp_insert_block
       have h4 : (2 : Nat) ^ 31 = 2147483648 := by norm_num
       have h5 : (2 : Nat) ^ 32 = 4294967296 := by norm_num
       omega
-    iapply twp_eqz (result := 0) (by rw [if_neg hzero])
+    iapply twp_eqz (result := 0) (by rw [ite_eq_right hzero])
     iapply twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_add]
       rewriting [hshift]

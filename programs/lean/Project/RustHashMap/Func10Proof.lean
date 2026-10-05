@@ -105,8 +105,8 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
       max (max (2 * cap.toNat) requiredNat) minCapNat := rfl
   have hminCapNat : minCapNat = 8 ∨ minCapNat = 4 := by
     by_cases h : size.toNat = 1
-    · exact Or.inl (by simp only [minCapNat, if_pos h])
-    · exact Or.inr (by simp only [minCapNat, if_neg h])
+    · exact Or.inl (by simp only [minCapNat, ite_eq_left h])
+    · exact Or.inr (by simp only [minCapNat, ite_eq_right h])
   have hmidLe : max (2 * cap.toNat) requiredNat ≤ newCapacityNat := by
     rw [hnewUnfold]; exact le_max_left _ _
   have hminLe : minCapNat ≤ newCapacityNat := by
@@ -199,7 +199,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
     UInt32.le_iff_toNat_le.mpr (by rw [hrequiredWord]; omega)
   have hgeWord :
       (1 : UInt32) = if len + additional ≥ additional then 1 else 0 :=
-    (if_pos hgeCond).symm
+    (ite_eq_left hgeCond).symm
   have hdoubleWord : cap <<< (1 : UInt32) =
       UInt32.ofNat (2 * cap.toNat) := by
     apply UInt32.toNat_inj.mp
@@ -217,14 +217,14 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
         else Value.i32 (UInt32.ofNat (2 * cap.toNat))) =
         Value.i32 (UInt32.ofNat (max (2 * cap.toNat) requiredNat)) := by
     by_cases hcmp : len + additional > UInt32.ofNat (2 * cap.toNat)
-    · rw [if_pos hcmp, if_pos (by decide : (1 : UInt32) ≠ 0)]
+    · rw [ite_eq_left hcmp, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       have hn : 2 * cap.toNat < requiredNat := by
         change UInt32.ofNat (2 * cap.toNat) < len + additional at hcmp
         rw [UInt32.lt_iff_toNat_lt,
           UInt32.toNat_ofNat_of_lt' hdoubleBound, hrequiredWord] at hcmp
         exact hcmp
       rw [max_eq_right (by omega), hrequiredOfNat]
-    · rw [if_neg hcmp, if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+    · rw [ite_eq_right hcmp, ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
       have hn : requiredNat ≤ 2 * cap.toNat := by
         change ¬ UInt32.ofNat (2 * cap.toNat) < len + additional at hcmp
         rw [UInt32.lt_iff_toNat_lt,
@@ -236,17 +236,17 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
           Value.i32 8 else Value.i32 4) =
         Value.i32 (UInt32.ofNat minCapNat) := by
     by_cases hs : size = 1
-    · rw [if_pos hs, if_pos (by decide : (1 : UInt32) ≠ 0)]
+    · rw [ite_eq_left hs, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       have hn : size.toNat = 1 := by rw [hs]; decide
       show Value.i32 8 = Value.i32 (UInt32.ofNat minCapNat)
-      rw [show minCapNat = 8 by simp only [minCapNat, if_pos hn]]
+      rw [show minCapNat = 8 by simp only [minCapNat, ite_eq_left hn]]
       rfl
-    · rw [if_neg hs, if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+    · rw [ite_eq_right hs, ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
       have hn : size.toNat ≠ 1 := by
         intro hcontra
         exact hs (UInt32.toNat_inj.mp (by rw [hcontra]; decide))
       show Value.i32 4 = Value.i32 (UInt32.ofNat minCapNat)
-      rw [show minCapNat = 4 by simp only [minCapNat, if_neg hn]]
+      rw [show minCapNat = 4 by simp only [minCapNat, ite_eq_right hn]]
       rfl
   have hselectThree :
       (if (if UInt32.ofNat (max (2 * cap.toNat) requiredNat) >
@@ -256,7 +256,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
         Value.i32 newCapacity := by
     by_cases hcmp : UInt32.ofNat (max (2 * cap.toNat) requiredNat) >
         UInt32.ofNat minCapNat
-    · rw [if_pos hcmp, if_pos (by decide : (1 : UInt32) ≠ 0)]
+    · rw [ite_eq_left hcmp, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       have hn : minCapNat < max (2 * cap.toNat) requiredNat := by
         change UInt32.ofNat minCapNat <
           UInt32.ofNat (max (2 * cap.toNat) requiredNat) at hcmp
@@ -266,7 +266,7 @@ theorem func10_correct [WasmSmallStepGS hlc Universal.State] :
       show Value.i32 (UInt32.ofNat (max (2 * cap.toNat) requiredNat)) =
         Value.i32 (UInt32.ofNat newCapacityNat)
       rw [hnewUnfold, max_eq_left (Nat.le_of_lt hn)]
-    · rw [if_neg hcmp, if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+    · rw [ite_eq_right hcmp, ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
       have hn : max (2 * cap.toNat) requiredNat ≤ minCapNat := by
         change ¬ UInt32.ofNat minCapNat <
           UInt32.ofNat (max (2 * cap.toNat) requiredNat) at hcmp

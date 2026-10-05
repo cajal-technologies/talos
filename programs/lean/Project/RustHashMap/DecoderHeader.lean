@@ -387,7 +387,7 @@ theorem twp_header_error [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_const]
-  iapply twp_gtU (result := 0) (by rw [if_neg hshort])
+  iapply twp_gtU (result := 0) (by rw [ite_eq_right hshort])
   iapply twp_brIfZero
   -- absolute `func 55` builds the `io::Error` at `frame + 48`
   wasm_twp_pures [twp_localGet twp_const twp_add]
@@ -472,7 +472,7 @@ theorem twp_header_error [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_const]
-    iapply twp_eq (result := 0) (by rw [if_neg hw0'])
+    iapply twp_eq (result := 0) (by rw [ite_eq_right hw0'])
     iapply twp_brIfZero
     -- the word goes back where it was
     ihave Herr0arr := Hclose0 $$ Hw0
@@ -607,7 +607,7 @@ theorem twp_header_error [WasmSmallStepGS hlc Universal.State]
       wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       wasm_twp_pures [twp_const]
-      iapply twp_eq (result := 0) (by rw [if_neg hv0'])
+      iapply twp_eq (result := 0) (by rw [ite_eq_right hv0'])
       iapply twp_brIfZero
       ihave Hv0arr := Hclosev0 $$ Hv0
       ihave Hv0s :=

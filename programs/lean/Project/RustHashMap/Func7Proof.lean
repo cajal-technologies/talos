@@ -768,7 +768,7 @@ private theorem twp_short_shuffle [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_const]
-  iapply twp_eq (result := 0) (by rw [if_neg hw0'])
+  iapply twp_eq (result := 0) (by rw [ite_eq_right hw0'])
   iapply twp_brIfZero
   -- word 0 goes back where it was
   wasm_twp_pures [twp_localGet twp_localGet]
@@ -958,7 +958,7 @@ private theorem twp_short_convert [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_const]
-    iapply twp_eq (result := 0) (by rw [if_neg hv0'])
+    iapply twp_eq (result := 0) (by rw [ite_eq_right hv0'])
     iapply twp_brIfZero
     -- the last two words go to the pair local
     wasm_twp_pures [twp_localGet]
@@ -1816,7 +1816,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
         UInt32.lt_iff_toNat_lt.mp hshort
       have h4 : (4 : UInt32).toNat = 4 := rfl
       omega
-    iapply twp_ltU (result := 1) (by rw [if_pos hshort])
+    iapply twp_ltU (result := 1) (by rw [ite_eq_left hshort])
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.drop_zero, List.nil_append]
     simp only [shortArm]
@@ -1905,7 +1905,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
       ptr_slot_bound ptr bytes.length hptrBound hfourBytes
     obtain ⟨hk0, hk1, hk2, hk3⟩ := offset_facts ptr 0 0 rfl hbptr
     rw [hzero] at hk1 hk2 hk3
-    iapply twp_ltU (result := 0) (by rw [if_neg hshort])
+    iapply twp_ltU (result := 0) (by rw [ite_eq_right hshort])
     iapply twp_brIfZero
     -- the header moves past the key
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
@@ -2006,7 +2006,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
       have hokNe : ¬ (okTag ≠ (2147483649 : UInt32)) := by
         intro h
         exact h hokTag
-      iapply twp_ne (result := 0) (by rw [if_neg hokNe])
+      iapply twp_ne (result := 0) (by rw [ite_eq_right hokNe])
       iapply twp_brIfZero
       -- the buffer address goes to its local
       wasm_twp_pures [twp_localGet twp_wrapI64]
@@ -2023,7 +2023,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
       · -- the decoder read the whole map
         have hacc : KeyDecodeAccepts bytes :=
           ⟨hfourBytes, hAccept, (hiff.mp hrem).symm⟩
-        iapply twp_eqz (result := 1) (by rw [if_pos hrem])
+        iapply twp_eqz (result := 1) (by rw [ite_eq_left hrem])
         iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
         simp only [List.take_zero, List.nil_append]
         rw [show okWrite = okWrite ++ ([] : Program) from
@@ -2099,7 +2099,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
         have hnotAccept : ¬ KeyDecodeAccepts bytes := by
           intro hacc
           exact hrem (hiff.mpr hacc.2.2.symm)
-        iapply twp_eqz (result := 0) (by rw [if_neg hrem])
+        iapply twp_eqz (result := 0) (by rw [ite_eq_right hrem])
         iapply twp_brIfZero
         iapply twp_trailing_error out (sp - 96) (.i32 buffer)
           (.i32 capacity) heapId q3 outBefore dataBytes belowD cursorD
@@ -2166,7 +2166,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
           wasm_twp_pures [twp_localGet]
           by_cases hcap : capacity = 0
           · -- the map has no buffer to give back
-            iapply twp_eqz (result := 1) (by rw [if_pos hcap])
+            iapply twp_eqz (result := 1) (by rw [ite_eq_left hcap])
             iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
             simp only [List.take_zero, List.nil_append]
             iapply twp_key_return sp
@@ -2183,7 +2183,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
             iapply Hreject $$ %hnotAccept Hruntime Hsp Hbelow Hout Hbytes
               Hdata Hbump Hstreams %hw0
           · -- the map gives its buffer back
-            iapply twp_eqz (result := 0) (by rw [if_neg hcap])
+            iapply twp_eqz (result := 0) (by rw [ite_eq_right hcap])
             iapply twp_brIfZero
             wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl
               twp_const]
@@ -2266,7 +2266,7 @@ theorem func7_correct [WasmSmallStepGS hlc Universal.State] :
         wasm_twp_localTee [List.length_cons, List.length_nil,
           Nat.reduceAdd, Nat.reduceSub, List.set]
         wasm_twp_pures [twp_const]
-        iapply twp_ne (result := 1) (by rw [if_pos hword0'])
+        iapply twp_ne (result := 1) (by rw [ite_eq_left hword0'])
         iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
         simp only [List.take_zero, List.nil_append]
         simp only [rejectWrite]

@@ -195,7 +195,7 @@ theorem twp_grow_body [WasmSmallStepGS hlc Universal.State]
       exact hbound
     have hpush : pairPushCapacity capacity.toNat = 2 * capacity.toNat :=
       pairPushCapacity_double capacity.toNat hcapacity2
-    iapply twp_ne (result := 0) (by rw [if_neg (by simp [hfull])])
+    iapply twp_ne (result := 0) (by rw [ite_eq_right (by simp [hfull])])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_add]
     rw [hheadAddr]
     ihave Hpointer' :=
@@ -306,7 +306,7 @@ theorem twp_grow_body [WasmSmallStepGS hlc Universal.State]
           ihave Hoom := Hoom $$ %input
           iapply Hoom $$ Hstreams
   · -- the buffer has room, so the body leaves the block at once
-    iapply twp_ne (result := 1) (by rw [if_pos hfull])
+    iapply twp_ne (result := 1) (by rw [ite_eq_left hfull])
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.drop_zero, List.nil_append]
     have hlt : written.toNat < capacity.toNat := by

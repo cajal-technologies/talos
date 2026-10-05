@@ -90,12 +90,12 @@ theorem twp_error_free [WasmSmallStepGS hlc Universal.State]
     Nat.reduceSub, List.set]
   by_cases hempty : capacity = 0
   · -- an empty buffer frees nothing
-    iapply twp_eqz (result := 1) (by rw [if_pos hempty])
+    iapply twp_eqz (result := 1) (by rw [ite_eq_left hempty])
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     iapply Hcont $$ Hruntime Hcapacity
   · -- a live buffer calls the empty deallocator
-    iapply twp_eqz (result := 0) (by rw [if_neg hempty])
+    iapply twp_eqz (result := 0) (by rw [ite_eq_right hempty])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const twp_shl
       twp_const]
     have Hfree : Func57NoopSpec (hlc := hlc) := func57_noop_correct

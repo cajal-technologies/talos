@@ -321,7 +321,7 @@ theorem twp_seed_guard [WasmSmallStepGS hlc Universal.State]
   ihave Hkeys := Hback $$ Hbyte
   by_cases hone : stateByte.toUInt32 = (1 : UInt32)
   · -- the seed pair is already there
-    iapply twp_eq (result := 1) (by rw [if_pos hone])
+    iapply twp_eq (result := 1) (by rw [ite_eq_left hone])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_zero, List.nil_append]
     ihave ⟨Hword0, Hword1, Htail⟩ :=
@@ -334,7 +334,7 @@ theorem twp_seed_guard [WasmSmallStepGS hlc Universal.State]
       Hruntime Hsp Hbelow Hword0 Hword1 Htail Hbump Hstreams %hdrop16
     iexact Hexit
   · -- the first call of the run: absolute `func 16` writes the pair
-    iapply twp_eq (result := 0) (by rw [if_neg hone])
+    iapply twp_eq (result := 0) (by rw [ite_eq_right hone])
     iapply twp_brIfZero
     wasm_twp_pures [twp_const]
     ihave ⟨Hlow, Hown⟩ :=

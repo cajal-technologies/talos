@@ -180,7 +180,7 @@ theorem siftDownAux_eq_self (fuel : Nat) (ps : List (UInt32 × UInt32))
     siftDownAux fuel ps len node = ps := by
   cases fuel with
   | zero => rfl
-  | succ fuel => rw [siftDownAux, if_pos h]
+  | succ fuel => rw [siftDownAux, ite_eq_left h]
 
 private theorem siftDownAux_fuel_aux (len : Nat) :
     ∀ (fuel : Nat) (ps : List (UInt32 × UInt32)) (node extra : Nat),
@@ -658,12 +658,12 @@ private theorem heapsortUpto_inv_aux (ps : List (UInt32 × UInt32))
     rw [heapsortUpto_succ ps len i hiN]
     refine ⟨?_, ?_⟩
     · intro hli
-      rw [heapsortStep, if_pos hli]
+      rw [heapsortStep, ite_eq_left hli]
       have h1 := hih.1 (by omega)
       rw [show i + 1 - len = (i - len) + 1 from by omega] at h1
       exact siftDown_heapFrom _ len (i - len) (by omega) h1
     · intro hli
-      rw [heapsortStep, if_neg (by omega)]
+      rw [heapsortStep, ite_eq_right (by omega)]
       refine sort_step hqlen hli ?_
       rcases Nat.lt_or_ge (i + 1) len with hlt | hge
       · exact hih.2 hlt

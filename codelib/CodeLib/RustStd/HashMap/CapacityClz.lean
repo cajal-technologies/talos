@@ -87,7 +87,7 @@ private theorem clz32_go (f : Nat) : ∀ (x : UInt32) (m : Nat), m < 32 →
     intro x m hm hlow hhigh hfuel hf
     rw [clz32_succ]
     by_cases htop : x &&& 0x80000000 ≠ 0
-    · rw [if_pos htop]
+    · rw [ite_eq_left htop]
       have hge : ¬ (x.toNat < 2 ^ 31) := by
         intro hlt
         exact htop (and_top_bit_uint.mpr hlt)
@@ -98,7 +98,7 @@ private theorem clz32_go (f : Nat) : ∀ (x : UInt32) (m : Nat), m < 32 →
         omega
       subst hm31
       omega
-    · rw [if_neg htop]
+    · rw [ite_eq_right htop]
       have hlt31 : x.toNat < 2 ^ 31 :=
         and_top_bit_uint.mp (by simpa using htop)
       have hmlt : m < 31 := by

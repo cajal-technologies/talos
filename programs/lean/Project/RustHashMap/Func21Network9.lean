@@ -148,22 +148,22 @@ theorem keyLt_eq : keyLt = fun a b => decide (a.1 < b.1) := rfl
 /-- The smaller entry, when the second key is below the first. -/
 private theorem cmpMin_pos {a b : UInt32 × UInt32} (h : b.1 < a.1) :
     Table.cmpMin keyLt a b = b := by
-  rw [Table.minPair_eq, if_pos (by simpa [keyLt] using h)]
+  rw [Table.minPair_eq, ite_eq_left (by simpa [keyLt] using h)]
 
 /-- The smaller entry, when the second key is not below the first. -/
 private theorem cmpMin_neg {a b : UInt32 × UInt32} (h : ¬ b.1 < a.1) :
     Table.cmpMin keyLt a b = a := by
-  rw [Table.minPair_eq, if_neg (by simpa [keyLt] using h)]
+  rw [Table.minPair_eq, ite_eq_right (by simpa [keyLt] using h)]
 
 /-- The greater entry, when the second key is below the first. -/
 private theorem cmpMax_pos {a b : UInt32 × UInt32} (h : b.1 < a.1) :
     Table.cmpMax keyLt a b = a := by
-  rw [Table.maxPair_eq, if_pos (by simpa [keyLt] using h)]
+  rw [Table.maxPair_eq, ite_eq_left (by simpa [keyLt] using h)]
 
 /-- The greater entry, when the second key is not below the first. -/
 private theorem cmpMax_neg {a b : UInt32 × UInt32} (h : ¬ b.1 < a.1) :
     Table.cmpMax keyLt a b = b := by
-  rw [Table.maxPair_eq, if_neg (by simpa [keyLt] using h)]
+  rw [Table.maxPair_eq, ite_eq_right (by simpa [keyLt] using h)]
 
 /-- A flag that the compiled code made with `i32.lt_u` selects the arm
 that the test names. -/
@@ -180,12 +180,12 @@ private theorem cmpMax_key (a b : UInt32 × UInt32) :
     (if a.1 < b.1 then b.1 else a.1) = (Table.cmpMax keyLt a b).1 := by
   by_cases h : b.1 < a.1
   · have h1 := UInt32.lt_iff_toNat_lt.mp h
-    rw [cmpMax_pos h, if_neg (fun hc =>
+    rw [cmpMax_pos h, ite_eq_right (fun hc =>
       absurd (UInt32.lt_iff_toNat_lt.mp hc) (by omega))]
   · rw [cmpMax_neg h]
     by_cases h2 : a.1 < b.1
-    · rw [if_pos h2]
-    · rw [if_neg h2]
+    · rw [ite_eq_left h2]
+    · rw [ite_eq_right h2]
       have h1 : ¬ b.1.toNat < a.1.toNat := fun hc =>
         h (UInt32.lt_iff_toNat_lt.mpr hc)
       have h3 : ¬ a.1.toNat < b.1.toNat := fun hc =>
@@ -242,9 +242,9 @@ private theorem cmpSwap_getElem_ne (M : List (UInt32 × UInt32))
     (Table.cmpSwap keyLt M (i, j))[k]'(by
         rwa [Table.cmpSwap_length]) = M[k] := by
   by_cases h : i < M.length ∧ j < M.length
-  · simp only [Table.cmpSwap, dif_pos h,
+  · simp only [Table.cmpSwap, dite_eq_left h,
       List.getElem_set_ne (Ne.symm hkj), List.getElem_set_ne (Ne.symm hki)]
-  · simp only [Table.cmpSwap, dif_neg h]
+  · simp only [Table.cmpSwap, dite_eq_right h]
 
 /-- The low slot of a comparator takes the smaller entry. -/
 private theorem cmpSwap_getElem_lo (M : List (UInt32 × UInt32))
@@ -252,7 +252,7 @@ private theorem cmpSwap_getElem_lo (M : List (UInt32 × UInt32))
     (Table.cmpSwap keyLt M (i, j))[i]'(by
         rwa [Table.cmpSwap_length]) =
       Table.cmpMin keyLt M[i] M[j] := by
-  simp only [Table.cmpSwap, dif_pos (⟨hi, hj⟩ : i < M.length ∧
+  simp only [Table.cmpSwap, dite_eq_left (⟨hi, hj⟩ : i < M.length ∧
     j < M.length), List.getElem_set_ne (Ne.symm hij),
     List.getElem_set_self]
 
@@ -262,7 +262,7 @@ private theorem cmpSwap_getElem_hi (M : List (UInt32 × UInt32))
     (Table.cmpSwap keyLt M (i, j))[j]'(by
         rwa [Table.cmpSwap_length]) =
       Table.cmpMax keyLt M[i] M[j] := by
-  simp only [Table.cmpSwap, dif_pos (⟨hi, hj⟩ : i < M.length ∧
+  simp only [Table.cmpSwap, dite_eq_left (⟨hi, hj⟩ : i < M.length ∧
     j < M.length), List.getElem_set_self]
 
 /-- A comparator leaves the entry of every other slot alone. -/
@@ -719,14 +719,14 @@ private theorem twp_min_addr [WasmSmallStepGS hlc Universal.State]
       else Value.i32 addri) (select_flag _ _ _).symm
   by_cases h : (eAt M j).1 < (eAt M i).1
   · isimp only [cmpMin_pos h] at Hcont
-    isimp only [if_pos h]
+    isimp only [ite_eq_left h]
     iapply twp_pair_read (k := j) hj hlen hroom haddrj
     isplitl_exact Hbuf
     iintro Hbuf
     ihave Hgo := Hcont $$ Hbuf
     iexact Hgo
   · isimp only [cmpMin_neg h] at Hcont
-    isimp only [if_neg h]
+    isimp only [ite_eq_right h]
     iapply twp_pair_read (k := i) hi hlen hroom haddri
     isplitl_exact Hbuf
     iintro Hbuf
@@ -763,7 +763,7 @@ private theorem twp_min_off [WasmSmallStepGS hlc Universal.State]
       else Value.i32 ci) (select_flag _ _ _).symm
   by_cases h : (eAt M j).1 < (eAt M i).1
   · isimp only [cmpMin_pos h] at Hcont
-    isimp only [if_pos h]
+    isimp only [ite_eq_left h]
     iapply twp_add
     iapply twp_pair_read (k := j) hj hlen hroom
       (by rw [hcj]; exact UInt32.add_comm _ _)
@@ -772,7 +772,7 @@ private theorem twp_min_off [WasmSmallStepGS hlc Universal.State]
     ihave Hgo := Hcont $$ Hbuf
     iexact Hgo
   · isimp only [cmpMin_neg h] at Hcont
-    isimp only [if_neg h]
+    isimp only [ite_eq_right h]
     iapply twp_add
     iapply twp_pair_read (k := i) hi hlen hroom
       (by rw [hci]; exact UInt32.add_comm _ _)
@@ -812,14 +812,14 @@ private theorem twp_max_value [WasmSmallStepGS hlc Universal.State]
       else Value.i32 addrj) (select_flag _ _ _).symm
   by_cases h : (eAt M j).1 < (eAt M i).1
   · isimp only [cmpMax_pos h] at Hcont
-    isimp only [if_pos h]
+    isimp only [ite_eq_left h]
     iapply twp_value_read (k := i) hi hlen hroom haddri
     isplitl_exact Hbuf
     iintro Hbuf
     ihave Hgo := Hcont $$ Hbuf
     iexact Hgo
   · isimp only [cmpMax_neg h] at Hcont
-    isimp only [if_neg h]
+    isimp only [ite_eq_right h]
     iapply twp_value_read (k := j) hj hlen hroom haddrj
     isplitl_exact Hbuf
     iintro Hbuf
@@ -899,8 +899,8 @@ private theorem select_min_pair (a b : UInt32 × UInt32) :
         Value.i64 (Table.pairWord b) else Value.i64 (Table.pairWord a) := by
   rw [select_flag]
   by_cases h : b.1 < a.1
-  · rw [if_pos h, cmpMin_pos h]
-  · rw [if_neg h, cmpMin_neg h]
+  · rw [ite_eq_left h, cmpMin_pos h]
+  · rw [ite_eq_right h, cmpMin_neg h]
 
 /-- The two stores of the greater slot, in the order that the compiled
 comparator makes them. -/

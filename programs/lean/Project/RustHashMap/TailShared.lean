@@ -211,7 +211,7 @@ theorem PairVecAt_bytes [WasmHeapGS Universal.State]
         ⌜ptr.toNat + 8 * pairs.length < UInt32.size⌝) := by
   unfold PairVecAt
   by_cases hcap : capacity = 0
-  · rw [if_pos hcap]
+  · rw [ite_eq_left hcap]
     iintro %hfacts
     obtain ⟨hptr, hpairs⟩ := hfacts
     subst hptr
@@ -224,7 +224,7 @@ theorem PairVecAt_bytes [WasmHeapGS Universal.State]
       · iapply (pointsToBytes_nil 0 (4 : UInt32)).mpr
         itrivial
     · ipureexact (by decide)
-  · rw [if_neg hcap]
+  · rw [ite_eq_right hcap]
     iintro ⟨%pad, %hlen, Hblock⟩
     iunfold LiveBlock at Hblock
     icases Hblock with ⟨_Htoken, Hbytes, %_hfields⟩

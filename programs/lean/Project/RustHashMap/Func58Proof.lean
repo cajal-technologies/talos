@@ -80,7 +80,7 @@ private theorem classifyBump_oom_end
             2147483648) := by
   intro hend
   unfold classifyBump at hoom
-  rw [dif_pos hsum, if_pos hend] at hoom
+  rw [dite_eq_left hsum, ite_eq_left hend] at hoom
   exact BumpDecision.noConfusion hoom
 
 /-- The post-commit tail copies the whole old allocation, retires it, and
@@ -610,7 +610,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       rw [hsumWordEq]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
-      iapply twp_ltU (result := 0) (by rw [if_neg hnoUnderflow])
+      iapply twp_ltU (result := 0) (by rw [ite_eq_right hnoUnderflow])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet twp_sub]
       wasm_twp_pures [twp_and]
       rw [hbaseEq]
@@ -629,7 +629,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
         change ¬ (if 2 * finish.toNat < 4294967296 then
           (finish.toNat : Int) else (finish.toNat : Int) - 4294967296) < 0
         omega
-      iapply twp_ltS (result := 0) (by rw [if_neg hfinishNonnegative])
+      iapply twp_ltS (result := 0) (by rw [ite_eq_right hfinishNonnegative])
       wasm_twp_pures [twp_brIfZero twp_block twp_localGet twp_const twp_add]
       rw [UInt32.add_comm (65535 : UInt32) finish]
       wasm_twp_pures [twp_const twp_shrU] rewriting [show (16 : UInt32) % 32 = 16 by decide]
@@ -672,7 +672,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       iapply twp_leU (result := if allocatorRequiredPages finish ≤
         UInt32.ofNat pages then 1 else 0) rfl
       by_cases hcapacity : allocatorRequiredPages finish ≤ UInt32.ofNat pages
-      · rw [if_pos hcapacity]
+      · rw [ite_eq_left hcapacity]
         iapply twp_brIf (by decide) (by rfl)
         simp only [List.take_zero, List.nil_append, Nat.reduceAdd, Nat.reduceSub,
           List.set, List.drop_zero]
@@ -701,7 +701,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
             hphysical
         iframe Hruntime Hcursor Hfrontier Hauth Hretired Hpages Hblock Hstreams
           Hnormal
-      · rw [if_neg hcapacity]
+      · rw [ite_eq_right hcapacity]
         wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_sub]
         let delta := allocatorRequiredPages finish - UInt32.ofNat pages
         ihave HgrowFrame : iprop(
@@ -885,7 +885,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
         change (if 2 * (base + newSize).toNat < 4294967296 then
           ((base + newSize).toNat : Int)
           else ((base + newSize).toNat : Int) - 4294967296) < 0
-        rw [if_neg (by rw [hfinishNat]; omega)]; omega
+        rw [ite_eq_right (by rw [hfinishNat]; omega)]; omega
       have hfrontierWord :
           (if storedCursor ≠ 0 then storedCursor else heapBase) =
             UInt32.ofNat frontier := by
@@ -934,7 +934,7 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       rw [hsumWordEq]
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
-      iapply twp_ltU (result := 0) (by rw [if_neg hnoUnderflow])
+      iapply twp_ltU (result := 0) (by rw [ite_eq_right hnoUnderflow])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const twp_localGet twp_sub]
       wasm_twp_pures [twp_and]
       rw [← hbaseDef]
@@ -943,9 +943,9 @@ theorem func58_correct [WasmSmallStepGS hlc Universal.State] :
       wasm_twp_localTee [List.length]
       wasm_twp_pures [twp_localGet]
       iapply twp_ltU (result := 0) (by
-        rw [if_neg (UInt32.not_lt.mpr hbaseLeFinish)])
+        rw [ite_eq_right (UInt32.not_lt.mpr hbaseLeFinish)])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
-      iapply twp_ltS (result := 1) (by rw [if_pos hfinishNegative])
+      iapply twp_ltS (result := 1) (by rw [ite_eq_left hfinishNegative])
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.nil_append]
       ihave Hbump : BumpHeap heapId storedCursor frontier history $$

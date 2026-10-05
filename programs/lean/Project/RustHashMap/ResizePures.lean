@@ -147,7 +147,7 @@ theorem reserve_one_eq (hcl : Clean t) (hg : t.growthLeft = 0) :
 theorem capBuckets_resizeCap (t : Table K V) :
     capBuckets (resizeCap t) = Table.capacityToBuckets (resizeCap t) := by
   unfold capBuckets
-  rw [if_neg (by unfold resizeCap; omega)]
+  rw [ite_eq_right (by unfold resizeCap; omega)]
 
 /-- The bucket count of the fresh table, as the compiled code computes it
 from the capacity. -/
@@ -274,9 +274,9 @@ theorem walkFrom_zero (hw : Layout hash t) :
     walkFrom t (walkGroups t) 0 = Table.fullIndices t := by
   unfold walkGroups
   by_cases hsmall : t.buckets < 8
-  · rw [if_pos hsmall]
+  · rw [ite_eq_left hsmall]
     exact walkFrom_zero_small hw hsmall
-  · rw [if_neg hsmall]
+  · rw [ite_eq_right hsmall]
     refine walkFrom_zero_big ?_
     obtain ⟨m, hm, hm1, hpow⟩ := hw.shape
     have h8 : 8 ≤ t.buckets := by omega

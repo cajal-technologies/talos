@@ -128,7 +128,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         iframe H0 H4 H8 H12 Hctrl
       · iframe Hk0 Hk1
     simp only [containsKey_eq_false_of_items_zero hwf hsing.2.1 key,
-      Bool.false_eq_true, if_false]
+      Bool.false_eq_true, ite_false]
     ihave Hgo := Hcont $$ Hruntime Hmap
     isimp only [ResumeWP, resumeExpr, List.cons_append,
       List.nil_append] at Hgo
@@ -164,7 +164,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
           iexact Hbody
         · iframe Hk0 Hk1
       simp only [containsKey_eq_false_of_items_zero hwf hitems key,
-        Bool.false_eq_true, if_false]
+        Bool.false_eq_true, ite_false]
       ihave Hgo := Hcont $$ Hruntime Hmap
       isimp only [ResumeWP, resumeExpr, List.cons_append,
         List.nil_append] at Hgo
@@ -176,7 +176,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
         have hle := items_le_buckets hwf
         omega
       iapply Wasm.SmallStep.twp_eqz (result := 0)
-        (by rw [if_neg (ofNat_ne_zero (by omega) hitemsLt)])
+        (by rw [ite_eq_right (ofNat_ne_zero (by omega) hitemsLt)])
       wasm_twp_pures [twp_brIfZero twp_localGet]
       wasm_twp_rebind Wasm.SmallStep.twp_load32 (address := map)
         (offset := 4) (UInt32.ofNat (t.buckets - 1)) hh4.1 hh4.2.1
@@ -215,7 +215,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
               isplitl_pureexact hbuckets
               iexact Hbody
             · iframe Hk0 Hk1
-          simp only [hck, if_true]
+          simp only [hck, ite_true]
           ihave Hgo := Hcont $$ Hruntime Hmap
           isimp only [ResumeWP, resumeExpr, List.cons_append,
             List.nil_append] at Hgo
@@ -242,7 +242,7 @@ theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
               isplitl_pureexact hbuckets
               iexact Hbody
             · iframe Hk0 Hk1
-          simp only [hmissed, Bool.false_eq_true, if_false]
+          simp only [hmissed, Bool.false_eq_true, ite_false]
           ihave Hgo := Hcont $$ Hruntime Hmap
           isimp only [ResumeWP, resumeExpr, List.cons_append,
             List.nil_append] at Hgo

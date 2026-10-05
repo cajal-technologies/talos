@@ -172,7 +172,7 @@ theorem deserializeEntries_eq_some_of_accepts (bytes : List UInt8)
         * headerCount bytes := by
     rw [List.length_drop, hexact, pairCodec_u32le_width]
     omega
-  rw [HashMap.deserializeEntries, Vec.deserialize, if_neg (by omega),
+  rw [HashMap.deserializeEntries, Vec.deserialize, ite_eq_right (by omega),
     WordCodec.deserialize_eq_some_map_range _ _ _ hrest]
   have hcount : ((List.range (headerCount bytes)).map fun i =>
       (HashMap.pairCodec WordCodec.u32le WordCodec.u32le).decode
@@ -182,7 +182,7 @@ theorem deserializeEntries_eq_some_of_accepts (bytes : List UInt8)
       = (WordCodec.decodeU32 (bytes.take 4)).toNat := by
     simp [headerCount]
   dsimp only
-  rw [if_pos hcount]
+  rw [ite_eq_left hcount]
   congr 1
   rw [wireEntries]
   apply List.map_congr_left

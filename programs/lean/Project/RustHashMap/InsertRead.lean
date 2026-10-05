@@ -546,7 +546,7 @@ theorem twp_insert_read_phase [WasmSmallStepGS hlc Universal.State]
     have hcountLe : min 256 input.length ≤ input.length :=
       Nat.min_le_right _ _
     iapply twp_eqz (result := 0)
-      (by rw [if_neg (ofNat_ne_zero _ hcountPos (by omega))])
+      (by rw [ite_eq_right (ofNat_ne_zero _ hcountPos (by omega))])
     iapply twp_brIfZero
     let initial : LoopState :=
       { pushed := []

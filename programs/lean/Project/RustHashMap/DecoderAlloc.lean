@@ -55,11 +55,11 @@ def pairLayout (count : UInt32) : AllocLayout :=
 theorem pairCapacity_le (count : UInt32) : (pairCapacity count).toNat ≤ 512 := by
   unfold pairCapacity
   by_cases h : count < 512
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     have hn := UInt32.lt_iff_toNat_lt.mp h
     have h512 : (512 : UInt32).toNat = 512 := by decide
     omega
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     decide
 
 theorem pairCapacity_pos (count : UInt32) (hcount : count ≠ 0) :
@@ -69,8 +69,8 @@ theorem pairCapacity_pos (count : UInt32) (hcount : count ≠ 0) :
     exact hcount (UInt32.toNat_inj.mp (by rw [h]; rfl))
   unfold pairCapacity
   by_cases h : count < 512
-  · rw [if_pos h]; omega
-  · rw [if_neg h]; decide
+  · rw [ite_eq_left h]; omega
+  · rw [ite_eq_right h]; decide
 
 theorem pairSize_toNat (count : UInt32) :
     (pairSize count).toNat = 8 * (pairCapacity count).toNat := by

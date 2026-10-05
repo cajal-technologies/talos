@@ -310,7 +310,7 @@ theorem func24_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_const twp_localGet twp_sub]
-  iapply twp_leU (result := 1) (by rw [if_pos hleGuard])
+  iapply twp_leU (result := 1) (by rw [ite_eq_left hleGuard])
   iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_block twp_block twp_block twp_block]
@@ -459,7 +459,7 @@ theorem func24_correct [WasmSmallStepGS hlc Universal.State] :
       ihave ⟨Hblock, %hblockFacts⟩ :=
         LiveBlock_facts heapId oldId oldPtr oldLayout allBytes $$ Hblock
       wasm_twp_pures [twp_localGet]
-      iapply twp_eqz (by rw [if_neg holdNonzero])
+      iapply twp_eqz (by rw [ite_eq_right holdNonzero])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet
         twp_mul twp_localGet twp_localGet]
       have Hrealloc : Func58Spec (hlc := hlc) :=

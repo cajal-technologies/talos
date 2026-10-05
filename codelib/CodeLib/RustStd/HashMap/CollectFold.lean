@@ -51,9 +51,9 @@ theorem reserve_empty (hash : K → UInt64) (n : Nat) :
   have hcap : bucketMaskToCapacity ((empty : Table K V).buckets - 1) = 0 := rfl
   unfold Table.reserve
   by_cases h0 : n = 0
-  · rw [h0, if_pos (show 0 ≤ (empty : Table K V).growthLeft from Nat.zero_le _)]
-    rw [withCapacity, if_pos rfl]
-  · rw [if_neg (show ¬ n ≤ (empty : Table K V).growthLeft by
+  · rw [h0, ite_eq_left (show 0 ≤ (empty : Table K V).growthLeft from Nat.zero_le _)]
+    rw [withCapacity, ite_eq_left rfl]
+  · rw [ite_eq_right (show ¬ n ≤ (empty : Table K V).growthLeft by
       show ¬ n ≤ 0
       omega)]
     show (if (empty : Table K V).items + n ≤
@@ -61,7 +61,7 @@ theorem reserve_empty (hash : K → UInt64) (n : Nat) :
       else Table.resize hash empty
         (max ((empty : Table K V).items + n)
           (bucketMaskToCapacity ((empty : Table K V).buckets - 1) + 1))) = _
-    rw [if_neg (show ¬ (empty : Table K V).items + n ≤
+    rw [ite_eq_right (show ¬ (empty : Table K V).items + n ≤
         bucketMaskToCapacity ((empty : Table K V).buckets - 1) / 2 by
       rw [hitems, hcap, Nat.zero_div]
       omega)]
@@ -104,9 +104,9 @@ theorem Clean.growthLeft_le {t : Table K V} (hcl : Clean t) : t.growthLeft ≤ t
   have h := hcl.2
   unfold bucketMaskToCapacity at h
   by_cases h8 : t.buckets - 1 < 8
-  · rw [if_pos h8] at h
+  · rw [ite_eq_left h8] at h
     omega
-  · rw [if_neg h8] at h
+  · rw [ite_eq_right h8] at h
     have : (t.buckets - 1 + 1) / 8 * 7 ≤ t.buckets := by omega
     omega
 

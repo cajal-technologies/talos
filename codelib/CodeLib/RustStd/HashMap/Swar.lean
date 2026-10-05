@@ -611,10 +611,10 @@ theorem Layout.find?_setBytes_eq [BEq K] [LawfulBEq K] (hw : Layout hash t) {p :
       have hmir := hw.mirror (p + j) (by omega)
       have hnp : ¬ IsPad t.buckets (p + j) := by
         intro hpad
-        rw [if_pos hpad] at hmir
+        rw [ite_eq_left hpad] at hmir
         rw [hmir] at hfull
         exact absurd hfull (by decide)
-      rw [if_neg hnp] at hmir
+      rw [ite_eq_right hnp] at hmir
       apply hw.keyIs_eq_false_of_ctrl_ne (Nat.mod_lt _ hw.pos)
       rw [← hmir, h]
       exact xor_one_ne _

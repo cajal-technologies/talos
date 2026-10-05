@@ -69,9 +69,9 @@ theorem insertTail_perm (p : UInt32 × UInt32) (l : List (UInt32 × UInt32)) :
   | nil => exact List.Perm.refl _
   | cons q qs ih =>
     by_cases hlt : p.1 < q.1
-    · simp only [insertTail, hlt, if_true]
+    · simp only [insertTail, hlt, ite_true]
       exact List.Perm.refl _
-    · simp only [insertTail, hlt, if_false]
+    · simp only [insertTail, hlt, ite_false]
       exact (ih.cons q).trans (List.Perm.swap p q qs)
 
 /-- One insertion keeps the key order. -/
@@ -84,14 +84,14 @@ theorem insertTail_sorted (p : UInt32 × UInt32)
     rw [Table.SortedByKey.cons_iff] at hs
     obtain ⟨hhead, htail⟩ := hs
     by_cases hlt : p.1 < q.1
-    · simp only [insertTail, hlt, if_true]
+    · simp only [insertTail, hlt, ite_true]
       rw [Table.SortedByKey.cons_iff]
       refine ⟨?_, Table.SortedByKey.cons_iff.2 ⟨hhead, htail⟩⟩
       intro x hx
       rcases List.mem_cons.1 hx with hxq | hxqs
       · exact hxq ▸ UInt32.le_of_lt hlt
       · exact UInt32.le_trans (UInt32.le_of_lt hlt) (hhead x hxqs)
-    · simp only [insertTail, hlt, if_false]
+    · simp only [insertTail, hlt, ite_false]
       rw [Table.SortedByKey.cons_iff]
       refine ⟨?_, ih htail⟩
       intro x hx

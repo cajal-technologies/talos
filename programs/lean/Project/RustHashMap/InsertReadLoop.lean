@@ -640,7 +640,7 @@ theorem twp_loop_iteration [WasmSmallStepGS hlc Universal.State]
   unfold pushBody
   simp only [List.cons_append, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const]
-  iapply twp_eq (result := 0) (by rw [if_neg (ofNat_ne_256 st.index hindexLt)])
+  iapply twp_eq (result := 0) (by rw [ite_eq_right (ofNat_ne_256 st.index hindexLt)])
   iapply twp_brIfZero
   wasm_twp_pures [twp_localGet twp_const twp_add]
     rewriting [UInt32.add_comm insertMap.chunkOff base]

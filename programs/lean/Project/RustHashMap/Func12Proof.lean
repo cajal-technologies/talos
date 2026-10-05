@@ -201,7 +201,7 @@ private theorem insertTail_eq_of_split (p : UInt32 × UInt32) :
     match i with
     | 0 =>
       have hlt : p.1 < q.1 := habove (by simp)
-      simp only [insertTail, hlt, if_true, List.take_zero,
+      simp only [insertTail, hlt, ite_true, List.take_zero,
         List.drop_zero, List.nil_append]
     | i + 1 =>
       have hge : ¬ (p.1 < q.1) := hbelow 0 (Nat.succ_pos i)
@@ -212,7 +212,7 @@ private theorem insertTail_eq_of_split (p : UInt32 × UInt32) :
       have habove' : i < qs.length → p.1 < keyAt qs i := by
         intro hlt
         exact habove (by simpa using hlt)
-      simp only [insertTail, hge, if_false, ih i hi' hbelow' habove',
+      simp only [insertTail, hge, ite_false, ih i hi' hbelow' habove',
         List.take_succ_cons, List.drop_succ_cons, List.cons_append]
 
 /-! ## The state of the outer loop -/
@@ -847,7 +847,7 @@ private theorem twp_hole [WasmSmallStepGS hlc Universal.State]
         rw [UInt32.toNat_ofNat_of_lt' (by omega),
           show (8 : UInt32).toNat = 8 from rfl] at h1
         omega
-      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [if_pos hne])
+      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [ite_eq_left hne])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_const twp_add]
@@ -872,7 +872,7 @@ private theorem twp_hole [WasmSmallStepGS hlc Universal.State]
         (A.drop (i'' + 1) ++ post)) hi''A] at Hbuf
       by_cases hcmp : held.1 < keyAt A i''
       · iapply Wasm.SmallStep.twp_ltU (result := 1)
-          (by rw [if_pos (by rw [← keyAt_entryAt]; exact hcmp)])
+          (by rw [ite_eq_left (by rw [← keyAt_entryAt]; exact hcmp)])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
         simp only [List.take_zero, List.nil_append]
         ihave Hback := Hrec
@@ -895,7 +895,7 @@ private theorem twp_hole [WasmSmallStepGS hlc Universal.State]
             iexact Hbuf
           · iexact Hexit
       · iapply Wasm.SmallStep.twp_ltU (result := 0)
-          (by rw [if_neg (by rw [← keyAt_entryAt]; exact hcmp)])
+          (by rw [ite_eq_right (by rw [← keyAt_entryAt]; exact hcmp)])
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_exitControl twp_localGet twp_localGet twp_add]
         wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
@@ -998,7 +998,7 @@ private theorem twp_scan [WasmSmallStepGS hlc Universal.State]
   by_cases hcmp : held.1 < keyAt A j0
   · iapply Wasm.SmallStep.twp_geU (result := 0)
       (by
-        rw [if_neg (show ¬ (held.1 ≥ (entryAt A j0).1) from
+        rw [ite_eq_right (show ¬ (held.1 ≥ (entryAt A j0).1) from
           fun hge => absurd hcmp (UInt32.not_lt.mpr hge))])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet]
@@ -1024,7 +1024,7 @@ private theorem twp_scan [WasmSmallStepGS hlc Universal.State]
       iexact Hgo
   · iapply Wasm.SmallStep.twp_geU (result := 1)
       (by
-        rw [if_pos (show held.1 ≥ (entryAt A j0).1 from
+        rw [ite_eq_left (show held.1 ≥ (entryAt A j0).1 from
           UInt32.not_lt.mp hcmp)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1068,13 +1068,13 @@ theorem func12_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_pures [twp_block twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_gtU (result := 0)
     (by
-      rw [if_neg (show ¬ (offset > len) from
+      rw [ite_eq_right (show ¬ (offset > len) from
         UInt32.not_lt.mpr (UInt32.le_iff_toNat_le.mpr hoffle))])
   iapply Wasm.SmallStep.twp_brIfZero
   wasm_twp_pures [twp_block twp_localGet twp_localGet]
   by_cases heq : offset = len
   · -- WAT 2857 to 2860: the offset is the length, so nothing moves
-    iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [if_pos heq])
+    iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [ite_eq_left heq])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
     wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallExplicit with Hmodule
@@ -1091,7 +1091,7 @@ theorem func12_correct [WasmSmallStepGS hlc Universal.State] :
     isimp only [ResumeWP, resumeExpr, List.nil_append] at Hgo
     iexact Hgo
   · -- WAT 2861 to 2947: the cursor set-up and the outer loop
-    iapply Wasm.SmallStep.twp_eq (result := 0) (by rw [if_neg heq])
+    iapply Wasm.SmallStep.twp_eq (result := 0) (by rw [ite_eq_right heq])
     iapply Wasm.SmallStep.twp_brIfZero
     have hoffn : offset.toNat < len.toNat := by
       rcases Nat.eq_or_lt_of_le hoffle with he | hlt
@@ -1180,7 +1180,7 @@ theorem func12_correct [WasmSmallStepGS hlc Universal.State] :
         by_cases hlast : jj + 1 = len.toNat
         · -- WAT 2947: the cursor met the end pointer
           iapply Wasm.SmallStep.twp_ne (result := 0)
-            (by rw [if_neg (by rw [hlast]; exact fun h => h rfl)])
+            (by rw [ite_eq_right (by rw [hlast]; exact fun h => h rfl)])
           iapply Wasm.SmallStep.twp_brIfZero
           wasm_twp_pures [twp_exitControl]
           simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1216,7 +1216,7 @@ theorem func12_correct [WasmSmallStepGS hlc Universal.State] :
               Slices.byteOffset_toNat v (8 * len.toNat) (by omega)] at h1
             omega
           iapply Wasm.SmallStep.twp_ne (result := 1)
-            (by rw [if_pos hne])
+            (by rw [ite_eq_left hne])
           iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
             rfl
           simp only [List.take_zero, List.nil_append, List.drop_zero]

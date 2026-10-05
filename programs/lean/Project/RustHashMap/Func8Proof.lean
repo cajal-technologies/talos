@@ -497,7 +497,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
     exact h
   by_cases hmne : msk = 0
   · subst hmne
-    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos rfl])
+    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left rfl])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) hnoneTarget
     have hnone0 : (Table.setBytes (0 : UInt64)).find?
         (fun j => t.keyIs ((P + j) % t.buckets) key) = none := by
@@ -507,7 +507,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
       %hnone0 Hslots
     isimp only [func8WalkExit] at Hgo
     iexact Hgo
-  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hmne])
+  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hmne])
   iapply Wasm.SmallStep.twp_brIfZero
   iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := UInt64 × UInt32 × UInt32)
@@ -621,7 +621,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
             = some (ctz64 64 p.1 / 8) := by
         rw [hnext]
         exact List.find?_cons_of_pos (by simpa using hkeyIs)
-      isimp only [if_pos hkey]
+      isimp only [ite_eq_left hkey]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
         (hhitTarget _)
       ihave Hgo := Hexit $$ %(some (ctz64 64 p.1 / 8)) %p.1
@@ -653,7 +653,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
         intro j hj
         rw [Table.hasBit_iterNext hqmask hlow j, Bool.and_eq_true] at hj
         exact hqsub _ hj.1
-      isimp only [if_neg hkey]
+      isimp only [ite_eq_right hkey]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
         twp_andI64_bits]
@@ -661,7 +661,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
       by_cases hzero : p.1 &&& (p.1 + 18446744073709551615) = 0
-      · iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+      · iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         iapply Wasm.SmallStep.twp_exitControl (by decide)
@@ -682,7 +682,7 @@ private theorem twp_func8_walk [WasmSmallStepGS hlc Universal.State]
         isimp only [func8WalkExit, func8Locals, hnone3.1, hnone3.2.1,
           hnone3.2.2] at Hgo
         iexact Hgo
-      · iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hzero])
+      · iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           (by rfl)
@@ -982,7 +982,7 @@ private theorem twp_func8_probe [WasmSmallStepGS hlc Universal.State]
           intro hc
           rw [(Table.swarMatchEmpty_eq_zero_iff hg8 hctrls).mp hc] at hemp
           exact absurd hemp (by decide)
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hne0])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hne0])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           (hmiss _ _)
@@ -1034,7 +1034,7 @@ private theorem twp_func8_probe [WasmSmallStepGS hlc Universal.State]
               = (Table.probeSeq t (SipHash.hashU32 k0 k1 key)
                   i.1.step).next t from rfl,
             ← Table.probeNext_pos_of_wasm t hm32 hbShape, UInt32.ofNat_toNat]
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
@@ -1130,10 +1130,10 @@ private theorem sum_gt_seven (a b : Nat) (ha : a ≤ 8) (hb : b ≤ 8) :
     omega
   have h7 : (7 : UInt32).toNat = 7 := rfl
   by_cases hge : 8 ≤ a + b
-  · rw [if_pos hge, if_pos]
+  · rw [ite_eq_left hge, ite_eq_left]
     rw [gt_iff_lt, UInt32.lt_iff_toNat_lt, hsum, h7]
     omega
-  · rw [if_neg hge, if_neg]
+  · rw [ite_eq_right hge, ite_eq_right]
     rw [gt_iff_lt, UInt32.lt_iff_toNat_lt, hsum, h7]
     omega
 
@@ -1556,7 +1556,7 @@ private theorem twp_func8_erase [WasmSmallStepGS hlc Universal.State]
       (Table.groupAt t i)
   · -- the run is at least eight bytes long: a tombstone
     iapply Wasm.SmallStep.twp_gtU (result := 1)
-      ((sum_gt_seven _ _ hleadLe htrailLe).trans (if_pos htomb)).symm
+      ((sum_gt_seven _ _ hleadLe htrailLe).trans (ite_eq_left htomb)).symm
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_nil, List.drop_zero, List.nil_append]
     iapply twp_func8_erase_writes (hlayout := hlayout) (hi := hi)
@@ -1575,7 +1575,7 @@ private theorem twp_func8_erase [WasmSmallStepGS hlc Universal.State]
             [Hheader Hctrl Hslots]
           · isimp only [Table.TableBody, erase_buckets, erase_ctrl,
               erase_slots, erase_items, erase_growth, eraseByte,
-              if_pos htomb]
+              ite_eq_left htomb]
             isplitl_pureexact hroom
             iframe Hheader Hctrl Hslots
           ihave Hgo := Hcont $$ %c2 %(128 : UInt32) %c11
@@ -1584,7 +1584,7 @@ private theorem twp_func8_erase [WasmSmallStepGS hlc Universal.State]
           iexact Hgo
   · -- the run is shorter: the byte becomes `EMPTY` and `growth_left` grows
     iapply Wasm.SmallStep.twp_gtU (result := 0)
-      ((sum_gt_seven _ _ hleadLe htrailLe).trans (if_neg htomb)).symm
+      ((sum_gt_seven _ _ hleadLe htrailLe).trans (ite_eq_right htomb)).symm
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet]
     wasm_twp_rebind twp_load32 (address := map) (offset := 8)
@@ -1614,7 +1614,7 @@ private theorem twp_func8_erase [WasmSmallStepGS hlc Universal.State]
             [Hheader Hctrl Hslots]
           · isimp only [Table.TableBody, erase_buckets, erase_ctrl,
               erase_slots, erase_items, erase_growth, eraseByte,
-              if_neg htomb]
+              ite_eq_right htomb]
             isplitl_pureexact hroom
             iframe Hheader Hctrl Hslots
           ihave Hgo := Hcont $$ %c2 %(255 : UInt32) %c11
@@ -1991,7 +1991,7 @@ private theorem twp_func8_singleton_probe
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   isimp only [swarMatchTag_wasm, htag0]
-  iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos rfl])
+  iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left rfl])
   iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
   simp only [List.drop_zero, List.nil_append,
     List.take_nil]
@@ -2001,7 +2001,7 @@ private theorem twp_func8_singleton_probe
   wasm_twp_pures [twp_localGet twp_localGet twp_constI64 twp_shlI64
     twp_andI64_bits twp_constI64 twp_andI64_bits]
   isimp only [shl64Wasm1, swarMatchEmpty_wasm]
-  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hne0])
+  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hne0])
   iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
   iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (hmiss _ _)
   ihave Hctrl : Slices.ByteSlice 0 ctrl (t.ctrl.take 8) $$ [Hgroup]

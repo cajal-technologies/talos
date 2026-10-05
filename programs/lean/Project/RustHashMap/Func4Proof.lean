@@ -371,12 +371,12 @@ private theorem groups_eq_fullIndices {hash : UInt32 → UInt64}
       Table.fullIndices t := by
   unfold numGroups
   by_cases hb : t.buckets < 8
-  · rw [if_pos hb]
+  · rw [ite_eq_left hb]
     simp only [List.range_one, List.flatMap_cons, List.flatMap_nil,
       List.append_nil, groupIdx, Nat.mul_zero, Nat.zero_add]
     rw [Table.walk_eq_fullIndices_small hw hb, List.map_id_fun']
     rfl
-  · rw [if_neg hb]
+  · rw [ite_eq_right hb]
     exact Table.walk_eq_fullIndices t (eight_dvd_buckets hw (by omega))
 
 /-- Group `b` of the walk lies inside the control bytes. -/
@@ -386,9 +386,9 @@ private theorem group_room {hash : UInt32 → UInt64}
   rw [hw.ctrl_len]
   unfold numGroups at hb
   by_cases hsmall : t.buckets < 8
-  · rw [if_pos hsmall] at hb
+  · rw [ite_eq_left hsmall] at hb
     omega
-  · rw [if_neg hsmall] at hb
+  · rw [ite_eq_right hsmall] at hb
     have hdvd := eight_dvd_buckets hw (by omega)
     omega
 
@@ -640,7 +640,7 @@ private theorem twp_advance [WasmSmallStepGS hlc Universal.State]
         exact UInt64.xor_self
       have hkeep0 : walkRest t (b0 + 1) 0 = walkRest t b0 0 := by
         rw [← hkeep, hzero]
-      iapply Wasm.SmallStep.twp_eqI64 (result := 1) (by rw [if_pos hfull])
+      iapply Wasm.SmallStep.twp_eqI64 (result := 1) (by rw [ite_eq_left hfull])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       ihave Hback := Hrec
@@ -660,7 +660,7 @@ private theorem twp_advance [WasmSmallStepGS hlc Universal.State]
         rw [← full_of_and_xor]
         intro hc
         exact hfull ((xor_eq_zero_iff _ _).mp hc)
-      iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by rw [if_neg hfull])
+      iapply Wasm.SmallStep.twp_eqI64 (result := 0) (by rw [ite_eq_right hfull])
       wasm_twp_pures [twp_brIfZero twp_exitControl]
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       ihave Hgo := Hexit $$ %(b0 + 1) %(ctrl + UInt32.ofNat (8 * (b0 + 1)))
@@ -778,7 +778,7 @@ private theorem twp_peel [WasmSmallStepGS hlc Universal.State]
         Table.swarMatchFull (Table.groupWord (Table.groupAt t 0)) = 0 := by
       rw [← full_of_and_xor, hfull]
       exact UInt64.xor_self
-    iapply Wasm.SmallStep.twp_neI64 (result := 0) (by rw [if_neg (by
+    iapply Wasm.SmallStep.twp_neI64 (result := 0) (by rw [ite_eq_right (by
       simpa using hfull)])
     wasm_twp_pures [twp_brIfZero]
     iapply twp_advance hw ctrl target (b := 0) (mAny :=
@@ -796,7 +796,7 @@ private theorem twp_peel [WasmSmallStepGS hlc Universal.State]
       rw [← full_of_and_xor]
       intro hc
       exact hfull ((xor_eq_zero_iff _ _).mp hc)
-    iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [if_pos (by
+    iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [ite_eq_left (by
       simpa using hfull)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
@@ -854,7 +854,7 @@ private theorem twp_refill [WasmSmallStepGS hlc Universal.State]
   by_cases hm : m = 0
   · subst hm
     iapply Wasm.SmallStep.twp_neI64 (result := 0)
-      (by rw [if_neg (by simp)])
+      (by rw [ite_eq_right (by simp)])
     wasm_twp_pures [twp_brIfZero]
     iapply twp_advance hw ctrl target (b := b) (mAny := 0) htarget hne
     isplitl_exact Hctrl
@@ -884,7 +884,7 @@ private theorem twp_refill [WasmSmallStepGS hlc Universal.State]
                 (Table.groupWord (Table.groupAt t (8 * b'))))
         Hctrl
       iexact Hgo
-  · iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [if_pos hm])
+  · iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [ite_eq_left hm])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     ihave Hgo := Hexit $$ %b %m %l6
@@ -1241,7 +1241,7 @@ private theorem twp_pushLoop [WasmSmallStepGS hlc Universal.State]
       wasm_twp_rebind Wasm.SmallStep.twp_load32 (address := fbase)
         (offset := 4) capW hf4.1 hf4.2.1 hf4.2.2.1 hf4.2.2.2 with Hcell1
       ihave Hframe := Hback1 $$ Hcell1
-      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [if_pos hlencap])
+      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [ite_eq_left hlencap])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [List.take_zero, List.nil_append]
       -- the iterator step
@@ -1520,7 +1520,7 @@ private theorem pairVec_of_slice [WasmSmallStepGS hlc Universal.State]
           spare) ⊢
       PairVecAt heapId allocationId cap ptr pairs := by
   iintro ⟨Htoken, Hbuf, Hspare⟩
-  isimp only [PairVecAt, if_neg hcap]
+  isimp only [PairVecAt, ite_eq_right hcap]
   iexists spare
   isplitl_pureexact (by
     rw [List.length_append, Table.pairBytes_length, hspare]; omega)
@@ -1642,7 +1642,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
       have hlen := hwf.items_eq
       rw [hitems] at hlen
       exact List.eq_nil_of_length_eq_zero hlen.symm
-    iapply Wasm.SmallStep.twp_eqz (result := 1) (by rw [if_pos hzero])
+    iapply Wasm.SmallStep.twp_eqz (result := 1) (by rw [ite_eq_left hzero])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     ihave ⟨%houtWords, Houtcells⟩ :=
@@ -1702,7 +1702,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
     ihave Hpv : PairVecAt heapId 0 (UInt32.toNat (0 : UInt32)) 4
         (sortByKey (Table.toList t)) $$ []
     · isimp only [PairVecAt,
-        if_pos (show UInt32.toNat (0 : UInt32) = 0 from rfl)]
+        ite_eq_left (show UInt32.toNat (0 : UInt32) = 0 from rfl)]
       ipureexact
         (⟨trivial, by rw [hlist]; simp [sortByKey]⟩ :
           True ∧ sortByKey (Table.toList t) = [])
@@ -1713,7 +1713,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
     iapply Hnormal $$ Hruntime Hsp Hbelow Hout Hmap Hbump Hpv Hstreams
       %(show UInt32.toNat (0 : UInt32)
           = if t.items = 0 then 0 else max t.items 4 by
-        rw [if_pos hitems]
+        rw [ite_eq_left hitems]
         rfl)
   · -- the table has an entry, WAT 1036 to 1286
     have hitemsPos : 1 ≤ t.items := by omega
@@ -1730,11 +1730,11 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
           else Value.i32 (UInt32.ofNat 4) := by
       have hfour : (4 : UInt32).toNat = 4 := rfl
       by_cases hbig : (4 : UInt32) < UInt32.ofNat t.items
-      · rw [if_pos hbig, if_pos (by decide : (1 : UInt32) ≠ 0)]
+      · rw [ite_eq_left hbig, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
         rw [UInt32.lt_iff_toNat_lt, hfour,
           UInt32.toNat_ofNat_of_lt' hitemsLt] at hbig
         rw [Nat.max_eq_left (by omega)]
-      · rw [if_neg hbig, if_neg (by decide : ¬((0 : UInt32) ≠ 0))]
+      · rw [ite_eq_right hbig, ite_eq_right (by decide : ¬((0 : UInt32) ≠ 0))]
         rw [UInt32.lt_iff_toNat_lt, hfour,
           UInt32.toNat_ofNat_of_lt' hitemsLt, Nat.not_lt] at hbig
         rw [Nat.max_eq_right hbig]
@@ -1744,7 +1744,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
     have hctrlLt : ctrl.toNat < UInt32.size := ctrl.toNat_lt
     obtain ⟨hm1, hm2, hm3⟩ := addr3 map (by omega)
     iapply Wasm.SmallStep.twp_eqz (result := 0)
-      (by rw [if_neg (ofNat_ne_zero hitemsPos hitemsLt)])
+      (by rw [ite_eq_right (ofNat_ne_zero hitemsPos hitemsLt)])
     wasm_twp_pures [twp_brIfZero twp_localGet]
     wasm_twp_rebind Wasm.SmallStep.twp_load32_addr ctrl hm1 hm2 hm3 with H0
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
@@ -1795,9 +1795,9 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
           Nat.not_lt]
         omega
       wasm_twp_pures [twp_localGet twp_const]
-      iapply Wasm.SmallStep.twp_gtU (result := 0) (by rw [if_neg hg1])
+      iapply Wasm.SmallStep.twp_gtU (result := 0) (by rw [ite_eq_right hg1])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_const]
-      iapply Wasm.SmallStep.twp_gtU (result := 0) (by rw [if_neg hg2])
+      iapply Wasm.SmallStep.twp_gtU (result := 0) (by rw [ite_eq_right hg2])
       wasm_twp_pures [twp_brIfZero]
       -- the first entry, WAT 1092 to 1111
       have hm0mask := Table.swarMatchFull_and_REP80
@@ -1973,7 +1973,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
               wasm_twp_localTee [List.set, List.length_cons,
                 List.length_nil, Nat.reduceAdd, Nat.reduceSub]
               iapply Wasm.SmallStep.twp_eqz (result := 0)
-                (by rw [if_neg hnonnull])
+                (by rw [ite_eq_right hnonnull])
               wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
               wasm_twp_rebind Wasm.SmallStep.twp_store32 (address := base)
                 (offset := 4) bw1 hb4.1 hb4.2.1 hb4.2.2.1 hb4.2.2.2
@@ -2062,7 +2062,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                 rfl
               have hcapNat : (UInt32.ofNat (max t.items 4)).toNat
                   = if t.items = 0 then 0 else max t.items 4 := by
-                rw [if_neg hitems, UInt32.toNat_ofNat_of_lt' hcapLt]
+                rw [ite_eq_right hitems, UInt32.toNat_ofNat_of_lt' hcapLt]
               ihave Htail : TailExit t sp out ctrl base
                   (UInt32.ofNat (max t.items 4)) heapId
                   history.nextId finish finish.toNat
@@ -2259,7 +2259,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                       show (2 : UInt32).toNat = 2 from rfl]
                     omega
                   iapply Wasm.SmallStep.twp_ltU (result := 1)
-                    (by rw [if_pos hlt])
+                    (by rw [ite_eq_left hlt])
                   iapply Wasm.SmallStep.twp_brIf
                     (by decide : (1 : UInt32) ≠ 0) (by rfl)
                   simp only [List.take_zero, List.nil_append]
@@ -2305,7 +2305,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                       = (Table.fullIndices t).length :=
                     UInt32.toNat_ofNat_of_lt' hNlt
                   iapply Wasm.SmallStep.twp_ltU (result := 0)
-                    (by rw [if_neg hnlt])
+                    (by rw [ite_eq_right hnlt])
                   wasm_twp_pures [twp_brIfZero twp_localGet]
                   have ho4w := offset_facts out 4 4 rfl (by omega)
                   wasm_twp_rebind Wasm.SmallStep.twp_load32
@@ -2336,7 +2336,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                         show (21 : UInt32).toNat = 21 from rfl]
                       omega
                     iapply Wasm.SmallStep.twp_ltU (result := 1)
-                      (by rw [if_pos hlt21])
+                      (by rw [ite_eq_left hlt21])
                     iapply Wasm.SmallStep.twp_brIf
                       (by decide : (1 : UInt32) ≠ 0) (by rfl)
                     simp only [List.take_zero, List.nil_append]
@@ -2392,7 +2392,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                         show (21 : UInt32).toNat = 21 from rfl]
                       omega
                     iapply Wasm.SmallStep.twp_ltU (result := 0)
-                      (by rw [if_neg hnlt21])
+                      (by rw [ite_eq_right hnlt21])
                     wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet
                       twp_localGet twp_const twp_add]
                     ihave Hbelow := (show StackBelow (sp - 16)
@@ -2473,7 +2473,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                     = UInt32.ofNat 8 := by
                   rw [hone]
                 iapply Wasm.SmallStep.twp_eqz (result := 1)
-                  (by rw [if_pos hz])
+                  (by rw [ite_eq_left hz])
                 iapply Wasm.SmallStep.twp_brIf
                   (by decide : (1 : UInt32) ≠ 0) (by rfl)
                 simp only [List.take_zero, List.nil_append, hz]
@@ -2509,7 +2509,7 @@ theorem func4_correct [WasmSmallStepGS hlc Universal.State] :
                 have hzne : UInt32.ofNat (t.items - 1) ≠ (0 : UInt32) :=
                   ofNat_ne_zero (by omega) (by omega)
                 iapply Wasm.SmallStep.twp_eqz (result := 0)
-                  (by rw [if_neg hzne])
+                  (by rw [ite_eq_right hzne])
                 wasm_twp_pures [twp_brIfZero twp_localGet twp_constI64
                   twp_addI64 twp_localGet twp_andI64_bits]
                 wasm_twp_localSet [List.set, List.length_cons,

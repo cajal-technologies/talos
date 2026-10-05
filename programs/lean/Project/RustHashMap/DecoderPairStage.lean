@@ -254,7 +254,7 @@ theorem twp_pair_stage [WasmSmallStepGS hlc Universal.State]
       UInt32.toNat_sub_of_le remaining 4 hle4
     simp only [shortPairBuild, List.cons_append, List.nil_append]
     wasm_twp_pures [twp_localGet twp_const]
-    iapply twp_gtU (result := 1) (by rw [if_pos hshort])
+    iapply twp_gtU (result := 1) (by rw [ite_eq_left hshort])
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     rw [keyRead_shape]
@@ -275,7 +275,7 @@ theorem twp_pair_stage [WasmSmallStepGS hlc Universal.State]
       isplitl_exacts [Hhdr Hlen Hkey]
       iintro Hhdr Hlen Hkey
       wasm_twp_pures [twp_localGet twp_const]
-      iapply twp_geU (result := 1) (by rw [if_pos hge4])
+      iapply twp_geU (result := 1) (by rw [ite_eq_left hge4])
       iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [List.take_zero, List.nil_append]
       rw [← List.append_nil pairRead]
@@ -327,7 +327,7 @@ theorem twp_pair_stage [WasmSmallStepGS hlc Universal.State]
       · isplitl_exacts [Hpre Hkey]
         iexact Hpost
       wasm_twp_pures [twp_localGet twp_const]
-      iapply twp_geU (result := 0) (by rw [if_neg hlt4])
+      iapply twp_geU (result := 0) (by rw [ite_eq_right hlt4])
       wasm_twp_pures [twp_brIfZero twp_localGet]
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]

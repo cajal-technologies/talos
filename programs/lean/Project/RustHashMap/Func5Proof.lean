@@ -235,7 +235,7 @@ private theorem option_length (o : Option UInt32) :
   cases o with
   | none => rfl
   | some v =>
-      simp only [Borsh.option, Option.isSome_some, if_true,
+      simp only [Borsh.option, Option.isSome_some, ite_true,
         List.length_cons, Borsh.u32, WordCodec.u32le_encode_length]
 
 /-- The borsh form of `some v` is the tag byte and then the payload
@@ -287,7 +287,7 @@ private theorem growCapacity_double {cap required : Nat}
     (hcap : 1024 ≤ cap) (hreq : required ≤ cap + 4) :
     growCapacity cap required 1 = 2 * cap := by
   unfold growCapacity
-  rw [if_pos rfl]
+  rw [ite_eq_left rfl]
   omega
 
 /-! ## Reading the allocator bounds -/
@@ -877,7 +877,7 @@ private theorem twp_main_tail [WasmSmallStepGS hlc Universal.State]
   iintro Hruntime Hstreams Hwritten
   isimp only [ResumeWP, resumeExpr, List.nil_append]
   wasm_twp_pures [twp_localGet]
-  iapply Wasm.SmallStep.twp_eqz (result := 0) (by rw [if_neg hcapNe])
+  iapply Wasm.SmallStep.twp_eqz (result := 0) (by rw [ite_eq_right hcapNe])
   wasm_twp_pures [twp_brIfZero]
   iapply Wasm.SmallStep.twp_br (by rfl)
   simp only [List.take_nil, List.nil_append]
@@ -1293,7 +1293,7 @@ private theorem twp_growKeyBlock [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_localGet twp_sub twp_const]
   by_cases hfull : cursor + 4 ≤ cap
   · iapply Wasm.SmallStep.twp_gtU (result := 1)
-      (by rw [if_pos (hgt.mpr (by omega))])
+      (by rw [ite_eq_left (hgt.mpr (by omega))])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     isimp only [GrowDone] at Hdone
@@ -1306,7 +1306,7 @@ private theorem twp_growKeyBlock [WasmSmallStepGS hlc Universal.State]
           low.length = 16)
       Hruntime Hsp Hlow Hw0 Hcap Hbufptr Hcur Hbuf Hbump Hstreams Hoom
   · iapply Wasm.SmallStep.twp_gtU (result := 0)
-      (by rw [if_neg (by rw [hgt]; omega)])
+      (by rw [ite_eq_right (by rw [hgt]; omega)])
     wasm_twp_pures [twp_brIfZero]
     iapply twp_growCall (l3 := buf) fbase buf cursorW cap cursor
       allocationId heapId written low storedCursor frontier history input
@@ -1411,7 +1411,7 @@ private theorem twp_growValueBlock [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_localGet twp_localGet twp_sub twp_const]
   by_cases hfull : cursor + 4 ≤ cap
   · iapply Wasm.SmallStep.twp_gtU (result := 1)
-      (by rw [if_pos (hgt.mpr (by omega))])
+      (by rw [ite_eq_left (hgt.mpr (by omega))])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     isimp only [GrowDone] at Hdone
@@ -1424,7 +1424,7 @@ private theorem twp_growValueBlock [WasmSmallStepGS hlc Universal.State]
           low.length = 16)
       Hruntime Hsp Hlow Hw0 Hcap Hbufptr Hcur Hbuf Hbump Hstreams Hoom
   · iapply Wasm.SmallStep.twp_gtU (result := 0)
-      (by rw [if_neg (by rw [hgt]; omega)])
+      (by rw [ite_eq_right (by rw [hgt]; omega)])
     wasm_twp_pures [twp_brIfZero]
     iapply twp_growCall (l3 := buf) (l4 := UInt32.ofNat cap) fbase buf
       cursorW cap cursor allocationId heapId written low storedCursor
@@ -1478,7 +1478,7 @@ private theorem optLen_bounds (o : Option UInt32) :
 private theorem optLen_none : optLen (none : Option UInt32) = 1 := rfl
 
 private theorem optLen_some (v : UInt32) : optLen (some v) = 5 := by
-  simp only [optLen, option_length, Option.isSome_some, if_true]
+  simp only [optLen, option_length, Option.isSome_some, ite_true]
 
 /-- Move an owned byte slice between two names of one address. -/
 private theorem sliceMove [WasmHeapGS Universal.State]
@@ -1867,7 +1867,7 @@ private theorem twp_entryLoop [WasmSmallStepGS hlc Universal.State]
           Slices.byteOffset_toNat ptr _ (by omega)
         rw [heq, h2] at h1
         omega
-      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [if_pos hne])
+      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [ite_eq_left hne])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
         (by rfl)
       simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -2063,7 +2063,7 @@ private theorem twp_countStage [WasmSmallStepGS hlc Universal.State]
       rw [hzero]
       rfl
     wasm_twp_pures [twp_localGet]
-    iapply Wasm.SmallStep.twp_eqz (result := 1) (by rw [if_pos hcountZero])
+    iapply Wasm.SmallStep.twp_eqz (result := 1) (by rw [ite_eq_left hcountZero])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     ihave Hdone := hdoneOf $$ Hexit
@@ -2125,7 +2125,7 @@ private theorem twp_countStage [WasmSmallStepGS hlc Universal.State]
         show (0 : UInt32).toNat = 0 from rfl] at hx
       exact hx
     wasm_twp_pures [twp_localGet]
-    iapply Wasm.SmallStep.twp_eqz (result := 0) (by rw [if_neg hcountNe])
+    iapply Wasm.SmallStep.twp_eqz (result := 0) (by rw [ite_eq_right hcountNe])
     wasm_twp_pures [twp_brIfZero twp_localGet]
     wasm_twp_rebind twp_load32 (address := arg) (offset := 12) ptr
       ha12.1 ha12.2.1 ha12.2.2.1 ha12.2.2.2 with Hptrcell
@@ -2435,7 +2435,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                 ha0.1 ha0.2.1 ha0.2.2 with Htag
               wasm_twp_pures [twp_const]
               iapply Wasm.SmallStep.twp_ne (result := 1)
-                (by rw [if_pos (by decide : (0 : UInt32) ≠ 1)])
+                (by rw [ite_eq_left (by decide : (0 : UInt32) ≠ 1)])
               iapply Wasm.SmallStep.twp_brIf
                 (by decide : (1 : UInt32) ≠ 0) (by rfl)
               simp only [List.take_zero, List.nil_append]
@@ -2480,7 +2480,7 @@ theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
                 ha0.1 ha0.2.1 ha0.2.2 with Htag
               wasm_twp_pures [twp_const]
               iapply Wasm.SmallStep.twp_ne (result := 0)
-                (by rw [if_neg (by simp)])
+                (by rw [ite_eq_right (by simp)])
               wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
               wasm_twp_rebind twp_load32 (address := arg) (offset := 4) v
                 ha4.1 ha4.2.1 ha4.2.2.1 ha4.2.2.2 with Hpayload

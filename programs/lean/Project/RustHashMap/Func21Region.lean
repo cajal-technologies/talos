@@ -235,7 +235,7 @@ private theorem insertTail_eq_of_split (p : UInt32 × UInt32) :
     match i with
     | 0 =>
       have hlt : p.1 < q.1 := habove (by simp)
-      simp only [insertTail, hlt, if_true, List.take_zero,
+      simp only [insertTail, hlt, ite_true, List.take_zero,
         List.drop_zero, List.nil_append]
     | i + 1 =>
       have hge : ¬ (p.1 < q.1) := hbelow 0 (Nat.succ_pos i)
@@ -246,7 +246,7 @@ private theorem insertTail_eq_of_split (p : UInt32 × UInt32) :
       have habove' : i < qs.length → p.1 < keyAt qs i := by
         intro hlt
         exact habove (by simpa using hlt)
-      simp only [insertTail, hge, if_false, ih i hi' hbelow' habove',
+      simp only [insertTail, hge, ite_false, ih i hi' hbelow' habove',
         List.take_succ_cons, List.drop_succ_cons, List.cons_append]
 
 /-! ## The state of the outer loop -/
@@ -943,7 +943,7 @@ private theorem twp_hole [WasmSmallStepGS hlc Universal.State]
         rw [UInt32.toNat_ofNat_of_lt' (by omega),
           show (8 : UInt32).toNat = 8 from rfl] at h1
         omega
-      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [if_pos hne])
+      iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [ite_eq_left hne])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_const twp_add]
@@ -969,7 +969,7 @@ private theorem twp_hole [WasmSmallStepGS hlc Universal.State]
         (A.drop (i'' + 1) ++ post)) hi''A] at Hbuf
       by_cases hcmp : held.1 < keyAt A i''
       · iapply Wasm.SmallStep.twp_ltU (result := 1)
-          (by rw [if_pos (by rw [← keyAt_entryAt]; exact hcmp)])
+          (by rw [ite_eq_left (by rw [← keyAt_entryAt]; exact hcmp)])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           rfl
         simp only [List.take_zero, List.nil_append]
@@ -993,7 +993,7 @@ private theorem twp_hole [WasmSmallStepGS hlc Universal.State]
             iexact Hbuf
           · iexact Hexit
       · iapply Wasm.SmallStep.twp_ltU (result := 0)
-          (by rw [if_neg (by rw [← keyAt_entryAt]; exact hcmp)])
+          (by rw [ite_eq_right (by rw [← keyAt_entryAt]; exact hcmp)])
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_exitControl twp_localGet twp_localGet
           twp_add]
@@ -1102,7 +1102,7 @@ private theorem twp_scan [WasmSmallStepGS hlc Universal.State]
   by_cases hcmp : held.1 < keyAt A j0
   · iapply Wasm.SmallStep.twp_geU (result := 0)
       (by
-        rw [if_neg (show ¬ (held.1 ≥ (entryAt A j0).1) from
+        rw [ite_eq_right (show ¬ (held.1 ≥ (entryAt A j0).1) from
           fun hge => absurd hcmp (UInt32.not_lt.mpr hge))])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet]
@@ -1128,7 +1128,7 @@ private theorem twp_scan [WasmSmallStepGS hlc Universal.State]
       iexact Hgo
   · iapply Wasm.SmallStep.twp_geU (result := 1)
       (by
-        rw [if_pos (show held.1 ≥ (entryAt A j0).1 from
+        rw [ite_eq_left (show held.1 ≥ (entryAt A j0).1 from
           UInt32.not_lt.mp hcmp)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1211,7 +1211,7 @@ theorem twp_region_insertion [WasmSmallStepGS hlc Universal.State]
   by_cases hkeq : k = n
   · -- WAT 8400 and 8401: the region is already in key order
     subst hkeq
-    iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [if_pos rfl])
+    iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [ite_eq_left rfl])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
     have hid : insertionShiftLeft R k = R :=
@@ -1223,7 +1223,7 @@ theorem twp_region_insertion [WasmSmallStepGS hlc Universal.State]
     · iexact HRest
   · -- WAT 8402 to 8488: the cursor set-up and the outer loop
     iapply Wasm.SmallStep.twp_eq (result := 0)
-      (by rw [if_neg (fun hc => hkeq (ofNat_inj (by omega) (by omega)
+      (by rw [ite_eq_right (fun hc => hkeq (ofNat_inj (by omega) (by omega)
         hc))])
     iapply Wasm.SmallStep.twp_brIfZero
     have hkn' : k < n := by omega
@@ -1302,7 +1302,7 @@ theorem twp_region_insertion [WasmSmallStepGS hlc Universal.State]
         by_cases hlast : jj + 1 = n
         · -- WAT 8487: the cursor met the end pointer
           iapply Wasm.SmallStep.twp_ne (result := 0)
-            (by rw [if_neg (by rw [hlast]; exact fun h => h rfl)])
+            (by rw [ite_eq_right (by rw [hlast]; exact fun h => h rfl)])
           iapply Wasm.SmallStep.twp_brIfZero
           wasm_twp_pures [twp_exitControl]
           simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1330,7 +1330,7 @@ theorem twp_region_insertion [WasmSmallStepGS hlc Universal.State]
               Slices.byteOffset_toNat rbase (8 * n) (by omega)] at h1
             omega
           iapply Wasm.SmallStep.twp_ne (result := 1)
-            (by rw [if_pos hne])
+            (by rw [ite_eq_left hne])
           iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
             rfl
           simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1400,7 +1400,7 @@ private theorem twp_after_region [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_localGet twp_localGet]
   iapply Wasm.SmallStep.twp_gtU (result := 0)
     (by
-      rw [if_neg (show ¬ ((UInt32.ofNat k : UInt32)
+      rw [ite_eq_right (show ¬ ((UInt32.ofNat k : UInt32)
           > UInt32.ofNat n) from
         UInt32.not_lt.mpr
           (ofNat_le (a := k) (b := n) (by omega) (by omega) hkn))])
@@ -1676,7 +1676,7 @@ theorem twp_sort_region [WasmSmallStepGS hlc Universal.State]
   · -- WAT 6225 and 6226: the region goes to the second network
     iapply Wasm.SmallStep.twp_gtU (result := 1)
       (by
-        rw [if_pos (show (UInt32.ofNat n : UInt32) > 12 from
+        rw [ite_eq_left (show (UInt32.ofNat n : UInt32) > 12 from
           ofNat_lt (a := 12) (b := n) (by omega) (by omega)
             (by omega))])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
@@ -1705,7 +1705,7 @@ theorem twp_sort_region [WasmSmallStepGS hlc Universal.State]
   · -- WAT 6227 to 6232: the region has twelve entries or fewer
     iapply Wasm.SmallStep.twp_gtU (result := 0)
       (by
-        rw [if_neg (show ¬ ((UInt32.ofNat n : UInt32) > 12) from
+        rw [ite_eq_right (show ¬ ((UInt32.ofNat n : UInt32) > 12) from
           UInt32.not_lt.mpr (ofNat_le (a := n) (b := 12) (by omega)
             (by omega) (by omega)))])
     iapply Wasm.SmallStep.twp_brIfZero
@@ -1717,7 +1717,7 @@ theorem twp_sort_region [WasmSmallStepGS hlc Universal.State]
     · -- WAT 6232: the insertion sort alone
       iapply Wasm.SmallStep.twp_leU (result := 1)
         (by
-          rw [if_pos (show (UInt32.ofNat n : UInt32) ≤ 8 from
+          rw [ite_eq_left (show (UInt32.ofNat n : UInt32) ≤ 8 from
             ofNat_le (a := n) (b := 8) (by omega) (by omega)
               hsmall)])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
@@ -1740,7 +1740,7 @@ theorem twp_sort_region [WasmSmallStepGS hlc Universal.State]
     · -- WAT 6233 to 7008: the first network
       iapply Wasm.SmallStep.twp_leU (result := 0)
         (by
-          rw [if_neg (show ¬ ((UInt32.ofNat n : UInt32) ≤ 8) from
+          rw [ite_eq_right (show ¬ ((UInt32.ofNat n : UInt32) ≤ 8) from
             UInt32.not_le.mpr (ofNat_lt (a := 8) (b := n) (by omega)
               (by omega) (by omega)))])
       iapply Wasm.SmallStep.twp_brIfZero
@@ -1923,7 +1923,7 @@ theorem twp_region_loop_single [WasmSmallStepGS hlc Universal.State]
   · -- WAT 6197 to 8501: one region, the whole buffer
     iapply Wasm.SmallStep.twp_ltU (result := 0)
       (by
-        rw [if_neg (show ¬ (len < (2 : UInt32)) from
+        rw [ite_eq_right (show ¬ (len < (2 : UInt32)) from
           UInt32.not_lt.mpr (UInt32.le_iff_toNat_le.mpr
             (show (2 : UInt32).toNat ≤ len.toNat by
               rw [show (2 : UInt32).toNat = 2 from rfl]; omega)))])
@@ -1934,14 +1934,14 @@ theorem twp_region_loop_single [WasmSmallStepGS hlc Universal.State]
     wasm_twp_pures [twp_localGet twp_const]
     iapply Wasm.SmallStep.twp_ltU (result := 1)
       (by
-        rw [if_pos (show len < (18 : UInt32) from
+        rw [ite_eq_left (show len < (18 : UInt32) from
           UInt32.lt_iff_toNat_lt.mpr
             (show len.toNat < (18 : UInt32).toNat by
               rw [show (18 : UInt32).toNat = 18 from rfl]; omega))])
     wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     iapply Wasm.SmallStep.twp_select (selected := Value.i32 len)
-      (by rw [if_pos (by decide : (1 : UInt32) ≠ 0)])
+      (by rw [ite_eq_left (by decide : (1 : UInt32) ≠ 0)])
     wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
       Nat.reduceAdd, Nat.reduceSub]
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
@@ -1979,7 +1979,7 @@ theorem twp_region_loop_single [WasmSmallStepGS hlc Universal.State]
   · -- WAT 6196: a length below two leaves at once
     iapply Wasm.SmallStep.twp_ltU (result := 1)
       (by
-        rw [if_pos (show len < (2 : UInt32) from
+        rw [ite_eq_left (show len < (2 : UInt32) from
           UInt32.lt_iff_toNat_lt.mpr
             (show len.toNat < (2 : UInt32).toNat by
               rw [show (2 : UInt32).toNat = 2 from rfl]; omega))])
@@ -2056,7 +2056,7 @@ theorem twp_region_loop_double [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_localGet twp_const]
   iapply Wasm.SmallStep.twp_ltU (result := 0)
     (by
-      rw [if_neg (show ¬ (len < (2 : UInt32)) from
+      rw [ite_eq_right (show ¬ (len < (2 : UInt32)) from
         UInt32.not_lt.mpr (UInt32.le_iff_toNat_le.mpr
           (show (2 : UInt32).toNat ≤ len.toNat by
             rw [show (2 : UInt32).toNat = 2 from rfl]; omega)))])
@@ -2068,7 +2068,7 @@ theorem twp_region_loop_double [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_localGet twp_const]
   iapply Wasm.SmallStep.twp_ltU (result := 0)
     (by
-      rw [if_neg (show ¬ (len < (18 : UInt32)) from
+      rw [ite_eq_right (show ¬ (len < (18 : UInt32)) from
         UInt32.not_lt.mpr (UInt32.le_iff_toNat_le.mpr
           (show (18 : UInt32).toNat ≤ len.toNat by
             rw [show (18 : UInt32).toNat = 18 from rfl]; omega)))])
@@ -2076,7 +2076,7 @@ theorem twp_region_loop_double [WasmSmallStepGS hlc Universal.State]
     Nat.reduceAdd, Nat.reduceSub]
   iapply Wasm.SmallStep.twp_select
     (selected := Value.i32 (UInt32.ofNat m))
-    (by rw [if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))])
+    (by rw [ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))])
   wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
   wasm_twp_pures [twp_localGet twp_localGet twp_sub]
@@ -2117,7 +2117,7 @@ theorem twp_region_loop_double [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_localGet]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_localGet]
-      iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [if_pos rfl])
+      iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [ite_eq_left rfl])
       wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       wasm_twp_pures [twp_localGet]
@@ -2153,7 +2153,7 @@ theorem twp_region_loop_double [WasmSmallStepGS hlc Universal.State]
           iapply Wasm.SmallStep.twp_brIfZero
           wasm_twp_pures [twp_localGet twp_localGet]
           iapply Wasm.SmallStep.twp_eq (result := 0)
-            (by rw [if_neg hne13])
+            (by rw [ite_eq_right hne13])
           wasm_twp_localSet [List.set, List.length_cons,
             List.length_nil, Nat.reduceAdd, Nat.reduceSub]
           wasm_twp_pures [twp_localGet]

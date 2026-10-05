@@ -272,7 +272,7 @@ theorem func13_correct [WasmSmallStepGS hlc Universal.State] :
     wasm_twp_rebind twp_load8U_gen (address := 0) (offset := 1049528)
       stateByte hstore8 with Hstatebyte
     wasm_twp_pures [twp_const]
-    iapply twp_ne (result := 1) (by rw [if_pos (toUInt32_ne_two hstateNe)])
+    iapply twp_ne (result := 1) (by rw [ite_eq_left (toUInt32_ne_two hstateNe)])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_zero, List.drop_zero, List.nil_append]
     -- `[1049528] := 1`

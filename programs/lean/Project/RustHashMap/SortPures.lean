@@ -178,7 +178,7 @@ theorem reverseFold_getElem? (ps : List (UInt32 × UInt32)) :
   induction k with
   | zero =>
     intro _ i hi
-    rw [reverseFold_zero, if_neg (by omega)]
+    rw [reverseFold_zero, ite_eq_right (by omega)]
   | succ k ih =>
     intro hk i hi
     have hlen : (reverseFold ps k).length = ps.length :=
@@ -189,11 +189,11 @@ theorem reverseFold_getElem? (ps : List (UInt32 × UInt32)) :
     by_cases hik : i = k
     · subst hik
       rw [Table.swapAt_getElem?_left _ hikL hjkL,
-        ih (by omega) _ (by omega), if_neg (by omega), if_pos (by omega)]
+        ih (by omega) _ (by omega), ite_eq_right (by omega), ite_eq_left (by omega)]
     · by_cases hij : i = ps.length - 1 - k
       · subst hij
         rw [Table.swapAt_getElem?_right _ hikL hjkL,
-          ih (by omega) _ (by omega), if_neg (by omega), if_pos (by omega)]
+          ih (by omega) _ (by omega), ite_eq_right (by omega), ite_eq_left (by omega)]
         congr 1
         omega
       · rw [Table.swapAt_getElem?_other _ hik hij, ih (by omega) _ hi]
@@ -211,8 +211,8 @@ theorem reverseFold_half (ps : List (UInt32 × UInt32)) :
   · rw [reverseFold_getElem? ps _ (Nat.le_refl _) i hi,
       List.getElem?_reverse hi]
     by_cases hcond : i < ps.length / 2 ∨ ps.length - ps.length / 2 ≤ i
-    · rw [if_pos hcond]
-    · rw [if_neg hcond]
+    · rw [ite_eq_left hcond]
+    · rw [ite_eq_right hcond]
       congr 1
       omega
   · rw [List.getElem?_eq_none (by simp; omega),

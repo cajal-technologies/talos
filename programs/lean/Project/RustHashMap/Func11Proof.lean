@@ -1029,13 +1029,13 @@ private theorem twp_asc_loop [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_localGet]
       by_cases hdrop : keyAt pairs j < keyAt pairs (j - 1)
       · -- WAT 2672: the run stops here, so the sort tail runs
-        iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [if_pos hdrop])
+        iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [ite_eq_left hdrop])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
         simp only [frame4, List.take, List.append_nil, scanTest]
         wasm_twp_pures [twp_localGet twp_localGet]
         iapply Wasm.SmallStep.twp_ne (result := 1)
           (by
-            rw [if_pos (by
+            rw [ite_eq_left (by
               rw [hlenv]
               exact fun hc =>
                 absurd ((ofNat_eq_iff (by omega) hnsz).mp hc) (by omega))])
@@ -1057,7 +1057,7 @@ private theorem twp_asc_loop [WasmSmallStepGS hlc Universal.State]
             exact hstep
           · exact hjpre m (by omega)
         iapply Wasm.SmallStep.twp_ltU (result := 0)
-          (by rw [if_neg hdrop])
+          (by rw [ite_eq_right hdrop])
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_localGet twp_const twp_add]
         isimp only [addr_step v n j (by omega) hroom]
@@ -1074,7 +1074,7 @@ private theorem twp_asc_loop [WasmSmallStepGS hlc Universal.State]
         by_cases hend : j + 1 = n
         · -- WAT 2686: the whole run ascends
           iapply Wasm.SmallStep.twp_ne (result := 0)
-            (by rw [if_neg (by rw [hlenv, hend]; exact fun hc => hc rfl)])
+            (by rw [ite_eq_right (by rw [hlenv, hend]; exact fun hc => hc rfl)])
           iapply Wasm.SmallStep.twp_brIfZero
           iapply Wasm.SmallStep.twp_br rfl
           simp only [frame3, List.take, List.append_nil]
@@ -1086,7 +1086,7 @@ private theorem twp_asc_loop [WasmSmallStepGS hlc Universal.State]
         · -- WAT 2685: one more entry
           iapply Wasm.SmallStep.twp_ne (result := 1)
             (by
-              rw [if_pos (by
+              rw [ite_eq_left (by
                 rw [hlenv]
                 exact fun hc =>
                   absurd ((ofNat_eq_iff hnsz (by omega)).mp hc)
@@ -1175,13 +1175,13 @@ private theorem twp_desc_loop [WasmSmallStepGS hlc Universal.State]
       wasm_twp_pures [twp_localGet]
       by_cases hrise : keyAt pairs (j - 1) ≤ keyAt pairs j
       · -- WAT 2707: the run stops here, so the sort tail runs
-        iapply Wasm.SmallStep.twp_geU (result := 1) (by rw [if_pos hrise])
+        iapply Wasm.SmallStep.twp_geU (result := 1) (by rw [ite_eq_left hrise])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
         simp only [frame4, List.take, List.append_nil, scanTest]
         wasm_twp_pures [twp_localGet twp_localGet]
         iapply Wasm.SmallStep.twp_ne (result := 1)
           (by
-            rw [if_pos (by
+            rw [ite_eq_left (by
               rw [hlenv]
               exact fun hc =>
                 absurd ((ofNat_eq_iff (by omega) hnsz).mp hc) (by omega))])
@@ -1203,7 +1203,7 @@ private theorem twp_desc_loop [WasmSmallStepGS hlc Universal.State]
             exact hstep
           · exact hjpre m (by omega)
         iapply Wasm.SmallStep.twp_geU (result := 0)
-          (by rw [if_neg hrise])
+          (by rw [ite_eq_right hrise])
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_localGet twp_const twp_add]
         isimp only [addr_step v n j (by omega) hroom]
@@ -1220,7 +1220,7 @@ private theorem twp_desc_loop [WasmSmallStepGS hlc Universal.State]
         by_cases hend : j + 1 = n
         · -- WAT 2721: the whole run descends
           iapply Wasm.SmallStep.twp_ne (result := 0)
-            (by rw [if_neg (by rw [hlenv, hend]; exact fun hc => hc rfl)])
+            (by rw [ite_eq_right (by rw [hlenv, hend]; exact fun hc => hc rfl)])
           iapply Wasm.SmallStep.twp_brIfZero
           iapply Wasm.SmallStep.twp_br rfl
           simp only [frame3, List.take, List.append_nil]
@@ -1232,7 +1232,7 @@ private theorem twp_desc_loop [WasmSmallStepGS hlc Universal.State]
         · -- WAT 2720: one more entry
           iapply Wasm.SmallStep.twp_ne (result := 1)
             (by
-              rw [if_pos (by
+              rw [ite_eq_left (by
                 rw [hlenv]
                 exact fun hc =>
                   absurd ((ofNat_eq_iff hnsz (by omega)).mp hc)
@@ -1525,7 +1525,7 @@ private theorem twp_rev_loop [WasmSmallStepGS hlc Universal.State]
     by_cases hdone : j + 2 = trips
     · -- WAT 2803: the trip count is reached
       iapply Wasm.SmallStep.twp_ne (result := 0)
-        (by rw [if_neg (by simp [hdone])])
+        (by rw [ite_eq_right (by simp [hdone])])
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1539,7 +1539,7 @@ private theorem twp_rev_loop [WasmSmallStepGS hlc Universal.State]
     · -- WAT 2804: one more trip
       iapply Wasm.SmallStep.twp_ne (result := 1)
         (by
-          rw [if_pos (fun hc => absurd
+          rw [ite_eq_left (fun hc => absurd
             ((ofNat_eq_iff (by omega) (by omega)).mp hc) (by omega))])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1635,7 +1635,7 @@ private theorem twp_reverse [WasmSmallStepGS hlc Universal.State]
   · -- WAT 2747: the buffer holds two or three entries
     iapply Wasm.SmallStep.twp_eq (result := 1)
       (by
-        rw [if_pos (by
+        rw [ite_eq_left (by
           rw [show (1 : UInt32) = UInt32.ofNat 1 from rfl]
           exact (ofNat_eq_iff (by omega) (by omega)).mpr hone)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
@@ -1658,7 +1658,7 @@ private theorem twp_reverse [WasmSmallStepGS hlc Universal.State]
     have htrips : 2 * (2 * (n / 2 / 2)) ≤ n := by omega
     iapply Wasm.SmallStep.twp_eq (result := 0)
       (by
-        rw [if_neg (by
+        rw [ite_eq_right (by
           rw [show (1 : UInt32) = UInt32.ofNat 1 from rfl]
           exact fun hc =>
             hone ((ofNat_eq_iff (by omega) (by omega)).mp hc))])
@@ -1686,7 +1686,7 @@ private theorem twp_reverse [WasmSmallStepGS hlc Universal.State]
     · -- WAT 2808: the half length is even, so the loop did every swap
       iapply Wasm.SmallStep.twp_eqz (result := 1)
         (by
-          rw [if_pos (by
+          rw [ite_eq_left (by
             rw [show (0 : UInt32) = UInt32.ofNat 0 from rfl]
             exact (ofNat_eq_iff (by omega) (by omega)).mpr hodd)])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
@@ -1706,7 +1706,7 @@ private theorem twp_reverse [WasmSmallStepGS hlc Universal.State]
         exact hlen
       iapply Wasm.SmallStep.twp_eqz (result := 0)
         (by
-          rw [if_neg (by
+          rw [ite_eq_right (by
             rw [show (0 : UInt32) = UInt32.ofNat 0 from rfl]
             exact fun hc =>
               hodd ((ofNat_eq_iff (by omega) (by omega)).mp hc))])
@@ -1774,12 +1774,12 @@ private theorem twp_scan_asc [WasmSmallStepGS hlc Universal.State]
   by_cases htwo : n = 2
   · -- WAT 2659: the buffer holds two entries
     iapply Wasm.SmallStep.twp_eq (result := 1)
-      (by rw [if_pos (by rw [hlenv, htwo]; rfl)])
+      (by rw [ite_eq_left (by rw [hlenv, htwo]; rfl)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take, List.append_nil, scanTest]
     wasm_twp_pures [twp_localGet twp_localGet]
     iapply Wasm.SmallStep.twp_ne (result := 0)
-      (by rw [if_neg (by rw [hlenv, htwo]; exact fun hc => hc rfl)])
+      (by rw [ite_eq_right (by rw [hlenv, htwo]; exact fun hc => hc rfl)])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_exitControl]
     simp only [List.take, List.append_nil]
@@ -1794,7 +1794,7 @@ private theorem twp_scan_asc [WasmSmallStepGS hlc Universal.State]
   · -- WAT 2660 to 2687: the scan runs
     iapply Wasm.SmallStep.twp_eq (result := 0)
       (by
-        rw [if_neg (by
+        rw [ite_eq_right (by
           rw [hlenv, show (2 : UInt32) = UInt32.ofNat 2 from rfl]
           exact fun hc => htwo ((ofNat_eq_iff hnsz (by omega)).mp hc))])
     iapply Wasm.SmallStep.twp_brIfZero
@@ -1857,12 +1857,12 @@ private theorem twp_scan_desc [WasmSmallStepGS hlc Universal.State]
   by_cases htwo : n = 2
   · -- WAT 2694: the buffer holds two entries
     iapply Wasm.SmallStep.twp_eq (result := 1)
-      (by rw [if_pos (by rw [hlenv, htwo]; rfl)])
+      (by rw [ite_eq_left (by rw [hlenv, htwo]; rfl)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take, List.append_nil, scanTest]
     wasm_twp_pures [twp_localGet twp_localGet]
     iapply Wasm.SmallStep.twp_ne (result := 0)
-      (by rw [if_neg (by rw [hlenv, htwo]; exact fun hc => hc rfl)])
+      (by rw [ite_eq_right (by rw [hlenv, htwo]; exact fun hc => hc rfl)])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_exitControl]
     simp only [List.take, List.append_nil]
@@ -1877,7 +1877,7 @@ private theorem twp_scan_desc [WasmSmallStepGS hlc Universal.State]
   · -- WAT 2695 to 2722: the scan runs
     iapply Wasm.SmallStep.twp_eq (result := 0)
       (by
-        rw [if_neg (by
+        rw [ite_eq_right (by
           rw [hlenv, show (2 : UInt32) = UInt32.ofNat 2 from rfl]
           exact fun hc => htwo ((ofNat_eq_iff hnsz (by omega)).mp hc))])
     iapply Wasm.SmallStep.twp_brIfZero
@@ -1934,7 +1934,7 @@ theorem func11_correct_of [WasmSmallStepGS hlc Universal.State]
   by_cases hsmall : len.toNat < 2
   · -- WAT 2642: one entry or none is already in key order
     iapply Wasm.SmallStep.twp_ltU (result := 1)
-      (by rw [if_pos (UInt32.lt_iff_toNat_lt.mpr hsmall)])
+      (by rw [ite_eq_left (UInt32.lt_iff_toNat_lt.mpr hsmall)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take, List.append_nil]
     iopen_map_runtime Hruntime with ⟨Hmodule, Henv⟩
@@ -1954,7 +1954,7 @@ theorem func11_correct_of [WasmSmallStepGS hlc Universal.State]
     iexact Hgo
   · -- WAT 2643 to 2847: the scan, the reverse and the sort tail
     iapply Wasm.SmallStep.twp_ltU (result := 0)
-      (by rw [if_neg (fun hc => hsmall (UInt32.lt_iff_toNat_lt.mp hc))])
+      (by rw [ite_eq_right (fun hc => hsmall (UInt32.lt_iff_toNat_lt.mp hc))])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_block]
     simp only [List.drop_zero]
@@ -1978,7 +1978,7 @@ theorem func11_correct_of [WasmSmallStepGS hlc Universal.State]
     by_cases hdesc : keyAt pairs 1 < keyAt pairs 0
     · -- WAT 2653: the first two entries descend
       iapply Wasm.SmallStep.twp_ltU (result := 1)
-        (by rw [if_pos hdesc])
+        (by rw [ite_eq_left hdesc])
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
@@ -2014,7 +2014,7 @@ theorem func11_correct_of [WasmSmallStepGS hlc Universal.State]
           simp only [reverseTail, regs]
           wasm_twp_pures [twp_localGet]
           iapply Wasm.SmallStep.twp_eqz (result := 0)
-            (by rw [if_neg (by decide)])
+            (by rw [ite_eq_right (by decide)])
           iapply Wasm.SmallStep.twp_brIfZero
           iapply twp_reverse (n := len.toNat) hplen rfl hroom (by omega)
             hlen27
@@ -2041,7 +2041,7 @@ theorem func11_correct_of [WasmSmallStepGS hlc Universal.State]
       iframe Hruntime Hsp Hbelow Hcont
     · -- WAT 2654: the first two entries do not descend
       iapply Wasm.SmallStep.twp_ltU (result := 0)
-        (by rw [if_neg hdesc])
+        (by rw [ite_eq_right hdesc])
       wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
         Nat.reduceAdd, Nat.reduceSub]
       iapply Wasm.SmallStep.twp_brIfZero
@@ -2076,7 +2076,7 @@ theorem func11_correct_of [WasmSmallStepGS hlc Universal.State]
           simp only [reverseTail, regs]
           wasm_twp_pures [twp_localGet]
           iapply Wasm.SmallStep.twp_eqz (result := 1)
-            (by rw [if_pos rfl])
+            (by rw [ite_eq_left rfl])
           iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
             rfl
           simp only [List.take, List.append_nil]

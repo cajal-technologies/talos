@@ -80,14 +80,14 @@ theorem func33_correct [WasmSmallStepGS hlc Universal.State] :
   wasm_twp_pures [twp_const]
   by_cases hsimple : capacity = 2147483648
   · -- the simple error: the branch leaves the block
-    iapply twp_eq (result := 1) (by rw [if_pos hsimple])
+    iapply twp_eq (result := 1) (by rw [ite_eq_left hsimple])
     wasm_twp_localSet
     wasm_twp_pures [twp_block]
     simp only [List.drop_zero]
     wasm_twp_pures [twp_const twp_const twp_localGet twp_const twp_and]
       using [and_one_one]
     iapply twp_select (selected := .i32 0)
-      (by rw [if_pos (by decide : (1 : UInt32) ≠ 0)])
+      (by rw [ite_eq_left (by decide : (1 : UInt32) ≠ 0)])
     iapply twp_eqz (result := 1) (by decide)
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
@@ -99,14 +99,14 @@ theorem func33_correct [WasmSmallStepGS hlc Universal.State] :
     · isplitl_exact Hmodule
       · iexact Henv
   · -- the error owns a buffer: the body forwards the record
-    iapply twp_eq (result := 0) (by rw [if_neg hsimple])
+    iapply twp_eq (result := 0) (by rw [ite_eq_right hsimple])
     wasm_twp_localSet
     wasm_twp_pures [twp_block]
     simp only [List.drop_zero]
     wasm_twp_pures [twp_const twp_const twp_localGet twp_const twp_and]
       using [and_zero_one]
     iapply twp_select (selected := .i32 1)
-      (by rw [if_neg (by decide : ¬ (0 : UInt32) ≠ 0)])
+      (by rw [ite_eq_right (by decide : ¬ (0 : UInt32) ≠ 0)])
     iapply twp_eqz (result := 0) (by decide)
     iapply twp_brIfZero
     wasm_twp_pures [twp_localGet]

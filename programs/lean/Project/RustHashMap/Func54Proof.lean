@@ -208,7 +208,7 @@ theorem func54_correct [WasmSmallStepGS hlc Universal.State] :
     ihave Houtarray := Houtclose $$ Houtcell
     -- the message is not empty, so both guards fall through
     wasm_twp_pures [twp_block twp_localGet twp_const]
-    iapply twp_gtU (result := 1) (by rw [if_pos hlenGt])
+    iapply twp_gtU (result := 1) (by rw [ite_eq_left hlenGt])
     wasm_twp_pures [twp_const twp_and]
     simp only [show (1 : UInt32) &&& 1 = 1 from by decide]
     iapply twp_eqz (result := 0) (by decide)
@@ -229,7 +229,7 @@ theorem func54_correct [WasmSmallStepGS hlc Universal.State] :
     wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_block twp_localGet]
-    iapply twp_eqz (result := 0) (by rw [if_neg hlenNonzero])
+    iapply twp_eqz (result := 0) (by rw [ite_eq_right hlenNonzero])
     iapply twp_brIfZero
     simp only [List.drop_zero]
     -- the copy

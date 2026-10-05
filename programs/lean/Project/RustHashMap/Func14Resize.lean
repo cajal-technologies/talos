@@ -315,7 +315,7 @@ theorem twp_resize_tail
       rfl
     rw [hmask0]
     wasm_twp_pures [twp_localGet]
-    iapply twp_eqz (result := 1) (by rw [if_pos rfl])
+    iapply twp_eqz (result := 1) (by rw [ite_eq_left rfl])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_zero, List.nil_append]
     iapply twp_exitControl (by rfl)
@@ -341,7 +341,7 @@ theorem twp_resize_tail
       have : (0 : UInt32).toNat = 0 := rfl
       omega
     wasm_twp_pures [twp_localGet]
-    iapply twp_eqz (result := 0) (by rw [if_neg hmwNe])
+    iapply twp_eqz (result := 0) (by rw [ite_eq_right hmwNe])
     iapply twp_brIfZero
     rw [shape_free_tail]
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
@@ -378,7 +378,7 @@ theorem twp_resize_tail
       omega
     wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
-    iapply twp_eqz (result := 0) (by rw [if_neg hz])
+    iapply twp_eqz (result := 0) (by rw [ite_eq_right hz])
     iapply twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_sub twp_localGet
       twp_const]
@@ -575,7 +575,7 @@ theorem twp_resize_commit
   -- WAT 3673 to 3675: the wrap guard of the sum
   wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
-    rw [if_neg (by
+    rw [ite_eq_right (by
       intro hlt
       have h := UInt32.lt_iff_toNat_lt.mp hlt
       rw [htotalNat, hctrlNat] at h
@@ -584,7 +584,7 @@ theorem twp_resize_commit
   -- WAT 3676 to 3681: the size guard
   wasm_twp_pures [twp_localGet twp_const]
   iapply twp_gtU (result := 0) (by
-    rw [if_neg (by
+    rw [ite_eq_right (by
       intro hgt
       have h := UInt32.lt_iff_toNat_lt.mp hgt
       have hlit : (2147483640 : UInt32).toNat = 2147483640 := rfl
@@ -698,7 +698,7 @@ theorem twp_resize_commit
           -- WAT 3720 to 3722: the dead zero guard
           wasm_twp_pures [twp_localGet]
           iapply twp_eqz (result := 0) (by
-            rw [if_neg (by
+            rw [ite_eq_right (by
               intro hzero
               have hz : ((8 : UInt32) + bucketsWord).toNat = 0 := by
                 rw [hzero]; rfl
@@ -739,18 +739,18 @@ theorem twp_resize_commit
               · have h9n : bucketsWord.toNat < 9 := by
                   have h := UInt32.lt_iff_toNat_lt.mp h9
                   omega
-                rw [if_pos h9, if_pos (by decide : (1 : UInt32) ≠ 0)]
+                rw [ite_eq_left h9, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
                 congr 1
                 rw [← growthLeft_eq (b := bucketsWord.toNat) (by omega),
-                  if_pos h9n]
+                  ite_eq_left h9n]
               · have h9n : 9 ≤ bucketsWord.toNat := by
                   by_contra hc
                   exact h9 (UInt32.lt_iff_toNat_lt.mpr (by omega))
-                rw [if_neg h9, if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+                rw [ite_eq_right h9, ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
                 congr 1
                 apply UInt32.toNat_inj.mp
                 rw [← growthLeft_eq (b := bucketsWord.toNat) (by omega),
-                  if_neg (by omega), UInt32.toNat_ofNat_of_lt' (by omega),
+                  ite_eq_right (by omega), UInt32.toNat_ofNat_of_lt' (by omega),
                   UInt32.toNat_mul, toNat_shr3,
                   show (7 : UInt32).toNat = 7 from rfl]
                 omega)
@@ -778,7 +778,7 @@ theorem twp_resize_commit
             unfold HashMap.Table.bucketMaskToCapacity at hfull
             by_cases hsm : t.buckets - 1 < 8
             · omega
-            · rw [if_neg hsm] at hfull
+            · rw [ite_eq_right hsm] at hfull
               have hb1 : t.buckets - 1 + 1 = t.buckets := by omega
               rw [hb1] at hfull
               omega
@@ -803,8 +803,8 @@ theorem twp_resize_commit
               (bucketsWord.toNat - 1) < 4294967296 := by
             unfold HashMap.Table.bucketMaskToCapacity
             by_cases hsm : bucketsWord.toNat - 1 < 8
-            · rw [if_pos hsm]; omega
-            · rw [if_neg hsm]; omega
+            · rw [ite_eq_left hsm]; omega
+            · rw [ite_eq_right hsm]; omega
           have hgrowthW : UInt32.ofNat (HashMap.Table.bucketMaskToCapacity
                 (bucketsWord.toNat - 1)) - UInt32.ofNat t.items
               = UInt32.ofNat (HashMap.Table.reserve
@@ -871,7 +871,7 @@ theorem twp_resize_commit
               rw [← hwf.items_eq, hzero] at hlen
               exact List.eq_nil_of_length_eq_zero hlen
             wasm_twp_pures [twp_localGet]
-            iapply twp_eqz (result := 1) (by rw [if_pos h60])
+            iapply twp_eqz (result := 1) (by rw [ite_eq_left h60])
             iapply twp_brIf (by decide) (by rfl)
             simp only [List.take_zero, List.nil_append]
             ihave HctrlFin : Slices.ByteSlice 0
@@ -906,7 +906,7 @@ theorem twp_resize_commit
               rw [hzz, h0nat] at hitemsNat
               exact hzero hitemsNat.symm
             wasm_twp_pures [twp_localGet]
-            iapply twp_eqz (result := 0) (by rw [if_neg h60])
+            iapply twp_eqz (result := 0) (by rw [ite_eq_right h60])
             iapply twp_brIfZero
             rw [resize_tail_eq, shape_resize_tail]
             icases Hold with (%hz | ⟨%hroomOld, HctrlOld, HslotsOld⟩)
@@ -1022,7 +1022,7 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
     unfold HashMap.Table.bucketMaskToCapacity at hfull
     by_cases hsm : t.buckets - 1 < 8
     · omega
-    · rw [if_neg hsm] at hfull
+    · rw [ite_eq_right hsm] at hfull
       have hb1 : t.buckets - 1 + 1 = t.buckets := by omega
       rw [hb1] at hfull
       omega
@@ -1065,7 +1065,7 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_ltU (result := 0) (by
-    rw [if_neg (by
+    rw [ite_eq_right (by
       intro hlt
       have h := UInt32.lt_iff_toNat_lt.mp hlt
       rw [hsucNat, hitemsNat] at h
@@ -1102,10 +1102,10 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
         have h := UInt32.lt_iff_toNat_lt.mp h8
         rw [hmaskNat, h8lit] at h
         omega
-      rw [if_pos h8, if_pos (by decide : (1 : UInt32) ≠ 0)]
+      rw [ite_eq_left h8, ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       congr 1
       rw [hfull, ← growthLeft_eq (b := t.buckets) (by omega),
-        if_pos (by omega)]
+        ite_eq_left (by omega)]
     · have h8n : 8 ≤ t.buckets - 1 := by
         by_contra hc
         have hlt : (UInt32.ofNat (t.buckets - 1)).toNat
@@ -1113,11 +1113,11 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
           rw [hmaskNat, h8lit]
           omega
         exact h8 (UInt32.lt_iff_toNat_lt.mpr hlt)
-      rw [if_neg h8, if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+      rw [ite_eq_right h8, ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
       congr 1
       apply UInt32.toNat_inj.mp
       rw [hfull, ← growthLeft_eq (b := t.buckets) (by omega),
-        if_neg (by omega), UInt32.toNat_ofNat_of_lt' (by omega),
+        ite_eq_right (by omega), UInt32.toNat_ofNat_of_lt' (by omega),
         UInt32.toNat_mul, toNat_shr3,
         show (7 : UInt32).toNat = 7 from rfl, hbucketsNat]
       omega)
@@ -1132,7 +1132,7 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
       show UInt32.toNat 1 % 32 = 1 from by decide,
       Nat.shiftRight_eq_div_pow, hitemsNat]
   iapply twp_leU (result := 0) (by
-    rw [if_neg (by
+    rw [ite_eq_right (by
       intro hle
       have h := UInt32.le_iff_toNat_le.mp hle
       rw [hsucNat, hshr1] at h
@@ -1145,12 +1145,12 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
   iapply twp_gtU (result := 0) (by
-    rw [if_neg (by
+    rw [ite_eq_right (by
       intro hgt
       have h := UInt32.lt_iff_toNat_lt.mp hgt
       omega)])
   iapply twp_select (selected := .i32 (UInt32.ofNat (t.items + 1)))
-    (by rw [if_neg (by decide)])
+    (by rw [ite_eq_right (by decide)])
   wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_const]
@@ -1171,7 +1171,7 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
     have ha15 : (UInt32.ofNat (t.items + 1)).toNat < 15 := by
       have h := UInt32.lt_iff_toNat_lt.mp hsmall
       omega
-    iapply twp_ltU (result := 1) (by rw [if_pos hsmall])
+    iapply twp_ltU (result := 1) (by rw [ite_eq_left hsmall])
     iapply twp_brIf (by decide) (by rfl)
     wasm_twp_pures [twp_const twp_localGet twp_const twp_and twp_const
       twp_add twp_localGet twp_const]
@@ -1183,8 +1183,8 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
       have hbuck : (4 : UInt32).toNat
           = HashMap.Table.capacityToBuckets (ResizePures.resizeCap t) := by
         rw [hcapNat, h4nat, buckets_tiny hcapLow ha4]
-      iapply twp_ltU (result := 1) (by rw [if_pos htiny])
-      iapply twp_select (selected := .i32 4) (by rw [if_pos (by decide)])
+      iapply twp_ltU (result := 1) (by rw [ite_eq_left htiny])
+      iapply twp_select (selected := .i32 4) (by rw [ite_eq_left (by decide)])
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       iapply twp_exitControl (by rfl)
@@ -1219,10 +1219,10 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
             (x := UInt32.ofNat (t.items + 1) &&& 8) (k := 8) (by omega)
         rw [hcapNat, hadd, UInt32.toNat_and, h8nat]
         exact buckets_small ha4 ha15
-      iapply twp_ltU (result := 0) (by rw [if_neg htiny])
+      iapply twp_ltU (result := 0) (by rw [ite_eq_right htiny])
       iapply twp_select
         (selected := .i32 ((8 : UInt32) + (UInt32.ofNat (t.items + 1) &&& 8)))
-        (by rw [if_neg (by decide)])
+        (by rw [ite_eq_right (by decide)])
       wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       iapply twp_exitControl (by rfl)
@@ -1248,12 +1248,12 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
     have ha15 : 15 ≤ (UInt32.ofNat (t.items + 1)).toNat := by
       by_contra hcon
       exact hsmall (UInt32.lt_iff_toNat_lt.mpr (by omega))
-    iapply twp_ltU (result := 0) (by rw [if_neg hsmall])
+    iapply twp_ltU (result := 0) (by rw [ite_eq_right hsmall])
     iapply twp_brIfZero
     iapply twp_blockOf shape_clz
     wasm_twp_pures [twp_localGet twp_const]
     iapply twp_gtU (result := 0) (by
-      rw [if_neg (by
+      rw [ite_eq_right (by
         intro hgt
         have h := UInt32.lt_iff_toNat_lt.mp hgt
         have hlit : (536870911 : UInt32).toNat = 536870911 := rfl
@@ -1303,7 +1303,7 @@ theorem func14_resize_correct : Func14ResizeSpec (hlc := hlc) := by
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_const]
     iapply twp_gtU (result := 0) (by
-      rw [if_neg (by
+      rw [ite_eq_right (by
         intro hgt
         have h := UInt32.lt_iff_toNat_lt.mp hgt
         have hlit : (536870910 : UInt32).toNat = 536870910 := rfl

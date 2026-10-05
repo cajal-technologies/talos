@@ -167,7 +167,7 @@ theorem keyValueAndMap_of_accepts (bytes : List UInt8)
         HashMap.ofEntries (acceptedInsertEntries bytes)) := by
   obtain ⟨height, hdec, hexact⟩ := haccept
   unfold Spec.keyValueAndMap
-  rw [if_neg (by omega), Spec.mapOf,
+  rw [ite_eq_right (by omega), Spec.mapOf,
     BorshBridge.hashMap?_eq_some_of_accepts (bytes.drop 8) hdec
       hexact.symm]
   rfl
@@ -180,8 +180,8 @@ theorem keyValueAndMap_eq_none_of_not_accepts (bytes : List UInt8)
     Spec.keyValueAndMap bytes = none := by
   unfold Spec.keyValueAndMap
   by_cases height : bytes.length < 8
-  · rw [if_pos height]
-  · rw [if_neg height]
+  · rw [ite_eq_left height]
+  · rw [ite_eq_right height]
     have hrest : Spec.mapOf (bytes.drop 8) = none := by
       unfold Spec.mapOf
       by_cases hdec : DecodeAccepts (insertMapBytes bytes)

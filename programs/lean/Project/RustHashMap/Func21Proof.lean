@@ -219,10 +219,10 @@ private theorem select_addr3 (v a b c : UInt32) (i j l : Nat)
       (if x ≠ 0 then a else if y ≠ 0 then b else c)
         = v + UInt32.ofNat (8 * m) := by
   by_cases hx : x ≠ 0
-  · exact ⟨i, hi, by rw [if_pos hx, ha]⟩
+  · exact ⟨i, hi, by rw [ite_eq_left hx, ha]⟩
   · by_cases hy : y ≠ 0
-    · exact ⟨j, hj, by rw [if_neg hx, if_pos hy, hb]⟩
-    · exact ⟨l, hl, by rw [if_neg hx, if_neg hy, hc]⟩
+    · exact ⟨j, hj, by rw [ite_eq_right hx, ite_eq_left hy, hb]⟩
+    · exact ⟨l, hl, by rw [ite_eq_right hx, ite_eq_right hy, hc]⟩
 
 /-! ## One memory step on one entry
 
@@ -488,9 +488,9 @@ private theorem ancestorArg_ancAt (a k : UInt32) :
     ancestorArg (ancAt a k) = a := by
   unfold ancAt
   by_cases h : a = 0
-  · rw [if_pos h, h]
+  · rw [ite_eq_left h, h]
     rfl
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     rfl
 
 private theorem ancAt_ne_zero (a k : UInt32) :
@@ -498,9 +498,9 @@ private theorem ancAt_ne_zero (a k : UInt32) :
   intro p q hsome
   unfold ancAt at hsome
   by_cases h : a = 0
-  · rw [if_pos h] at hsome
+  · rw [ite_eq_left h] at hsome
     exact absurd hsome (by simp)
-  · rw [if_neg h] at hsome
+  · rw [ite_eq_right h] at hsome
     have hp : p = a := by
       have := Option.some.inj hsome
       exact (congrArg Prod.fst this).symm
@@ -513,9 +513,9 @@ private theorem ancestorBelow_ancAt (a k : UInt32)
   intro p q hsome x hx
   unfold ancAt at hsome
   by_cases hz : a = 0
-  · rw [if_pos hz] at hsome
+  · rw [ite_eq_left hz] at hsome
     exact absurd hsome (by simp)
-  · rw [if_neg hz] at hsome
+  · rw [ite_eq_right hz] at hsome
     have hq : q = k := by
       have := Option.some.inj hsome
       exact (congrArg Prod.snd this).symm
@@ -561,9 +561,9 @@ private theorem ancestorFits_of_slice (v : UInt32) (i n : Nat)
     Slices.byteOffset_toNat v (8 * i) (by omega)
   unfold ancAt at hsome
   by_cases hz : v + UInt32.ofNat (8 * i) = 0
-  · rw [if_pos hz] at hsome
+  · rw [ite_eq_left hz] at hsome
     exact absurd hsome (by simp)
-  · rw [if_neg hz] at hsome
+  · rw [ite_eq_right hz] at hsome
     have hp : p = v + UInt32.ofNat (8 * i) := by
       have := Option.some.inj hsome
       exact (congrArg Prod.fst this).symm
@@ -620,7 +620,7 @@ private theorem swap_pivot (p : UInt32 × UInt32)
         simp only [hlen, Nat.add_sub_cancel]
       have hhead : entryAt (p :: (l ++ ge)) 0 = p := rfl
       have hset : l.set t.length p = l.dropLast ++ [p] := by
-        rw [List.set_eq_take_append_cons_drop, if_pos (by omega),
+        rw [List.set_eq_take_append_cons_drop, ite_eq_left (by omega),
           List.dropLast_eq_take, hlen]
         simp [hlen]
       refine ⟨l.getLast hne :: l.dropLast, ?_, ?_⟩
@@ -1204,7 +1204,7 @@ private theorem twp_pivot [WasmSmallStepGS hlc Universal.State]
     have hlt : f.len < (64 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, show (64 : UInt32).toNat = 64 from rfl]
       exact hshort
-    iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [if_pos hlt])
+    iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [ite_eq_left hlt])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero,
       qsMedianInline_shape]
@@ -1257,7 +1257,7 @@ private theorem twp_pivot [WasmSmallStepGS hlc Universal.State]
     have hnlt : ¬ f.len < (64 : UInt32) := by
       rw [UInt32.lt_iff_toNat_lt, show (64 : UInt32).toNat = 64 from rfl]
       omega
-    iapply Wasm.SmallStep.twp_ltU (result := 0) (by rw [if_neg hnlt])
+    iapply Wasm.SmallStep.twp_ltU (result := 0) (by rw [ite_eq_right hnlt])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_localGet]
     have H23 := Func20Proof.func20_correct (hlc := hlc)
@@ -1339,7 +1339,7 @@ private theorem twp_equal_guard [WasmSmallStepGS hlc Universal.State]
   match hcur : cur with
   | none =>
       have hzero' : f.anc = 0 := by rw [hanc]; rfl
-      iapply Wasm.SmallStep.twp_eqz (result := 1) (by rw [if_pos hzero'])
+      iapply Wasm.SmallStep.twp_eqz (result := 1) (by rw [ite_eq_left hzero'])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       iapply (hcont k7)
@@ -1363,7 +1363,7 @@ private theorem twp_equal_guard [WasmSmallStepGS hlc Universal.State]
         addr_facts f.anc (by rw [hancp]; exact hpfits)
       isimp only [AncestorCell] at Hanc
       ihave Hanc := wordMove32 hancp.symm $$ Hanc
-      iapply Wasm.SmallStep.twp_eqz (result := 0) (by rw [if_neg hp])
+      iapply Wasm.SmallStep.twp_eqz (result := 0) (by rw [ite_eq_right hp])
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet]
       wasm_twp_rebind Wasm.SmallStep.twp_load32_addr key h1 h2 h3
@@ -1376,7 +1376,7 @@ private theorem twp_equal_guard [WasmSmallStepGS hlc Universal.State]
         (by omega) rfl
       isplitl_exact Hbuf
       iintro Hbuf
-      iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [if_pos hkey])
+      iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [ite_eq_left hkey])
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       iapply (hcont (f.buf + UInt32.ofNat (8 * ip)))
@@ -1394,14 +1394,14 @@ private theorem ancestorCell_ancAt [WasmHeapGS Universal.State]
     (a k : UInt32) (h : a ≠ 0) :
     AncestorCell (ancAt a k) = iprop(pointsTo_u32 0 a k) := by
   unfold ancAt
-  rw [if_neg h]
+  rw [ite_eq_right h]
   rfl
 
 private theorem ancestorCell_ancAt_zero [WasmHeapGS Universal.State]
     (a k : UInt32) (h : a = 0) :
     AncestorCell (ancAt a k) = iprop(emp) := by
   unfold ancAt
-  rw [if_pos h]
+  rw [ite_eq_left h]
   rfl
 
 /-- Writing the key that a slot already holds changes nothing. -/
@@ -2155,7 +2155,7 @@ private theorem twp_qs_loop [WasmSmallStepGS hlc Universal.State]
                   by_cases hge : 33 ≤ ge.length
                   · -- WAT 6190: the run is long, so the loop turns
                     iapply Wasm.SmallStep.twp_geU (result := 1)
-                      (by rw [if_pos (word_ge_33 ge.length hgeFit hge)])
+                      (by rw [ite_eq_left (word_ge_33 ge.length hgeFit hge)])
                     iapply Wasm.SmallStep.twp_brIf
                       (by decide : (1 : UInt32) ≠ 0) rfl
                     simp only [List.take_zero, List.nil_append]
@@ -2209,7 +2209,7 @@ private theorem twp_qs_loop [WasmSmallStepGS hlc Universal.State]
                                 · iexact Hcont
                   · -- WAT 6190: the run is short, so the loop leaves
                     iapply Wasm.SmallStep.twp_geU (result := 0)
-                      (by rw [if_neg (word_lt_33 ge.length hgeFit hge)])
+                      (by rw [ite_eq_right (word_lt_33 ge.length hgeFit hge)])
                     iapply Wasm.SmallStep.twp_brIfZero
                     iapply Wasm.SmallStep.twp_exitControl rfl
                     simp only [List.take_zero, List.nil_append,
@@ -2317,7 +2317,7 @@ private theorem twp_func21_upto [WasmSmallStepGS hlc Universal.State]
           rw [UInt32.lt_iff_toNat_lt,
             show (33 : UInt32).toNat = 33 from rfl]
           exact hsmall
-        iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [if_pos hlt])
+        iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [ite_eq_left hlt])
         iapply Wasm.SmallStep.twp_brIf
           (by decide : (1 : UInt32) ≠ 0) rfl
         simp only [regBlocks_fold]
@@ -2343,7 +2343,7 @@ private theorem twp_func21_upto [WasmSmallStepGS hlc Universal.State]
             show (33 : UInt32).toNat = 33 from rfl]
           omega
         iapply Wasm.SmallStep.twp_ltU (result := 0)
-          (by rw [if_neg hnlt])
+          (by rw [ite_eq_right hnlt])
         iapply Wasm.SmallStep.twp_brIfZero
         have hlenWord : len = UInt32.ofNat pairs.length := by
           rw [hlen]

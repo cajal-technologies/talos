@@ -269,12 +269,12 @@ theorem twp_free_block
   simp only [collectLocals, List.drop_nil]
   wasm_twp_pures [twp_localGet]
   by_cases hcap : cap = 0
-  · iapply twp_eqz (result := 1) (by rw [if_pos hcap])
+  · iapply twp_eqz (result := 1) (by rw [ite_eq_left hcap])
     iapply twp_brIf (by decide) (by rfl)
     simp only [List.take_zero, List.nil_append]
     iapply Hcont
     iexact Hruntime
-  · iapply twp_eqz (result := 0) (by rw [if_neg hcap])
+  · iapply twp_eqz (result := 0) (by rw [ite_eq_right hcap])
     iapply twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl twp_const]
     rw [show ((3 : UInt32) % 32) = 3 from rfl]

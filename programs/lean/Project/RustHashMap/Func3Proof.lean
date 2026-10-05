@@ -167,7 +167,7 @@ private theorem optionU32At_words [WasmHeapGS Universal.State]
       isplitl_pureexact (by
         intro v hv
         exact absurd hv (by simp))
-      · isimp only [Option.isSome_none, Bool.false_eq_true, if_false]
+      · isimp only [Option.isSome_none, Bool.false_eq_true, ite_false]
         isplitl_exact Htag
         · iexact Hpad
   | some v =>
@@ -177,7 +177,7 @@ private theorem optionU32At_words [WasmHeapGS Universal.State]
       isplitl_pureexact (by
         intro w hw
         exact Option.some_inj.mp hw)
-      · isimp only [Option.isSome_some, if_true]
+      · isimp only [Option.isSome_some, ite_true]
         isplitl_exact Htag
         · iexact Hval
 

@@ -205,7 +205,7 @@ theorem twp_header_stage [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_const]
-    iapply twp_gtU (result := 1) (by rw [if_pos hlong])
+    iapply twp_gtU (result := 1) (by rw [ite_eq_left hlong])
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     rw [headerRead_shape]

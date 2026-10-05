@@ -122,13 +122,13 @@ theorem hasBit_zero (j : Nat) : hasBit 0 j = false := by
 theorem ctz64_zero : ∀ k : Nat, ctz64 k 0 = 64
   | 0 => rfl
   | k + 1 => by
-      rw [ctz64, if_neg (by decide), show (0 : UInt64) >>> 1 = 0 from rfl,
+      rw [ctz64, ite_eq_right (by decide), show (0 : UInt64) >>> 1 = 0 from rfl,
         ctz64_zero k]
 
 theorem clz64_zero : ∀ k : Nat, clz64 k 0 = 64
   | 0 => rfl
   | k + 1 => by
-      rw [clz64, if_neg (by decide), show (0 : UInt64) <<< 1 = 0 from rfl,
+      rw [clz64, ite_eq_right (by decide), show (0 : UInt64) <<< 1 = 0 from rfl,
         clz64_zero k]
 
 theorem lowestByte_of_ne_zero {msk : UInt64} (hmask : msk &&& REP80 = msk)
@@ -193,7 +193,7 @@ theorem clz64_eq : ∀ (k : Nat), k ≤ 64 → ∀ (a : UInt64) (i : Nat), i < 6
   | 0, _, _, _, _, hik, _, _ => absurd hik (by omega)
   | k + 1, hk, a, i, hi, hik, hbit, hmax => by
     by_cases htop : a &&& 0x8000000000000000 ≠ 0
-    · rw [clz64, if_pos htop]
+    · rw [clz64, ite_eq_left htop]
       have h63 : a.toNat.testBit 63 = true := (top_bit_iff a).1 htop
       have hie : i = 63 := by
         by_contra hne
@@ -201,7 +201,7 @@ theorem clz64_eq : ∀ (k : Nat), k ≤ 64 → ∀ (a : UInt64) (i : Nat), i < 6
         rw [h63] at hf
         exact absurd hf (by simp)
       omega
-    · rw [clz64, if_neg htop]
+    · rw [clz64, ite_eq_right htop]
       have h63 : a.toNat.testBit 63 = false := by
         cases h : a.toNat.testBit 63 with
         | false => rfl
@@ -311,7 +311,7 @@ theorem walk_eq_fullIndices_small {hash : K → UInt64} {t : Table K V}
   have hpad : ∀ p, t.buckets ≤ p → p < 8 → isFull (t.ctrlAt p) = false := by
     intro p h1 h2
     have hm := hw.mirror p (by omega)
-    rw [if_pos (show IsPad t.buckets p from ⟨hb, h1, h2⟩)] at hm
+    rw [ite_eq_left (show IsPad t.buckets p from ⟨hb, h1, h2⟩)] at hm
     rw [hm, isFull_EMPTY]
   rw [setBytes_swarMatchFull]
   unfold fullIndices
@@ -352,16 +352,16 @@ theorem capBuckets_le_of_le_max {n : Nat} (h : n ≤ 117440512) :
   have h32 : (2 : Nat) ^ 32 = 4294967296 := by norm_num
   unfold capBuckets
   by_cases h0 : n = 0
-  · rw [if_pos h0]
+  · rw [ite_eq_left h0]
     omega
-  · rw [if_neg h0]
+  · rw [ite_eq_right h0]
     unfold capacityToBuckets
     by_cases h15 : n < 15
-    · rw [if_pos h15]
+    · rw [ite_eq_left h15]
       show (if max 3 n < 4 then 4 else if max 3 n < 8 then 8 else 16)
         ≤ 2 ^ 27
       split_ifs <;> omega
-    · rw [if_neg h15]
+    · rw [ite_eq_right h15]
       obtain ⟨k, hk32, hp, hnm, hor⟩ :=
         nextPow2_spec (n := n * 8 / 7) (by omega)
       rw [hp]

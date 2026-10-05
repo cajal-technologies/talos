@@ -285,7 +285,7 @@ theorem PartInv_step {pk : UInt32} {orig : List (UInt32 × UInt32)}
     · have hf1 : g' = g + 1 := by omega
       have hlt : keyAt A r < pk := by
         by_contra hc
-        rw [hg', gapNext, if_neg hc] at hf1
+        rw [hg', gapNext, ite_eq_right hc] at hf1
         omega
       rw [hig, hentry1g, hx, ← keyAt]
       exact hlt
@@ -297,7 +297,7 @@ theorem PartInv_step {pk : UInt32} {orig : List (UInt32 × UInt32)}
       by_cases hf : g' = g
       · have hge : ¬ keyAt A r < pk := by
           by_contra hc
-          rw [hg', gapNext, if_pos hc] at hf
+          rw [hg', gapNext, ite_eq_left hc] at hf
           omega
         rw [hf, hentry1g, hx, ← keyAt]
         exact UInt32.le_of_not_lt hge
@@ -349,7 +349,7 @@ theorem PartInv_low (h : PartInv pk orig hv A g n)
   by_cases hig : i = g
   · have hflag : hv.1 < pk := by
       by_contra hc
-      rw [splitIndex, if_neg hc] at hi
+      rw [splitIndex, ite_eq_right hc] at hi
       omega
     rw [keyAt, hig, entryAt_set_self A (by
       have h1 := h.gapLt; have h2 := h.cursor; omega) hv]
@@ -366,7 +366,7 @@ theorem PartInv_high (h : PartInv pk orig hv A g n)
   by_cases hig : i = g
   · have hflag : ¬ hv.1 < pk := by
       by_contra hc
-      rw [splitIndex, if_pos hc] at hi
+      rw [splitIndex, ite_eq_left hc] at hi
       omega
     rw [keyAt, hig, entryAt_set_self A (by
       have h1 := h.gapLt; have h2 := h.cursor; omega) hv]
@@ -463,12 +463,12 @@ private theorem index_add_flag (g : Nat) (c : Prop) [Decidable c]
     (if c then (1 : UInt32) else 0) + UInt32.ofNat g =
       UInt32.ofNat (g + if c then 1 else 0) := by
   by_cases hc : c
-  · rw [if_pos hc, if_pos hc]
+  · rw [ite_eq_left hc, ite_eq_left hc]
     rw [show (1 : UInt32) = UInt32.ofNat 1 from rfl,
       index_add 1 g (by omega) (by omega)]
     congr 1
     omega
-  · rw [if_neg hc, if_neg hc]
+  · rw [ite_eq_right hc, ite_eq_right hc]
     rw [show (0 : UInt32) = UInt32.ofNat 0 from rfl,
       index_add 0 g (by omega) (by omega)]
     congr 1
@@ -1140,7 +1140,7 @@ private theorem twp_write_back [WasmSmallStepGS hlc Universal.State]
     rw [hlen, splitIndex]
     split_ifs <;> omega
   iapply Wasm.SmallStep.twp_geU (result := 0)
-    (by rw [if_neg (fun hc => absurd hlt (not_lt_of_ge hc))])
+    (by rw [ite_eq_right (fun hc => absurd hlt (not_lt_of_ge hc))])
   set out := (settle B g n).set g hv with hout
   set numLt := splitIndex pk hv g with hnumLt
   have hlenOut : out.length = n := by
@@ -1210,7 +1210,7 @@ private theorem twp_scan_back [WasmSmallStepGS hlc Universal.State]
   by_cases hend : r = n
   · -- the cursor is the end, so the loop does not run
     subst hend
-    iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [if_pos rfl])
+    iapply Wasm.SmallStep.twp_eq (result := 1) (by rw [ite_eq_left rfl])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
     iapply (twp_write_back (j6 := v + UInt32.ofNat (8 * r))
@@ -1223,7 +1223,7 @@ private theorem twp_scan_back [WasmSmallStepGS hlc Universal.State]
     have hrlt : r < n := by omega
     have hne : v + UInt32.ofNat (8 * r) ≠ v + UInt32.ofNat (8 * n) :=
       fun hc => hend (addr_inj v r n n (by omega) (by omega) hroom hc)
-    iapply Wasm.SmallStep.twp_eq (result := 0) (by rw [if_neg hne])
+    iapply Wasm.SmallStep.twp_eq (result := 0) (by rw [ite_eq_right hne])
     iapply Wasm.SmallStep.twp_brIfZero
     iapply Wasm.SmallStep.twp_loop_wf_family
       (ι := List (UInt32 × UInt32) × Nat × Nat × UInt32)
@@ -1313,7 +1313,7 @@ private theorem twp_scan_back [WasmSmallStepGS hlc Universal.State]
       by_cases hlast : ri + 1 = n
       · -- the cursor reaches the end
         iapply Wasm.SmallStep.twp_ne (result := 0)
-          (by rw [if_neg (by rw [hlast]; exact fun hc => hc rfl)])
+          (by rw [ite_eq_right (by rw [hlast]; exact fun hc => hc rfl)])
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_exitControl] using
           [List.take_zero, List.nil_append, List.drop_zero]
@@ -1338,7 +1338,7 @@ private theorem twp_scan_back [WasmSmallStepGS hlc Universal.State]
         have hne2 : v + UInt32.ofNat (8 * (ri + 1))
             ≠ v + UInt32.ofNat (8 * n) := fun hc =>
           hlast (addr_inj v (ri + 1) n n (by omega) (by omega) hroom hc)
-        iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [if_pos hne2])
+        iapply Wasm.SmallStep.twp_ne (result := 1) (by rw [ite_eq_left hne2])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           rfl
         simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1433,7 +1433,7 @@ private theorem twp_scan_fwd [WasmSmallStepGS hlc Universal.State]
   by_cases hbig : 3 ≤ n
   · -- the tail holds three entries or more, so the loop runs
     iapply Wasm.SmallStep.twp_ltU (result := 1)
-      (by rw [if_pos ((addr_lt_iff v 1 (n - 1) n (by omega) (by omega)
+      (by rw [ite_eq_left ((addr_lt_iff v 1 (n - 1) n (by omega) (by omega)
         hroom).mpr (by omega))])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1604,7 +1604,7 @@ private theorem twp_scan_fwd [WasmSmallStepGS hlc Universal.State]
       by_cases hmore : ri + 2 + 2 ≤ n
       · -- two more turns
         iapply Wasm.SmallStep.twp_ltU (result := 1)
-          (by rw [if_pos ((addr_lt_iff v (ri + 2) (n - 1) n (by omega)
+          (by rw [ite_eq_left ((addr_lt_iff v (ri + 2) (n - 1) n (by omega)
             (by omega) hroom).mpr (by omega))])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           rfl
@@ -1645,7 +1645,7 @@ private theorem twp_scan_fwd [WasmSmallStepGS hlc Universal.State]
       · -- the loop stops
         have hstop : ¬ (ri + 2 < n - 1) := by omega
         iapply Wasm.SmallStep.twp_ltU (result := 0)
-          (by rw [if_neg (fun hc => hstop ((addr_lt_iff v (ri + 2)
+          (by rw [ite_eq_right (fun hc => hstop ((addr_lt_iff v (ri + 2)
             (n - 1) n (by omega) (by omega) hroom).mp hc))])
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_exitControl] using
@@ -1680,7 +1680,7 @@ private theorem twp_scan_fwd [WasmSmallStepGS hlc Universal.State]
   · -- the tail is too short for the first loop
     have hsmall : ¬ (1 < n - 1) := by omega
     iapply Wasm.SmallStep.twp_ltU (result := 0)
-      (by rw [if_neg (fun hc => hsmall ((addr_lt_iff v 1 (n - 1) n
+      (by rw [ite_eq_right (fun hc => hsmall ((addr_lt_iff v 1 (n - 1) n
         (by omega) (by omega) hroom).mp hc))])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet]

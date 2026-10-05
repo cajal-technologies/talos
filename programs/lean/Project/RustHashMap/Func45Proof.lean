@@ -110,7 +110,7 @@ theorem func45_correct [WasmSmallStepGS hlc Universal.State] :
   simp only [show (2147483648 : UInt32) - 1 = 2147483647 from by decide]
   have hcountLeU : count ≤ 2147483647 :=
     UInt32.le_iff_toNat_le.mpr (by simpa using hcountLe)
-  iapply twp_leU (result := 1) (by rw [if_pos hcountLeU])
+  iapply twp_leU (result := 1) (by rw [ite_eq_left hcountLeU])
   wasm_twp_pures [twp_const twp_and]
   simp only [show (1 : UInt32) &&& 1 = 1 from by decide]
   iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
@@ -233,7 +233,7 @@ theorem func45_correct [WasmSmallStepGS hlc Universal.State] :
   have hcountNonzero : count ≠ 0 := by
     intro hzero; rw [hzero] at hcountPos; simp at hcountPos
   wasm_twp_pures [twp_localGet]
-  iapply twp_eqz (result := 0) (by rw [if_neg hcountNonzero])
+  iapply twp_eqz (result := 0) (by rw [ite_eq_right hcountNonzero])
   iapply twp_brIfZero
   iapply twp_br (by rfl)
   simp only [List.take_zero, List.nil_append]
@@ -358,7 +358,7 @@ theorem func45_correct [WasmSmallStepGS hlc Universal.State] :
     wasm_twp_localSet [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_block twp_const twp_localGet twp_localGet]
-    iapply twp_select (selected := Value.i32 0) (by rw [if_pos hptrNonzero])
+    iapply twp_select (selected := Value.i32 0) (by rw [ite_eq_left hptrNonzero])
     wasm_twp_pures [twp_const twp_and]
     simp only [show (0 : UInt32) &&& 1 = 0 from by decide]
     iapply twp_eqz (result := 1) (by decide)

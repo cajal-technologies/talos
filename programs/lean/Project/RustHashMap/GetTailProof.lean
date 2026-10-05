@@ -444,7 +444,7 @@ theorem twp_get_reply [WasmSmallStepGS hlc Universal.State]
           ⟨%hbyte0, Hcell0⟩
         cases answer with
         | none =>
-            simp only [Option.isSome_none, Bool.false_eq_true, if_false]
+            simp only [Option.isSome_none, Bool.false_eq_true, ite_false]
             wasm_twp_pures [twp_localGet twp_const]
             iapply twp_ne (result := 1) (by decide)
             iapply twp_brIf (by decide) (by rfl)
@@ -504,7 +504,7 @@ theorem twp_get_reply [WasmSmallStepGS hlc Universal.State]
         | some v =>
             have hv : payload = v := hpayload v rfl
             subst hv
-            simp only [Option.isSome_some, if_true]
+            simp only [Option.isSome_some, ite_true]
             wasm_twp_pures [twp_localGet twp_const]
             iapply twp_ne (result := 0) (by decide)
             wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet]
@@ -1056,12 +1056,12 @@ theorem twp_get_reject [WasmSmallStepGS hlc Universal.State]
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_const]
   by_cases hshort : word1.toInt32 < (1 : UInt32).toInt32
-  · iapply twp_ltS (result := 1) (by rw [if_pos hshort])
+  · iapply twp_ltS (result := 1) (by rw [ite_eq_left hshort])
     iapply twp_brIf (by decide) (by rfl)
     simp only [getDropErrorFrame, List.take_zero, List.nil_append]
     iapply twp_get_err_epilogue
     iframe
-  · iapply twp_ltS (result := 0) (by rw [if_neg hshort])
+  · iapply twp_ltS (result := 0) (by rw [ite_eq_right hshort])
     wasm_twp_pures [twp_brIfZero twp_localGet]
     wasm_twp_rebind twp_load32 (address := func18Base) (offset := 40) word2
       h40.1 h40.2.1 h40.2.2.1 h40.2.2.2 with Hword2

@@ -577,9 +577,9 @@ theorem exists_empty_window_weak {K V : Type} {hashf : K → UInt64}
   have hp := hw.probe_lt hsh N
   have hmir := hw.mirror ((Table.probeSeq t hsh N).pos + j) (by omega)
   by_cases hpad : Table.IsPad t.buckets ((Table.probeSeq t hsh N).pos + j)
-  · rw [hmir, if_pos hpad]
-  · rw [hmir, if_neg hpad]
-    rw [hmir, if_neg hpad] at hspj
+  · rw [hmir, ite_eq_left hpad]
+  · rw [hmir, ite_eq_right hpad]
+    rw [hmir, ite_eq_right hpad] at hspj
     exact hsp _ (Nat.mod_lt _ hw.pos) hspj
 
 /-- The first window with an `EMPTY` byte. -/
@@ -638,7 +638,7 @@ theorem fixInsertIndex_spec_weak {K V : Type} {hashf : K → UInt64}
       t.ctrlAt (Table.fixInsertIndex t c) = Table.EMPTY := by
   unfold Table.fixInsertIndex
   by_cases hfull : Table.isFull (t.ctrlAt c) = true
-  · rw [if_pos hfull]
+  · rw [ite_eq_left hfull]
     have hb8 : t.buckets ≤ 8 := by
       rcases hspecial with hs | hs
       · exact absurd hfull (Table.isSpecial_iff.mp hs)
@@ -647,7 +647,7 @@ theorem fixInsertIndex_spec_weak {K V : Type} {hashf : K → UInt64}
       lowestSpecial_groupAt_zero_weak hw hsp hlen hb8
     rw [hls0]
     exact ⟨hxb, hxe⟩
-  · rw [if_neg hfull]
+  · rw [ite_eq_right hfull]
     exact ⟨hc, hsp c hc (Table.isSpecial_iff.mpr hfull)⟩
 
 /-! ## The insert probe of one turn, WAT 3977 to 4012 -/
@@ -777,9 +777,9 @@ theorem lowestSpecial_none_of_walk {K V : Type} {hashf : K → UInt64}
         = Table.EMPTY := by
       by_cases hpad : Table.IsPad t.buckets
           ((Table.probeSeq t hsh k).pos + j)
-      · rw [hmir, if_pos hpad]
-      · rw [hmir, if_neg hpad]
-        rw [hmir, if_neg hpad] at hsp
+      · rw [hmir, ite_eq_left hpad]
+      · rw [hmir, ite_eq_right hpad]
+        rw [hmir, ite_eq_right hpad] at hsp
         exact hsp0 _ (Nat.mod_lt _ hw.pos) hsp
     rw [Bool.eq_false_iff] at hme
     exact hme ((Table.matchEmpty_window t hsh k).mpr ⟨j, hj8, hempty⟩)
@@ -887,7 +887,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
       have hp := hlayout.probe_lt hsh N
       have hmir := hlayout.mirror ((Table.probeSeq n hsh N).pos + jN)
         (by omega)
-      rw [if_neg (by unfold Table.IsPad; omega)] at hmir
+      rw [ite_eq_right (by unfold Table.IsPad; omega)] at hmir
       rw [← hmir]
       exact hjNsp
   have hlowN : Table.lowestSetByte
@@ -979,7 +979,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_constI64]
   rcases Nat.eq_zero_or_pos N with hN0 | hNpos
   · subst hN0
-    iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [if_pos hneN])
+    iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [ite_eq_left hneN])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
     ihave Hgo := Hexit $$ %((Table.probeSeq n hsh 0).pos) %jN
@@ -989,7 +989,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
     iapply Hgo $$ Hctrl
   · have hz0 := hzero 0 hNpos
     iapply Wasm.SmallStep.twp_neI64 (result := 0)
-      (by rw [if_neg (fun hne => hne hz0)])
+      (by rw [ite_eq_right (fun hne => hne hz0)])
     iapply Wasm.SmallStep.twp_brIfZero
     isimp only [hz0]
     wasm_twp_pures [twp_const]
@@ -1077,7 +1077,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
       rcases Nat.lt_or_ge (k + 1) N with hlt | hge
       · have hzk := hzero (k + 1) hlt
         iapply Wasm.SmallStep.twp_eqzI64 (result := 1)
-          (by rw [if_pos hzk])
+          (by rw [ite_eq_left hzk])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           (by rfl)
         simp only [List.take_zero, List.drop_zero, List.nil_append]
@@ -1090,7 +1090,7 @@ theorem twp_resize_probe [WasmSmallStepGS hlc Universal.State]
       · have hkN1 : k + 1 = N := by omega
         subst hkN1
         iapply Wasm.SmallStep.twp_eqzI64 (result := 0)
-          (by rw [if_neg hneN])
+          (by rw [ite_eq_right hneN])
         iapply Wasm.SmallStep.twp_brIfZero
         iapply Wasm.SmallStep.twp_exitControl (by rfl)
         simp only [List.take_zero, List.drop_zero, List.nil_append]
@@ -1149,8 +1149,8 @@ theorem walkGroups_load_bound {K V : Type} {hashf : K → UInt64}
     (hc : c < ResizePures.walkGroups t) : 8 * c + 8 ≤ t.buckets := by
   unfold ResizePures.walkGroups at hc
   by_cases hsmall : t.buckets < 8
-  · rw [if_pos hsmall] at hc; omega
-  · rw [if_neg hsmall] at hc
+  · rw [ite_eq_left hsmall] at hc; omega
+  · rw [ite_eq_right hsmall] at hc
     obtain ⟨m, hm, hm1, hpow⟩ := hw.shape
     have hdvd : 8 ∣ t.buckets := by
       have hm3 : 3 ≤ m := by
@@ -1270,7 +1270,7 @@ theorem twp_resize_adv [WasmSmallStepGS hlc Universal.State]
       walkFrom_first t (ResizePures.walkGroups t)
         (ResizePures.walkGroups t) (b + 1) (by omega) hwf0
     iapply Wasm.SmallStep.twp_neI64 (result := 0)
-      (by rw [if_neg (fun hne => hne rfl)])
+      (by rw [ite_eq_right (fun hne => hne rfl)])
     iapply Wasm.SmallStep.twp_brIfZero
     iapply Wasm.SmallStep.twp_loop_wf_family
       (ι := Nat × Value)
@@ -1345,7 +1345,7 @@ theorem twp_resize_adv [WasmSmallStepGS hlc Universal.State]
           rw [show (9259542123273814144 : UInt64) = Table.REP80 from rfl,
             ← ResizePures.swarMatchFull_eq_zero_iff]
           exact hc5 (i.1 + 1) (by omega) hlt
-        iapply Wasm.SmallStep.twp_eqI64 (result := 1) (by rw [if_pos heq])
+        iapply Wasm.SmallStep.twp_eqI64 (result := 1) (by rw [ite_eq_left heq])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           (by rfl)
         simp only [List.take_zero, List.nil_append]
@@ -1367,7 +1367,7 @@ theorem twp_resize_adv [WasmSmallStepGS hlc Universal.State]
             ← ResizePures.swarMatchFull_eq_zero_iff] at heq
           exact hc3 heq
         iapply Wasm.SmallStep.twp_eqI64 (result := 0)
-          (by rw [if_neg hne])
+          (by rw [ite_eq_right hne])
         iapply Wasm.SmallStep.twp_brIfZero
         iapply Wasm.SmallStep.twp_exitControl (by rfl)
         simp only [List.take_zero, List.nil_append]
@@ -1386,7 +1386,7 @@ theorem twp_resize_adv [WasmSmallStepGS hlc Universal.State]
         iapply Hgo $$ Hctrl
     · isplitl_pureexact ⟨Nat.le_refl b, by omega⟩
       iframe Hctrl Hexit
-  · iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [if_pos hz])
+  · iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [ite_eq_left hz])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.drop_zero, List.nil_append]
     ihave Hgo := Hexit $$ %b %msk
@@ -1480,13 +1480,13 @@ theorem twp_resize_fix [WasmSmallStepGS hlc Universal.State]
   wasm_twp_pures [twp_const]
   by_cases hsp : Table.isSpecial (Table.ctrlAt n c) = true
   · have hlt := (ProbeStop.ltS_signByte (Table.ctrlAt n c)).mpr hsp
-    iapply Wasm.SmallStep.twp_ltS (result := 1) (by rw [if_pos hlt])
+    iapply Wasm.SmallStep.twp_ltS (result := 1) (by rw [ite_eq_left hlt])
     iapply Wasm.SmallStep.twp_brIf (targetCode := contCode)
       (targetControl := controls) (targetValues := ([] : List Value))
       (by decide : (1 : UInt32) ≠ 0) (by rfl)
     have hfix : Table.fixInsertIndex n c = c := by
       unfold Table.fixInsertIndex
-      rw [if_neg (Table.isSpecial_iff.mp hsp)]
+      rw [ite_eq_right (Table.isSpecial_iff.mp hsp)]
     rw [hfix]
     iapply Hexit $$ Hctrl
   · have hfull : Table.isFull (Table.ctrlAt n c) = true := by
@@ -1501,13 +1501,13 @@ theorem twp_resize_fix [WasmSmallStepGS hlc Universal.State]
               (signExtend (Table.ctrlAt n c).toNat 8)).toUInt32.toInt32
             < (0 : UInt32).toInt32) := fun hlt =>
       hsp ((ProbeStop.ltS_signByte _).mp hlt)
-    iapply Wasm.SmallStep.twp_ltS (result := 0) (by rw [if_neg hltFalse])
+    iapply Wasm.SmallStep.twp_ltS (result := 0) (by rw [ite_eq_right hltFalse])
     iapply Wasm.SmallStep.twp_brIfZero
     obtain ⟨jz, hls0, hjzb, hjze⟩ :=
       lowestSpecial_groupAt_zero_weak hlay hclean hlen hb8
     have hfix : Table.fixInsertIndex n c = jz := by
       unfold Table.fixInsertIndex
-      rw [if_pos hfull, hls0, Option.getD_some]
+      rw [ite_eq_left hfull, hls0, Option.getD_some]
     have hmask0 : Table.swarMatchEmptyOrDeleted
           (Table.groupWord (Table.groupAt n 0)) &&& Table.REP80
         = Table.swarMatchEmptyOrDeleted
@@ -1951,8 +1951,8 @@ theorem twp_resize_walk [WasmSmallStepGS hlc Universal.State]
   have hN0 : 0 < ResizePures.walkGroups t := by
     unfold ResizePures.walkGroups
     by_cases hsmall : t.buckets < 8
-    · rw [if_pos hsmall]; omega
-    · rw [if_neg hsmall]
+    · rw [ite_eq_left hsmall]; omega
+    · rw [ite_eq_right hsmall]
       have := hlayout.pos
       omega
   have hmask0 : Table.swarMatchFull

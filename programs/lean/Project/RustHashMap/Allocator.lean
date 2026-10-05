@@ -360,8 +360,7 @@ theorem allocatorMemoryGrow_succeeds (memory : Mem) (finish : UInt32)
     rw [UInt32.toNat_sub_of_le _ _ hleWords, hpagesWord]
   unfold Mem.grow
   simp only [hdelta, Nat.add_sub_of_le (Nat.le_of_lt hneed)]
-  norm_num [Module.memoryHardCap]
-  exact ite_eq_left (by omega)
+  exact ite_eq_left (by unfold Module.memoryHardCap; omega)
 
 /-- The frozen module declares no maximum, so its declaration-level cap is
 the interpreter's i32 hard cap. -/

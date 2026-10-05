@@ -28,9 +28,9 @@ open Project.RustHashMap.CollectBodyContracts
 theorem buckets_tiny {a : Nat} (h1 : 1 ≤ a) (h4 : a < 4) :
     Table.capacityToBuckets a = 4 := by
   unfold Table.capacityToBuckets
-  rw [if_pos (by omega)]
+  rw [ite_eq_left (by omega)]
   show (if max 3 a < 4 then 4 else if max 3 a < 8 then 8 else 16) = 4
-  rw [if_pos (by omega)]
+  rw [ite_eq_left (by omega)]
 
 /-- Four to fourteen items take the masked form of WAT 3653 to 3663. -/
 theorem buckets_small {a : Nat} (h4 : 4 ≤ a) (h15 : a < 15) :
@@ -49,7 +49,7 @@ theorem buckets_big {a : Nat} (h15 : 15 ≤ a) (hmax : a ≤ maxTableCapacity) :
     le_trans (Nat.div_le_self (a * 8) 7) (by omega)
   rw [Table.nextPow2_eq_wasm_clz hc2 hcub]
   unfold Table.capacityToBuckets
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
 
 /-! ## Bounds on the bucket count -/
 
@@ -60,10 +60,10 @@ theorem buckets_ge_four {a : Nat} (h1 : 1 ≤ a) (hmax : a ≤ maxTableCapacity)
   rw [hmaxEq] at hmax
   unfold Table.capacityToBuckets
   by_cases h15 : a < 15
-  · rw [if_pos h15]
+  · rw [ite_eq_left h15]
     show 4 ≤ if max 3 a < 4 then 4 else if max 3 a < 8 then 8 else 16
     split_ifs <;> omega
-  · rw [if_neg h15]
+  · rw [ite_eq_right h15]
     obtain ⟨m, -, hp, hnm, -⟩ :=
       Table.nextPow2_spec (n := a * 8 / 7) (by omega)
     rw [hp]
@@ -78,10 +78,10 @@ theorem buckets_le {a : Nat} (hmax : a ≤ maxTableCapacity) :
   rw [hmaxEq] at hmax
   unfold Table.capacityToBuckets
   by_cases h15 : a < 15
-  · rw [if_pos h15]
+  · rw [ite_eq_left h15]
     show (if max 3 a < 4 then 4 else if max 3 a < 8 then 8 else 16) ≤ 2 ^ 27
     split_ifs <;> omega
-  · rw [if_neg h15]
+  · rw [ite_eq_right h15]
     obtain ⟨m, -, hp, hnm, hor⟩ :=
       Table.nextPow2_spec (n := a * 8 / 7) (by omega)
     rw [hp]
@@ -110,8 +110,8 @@ theorem growthLeft_eq {b : Nat} (hb : 1 ≤ b) :
       Table.bucketMaskToCapacity (b - 1) := by
   unfold Table.bucketMaskToCapacity
   by_cases h9 : b < 9
-  · rw [if_pos h9, if_pos (by omega)]
-  · rw [if_neg h9, if_neg (by omega), show b - 1 + 1 = b from by omega]
+  · rw [ite_eq_left h9, ite_eq_left (by omega)]
+  · rw [ite_eq_right h9, ite_eq_right (by omega), show b - 1 + 1 = b from by omega]
 
 /-! ## The `u32` operations of the body -/
 

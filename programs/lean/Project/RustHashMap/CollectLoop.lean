@@ -392,7 +392,7 @@ theorem twp_insert_loop
     · -- the last pair: fall out of the loop
       have hsame : ptr + UInt32.ofNat (8 * (k + 1)) =
           ptr + UInt32.ofNat (8 * entries.length) := by rw [hlast]
-      iapply twp_ne (result := 0) (by rw [if_neg (not_not_intro hsame)])
+      iapply twp_ne (result := 0) (by rw [ite_eq_right (not_not_intro hsame)])
       iapply twp_brIfZero
       wasm_twp_pures [twp_exitControl]
       simp only [List.take_zero, List.nil_append]
@@ -422,7 +422,7 @@ theorem twp_insert_loop
         have := congrArg UInt32.toNat heq
         rw [hnextNat, hendNat] at this
         omega
-      iapply twp_ne (result := 1) (by rw [if_pos hne])
+      iapply twp_ne (result := 1) (by rw [ite_eq_left hne])
       iapply twp_brIf (by decide) (by rfl)
       simp only [List.take_zero, List.nil_append]
       ihave Hback := Hrec $$ %(k + 1)

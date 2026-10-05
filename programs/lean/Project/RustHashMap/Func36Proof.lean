@@ -150,7 +150,7 @@ private theorem twp_walk_loop [WasmSmallStepGS hlc Universal.State]
         hf12 hf12_1 hf12_2 hf12_3 with Hcounter
       ihave Hcell := Hclose $$ Hcounter
       wasm_twp_pures [twp_localGet]
-      iapply twp_eq (result := 1) (by rw [if_pos rfl])
+      iapply twp_eq (result := 1) (by rw [ite_eq_left rfl])
       wasm_twp_pures [twp_const twp_and] using [and_one_one]
       iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [walkBlock, List.take_zero, List.nil_append]
@@ -166,7 +166,7 @@ private theorem twp_walk_loop [WasmSmallStepGS hlc Universal.State]
       wasm_twp_rebind twp_load32 (address := sp - 16) (offset := 12)
         (UInt32.ofNat i) hf12 hf12_1 hf12_2 hf12_3 with Hcounter
       wasm_twp_pures [twp_localGet]
-      iapply twp_eq (result := 0) (by rw [if_neg hne])
+      iapply twp_eq (result := 0) (by rw [ite_eq_right hne])
       wasm_twp_pures [twp_const twp_and] using [and_zero_one]
       iapply twp_brIfZero
       wasm_twp_pures [twp_localGet twp_localGet]

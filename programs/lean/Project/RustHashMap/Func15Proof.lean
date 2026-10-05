@@ -207,7 +207,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
   by_cases hmne : msk = 0
   · -- no byte carries the tag: leave the block at once
     subst hmne
-    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos rfl])
+    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left rfl])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) hnoneTarget
     have hnone0 : (Table.setBytes (0 : UInt64)).find?
         (fun j => t.keyIs ((P + j) % t.buckets) key) = none := by
@@ -216,7 +216,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
     ihave Hgo := Hexit $$ %(none : Option Nat) %(0 : UInt64) %l16 %hnone0 Hslots
     isimp only [tagWalkExit] at Hgo
     iexact Hgo
-  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hmne])
+  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hmne])
   iapply Wasm.SmallStep.twp_brIfZero
   iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := UInt64 × UInt32)
@@ -314,7 +314,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
           (fun j => t.keyIs ((P + j) % t.buckets) key) = some (ctz64 64 q.1 / 8) := by
         rw [hnext]
         exact List.find?_cons_of_pos (by simpa using hkeyIs)
-      isimp only [if_pos hkey]
+      isimp only [ite_eq_left hkey]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (htarget _)
       ihave Hgo := Hexit $$ %(some (ctz64 64 q.1 / 8)) %q.1
         %(ctrl - UInt32.ofNat ((P + ctz64 64 q.1 / 8) % t.buckets) <<< 3)
@@ -341,7 +341,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
         intro j hj
         rw [Table.hasBit_iterNext hqmask hlow j, Bool.and_eq_true] at hj
         exact hqsub _ hj.1
-      isimp only [if_neg hkey]
+      isimp only [ite_eq_right hkey]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
         twp_andI64_bits]
@@ -350,7 +350,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
       isimp only [hcomm]
       by_cases hzero : q.1 &&& (q.1 + 18446744073709551615) = 0
       · -- no flagged byte is left: leave the loop and the block
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         iapply Wasm.SmallStep.twp_exitControl (by decide)
@@ -370,7 +370,7 @@ private theorem twp_tag_walk [WasmSmallStepGS hlc Universal.State]
           walkLocals] at Hgo
         iexact Hgo
       · -- one flagged byte is left: take the back edge
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hzero])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
         simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1023,14 +1023,14 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
               (Table.probeFuel t - i.step - 1)
               ((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).next t) none
               = Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key := by
-            rw [← hunfold, if_neg (Bool.eq_false_iff.mp hmeF)]
+            rw [← hunfold, ite_eq_right (Bool.eq_false_iff.mp hmeF)]
           have hlookupN2 : Table.findOrFindInsertLoop t
               (Table.h2 (SipHash.hashU32 k0 k1 key)) key
               (Table.probeFuel t - (i.step + 1))
               (Table.probeSeq t (SipHash.hashU32 k0 k1 key) (i.step + 1)) none
               = Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key := hlookupN
           wasm_twp_pures [twp_localGet]
-          iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzeroSpecial])
+          iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzeroSpecial])
           iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
           simp only [List.take_zero, List.nil_append]
           -- WAT 4532 to 4533: the flag goes back to zero
@@ -1087,7 +1087,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
             · left
               have hmir := hlayout.mirror
                 ((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos + j0) (by omega)
-              rw [if_neg (by unfold Table.IsPad; omega)] at hmir
+              rw [ite_eq_right (by unfold Table.IsPad; omega)] at hmir
               rw [← hcdef, ← hmir]
               exact hspj
           have hlowByte : Table.lowestSetByte (Table.swarMatchEmptyOrDeleted
@@ -1116,7 +1116,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
           simp only [Table.findOrFindInsertLoop, hmodelFind, hcase, hj0, Option.map_some,
             hcdef, Option.getD_some] at hunfold
           wasm_twp_pures [twp_localGet]
-          iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hneSpecial])
+          iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hneSpecial])
           iapply Wasm.SmallStep.twp_brIfZero
           wasm_twp_pures [twp_localGet twp_ctzI64 twp_wrapI64 twp_const twp_shrU
             twp_localGet twp_add twp_localGet twp_and]
@@ -1144,20 +1144,20 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
               exact Bool.noConfusion hz
             have hlookup : Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key
                 = Table.Lookup.insertAt (Table.fixInsertIndex t c) := by
-              rw [← hunfold, if_pos hme]
+              rw [← hunfold, ite_eq_left hme]
             have hins1 : (Table.insert (SipHash.hashU32 k0 k1) t key value).1 = none := by
-              simp only [Table.insert, Table.reserve, if_pos hgrowth, hlookup]
+              simp only [Table.insert, Table.reserve, ite_eq_left hgrowth, hlookup]
             have hins2 : (Table.insert (SipHash.hashU32 k0 k1) t key value).2
                 = Table.insertAt t (Table.fixInsertIndex t c)
                     (Table.h2 (SipHash.hashU32 k0 k1 key)) (key, value) := by
-              simp only [Table.insert, Table.reserve, if_pos hgrowth, hlookup]
+              simp only [Table.insert, Table.reserve, ite_eq_left hgrowth, hlookup]
             obtain ⟨hfixLt, hfixEmpty⟩ :=
               ProbeStop.fixInsertIndex_spec hwf hclean hgrowth hcLt hcSp
             have htagB : ((SipHash.hashU32Low k0 k1 key >>> 25).toUInt32 &&& 127).toUInt8
                 = Table.h2 (SipHash.hashU32 k0 k1 key) := by
               rw [ProbeStop.tagByte_of_wasm, Table.h2_hashU32Low]
             isimp only [hins1, hins2] at Hcont
-            iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [if_pos hneZero])
+            iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [ite_eq_left hneZero])
             iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
             simp only [List.take_zero, List.drop_zero, List.nil_append]
             -- WAT 4432 to 4433: the group of `fix_insert_index` is the first one
@@ -1224,13 +1224,13 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
                 key (Table.probeFuel t - i.step - 1)
                 ((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).next t) (some c)
                 = Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key := by
-              rw [← hunfold, if_neg hme]
+              rw [← hunfold, ite_eq_right hme]
             have hlookupN2 : Table.findOrFindInsertLoop t (Table.h2 (SipHash.hashU32 k0 k1 key))
                 key (Table.probeFuel t - (i.step + 1))
                 (Table.probeSeq t (SipHash.hashU32 k0 k1 key) (i.step + 1)) (some c)
                 = Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key := hlookupN
             iapply Wasm.SmallStep.twp_neI64 (result := 0)
-              (by rw [if_neg (fun hne => hne hzeroEmpty)])
+              (by rw [ite_eq_right (fun hne => hne hzeroEmpty)])
             iapply Wasm.SmallStep.twp_brIfZero
             -- WAT 4428 to 4430: the flag records that a candidate stands
             wasm_twp_pures [twp_const]
@@ -1296,20 +1296,20 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
             exact Bool.noConfusion hz
           have hlookup : Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key
               = Table.Lookup.insertAt (Table.fixInsertIndex t c) := by
-            rw [← hunfold, if_pos hme]
+            rw [← hunfold, ite_eq_left hme]
           have hins1 : (Table.insert (SipHash.hashU32 k0 k1) t key value).1 = none := by
-            simp only [Table.insert, Table.reserve, if_pos hgrowth, hlookup]
+            simp only [Table.insert, Table.reserve, ite_eq_left hgrowth, hlookup]
           have hins2 : (Table.insert (SipHash.hashU32 k0 k1) t key value).2
               = Table.insertAt t (Table.fixInsertIndex t c)
                   (Table.h2 (SipHash.hashU32 k0 k1 key)) (key, value) := by
-            simp only [Table.insert, Table.reserve, if_pos hgrowth, hlookup]
+            simp only [Table.insert, Table.reserve, ite_eq_left hgrowth, hlookup]
           obtain ⟨hfixLt, hfixEmpty⟩ :=
             ProbeStop.fixInsertIndex_spec hwf hclean hgrowth hcLt hcSp
           have htagB : ((SipHash.hashU32Low k0 k1 key >>> 25).toUInt32 &&& 127).toUInt8
               = Table.h2 (SipHash.hashU32 k0 k1 key) := by
             rw [ProbeStop.tagByte_of_wasm, Table.h2_hashU32Low]
           isimp only [hins1, hins2] at Hcont
-          iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [if_pos hneZero])
+          iapply Wasm.SmallStep.twp_neI64 (result := 1) (by rw [ite_eq_left hneZero])
           iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
           simp only [List.take_zero, List.drop_zero, List.nil_append]
           -- WAT 4432 to 4433: the group of `fix_insert_index` is the first one
@@ -1376,13 +1376,13 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
               key (Table.probeFuel t - i.step - 1)
               ((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).next t) (some c)
               = Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key := by
-            rw [← hunfold, if_neg hme]
+            rw [← hunfold, ite_eq_right hme]
           have hlookupN2 : Table.findOrFindInsertLoop t (Table.h2 (SipHash.hashU32 k0 k1 key))
               key (Table.probeFuel t - (i.step + 1))
               (Table.probeSeq t (SipHash.hashU32 k0 k1 key) (i.step + 1)) (some c)
               = Table.findOrFindInsertIndex t (SipHash.hashU32 k0 k1 key) key := hlookupN
           iapply Wasm.SmallStep.twp_neI64 (result := 0)
-            (by rw [if_neg (fun hne => hne hzeroEmpty)])
+            (by rw [ite_eq_right (fun hne => hne hzeroEmpty)])
           iapply Wasm.SmallStep.twp_brIfZero
           -- WAT 4428 to 4430: the flag records that a candidate stands
           wasm_twp_pures [twp_const]
@@ -1454,7 +1454,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
         simp only [Table.findOrFindInsertLoop, hmodelFind]
       have hins1 : (Table.insert (SipHash.hashU32 k0 k1) t key value).1
           = some oldValue := by
-        simp only [Table.insert, Table.reserve, if_pos hgrowth, hlookup, hslot]
+        simp only [Table.insert, Table.reserve, ite_eq_left hgrowth, hlookup, hslot]
       have hins2 : (Table.insert (SipHash.hashU32 k0 k1) t key value).2 =
           { t with
             slots :=
@@ -1462,7 +1462,7 @@ private theorem twp_insert_after_reserve [WasmSmallStepGS hlc Universal.State]
                 (((Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).pos + j0) %
                   t.buckets)
                 (some (key, value)) } := by
-        simp only [Table.insert, Table.reserve, if_pos hgrowth, hlookup, hslot]
+        simp only [Table.insert, Table.reserve, ite_eq_left hgrowth, hlookup, hslot]
       isimp only [hins1, hins2] at Hcont
       simp only [List.take_zero, List.drop_zero, List.nil_append]
       -- WAT 4508 to 4518: read the old value, write the new one

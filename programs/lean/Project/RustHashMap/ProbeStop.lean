@@ -62,9 +62,9 @@ theorem exists_empty_window (hw : WF hash t) (hcl : Clean t) (hg : 1 ≤ t.growt
   have hp := hw.toLayout.probe_lt h n
   have hmir := hw.toLayout.mirror ((probeSeq t h n).pos + j) (by omega)
   by_cases hpad : IsPad t.buckets ((probeSeq t h n).pos + j)
-  · rw [hmir, if_pos hpad]
-  · rw [hmir, if_neg hpad]
-    rw [hmir, if_neg hpad] at hsp
+  · rw [hmir, ite_eq_left hpad]
+  · rw [hmir, ite_eq_right hpad]
+    rw [hmir, ite_eq_right hpad] at hsp
     exact hcl.1 _ (Nat.mod_lt _ hw.toLayout.pos) hsp
 
 /-- The first window with an `EMPTY` byte.  The compiled loop stops at or
@@ -122,9 +122,9 @@ theorem slotAt_isSome_of_mem_matchBytes (hw : Layout hash t) (h : UInt64) (n : N
     isFull_of_hasBit_swarMatchTag hg hj8 (isFull_h2 h) hb
   rw [hw.window_getD h n j hj8] at hfullb
   by_cases hpad : IsPad t.buckets ((probeSeq t h n).pos + j)
-  · rw [if_pos hpad] at hfullb
+  · rw [ite_eq_left hpad] at hfullb
     exact absurd hfullb (by decide)
-  · rw [if_neg hpad] at hfullb
+  · rw [ite_eq_right hpad] at hfullb
     exact (hw.full_iff _ (hw.probeIdx_lt h n j)).mp hfullb
 
 /-- `slotAt_isSome_of_mem_matchBytes` with `window` and `probeIdx` unfolded,
@@ -241,7 +241,7 @@ theorem fixInsertIndex_spec (hwf : WF hash t) (hcl : Clean t)
     fixInsertIndex t c < t.buckets ∧ t.ctrlAt (fixInsertIndex t c) = EMPTY := by
   unfold fixInsertIndex
   by_cases hfull : isFull (t.ctrlAt c) = true
-  · rw [if_pos hfull]
+  · rw [ite_eq_left hfull]
     have hb8 : t.buckets ≤ 8 := by
       rcases hspecial with hs | hs
       · exact absurd hfull (isSpecial_iff.mp hs)
@@ -249,7 +249,7 @@ theorem fixInsertIndex_spec (hwf : WF hash t) (hcl : Clean t)
     obtain ⟨x, hls0, hxb, hxe⟩ := lowestSpecial_groupAt_zero hwf hcl hg hb8
     rw [hls0]
     exact ⟨hxb, hxe⟩
-  · rw [if_neg hfull]
+  · rw [ite_eq_right hfull]
     exact ⟨hc, hcl.1 c hc (isSpecial_iff.mpr hfull)⟩
 
 /-! ## The two byte bridges of the insert tail -/

@@ -364,7 +364,7 @@ private theorem twp_func20_upto [WasmSmallStepGS hlc Universal.State]
           rw [UInt32.lt_iff_toNat_lt,
             show (8 : UInt32).toNat = 8 from rfl]
           exact hsmall
-        iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [if_pos hlt])
+        iapply Wasm.SmallStep.twp_ltU (result := 1) (by rw [ite_eq_left hlt])
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
         simp only [List.take_zero, List.nil_append, List.drop_zero]
         iapply twp_func20_tail (v := v) (i0 := ia) (i1 := ib) (i2 := ic)
@@ -378,7 +378,7 @@ private theorem twp_func20_upto [WasmSmallStepGS hlc Universal.State]
           rw [UInt32.lt_iff_toNat_lt,
             show (8 : UInt32).toNat = 8 from rfl]
           omega
-        iapply Wasm.SmallStep.twp_ltU (result := 0) (by rw [if_neg hnlt])
+        iapply Wasm.SmallStep.twp_ltU (result := 0) (by rw [ite_eq_right hnlt])
         iapply Wasm.SmallStep.twp_brIfZero
         set kk : Nat := n.toNat / 8 with hkk
         have hsize : UInt32.size = 4294967296 := rfl

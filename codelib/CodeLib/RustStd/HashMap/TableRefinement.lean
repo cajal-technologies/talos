@@ -388,7 +388,7 @@ theorem Layout.matchEmpty_of_small (hw : Layout hash t) (hb : t.buckets < 8) (h 
   have hp := hw.probe_lt h n
   rw [matchEmpty_window t]
   refine ⟨t.buckets - (probeSeq t h n).pos, by omega, ?_⟩
-  rw [hw.mirror _ (by omega), if_pos (by unfold IsPad; omega)]
+  rw [hw.mirror _ (by omega), ite_eq_left (by unfold IsPad; omega)]
 
 /-- In a table with at least eight buckets the first `buckets / 8` windows
 name every bucket. -/
@@ -499,16 +499,16 @@ theorem mirror_setCtrl (hs : Shape t.buckets) (hlen : t.ctrl.length = t.buckets 
   rw [Nat.mod_mod] at e2
   by_cases hpad : IsPad t.buckets p
   · have h1 : ¬ (p = i ∨ p = index2 t.buckets i) := fun h => (e1.1 h).1 hpad
-    rw [if_neg h1, if_pos hpad, hm p hp, if_pos hpad]
-  · rw [if_neg hpad]
+    rw [ite_eq_right h1, ite_eq_left hpad, hm p hp, ite_eq_left hpad]
+  · rw [ite_eq_right hpad]
     by_cases hq : p % t.buckets = i
     · have h1 : p = i ∨ p = index2 t.buckets i := e1.2 ⟨hpad, hq⟩
       have h2 : p % t.buckets = i ∨ p % t.buckets = index2 t.buckets i := e2.2 ⟨hnp, hq⟩
-      rw [if_pos h1, if_pos h2]
+      rw [ite_eq_left h1, ite_eq_left h2]
     · have h1 : ¬ (p = i ∨ p = index2 t.buckets i) := fun h => hq (e1.1 h).2
       have h2 : ¬ (p % t.buckets = i ∨ p % t.buckets = index2 t.buckets i) :=
         fun h => hq (e2.1 h).2
-      rw [if_neg h1, if_neg h2, hm p hp, if_neg hpad]
+      rw [ite_eq_right h1, ite_eq_right h2, hm p hp, ite_eq_right hpad]
 
 /-- Distinct slots hold distinct keys, so the entry list has distinct keys. -/
 theorem Layout.nodupKeys_toList (hw : Layout hash t) : NodupKeys (toList t) := by
@@ -637,7 +637,7 @@ theorem findInsertIndexLoop_eq (t : Table K V) (hash : UInt64) :
 theorem Layout.ctrlAt_probe (hw : Layout hash t) (h : UInt64) {n j : Nat} (hj : j < 8)
     (hpad : ¬ IsPad t.buckets ((probeSeq t h n).pos + j)) :
     t.ctrlAt ((probeSeq t h n).pos + j) = t.ctrlAt (probeIdx t h n j) := by
-  rw [hw.mirror _ (by have := hw.probe_lt h n; omega), if_neg hpad]
+  rw [hw.mirror _ (by have := hw.probe_lt h n; omega), ite_eq_right hpad]
   rfl
 
 /-- With an `EMPTY` bucket somewhere, some window inside the fuel has a
@@ -709,7 +709,7 @@ theorem Layout.insertIndex_spec (hw : Layout hash t) (h : UInt64) {n j : Nat}
       · exact absurd hf (isSpecial_iff.1 hsp)
     unfold fixInsertIndex
     rw [hnf]
-    simp only [Bool.false_eq_true, if_false]
+    simp only [Bool.false_eq_true, ite_false]
     exact ⟨hw.probeIdx_lt h n j, hsp, ⟨j, hj, hpad, rfl⟩, hnoemp⟩
 
 section Loops
@@ -819,7 +819,7 @@ theorem Layout.findLoop_found (hw : Layout hash t) {k : K} {v : V} {i₀ : Nat}
           have := hemp 0 (by omega); rwa [Nat.add_zero] at this
         unfold window at hne
         rw [hne]
-        simp only [Bool.false_eq_true, if_false]
+        simp only [Bool.false_eq_true, ite_false]
         exact ih (s + 1) m (by omega)
           (fun m' hm' => by rw [Nat.add_assoc, Nat.add_comm 1 m']; exact hemp (m' + 1) (by omega))
           (by rw [Nat.add_assoc, Nat.add_comm 1 m]; exact hin)
@@ -858,7 +858,7 @@ theorem Layout.findOrFindInsertLoop_found (hw : Layout hash t) {k : K} {v : V} {
           have := hemp 0 (by omega); rwa [Nat.add_zero] at this
         unfold window at hne
         rw [hne]
-        simp only [Bool.false_eq_true, if_false]
+        simp only [Bool.false_eq_true, ite_false]
         exact ih (s + 1) m _ (by omega)
           (fun m' hm' => by rw [Nat.add_assoc, Nat.add_comm 1 m']; exact hemp (m' + 1) (by omega))
           (by rw [Nat.add_assoc, Nat.add_comm 1 m]; exact hin)
@@ -885,7 +885,7 @@ theorem findOrFindInsertLoop_absent (t : Table K V) (hb : 0 < t.buckets) (hash :
       have hne := matchEmpty_eq_false_of_lowestSpecial_none hls
       cases cand <;>
         simp only [findOrFindInsertLoop, firstSpecial, window, hls, hfind, hne, Option.map_none,
-          Bool.false_eq_true, if_false] <;>
+          Bool.false_eq_true, ite_false] <;>
         exact ih (s + 1) _
     · unfold window at hls
       cases cand <;> simp only [findOrFindInsertLoop, firstSpecial, window, hls, hfind,
@@ -1149,12 +1149,12 @@ theorem toList_counters (t : Table K V) (a g : Nat) :
 
 theorem ctrlAt_setCtrl_self (hs : Shape t.buckets) (hlen : t.ctrl.length = t.buckets + 8)
     {i : Nat} (hi : i < t.buckets) (c : UInt8) : (t.setCtrl i c).ctrlAt i = c := by
-  rw [ctrlAt_setCtrl hs hlen hi, if_pos (Or.inl rfl)]
+  rw [ctrlAt_setCtrl hs hlen hi, ite_eq_left (Or.inl rfl)]
 
 theorem ctrlAt_setCtrl_ne (hs : Shape t.buckets) (hlen : t.ctrl.length = t.buckets + 8)
     {i : Nat} (hi : i < t.buckets) (c : UInt8) {p : Nat} (hp : p < t.buckets) (hne : p ≠ i) :
     (t.setCtrl i c).ctrlAt p = t.ctrlAt p := by
-  rw [ctrlAt_setCtrl hs hlen hi, if_neg]
+  rw [ctrlAt_setCtrl hs hlen hi, ite_eq_right]
   intro hor
   have := (index2_iff hs hi (by omega)).1 hor
   rw [Nat.mod_eq_of_lt hp] at this
@@ -1448,7 +1448,7 @@ theorem Layout.replace (hw : Layout hash t) {i : Nat} (hi : i < t.buckets) {k : 
 theorem reserve_eq_self (hash : K → UInt64) (t : Table K V) {a : Nat}
     (h : a ≤ t.growthLeft) : reserve hash t a = t := by
   unfold reserve
-  rw [if_pos h]
+  rw [ite_eq_left h]
 
 section Ops
 variable [BEq K] [LawfulBEq K]
@@ -1550,7 +1550,7 @@ theorem WF.insert_of_growth (hw : WF hash t) (hcl : Clean t) (hg : 1 ≤ t.growt
         exact hcl.1 p hp' hsp'
     · show t.growthLeft - (if isEmpty (t.ctrlAt (findInsertIndex t (hash k))) then 1 else 0) +
         (t.items + 1) = bucketMaskToCapacity (t.buckets - 1)
-      rw [isEmpty_iff.2 hbyte, if_pos rfl]
+      rw [isEmpty_iff.2 hbyte, ite_eq_left rfl]
       have := hcl.2
       omega
 
@@ -1643,7 +1643,7 @@ theorem Layout.window_empty_of_runs (hw : Layout hash t) (hb : 8 ≤ t.buckets) 
   have hposb : (probeSeq t h n).pos < t.buckets := hw.probe_lt h n
   have ring : ∀ p, p < t.buckets + 8 → t.ctrlAt p = t.ctrlAt (p % t.buckets) := by
     intro p hp
-    rw [hw.mirror p hp, if_neg (by unfold IsPad; omega)]
+    rw [hw.mirror p hp, ite_eq_right (by unfold IsPad; omega)]
   have hwb : wrapSub i 8 t.buckets < t.buckets := Nat.mod_lt _ hw.pos
   have hbefore : wrapSub i 8 t.buckets = (i + (t.buckets - 8)) % t.buckets :=
     wrapSub_eight_of_le hw.shape.dvd_pow32 hb
@@ -1726,7 +1726,7 @@ theorem WF.erase (hw : WF hash t) {i : Nat} (hi : i < t.buckets) {k : K} {v : V}
       · have hrun : leadNonEmpty (groupAt t (wrapSub i 8 t.buckets)) +
             trailNonEmpty (groupAt t i) < 8 := by
           by_contra hge
-          rw [hc, if_pos (Nat.le_of_not_lt hge)] at hj'
+          rw [hc, ite_eq_left (Nat.le_of_not_lt hge)] at hj'
           exact absurd hj' (by decide)
         have hin : InWindow t h m i := by
           obtain ⟨hpad, hmod⟩ := (index2_iff hw.shape hi hpj).1 hor
@@ -1875,9 +1875,9 @@ theorem withCapacity_eq (cap : Nat) :
     (withCapacity cap : Table K V) = newEmpty (capBuckets cap) := by
   unfold withCapacity capBuckets
   by_cases h : cap = 0
-  · rw [if_pos h, if_pos h]
+  · rw [ite_eq_left h, ite_eq_left h]
     rfl
-  · rw [if_neg h, if_neg h]
+  · rw [ite_eq_right h, ite_eq_right h]
 
 /-! ### Sizing -/
 
@@ -1897,9 +1897,9 @@ theorem nextPow2_go_spec (n : Nat) : ∀ (f j : Nat), n ≤ 2 ^ (f + j) →
     rw [show nextPow2.go n (f + 1) (2 ^ j) =
       if n ≤ 2 ^ j then 2 ^ j else nextPow2.go n f (2 ^ j * 2) from rfl]
     by_cases hle : n ≤ 2 ^ j
-    · rw [if_pos hle]
+    · rw [ite_eq_left hle]
       exact ⟨j, le_rfl, by omega, rfl, hle, Or.inl rfl⟩
-    · rw [if_neg hle, ← Nat.pow_succ]
+    · rw [ite_eq_right hle, ← Nat.pow_succ]
       obtain ⟨m, hm1, hm2, hgo, hnm, hor⟩ :=
         ih (j + 1) (by rw [show f + (j + 1) = f + 1 + j by omega]; exact hj)
       refine ⟨m, by omega, by omega, hgo, hnm, Or.inr ?_⟩
@@ -1920,19 +1920,19 @@ theorem capacityToBuckets_spec {cap : Nat} (hc : cap * 8 / 7 ≤ 2 ^ 32) :
       cap ≤ bucketMaskToCapacity (capacityToBuckets cap - 1) := by
   unfold capacityToBuckets
   by_cases h15 : cap < 15
-  · rw [if_pos h15]
+  · rw [ite_eq_left h15]
     show Shape (if max 3 cap < 4 then 4 else if max 3 cap < 8 then 8 else 16) ∧
       cap ≤ bucketMaskToCapacity ((if max 3 cap < 4 then 4 else if max 3 cap < 8 then 8 else 16) - 1)
     by_cases h4 : max 3 cap < 4
-    · rw [if_pos h4]
+    · rw [ite_eq_left h4]
       exact ⟨⟨2, by omega, by omega, rfl⟩, by show cap ≤ 3; omega⟩
-    · rw [if_neg h4]
+    · rw [ite_eq_right h4]
       by_cases h8 : max 3 cap < 8
-      · rw [if_pos h8]
+      · rw [ite_eq_left h8]
         exact ⟨⟨3, by omega, by omega, rfl⟩, by show cap ≤ 7; omega⟩
-      · rw [if_neg h8]
+      · rw [ite_eq_right h8]
         exact ⟨⟨4, by omega, by omega, rfl⟩, by show cap ≤ 14; omega⟩
-  · rw [if_neg h15]
+  · rw [ite_eq_right h15]
     obtain ⟨m, hm, hp, hnm, -⟩ := nextPow2_spec hc
     rw [hp]
     have hm5 : 5 ≤ m := by
@@ -1944,17 +1944,17 @@ theorem capacityToBuckets_spec {cap : Nat} (hc : cap * 8 / 7 ≤ 2 ^ 32) :
     rw [hk, Nat.pow_add] at hnm ⊢
     generalize 2 ^ k = q at hnm ⊢
     unfold bucketMaskToCapacity
-    rw [if_neg (by omega)]
+    rw [ite_eq_right (by omega)]
     omega
 
 theorem capacityToBuckets_lt {cap : Nat} (hc : cap * 8 / 7 ≤ 2 ^ 31) :
     capacityToBuckets cap < 2 ^ 32 := by
   unfold capacityToBuckets
   by_cases h15 : cap < 15
-  · rw [if_pos h15]
+  · rw [ite_eq_left h15]
     show (if max 3 cap < 4 then 4 else if max 3 cap < 8 then 8 else 16) < 2 ^ 32
     split_ifs <;> omega
-  · rw [if_neg h15]
+  · rw [ite_eq_right h15]
     obtain ⟨m, -, hp, -, hor⟩ := nextPow2_spec (n := cap * 8 / 7) (by omega)
     rw [hp]
     rcases hor with rfl | hlt
@@ -1967,17 +1967,17 @@ theorem capBuckets_spec {cap : Nat} (hc : cap * 8 / 7 ≤ 2 ^ 32) :
     Shape (capBuckets cap) ∧ cap ≤ bucketMaskToCapacity (capBuckets cap - 1) := by
   unfold capBuckets
   by_cases h : cap = 0
-  · rw [if_pos h, h]
+  · rw [ite_eq_left h, h]
     exact ⟨⟨0, by omega, by omega, rfl⟩, Nat.zero_le _⟩
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     exact capacityToBuckets_spec hc
 
 theorem capBuckets_lt {cap : Nat} (hc : cap * 8 / 7 ≤ 2 ^ 31) : capBuckets cap < 2 ^ 32 := by
   unfold capBuckets
   by_cases h : cap = 0
-  · rw [if_pos h]
+  · rw [ite_eq_left h]
     omega
-  · rw [if_neg h]
+  · rw [ite_eq_right h]
     exact capacityToBuckets_lt hc
 
 /-- One more item than the full capacity still fits the sizing bound when the
@@ -1989,9 +1989,9 @@ theorem Shape.grow_bound {b : Nat} (hs : Shape b) (hb : b < 2 ^ 32) :
   · obtain ⟨k, hk⟩ := hs.eq_mul_pow h8
     unfold bucketMaskToCapacity
     by_cases h8' : b - 1 < 8
-    · rw [if_pos h8']
+    · rw [ite_eq_left h8']
       omega
-    · rw [if_neg h8']
+    · rw [ite_eq_right h8']
       generalize 2 ^ k = q at hk
       omega
 
@@ -2227,10 +2227,10 @@ theorem reserve_eq_resize (hcl : Clean t) {a : Nat} (hlt : t.growthLeft < a) :
     reserve hash t a =
       resize hash t (max (t.items + a) (bucketMaskToCapacity (t.buckets - 1) + 1)) := by
   unfold reserve
-  rw [if_neg (by omega)]
+  rw [ite_eq_right (by omega)]
   show (if t.items + a ≤ bucketMaskToCapacity (t.buckets - 1) / 2 then rehashInPlace hash t
     else resize hash t (max (t.items + a) (bucketMaskToCapacity (t.buckets - 1) + 1))) = _
-  rw [if_neg (by have := hcl.2; omega)]
+  rw [ite_eq_right (by have := hcl.2; omega)]
 
 /-- `reserve` on a `Clean` table: the entries stay, the table stays `Clean`,
 and the room is there. The bucket count either stays or is the one of the
@@ -2303,7 +2303,7 @@ theorem ofEntries_eq [BEq K] (hash : K → UInt64) (es : List (K × V)) :
   unfold ofEntries extend insertAll
   show es.foldl _ (reserve hash empty
     (if (empty : Table K V).items = 0 then es.length else (es.length + 1) / 2)) = _
-  rw [if_pos (show (empty : Table K V).items = 0 from rfl)]
+  rw [ite_eq_left (show (empty : Table K V).items = 0 from rfl)]
 
 theorem ofEntries_append_singleton [BEq K] (es : List (K × V)) (kv : K × V) :
     HashMap.ofEntries (es ++ [kv]) = (HashMap.insert (HashMap.ofEntries es) kv.1 kv.2).2 := by

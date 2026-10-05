@@ -255,13 +255,13 @@ private theorem greaterChild_eq (cur : List (UInt32 × UInt32))
       = if 2 * node + 2 < bound ∧
           keyAt cur (2 * node + 1) < keyAt cur (2 * node + 2) then
           2 * node + 2 else 2 * node + 1 := by
-  rw [greaterChild, if_neg (by omega)]
+  rw [greaterChild, ite_eq_right (by omega)]
 
 /-- A node with no child below the bound answers itself. -/
 private theorem greaterChild_childless (cur : List (UInt32 × UInt32))
     {bound node : Nat} (h : bound ≤ 2 * node + 1) :
     greaterChild cur bound node = node := by
-  rw [greaterChild, if_pos h]
+  rw [greaterChild, ite_eq_left h]
 
 /-- One exchange of the compiled sift loop is one step of the model.
 The fuel stays at `bound`, which is always enough. -/
@@ -278,7 +278,7 @@ private theorem sift_swap (cur : List (UInt32 × UInt32))
     rw [hchild] at hor
     rcases hor with h | h <;> omega
   obtain ⟨b, rfl⟩ : ∃ b, bound = b + 1 := ⟨bound - 1, by omega⟩
-  rw [siftDownAux, hchild, if_neg hne, if_pos hlt]
+  rw [siftDownAux, hchild, ite_eq_right hne, ite_eq_left hlt]
   exact (siftDownAux_fuel _ _ _ (show b + 1 ≤ child + b by omega)
     (Nat.le_succ b)).symm
 
@@ -293,8 +293,8 @@ private theorem sift_stop (cur : List (UInt32 × UInt32))
   | succ b =>
     rw [siftDownAux, hchild]
     by_cases hcn : child = node
-    · rw [if_pos hcn]
-    · rw [if_neg hcn, if_neg hstop]
+    · rw [ite_eq_left hcn]
+    · rw [ite_eq_right hcn, ite_eq_right hstop]
 
 /-! ## The regions of the body -/
 
@@ -796,7 +796,7 @@ private theorem twp_pick [WasmSmallStepGS hlc Universal.State]
   by_cases hright : 2 * node + 2 < bound
   · -- WAT 8739 to 8755: the node has a second child
     iapply Wasm.SmallStep.twp_ltU (result := 1)
-      (by rw [if_pos ((ofNat_lt_iff (by omega) (by omega)).mpr hright)])
+      (by rw [ite_eq_left ((ofNat_lt_iff (by omega) (by omega)).mpr hright)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
     wasm_twp_pures [twp_localGet twp_localGet twp_localGet twp_const
@@ -821,9 +821,9 @@ private theorem twp_pick [WasmSmallStepGS hlc Universal.State]
           rw [greaterChild_eq cur hchild1]
           by_cases hk : (entryAt cur (2 * node + 1)).1
               < (entryAt cur (2 * node + 2)).1
-          · rw [if_pos hk, if_pos ⟨hright, hk⟩,
+          · rw [ite_eq_left hk, ite_eq_left ⟨hright, hk⟩,
               index_add_one (2 * node + 1) (by omega)]
-          · rw [if_neg hk, if_neg (fun hc => hk hc.2),
+          · rw [ite_eq_right hk, ite_eq_right (fun hc => hk hc.2),
               index_add_zero (2 * node + 1) (by omega)]
         isimp only [hpick]
         wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
@@ -835,11 +835,11 @@ private theorem twp_pick [WasmSmallStepGS hlc Universal.State]
   · -- WAT 8736 to 8738: the node has one child only
     iapply Wasm.SmallStep.twp_ltU (result := 0)
       (by
-        rw [if_neg (fun hc =>
+        rw [ite_eq_right (fun hc =>
           hright ((ofNat_lt_iff (by omega) (by omega)).mp hc))])
     iapply Wasm.SmallStep.twp_brIfZero
     have hgc : greaterChild cur bound node = 2 * node + 1 := by
-      rw [greaterChild_eq cur hchild1, if_neg (fun hc => hright hc.1)]
+      rw [greaterChild_eq cur hchild1, ite_eq_right (fun hc => hright hc.1)]
     isimp only [hgc] at Hcont
     wasm_twp_pures [twp_localGet]
     wasm_twp_localSet [List.set, List.length_cons, List.length_nil,
@@ -923,17 +923,17 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
     (by
       rw [hlenv]
       by_cases hphase : n < i
-      · rw [if_pos hphase, if_pos ((ofNat_lt_iff hnsz hi).mpr hphase)]
-      · rw [if_neg hphase,
-          if_neg (fun hc => hphase ((ofNat_lt_iff hnsz hi).mp hc))])
+      · rw [ite_eq_left hphase, ite_eq_left ((ofNat_lt_iff hnsz hi).mpr hphase)]
+      · rw [ite_eq_right hphase,
+          ite_eq_right (fun hc => hphase ((ofNat_lt_iff hnsz hi).mp hc))])
   iapply Wasm.SmallStep.twp_select
     (selected := Value.i32 (UInt32.ofNat bound))
     (by
       by_cases hphase : n < i
-      · rw [if_pos hphase, if_pos (by decide : (1 : UInt32) ≠ 0), hlenv,
+      · rw [ite_eq_left hphase, ite_eq_left (by decide : (1 : UInt32) ≠ 0), hlenv,
           hbound, Nat.min_eq_left (Nat.le_of_lt hphase)]
-      · rw [if_neg hphase,
-          if_neg (show ¬ ((0 : UInt32) ≠ 0) from by decide), hbound,
+      · rw [ite_eq_right hphase,
+          ite_eq_right (show ¬ ((0 : UInt32) ≠ 0) from by decide), hbound,
           Nat.min_eq_right (Nat.not_lt.mp hphase)])
   wasm_twp_localTee [List.set, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub]
@@ -941,7 +941,7 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
   · -- WAT 8726 to 8803: the node has a child, so the sift loop runs
     iapply Wasm.SmallStep.twp_geU (result := 0)
       (by
-        rw [if_neg (fun hc =>
+        rw [ite_eq_right (fun hc =>
           absurd ((ofNat_le_iff (by omega) (by omega)).mp hc)
             (by omega))])
     iapply Wasm.SmallStep.twp_brIfZero
@@ -1012,7 +1012,7 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
             by_cases hgo : (entryAt cur node).1 < (entryAt cur child).1
             · -- WAT 8775 to 8802: the node sinks one level
               iapply Wasm.SmallStep.twp_geU (result := 0)
-                (by rw [if_neg (UInt32.not_le.mpr hgo)])
+                (by rw [ite_eq_right (UInt32.not_le.mpr hgo)])
               iapply Wasm.SmallStep.twp_brIfZero
               have hne' : node ≠ child := fun hc => hcne hc.symm
               have hnl : node < cur.length := by omega
@@ -1126,7 +1126,7 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
                           · -- WAT 8802: one more level to sink
                             iapply Wasm.SmallStep.twp_ltU (result := 1)
                               (by
-                                rw [if_pos ((ofNat_lt_iff (by omega)
+                                rw [ite_eq_left ((ofNat_lt_iff (by omega)
                                   (by omega)).mpr hback)])
                             iapply Wasm.SmallStep.twp_brIf
                               (by decide : (1 : UInt32) ≠ 0) rfl
@@ -1157,7 +1157,7 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
                           · -- WAT 8802: the node reached the bottom
                             iapply Wasm.SmallStep.twp_ltU (result := 0)
                               (by
-                                rw [if_neg (fun hc => hback
+                                rw [ite_eq_right (fun hc => hback
                                   ((ofNat_lt_iff (by omega)
                                     (by omega)).mp hc))])
                             iapply Wasm.SmallStep.twp_brIfZero
@@ -1183,7 +1183,7 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
                             iexact Hgo
             · -- WAT 8774: the node is already above its greater child
               iapply Wasm.SmallStep.twp_geU (result := 1)
-                (by rw [if_pos (UInt32.not_lt.mp hgo)])
+                (by rw [ite_eq_left (UInt32.not_lt.mp hgo)])
               iapply Wasm.SmallStep.twp_brIf
                 (by decide : (1 : UInt32) ≠ 0) rfl
               simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1210,7 +1210,7 @@ private theorem twp_sift [WasmSmallStepGS hlc Universal.State]
   · -- WAT 8725: the node has no child below the bound
     iapply Wasm.SmallStep.twp_geU (result := 1)
       (by
-        rw [if_pos ((ofNat_le_iff (by omega) (by omega)).mpr
+        rw [ite_eq_left ((ofNat_le_iff (by omega) (by omega)).mpr
           (by omega))])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1239,10 +1239,10 @@ private theorem heapsortStep_phase (ps : List (UInt32 × UInt32))
     heapsortStep ps n i
       = siftDown (phaseBuf ps n i) (min n i) (phaseNode n i) := by
   by_cases h : i < n
-  · rw [heapsortStep, if_neg (show ¬ (n ≤ i) by omega), phaseBuf,
-      phaseNode, if_pos h, if_pos h, Nat.min_eq_right (Nat.le_of_lt h)]
-  · rw [heapsortStep, if_pos (show n ≤ i by omega), phaseBuf, phaseNode,
-      if_neg h, if_neg h, Nat.min_eq_left (by omega)]
+  · rw [heapsortStep, ite_eq_right (show ¬ (n ≤ i) by omega), phaseBuf,
+      phaseNode, ite_eq_left h, ite_eq_left h, Nat.min_eq_right (Nat.le_of_lt h)]
+  · rw [heapsortStep, ite_eq_left (show n ≤ i by omega), phaseBuf, phaseNode,
+      ite_eq_right h, ite_eq_right h, Nat.min_eq_left (by omega)]
 
 set_option maxHeartbeats 2000000 in
 /-- The counter step, the phase split and the exchange of the root, WAT
@@ -1279,11 +1279,11 @@ private theorem twp_phase [WasmSmallStepGS hlc Universal.State]
   isimp only [phaseBuf, phaseNode] at Hcont
   by_cases hsort : i < n
   · -- WAT 8691 to 8707: the sort phase exchanges the root with entry `i`
-    isimp only [if_pos hsort] at Hcont
+    isimp only [ite_eq_left hsort] at Hcont
     iapply Wasm.SmallStep.twp_ltU (result := 1)
       (by
         rw [hlenv,
-          if_pos ((ofNat_lt_iff (by omega) (by omega)).mpr hsort)])
+          ite_eq_left ((ofNat_lt_iff (by omega) (by omega)).mpr hsort)])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
     have hswap0 : (ps.set 0 (entryAt ps i)).set i (entryAt ps 0)
@@ -1327,11 +1327,11 @@ private theorem twp_phase [WasmSmallStepGS hlc Universal.State]
               %(v + UInt32.ofNat (8 * i)) Hbuf
             iexact Hgo
   · -- WAT 8685 to 8689: the build phase sifts the node `i - len`
-    isimp only [if_neg hsort] at Hcont
+    isimp only [ite_eq_right hsort] at Hcont
     iapply Wasm.SmallStep.twp_ltU (result := 0)
       (by
         rw [hlenv,
-          if_neg (fun hc =>
+          ite_eq_right (fun hc =>
             hsort ((ofNat_lt_iff (by omega) (by omega)).mp hc))])
     iapply Wasm.SmallStep.twp_brIfZero
     wasm_twp_pures [twp_localGet twp_localGet twp_sub]
@@ -1391,7 +1391,7 @@ theorem func22_correct [WasmSmallStepGS hlc Universal.State] :
   · -- WAT 8674: an empty buffer leaves the block at once
     have hzero : len.toNat + len.toNat / 2 = 0 := by omega
     iapply Wasm.SmallStep.twp_eqz (result := 1)
-      (by rw [if_pos (by rw [hzero, ofNat_zero])])
+      (by rw [ite_eq_left (by rw [hzero, ofNat_zero])])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) rfl
     simp only [List.take_zero, List.nil_append, List.drop_zero]
     wasm_twp_rebind Wasm.SmallStep.twp_returnFromCallFallthrough
@@ -1411,7 +1411,7 @@ theorem func22_correct [WasmSmallStepGS hlc Universal.State] :
   · -- WAT 8675 to 8807: the merged loop
     iapply Wasm.SmallStep.twp_eqz (result := 0)
       (by
-        rw [if_neg (ofNat_ne_zero (by omega) htop)])
+        rw [ite_eq_right (ofNat_ne_zero (by omega) htop)])
     iapply Wasm.SmallStep.twp_brIfZero
     iapply Wasm.SmallStep.twp_loop_wf_family
       (ι := Nat × UInt32 × UInt64 × UInt32 × UInt32 × UInt32 × UInt32 ×

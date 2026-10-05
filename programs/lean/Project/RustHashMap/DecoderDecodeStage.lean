@@ -166,8 +166,8 @@ theorem twp_decode_stage [WasmSmallStepGS hlc Universal.State]
         2 ≤ (pairCapacity count).toNat := by
       unfold pairCapacity
       by_cases hlt : count < 512
-      · exact Or.inl (by rw [if_pos hlt])
-      · exact Or.inr (by rw [if_neg hlt]; decide)
+      · exact Or.inl (by rw [ite_eq_left hlt])
+      · exact Or.inr (by rw [ite_eq_right hlt]; decide)
     have hlocals :
         (⟨[.i32 out, .i32 hdr],
             [.i32 frame, .i32 0, .i32 (frame + 52), .i32 (len - 4),

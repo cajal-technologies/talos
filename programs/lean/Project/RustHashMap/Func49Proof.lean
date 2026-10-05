@@ -316,7 +316,7 @@ theorem func49_correct [WasmSmallStepGS hlc Universal.State] :
   isimp only [ResumeWP, resumeExpr, List.append_nil, List.nil_append]
   by_cases hsame : kindByte = tagByte
   · -- the bytes are equal: build a new error and drop the old one
-    rw [if_pos hsame]
+    rw [ite_eq_left hsame]
     wasm_twp_pures [twp_const twp_and] using [and_one_one]
     iapply twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
     simp only [List.take_zero, List.nil_append]
@@ -494,7 +494,7 @@ theorem func49_correct [WasmSmallStepGS hlc Universal.State] :
       ihave Hoom := Hoom $$ %remaining'
       iapply Hoom $$ Hstreams
   · -- the bytes differ: copy the error into the output slot
-    rw [if_neg hsame]
+    rw [ite_eq_right hsame]
     wasm_twp_pures [twp_const twp_and] using [and_zero_one]
     iapply twp_brIfZero
     iopen_map_runtime Hruntime with ⟨Hmodule, Henv⟩

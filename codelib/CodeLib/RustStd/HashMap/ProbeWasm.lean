@@ -71,14 +71,14 @@ theorem ctz64_eq : ∀ (k : Nat), k ≤ 64 → ∀ (a : UInt64) (i : Nat), i < k
       omega
     cases i with
     | zero =>
-      rw [ctz64, if_pos (hlow.mpr hbit)]
+      rw [ctz64, ite_eq_left (hlow.mpr hbit)]
       omega
     | succ i =>
       have hzero : ¬ (a &&& 1 ≠ 0) := fun h => by
         have := hmin 0 (Nat.zero_lt_succ i)
         rw [hlow.mp h] at this
         simp at this
-      rw [ctz64, if_neg hzero]
+      rw [ctz64, ite_eq_right hzero]
       have hshift : ∀ j, (a >>> 1).toNat.testBit j = a.toNat.testBit (j + 1) := by
         intro j
         rw [UInt64.toNat_shiftRight, show (1 : UInt64).toNat % 64 = 1 from rfl,
@@ -306,7 +306,7 @@ theorem setBytes_iterNext {msk : UInt64} (hmask : msk &&& REP80 = msk) {j0 : Nat
   rw [hhead] at hpw
   have hrest : ∀ a ∈ ((List.range 8).drop (j0 + 1)).filter (hasBit msk), j0 < a :=
     (List.pairwise_cons.mp hpw).1
-  rw [hnext, hhead, List.filter_cons, if_neg (by simp)]
+  rw [hnext, hhead, List.filter_cons, ite_eq_right (by simp)]
   congr 1
   exact (List.filter_eq_self.mpr fun a ha => decide_eq_true (Nat.ne_of_gt (hrest a ha))).symm
 

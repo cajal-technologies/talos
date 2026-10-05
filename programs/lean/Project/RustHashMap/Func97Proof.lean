@@ -369,7 +369,7 @@ theorem func97_correct_of [WasmSmallStepGS hlc Universal.State]
   have hguard : (0 : UInt32).toInt32 ≤ newCapacity.toInt32 :=
     toInt32_nonneg newCapacity (by omega)
   wasm_twp_pures [twp_block twp_block twp_localGet twp_const]
-  iapply twp_geS (result := 1) (by rw [if_pos hguard])
+  iapply twp_geS (result := 1) (by rw [ite_eq_left hguard])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_block twp_block twp_block twp_block]
@@ -519,7 +519,7 @@ theorem func97_correct_of [WasmSmallStepGS hlc Universal.State]
         · omega
         · exact oldCapacity.toBitVec.isLt
       wasm_twp_pures [twp_localGet]
-      iapply twp_eqz (by rw [if_neg holdNonzero])
+      iapply twp_eqz (by rw [ite_eq_right holdNonzero])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const
         twp_localGet]
       have Hrealloc : Func58Spec (hlc := hlc) := hfunc58

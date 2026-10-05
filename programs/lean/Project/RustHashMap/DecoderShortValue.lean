@@ -280,7 +280,7 @@ theorem twp_short_value_error [WasmSmallStepGS hlc Universal.State]
     wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
       Nat.reduceSub, List.set]
     wasm_twp_pures [twp_const]
-    iapply twp_eq (result := 0) (by rw [if_neg hw0'])
+    iapply twp_eq (result := 0) (by rw [ite_eq_right hw0'])
     iapply twp_brIfZero
     ihave Herr0arr := Hclose0 $$ Hw0
     -- the second block move: the middle two words come back
@@ -410,7 +410,7 @@ theorem twp_short_value_error [WasmSmallStepGS hlc Universal.State]
       wasm_twp_localTee [List.length_cons, List.length_nil, Nat.reduceAdd,
         Nat.reduceSub, List.set]
       wasm_twp_pures [twp_const]
-      iapply twp_ne (result := 1) (by rw [if_pos hv0'])
+      iapply twp_ne (result := 1) (by rw [ite_eq_left hv0'])
       ihave Hv0arr := Hclosev0 $$ Hv0
       ihave Hv0s :=
         ByteSlice_of_cells (frame + 16) [v0] (cells_nowrap_one _ v0 hbf16) $$

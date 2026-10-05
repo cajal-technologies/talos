@@ -241,7 +241,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
     exact h
   by_cases hmne : msk = 0
   · subst hmne
-    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos rfl])
+    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left rfl])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) hnoneTarget
     have hnone0 : (Table.setBytes (0 : UInt64)).find?
         (fun j => t.keyIs ((P + j) % t.buckets) key) = none := by
@@ -251,7 +251,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
       %([] : List Value) %rest %hnone0 Hslots
     isimp only [func9WalkExit] at Hgo
     iexact Hgo
-  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hmne])
+  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hmne])
   iapply Wasm.SmallStep.twp_brIfZero
   iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := UInt64)
@@ -354,7 +354,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
             = some (ctz64 64 q / 8) := by
         rw [hnext]
         exact List.find?_cons_of_pos (by simpa using hkeyIs)
-      isimp only [if_neg (by simpa using hkey : ¬ key ≠ k')]
+      isimp only [ite_eq_right (by simpa using hkey : ¬ key ≠ k')]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_const]
       ihave Hgo := Hexit $$ %(some (ctz64 64 q / 8)) %_ %_ %_
@@ -382,7 +382,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
         intro j hj
         rw [Table.hasBit_iterNext hqmask hlow j, Bool.and_eq_true] at hj
         exact hqsub _ hj.1
-      isimp only [if_pos (by simpa using hkey : key ≠ k')]
+      isimp only [ite_eq_left (by simpa using hkey : key ≠ k')]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
@@ -391,7 +391,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
       by_cases hzero : q &&& (q + 18446744073709551615) = 0
-      · iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+      · iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         iapply Wasm.SmallStep.twp_exitControl (by decide)
@@ -409,7 +409,7 @@ private theorem twp_func9_walk [WasmSmallStepGS hlc Universal.State]
         isimp only [func9WalkExit, func9Locals, hnone3.1, hnone3.2.1,
           hnone3.2.2] at Hgo
         iexact Hgo
-      · iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hzero])
+      · iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
         simp only [List.take_zero, List.nil_append]
@@ -660,7 +660,7 @@ theorem twp_func9_probe [WasmSmallStepGS hlc Universal.State]
           intro hc
           rw [(Table.swarMatchEmpty_eq_zero_iff hg8 hctrls).mp hc] at hemp
           exact absurd hemp (by decide)
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hne0])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hne0])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           (hmiss _)
@@ -707,7 +707,7 @@ theorem twp_func9_probe [WasmSmallStepGS hlc Universal.State]
               = (Table.probeSeq t (SipHash.hashU32 k0 k1 key) i.step).next t
               from rfl,
             ← Table.probeNext_pos_of_wasm t hm32 hbShape, UInt32.ofNat_toNat]
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
@@ -884,7 +884,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
     exact h
   by_cases hmne : msk = 0
   · subst hmne
-    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos rfl])
+    iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left rfl])
     iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) hnoneTarget
     have hnone0 : (Table.setBytes (0 : UInt64)).find?
         (fun j => t.keyIs ((P + j) % t.buckets) key) = none := by
@@ -894,7 +894,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
       %hnone0 Hslots
     isimp only [func17WalkExit] at Hgo
     iexact Hgo
-  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hmne])
+  iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hmne])
   iapply Wasm.SmallStep.twp_brIfZero
   iapply Wasm.SmallStep.twp_loop_wf_family
     (ι := UInt64 × UInt32)
@@ -1004,7 +1004,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
             = some (ctz64 64 p.1 / 8) := by
         rw [hnext]
         exact List.find?_cons_of_pos (by simpa using hkeyIs)
-      isimp only [if_pos hkey]
+      isimp only [ite_eq_left hkey]
       iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
         (hhitTarget _)
       ihave Hgo := Hexit $$ %(some (ctz64 64 p.1 / 8)) %p.1 %(0 : UInt32)
@@ -1033,7 +1033,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
         intro j hj
         rw [Table.hasBit_iterNext hqmask hlow j, Bool.and_eq_true] at hj
         exact hqsub _ hj.1
-      isimp only [if_neg hkey]
+      isimp only [ite_eq_right hkey]
       iapply Wasm.SmallStep.twp_brIfZero
       wasm_twp_pures [twp_localGet twp_constI64 twp_addI64 twp_localGet
         twp_andI64_bits]
@@ -1041,7 +1041,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
         Nat.reduceAdd, Nat.reduceSub]
       isimp only [hcomm]
       by_cases hzero : p.1 &&& (p.1 + 18446744073709551615) = 0
-      · iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+      · iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         iapply Wasm.SmallStep.twp_exitControl (by decide)
@@ -1060,7 +1060,7 @@ private theorem twp_func17_walk [WasmSmallStepGS hlc Universal.State]
         isimp only [func17WalkExit, func17Locals, hnone3.1, hnone3.2.1,
           hnone3.2.2] at Hgo
         iexact Hgo
-      · iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hzero])
+      · iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0) (by rfl)
         simp only [List.take_zero, List.nil_append, List.drop_zero]
@@ -1434,7 +1434,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
           intro hc
           rw [(Table.swarMatchEmpty_eq_zero_iff hg8 hctrls).mp hc] at hemp
           exact absurd hemp (by decide)
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [if_neg hne0])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 0) (by rw [ite_eq_right hne0])
         iapply Wasm.SmallStep.twp_eqz (result := 1) (by decide)
         iapply Wasm.SmallStep.twp_brIf (by decide : (1 : UInt32) ≠ 0)
           (hmiss _ _)
@@ -1486,7 +1486,7 @@ theorem twp_func17_probe [WasmSmallStepGS hlc Universal.State]
               = (Table.probeSeq t (SipHash.hashU32 k0 k1 key)
                   i.1.step).next t from rfl,
             ← Table.probeNext_pos_of_wasm t hm32 hbShape, UInt32.ofNat_toNat]
-        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [if_pos hzero])
+        iapply Wasm.SmallStep.twp_eqzI64 (result := 1) (by rw [ite_eq_left hzero])
         iapply Wasm.SmallStep.twp_eqz (result := 0) (by decide)
         iapply Wasm.SmallStep.twp_brIfZero
         wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]

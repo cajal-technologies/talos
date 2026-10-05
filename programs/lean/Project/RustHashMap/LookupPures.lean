@@ -633,9 +633,9 @@ theorem slotAt_isSome_of_mem_matchBytes (hw : Layout hash t) (h : UInt64)
     isFull_of_hasBit_swarMatchTag hg hj8 (isFull_h2 h) hb
   rw [hw.window_getD h n j hj8] at hfullb
   by_cases hpad : IsPad t.buckets ((probeSeq t h n).pos + j)
-  · rw [if_pos hpad] at hfullb
+  · rw [ite_eq_left hpad] at hfullb
     exact absurd hfullb (by decide)
-  · rw [if_neg hpad] at hfullb
+  · rw [ite_eq_right hpad] at hfullb
     exact (hw.full_iff _ (hw.probeIdx_lt h n j)).mp hfullb
 
 /-- `slotAt_isSome_of_mem_matchBytes` with `window` and `probeIdx`
@@ -699,9 +699,9 @@ theorem exists_empty_window_of_clean (hw : WF hash t) (hcl : Clean t)
   have hp := hw.toLayout.probe_lt h n
   have hmir := hw.toLayout.mirror ((probeSeq t h n).pos + j) (by omega)
   by_cases hpad : IsPad t.buckets ((probeSeq t h n).pos + j)
-  · rw [hmir, if_pos hpad]
-  · rw [hmir, if_neg hpad]
-    rw [hmir, if_neg hpad] at hsp
+  · rw [hmir, ite_eq_left hpad]
+  · rw [hmir, ite_eq_right hpad]
+    rw [hmir, ite_eq_right hpad] at hsp
     exact hcl.1 _ (Nat.mod_lt _ hw.toLayout.pos) hsp
 
 /-- The first window with an `EMPTY` byte.  The compiled loop stops at or
@@ -754,10 +754,10 @@ theorem findLoop_none_of_walk (t : Table K V) (h : UInt64) (tag : UInt8)
       have hsN : s = N := by omega
       subst hsN
       have : matchEmpty (groupAt t (probeSeq t h s).pos) = true := hstop
-      simp only [this, if_true]
+      simp only [this, ite_true]
     | d + 1, hsd, hd =>
       by_cases hemp : matchEmpty (groupAt t (probeSeq t h s).pos) = true
-      · simp only [hemp, if_true]
+      · simp only [hemp, ite_true]
       · rw [Bool.not_eq_true] at hemp
         simp only [hemp]
         exact ih (s + 1) d (by omega) (by omega)
@@ -849,7 +849,7 @@ theorem keyAndMap_of_accepts (bytes : List UInt8)
       some (leadingKey bytes, HashMap.ofEntries (acceptedEntries bytes)) := by
   obtain ⟨hfour, hdec, hexact⟩ := haccept
   unfold Spec.keyAndMap
-  rw [if_neg (by omega), Spec.mapOf,
+  rw [ite_eq_right (by omega), Spec.mapOf,
     BorshBridge.hashMap?_eq_some_of_accepts (bytes.drop 4) hdec hexact.symm]
   rfl
 
@@ -860,8 +860,8 @@ theorem keyAndMap_eq_none_of_not_accepts (bytes : List UInt8)
     (hreject : ¬ KeyDecodeAccepts bytes) : Spec.keyAndMap bytes = none := by
   unfold Spec.keyAndMap
   by_cases hfour : bytes.length < 4
-  · rw [if_pos hfour]
-  · rw [if_neg hfour]
+  · rw [ite_eq_left hfour]
+  · rw [ite_eq_right hfour]
     have hrest : Spec.mapOf (bytes.drop 4) = none := by
       unfold Spec.mapOf
       by_cases hdec : DecodeAccepts (mapBytes bytes)

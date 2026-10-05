@@ -864,12 +864,12 @@ theorem twp_ck_reject [WasmSmallStepGS hlc Universal.State]
     Nat.reduceSub, List.set]
   wasm_twp_pures [twp_const]
   by_cases hshort : word1.toInt32 < (1 : UInt32).toInt32
-  · iapply twp_ltS (result := 1) (by rw [if_pos hshort])
+  · iapply twp_ltS (result := 1) (by rw [ite_eq_left hshort])
     iapply twp_brIf (by decide) (by rfl)
     simp only [ckDropErrorFrame, List.take_zero, List.nil_append]
     iapply twp_ck_err_epilogue
     iframe
-  · iapply twp_ltS (result := 0) (by rw [if_neg hshort])
+  · iapply twp_ltS (result := 0) (by rw [ite_eq_right hshort])
     wasm_twp_pures [twp_brIfZero twp_localGet]
     wasm_twp_rebind twp_load32 (address := func16Base) (offset := 24) word2
       h24.1 h24.2.1 h24.2.2.1 h24.2.2.2 with Hword2

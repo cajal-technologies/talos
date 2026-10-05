@@ -538,12 +538,12 @@ theorem twp_ins_reject [WasmSmallStepGS hlc Universal.State]
   simp only [insDropError]
   wasm_twp_pures [twp_localGet twp_const]
   by_cases hshort : l4.toInt32 < (1 : UInt32).toInt32
-  · iapply twp_ltS (result := 1) (by rw [if_pos hshort])
+  · iapply twp_ltS (result := 1) (by rw [ite_eq_left hshort])
     iapply twp_brIf (by decide) (by rfl)
     simp only [insDropErrorFrame, List.take_zero, List.nil_append]
     iapply twp_ins_reject_tail
     iframe
-  · iapply twp_ltS (result := 0) (by rw [if_neg hshort])
+  · iapply twp_ltS (result := 0) (by rw [ite_eq_right hshort])
     wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_const]
     have Hfree := func57_noop_correct (hlc := hlc) l3 l4 1
       (callerLocals :=
@@ -1455,12 +1455,12 @@ theorem twp_ins_not_all_read [WasmSmallStepGS hlc Universal.State]
       Nat.reduceAdd, Nat.reduceSub, List.set]
     by_cases hcount :
         UInt32.ofNat (pair.toNat % 2 ^ 32) = 0
-    · iapply twp_eqz (result := 1) (by rw [if_pos hcount])
+    · iapply twp_eqz (result := 1) (by rw [ite_eq_left hcount])
       iapply twp_brIf (by decide) (by rfl)
       simp only [insBlock3Frame, List.take_zero, List.nil_append]
       iapply twp_ins_reject
       iframe
-    · iapply twp_eqz (result := 0) (by rw [if_neg hcount])
+    · iapply twp_eqz (result := 0) (by rw [ite_eq_right hcount])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_constI64 twp_shrUI64
         twp_wrapI64 twp_localGet twp_const twp_shl]
         rewriting [show (3 : UInt32) % 32 = 3 by decide]
@@ -1616,7 +1616,7 @@ theorem twp_ins_after_decode [WasmSmallStepGS hlc Universal.State]
   wasm_twp_rebind twp_load32 (address := func0Base) (offset := 316)
     remaining h316.1 h316.2.1 h316.2.2.1 h316.2.2.2 with Hrem
   by_cases hremaining : remaining = 0
-  · iapply twp_eqz (result := 1) (by rw [if_pos hremaining])
+  · iapply twp_eqz (result := 1) (by rw [ite_eq_left hremaining])
     iapply twp_brIf (by decide) (by rfl)
     simp only [insBlock2Frame, List.take_zero, List.nil_append]
     have haccept := hok hremaining
@@ -1646,7 +1646,7 @@ theorem twp_ins_after_decode [WasmSmallStepGS hlc Universal.State]
       hlt hmapBefore hslot hkeys hpayload hentries hcapBound hspareLen
       hstate halign
     iframe
-  · iapply twp_eqz (result := 0) (by rw [if_neg hremaining])
+  · iapply twp_eqz (result := 0) (by rw [ite_eq_right hremaining])
     wasm_twp_pures [twp_brIfZero]
     rw [insertOutput_of_not_accepts input (herr hremaining),
       List.append_nil]
@@ -2625,7 +2625,7 @@ theorem twp_insert_tail_nonempty [WasmSmallStepGS hlc Universal.State]
     have hno : ¬ InsertDecodeAccepts input := by
       rintro ⟨h8, -, -⟩
       omega
-    iapply twp_leU (result := 1) (by rw [if_pos hshort])
+    iapply twp_leU (result := 1) (by rw [ite_eq_left hshort])
     iapply twp_brIf (by decide) (by rfl)
     simp only [insBlock6Frame, List.take_zero, List.nil_append]
     rw [insertOutput_of_not_accepts input hno, List.append_nil]
@@ -2671,7 +2671,7 @@ theorem twp_insert_tail_nonempty [WasmSmallStepGS hlc Universal.State]
       exact hshort (UInt32.le_iff_toNat_le.mpr
         (by rw [hlenNat, h3t]; omega))
     have hptr4 : ptr.toNat + 4 < UInt32.size := by omega
-    iapply twp_leU (result := 0) (by rw [if_neg hshort])
+    iapply twp_leU (result := 0) (by rw [ite_eq_right hshort])
     iapply twp_brIfZero
     -- the header moves past the key
     wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
@@ -2712,7 +2712,7 @@ theorem twp_insert_tail_nonempty [WasmSmallStepGS hlc Universal.State]
       have hno : ¬ InsertDecodeAccepts input := by
         rintro ⟨h8, -, -⟩
         omega
-      iapply twp_ltU (result := 1) (by rw [if_pos hshort2])
+      iapply twp_ltU (result := 1) (by rw [ite_eq_left hshort2])
       iapply twp_brIf (by decide) (by rfl)
       simp only [insBlock5Frame, List.take_zero, List.nil_append]
       rw [insertOutput_of_not_accepts input hno, List.append_nil]
@@ -2761,7 +2761,7 @@ theorem twp_insert_tail_nonempty [WasmSmallStepGS hlc Universal.State]
       have h4f := offset_facts ptr 4 4 rfl (by omega)
       have hptr8 : (ptr + 4).toNat + 4 < UInt32.size := by
         rw [h4f.1, h4t]; omega
-      iapply twp_ltU (result := 0) (by rw [if_neg hshort2])
+      iapply twp_ltU (result := 0) (by rw [ite_eq_right hshort2])
       iapply twp_brIfZero
       -- the header moves past the value
       wasm_twp_pures [twp_localGet twp_localGet twp_const twp_add]
