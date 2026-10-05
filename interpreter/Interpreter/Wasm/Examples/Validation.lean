@@ -236,6 +236,9 @@ def invalidReversedMemoryLimitsValidationModule : Module :=
 def invalidMemory32MinOverLimitValidationModule : Module :=
   { funcs := [], memory := some { pagesMin := 65537 } }
 
+def invalidMemory32MaxOverLimitValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 0, pagesMax := some 65537 } }
+
 /-- The 32-bit page limit does not apply to 64-bit memories. -/
 def validMemory64AboveMemory32LimitValidationModule : Module :=
   { funcs := []
@@ -1165,6 +1168,10 @@ theorem validator_rejects_reversed_memory_limits :
 
 theorem validator_rejects_memory32_minimum_over_limit :
     validationErrorIs invalidMemory32MinOverLimitValidationModule
+      "memory size" = true := by decide +kernel
+
+theorem validator_rejects_memory32_maximum_over_limit :
+    validationErrorIs invalidMemory32MaxOverLimitValidationModule
       "memory size" = true := by decide +kernel
 
 theorem validator_accepts_memory64_above_memory32_limit :
