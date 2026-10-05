@@ -16,6 +16,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.GcdStdio.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev loopBody : Program := Project.NumIntegerOpt3.Spec.loopBody
 private abbrev innerBody : Program := Project.NumIntegerOpt3.Spec.innerBody
 private abbrev outerBody : Program := Project.NumIntegerOpt3.Spec.gcdOuterBody
@@ -219,7 +222,7 @@ private theorem twp_gcdLoop
       by_cases hxy' : x = y'
       · change x = (y - x) >>>
             (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
-        iapply twp_eqI64 (result := 1) (by rw [if_pos hxy'])
+        iapply twp_eqI64 (result := 1) (by rw [ite_eq_left hxy'])
         iapply twp_brIf (by decide) rfl
         simp only [Project.NumIntegerOpt3.Spec.gcdInnerFrame,
           List.take_nil, List.nil_append]
@@ -234,7 +237,7 @@ private theorem twp_gcdLoop
         iexact Hresources
       · change x ≠ (y - x) >>>
             (UInt64.ofNat (ctz64 64 (y - x)) % 64) at hxy'
-        iapply twp_eqI64 (result := 0) (by rw [if_neg hxy'])
+        iapply twp_eqI64 (result := 0) (by rw [ite_eq_right hxy'])
         iapply twp_brIfZero
         iapply twp_br rfl
         simp only [List.take_nil, List.nil_append]
@@ -302,7 +305,7 @@ private theorem twp_gcdInner
   have hbodd : bo.toNat % 2 = 1 := by
     simpa [bo, oddPart_toNat] using UInt64.shr_ctz_toNat_odd p1 hp1
   by_cases hab : ao = bo
-  · iapply twp_eqI64 (result := 1) (by rw [if_pos hab])
+  · iapply twp_eqI64 (result := 1) (by rw [ite_eq_left hab])
     iapply twp_brIf (by decide) rfl
     simp only [Project.NumIntegerOpt3.Spec.gcdInnerFrame,
       List.take_nil, List.nil_append]
@@ -311,7 +314,7 @@ private theorem twp_gcdInner
     iapply twp_finishGcd ao bo shared expected (hrecombine ao haoGcd)
       K callerLocals stack code arity remainder controls calls
     iexact Hresources
-  · iapply twp_eqI64 (result := 0) (by rw [if_neg hab])
+  · iapply twp_eqI64 (result := 0) (by rw [ite_eq_right hab])
     iapply twp_brIfZero
     iapply twp_loop
     simp only [List.drop_nil]
@@ -391,7 +394,7 @@ private theorem twp_func1_body
       · iexact Henv
     isimp only [RuntimeContext] at Hruntime'
     iapply Hcont $$ Hruntime' HK
-  · iapply twp_eqzI64 (result := 0) (by rw [if_neg ha])
+  · iapply twp_eqzI64 (result := 0) (by rw [ite_eq_right ha])
     iapply twp_brIfZero
     iapply twp_localGet rfl
     by_cases hb : b = 0
@@ -417,7 +420,7 @@ private theorem twp_func1_body
         · iexact Henv
       isimp only [RuntimeContext] at Hruntime'
       iapply Hcont $$ Hruntime' HK
-    · iapply twp_eqzI64 (result := 0) (by rw [if_neg hb])
+    · iapply twp_eqzI64 (result := 0) (by rw [ite_eq_right hb])
       iapply twp_brIfZero
       iapply twp_localGet rfl
       iapply twp_ctzI64

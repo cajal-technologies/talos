@@ -35,7 +35,7 @@ theorem twp_read_to_end_empty
     (hframe4 : Address64Facts ((sp - 32) + 4))
     (hframe12 : Offset32Facts (sp - 32) 12)
     (hframe16No : ((sp - 32) + 16).toNat = (sp - 32).toNat + 16)
-    (hframe16 : Address64Facts ((sp - 32) + 16))
+    (_hframe16 : Address64Facts ((sp - 32) + 16))
     (hout : Address64Facts out)
     (houtLen : Offset32Facts out 8)
     (h8no : ((((sp - 32) - 48) + 8).toNat =

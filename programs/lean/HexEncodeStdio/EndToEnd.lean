@@ -117,7 +117,7 @@ theorem encode_allocation_capacity (input : List UInt8)
   apply UInt32.toNat_inj.mp
   simp only [reserveNewCapacity, reserveCandidate, reserveRequired,
     reserveDoubled, UInt32.zero_add, UInt32.zero_shiftLeft]
-  rw [if_pos haddPos]
+  rw [ite_eq_left haddPos]
   split
   next hgt =>
     rw [UInt32.toNat_ofNat_of_lt' (by
@@ -320,9 +320,9 @@ theorem encode_reserve_after_read
       exact List.getElem?_set_eq_of_lt (.i32 1048512) hz)
     (by simp [reserveRequired])
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide)
+      Mem.write32]; decide)
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide)
+      Mem.write32]; decide)
     (by
       simp only [encodeStore, encodeAllocFrameStore]
       rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
@@ -1146,7 +1146,7 @@ theorem encode_after_alloc_terminates
         [] [] 0 [] encodeReserveControls (encodeMainCalls store inputPtr))
       body := by
     apply Reaches.prepend (Step.exitControl rfl)
-    simp [growResultFinal, body, encodeReserveControls]
+    simp [body]
     exact ⟨[], .refl _⟩
   apply TerminatesWith.prependReaches hprefix
   have hinputLen : (UInt32.ofNat input.length).toNat = input.length := by

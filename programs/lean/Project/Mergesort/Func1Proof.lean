@@ -18,6 +18,9 @@ open Project.Mergesort.Contracts
 open Project.Mergesort.Representations
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private theorem func1_index :
     Project.Mergesort.module.funcs[1]? =
       some Project.Mergesort.func1Def := by rfl
@@ -121,7 +124,7 @@ private theorem growSource_reserveHistory
       · ipureintro
         intro newPtr newLayout
         unfold VecReserveHistory growHistory
-        rw [if_neg hcapacity]; exact ⟨oldId, hlookup, rfl⟩
+        rw [ite_eq_right hcapacity]; exact ⟨oldId, hlookup, rfl⟩
 
 theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     (hfunc0 : Func0Spec (hlc := hlc)) :
@@ -255,7 +258,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
   iapply twp_geU (result := 1) (by
-    rw [if_pos (by simpa only [← hsumWord] using hguard)])
+    rw [ite_eq_left (by simpa only [← hsumWord] using hguard)])
   iapply twp_brIf (by decide) (by rfl)
   simp only [List.take_zero, List.drop_zero, List.nil_append]
   wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm 4 reserveBase]
@@ -277,14 +280,14 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     by_cases hcmp : UInt32.ofNat (initialized.length + current.length) >
         UInt32.ofNat (2 * capacity.toNat)
     · have hw : UInt32.ofNat (initialized.length + current.length) =
-          UInt32.ofNat firstMaxNat := by simpa only [if_pos hcmp] using hfirstMaxWord
-      rw [if_pos hcmp,
-        if_pos (by decide : (1 : UInt32) ≠ 0)]
+          UInt32.ofNat firstMaxNat := by simpa only [ite_eq_left hcmp] using hfirstMaxWord
+      rw [ite_eq_left hcmp,
+        ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
       exact congrArg Value.i32 hw.symm
     · have hw : UInt32.ofNat (2 * capacity.toNat) =
-          UInt32.ofNat firstMaxNat := by simpa only [if_neg hcmp] using hfirstMaxWord
-      rw [if_neg hcmp,
-        if_neg (by decide : ¬ ((0 : UInt32) ≠ 0))]
+          UInt32.ofNat firstMaxNat := by simpa only [ite_eq_right hcmp] using hfirstMaxWord
+      rw [ite_eq_right hcmp,
+        ite_eq_right (by decide : ¬ ((0 : UInt32) ≠ 0))]
       exact congrArg Value.i32 hw.symm)
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_const twp_const twp_localGet twp_const twp_eq]

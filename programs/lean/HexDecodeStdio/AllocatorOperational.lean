@@ -292,7 +292,7 @@ theorem allocator_signed_limit_traps
     rw [UInt32.sub_eq_add_neg, UInt32.zero_add] at hnegative
     exact hnegative
   apply TrapsWith.prepend
-    (Step.ltS (result := 1) (if_pos hnegative').symm)
+    (Step.ltS (result := 1) (ite_eq_left hnegative').symm)
   apply TrapsWith.prepend (Step.brIf (condition := 1) (by decide) rfl)
   simp
   exact oom_wrapper_traps store _ _ _ _ _ _ _ _ hmod henv
@@ -395,7 +395,7 @@ theorem allocator_grow_failure_traps
     rw [UInt32.sub_eq_add_neg, UInt32.zero_add] at hnegative
     exact hnegative
   apply TrapsWith.prepend
-    (Step.ltS (result := 0) (if_neg hnegative').symm)
+    (Step.ltS (result := 0) (ite_eq_right hnegative').symm)
   apply TrapsWith.prepend Step.brIfZero
   apply TrapsWith.prepend (Step.localGet rfl)
   apply TrapsWith.prepend Step.const
@@ -407,7 +407,7 @@ theorem allocator_grow_failure_traps
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   apply TrapsWith.prepend (Step.localTee rfl)
   have hneed' : ¬
       ((65535 + (size + (((if oldBump = 0 then 1054000 else oldBump) +
@@ -416,7 +416,7 @@ theorem allocator_grow_failure_traps
     rw [UInt32.sub_eq_add_neg, UInt32.zero_add] at hneed
     exact hneed
   apply TrapsWith.prepend
-    (Step.leU (result := 0) (if_neg hneed').symm)
+    (Step.leU (result := 0) (ite_eq_right hneed').symm)
   apply TrapsWith.prepend Step.brIfZero
   apply TrapsWith.prepend (Step.localGet rfl)
   apply TrapsWith.prepend (Step.localGet rfl)
@@ -505,12 +505,12 @@ theorem allocator_no_grow_steps
     rfl
   rw [hptr]
   apply Reaches.prepend
-    (Step.ltU (result := 0) (if_neg hsecond).symm)
+    (Step.ltU (result := 0) (ite_eq_right hsecond).symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.ltS (result := 0) (if_neg hnegative).symm)
+    (Step.ltS (result := 0) (ite_eq_right hnegative).symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
@@ -524,9 +524,9 @@ theorem allocator_no_grow_steps
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.leU (result := 1) (if_pos henough).symm)
+  apply Reaches.prepend (Step.leU (result := 1) (ite_eq_left henough).symm)
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)
@@ -621,12 +621,12 @@ theorem allocator_grow_success_steps
     rfl
   rw [hptr]
   apply Reaches.prepend
-    (Step.ltU (result := 0) (if_neg hsecond).symm)
+    (Step.ltU (result := 0) (ite_eq_right hsecond).symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.ltS (result := 0) (if_neg hnegative).symm)
+    (Step.ltS (result := 0) (ite_eq_right hnegative).symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
@@ -640,9 +640,9 @@ theorem allocator_grow_success_steps
   rw [hmod]
   have hm64 : «module».memIs64 = false := rfl
   rw [hm64]
-  simp only [sizeValue, Bool.false_eq_true, if_false]
+  simp only [sizeValue, Bool.false_eq_true, ite_false]
   apply Reaches.prepend (Step.localTee rfl)
-  apply Reaches.prepend (Step.leU (result := 0) (if_neg hneed).symm)
+  apply Reaches.prepend (Step.leU (result := 0) (ite_eq_right hneed).symm)
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend (Step.localGet rfl)
@@ -651,7 +651,7 @@ theorem allocator_grow_success_steps
   rw [setMemory_eq]
   simp only [allocatorGrownStore]
   apply Reaches.prepend Step.const
-  apply Reaches.prepend (Step.ne (result := 1) (if_pos hresult).symm)
+  apply Reaches.prepend (Step.ne (result := 1) (ite_eq_left hresult).symm)
   apply Reaches.prepend (Step.brIf (condition := 1) (by decide) rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend (Step.localGet rfl)

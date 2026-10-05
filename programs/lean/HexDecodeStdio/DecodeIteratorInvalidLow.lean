@@ -24,7 +24,7 @@ theorem twp_decodePair_invalid_low
     (hindexAddr : Offset32Facts iterator 12)
     (herrorWordAddr : Offset32Facts errorPtr 0)
     (herrorIndexAddr : Offset32Facts errorPtr 4)
-    (hinput0 : (inputPtr + 0).toNat = inputPtr.toNat)
+    (_hinput0 : (inputPtr + 0).toNat = inputPtr.toNat)
     (hinput1 : (inputPtr + 1).toNat = inputPtr.toNat + 1)
     (hout1 : (out + 1).toNat = out.toNat + 1)
     (hiRoute : HexRoute) (hhiValid : hiRoute.valid hi)

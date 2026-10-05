@@ -85,7 +85,7 @@ theorem read_empty (st : Store State) (length pointer : UInt32)
   simp only [readHost, readResult]
   rw [hinput]
   simp only [List.take_nil, List.length_nil]
-  rw [if_pos]
+  rw [ite_eq_left]
   · cases st with
     | mk globals globalIds functionIds mem extraMems memoryCaps memoryIds
         dataSegments tables tableIds elementSegments elementValues tagIds exns
@@ -97,7 +97,7 @@ theorem read_empty (st : Store State) (length pointer : UInt32)
       simp only [Mem.writeBytes, List.length_nil, Nat.add_zero, List.drop_zero]
       congr
       funext i
-      rw [dif_neg (by omega)]
+      rw [dite_eq_right (by omega)]
   · simp only [rangeInBounds, Nat.add_zero]
     exact decide_eq_true hptr
 
@@ -115,7 +115,7 @@ theorem read_one_past_traps (st : Store State) (pointer : UInt32)
   | cons byte bytes =>
       simp only [show (1 : UInt32).toNat = 1 by decide,
         List.take_succ_cons, List.take_zero, List.length_cons, List.length_nil]
-      rw [if_neg (by
+      rw [ite_eq_right (by
         simp only [rangeInBounds]
         intro h
         have := of_decide_eq_true h

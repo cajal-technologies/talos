@@ -116,7 +116,7 @@ theorem absDiff_smallStep_wp_to_return
       HscratchLater
     iintro Hscratch
     simp only [List.take_nil, List.nil_append]
-    simp only [hab, if_true] at hreturn
+    simp only [hab, ite_true] at hreturn
     iapply_frame hreturn
   · wasm_wp_next Wasm.SmallStep.wp_ltUI64 (result := 0) (by simp [hab])
     wasm_wp_pures [wp_const wp_and] rewriting [show (0 &&& 1 : UInt32) = 0 by decide]
@@ -135,7 +135,7 @@ theorem absDiff_smallStep_wp_to_return
     wasm_wp_next Wasm.SmallStep.wp_load64 (a - b) h8 h9 h10 h11 h12 h13 h14 h15 $$
       HscratchLater
     iintro Hscratch
-    simp only [hab, if_false] at hreturn
+    simp only [hab, ite_false] at hreturn
     iapply_frame hreturn
 
 set_option maxHeartbeats 4000000 in
