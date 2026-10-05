@@ -271,7 +271,7 @@ theorem push_on_serialized (value : UInt32) (values : List UInt32)
   have hout : pushOutput (Borsh.u32 value ++ Borsh.vec WordCodec.u32le values)
       = Borsh.vec WordCodec.u32le (Vec.push values value) := by
     unfold pushOutput wordAndVec
-    rw [if_neg hnot, hdrop, htake, hword, vecOf,
+    rw [ite_eq_right hnot, hdrop, htake, hword, vecOf,
       Borsh.vec?_vec WordCodec.u32le values hbound]
     simp
   have hrun := h (Borsh.u32 value ++ Borsh.vec WordCodec.u32le values)
@@ -303,7 +303,7 @@ theorem get_on_serialized (index : UInt32) (values : List UInt32)
   have hout : getOutput (Borsh.u32 index ++ Borsh.vec WordCodec.u32le values)
       = Borsh.option Borsh.u32 (Vec.get values index.toNat) := by
     unfold getOutput wordAndVec
-    rw [if_neg hnot, hdrop, htake, hword, vecOf,
+    rw [ite_eq_right hnot, hdrop, htake, hword, vecOf,
       Borsh.vec?_vec WordCodec.u32le values hbound]
     simp
   have hrun := h (Borsh.u32 index ++ Borsh.vec WordCodec.u32le values)
