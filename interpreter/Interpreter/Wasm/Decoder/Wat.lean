@@ -2571,9 +2571,12 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   -- `Module.memoryCap`, which caps growth at that limit, and a module with a
   -- clamped minimum fails `Module.memoriesWithinLimit` and is not
   -- instantiated.
+  -- The spec's memory64 limit (2^48 pages) is checked here, before the
+  -- clamp erases it; the memory32 limit (65536) is `MemDecl.checkLimits`.
   let parsePages (s : String) : Except Err UInt32 :=
     if is64 then do
       let n ← parseUnsignedNat (stripUnderscores s)
+      if n > 2 ^ 48 then throw "memory size"
       .ok (UInt32.ofNat (Nat.min n 0xFFFFFFFF))
     else parseU32 s
   match xs with
