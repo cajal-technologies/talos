@@ -254,6 +254,22 @@ def invalidDuplicateCrossKindExportValidationModule : Module :=
     memory := some { pagesMin := 0 }
     memoryExports := [("same", 0)] }
 
+def invalidDuplicateTagExportValidationModule : Module :=
+  { funcs := [{ body := [] }]
+    exports := [{ name := "same", funcIdx := 0 }]
+    tags := [{}]
+    tagExports := [("same", 0)] }
+
+def validTagExportValidationModule : Module :=
+  { funcs := []
+    tags := [{ params := [.i32] }]
+    tagExports := [("t", 0)] }
+
+def invalidTagExportIndexValidationModule : Module :=
+  { funcs := []
+    tags := [{}]
+    tagExports := [("t", 1)] }
+
 def invalidStartSignatureValidationModule : Module :=
   { funcs := [{ params := [.i32], body := [] }]
     startFunc := some 0 }
@@ -751,6 +767,17 @@ theorem validator_rejects_unknown_function_export :
 theorem validator_rejects_duplicate_cross_kind_export :
     validationErrorIs invalidDuplicateCrossKindExportValidationModule
       "duplicate export name" = true := by decide +kernel
+
+theorem validator_rejects_duplicate_tag_export :
+    validationErrorIs invalidDuplicateTagExportValidationModule
+      "duplicate export name" = true := by decide +kernel
+
+theorem validator_accepts_tag_export :
+    validationSucceeds validTagExportValidationModule = true := by decide +kernel
+
+theorem validator_rejects_unknown_tag_export :
+    validationErrorIs invalidTagExportIndexValidationModule
+      "unknown tag" = true := by decide +kernel
 
 theorem validator_rejects_start_signature :
     validationErrorIs invalidStartSignatureValidationModule
