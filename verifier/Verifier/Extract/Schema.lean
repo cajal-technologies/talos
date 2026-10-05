@@ -67,13 +67,19 @@ structure Program where
 
 inductive RefKind
   | rustExported
+  | rustExportedPartial
   | rustInternal
+  | rustInternalPartial
+  | crateProperty
   | leanSym
   deriving Inhabited, Repr
 
 def RefKind.toString : RefKind → String
   | .rustExported => "rust-exported"
+  | .rustExportedPartial => "rust-exported-partial"
   | .rustInternal => "rust-internal"
+  | .rustInternalPartial => "rust-internal-partial"
+  | .crateProperty => "crate-property"
   | .leanSym      => "lean"
 
 structure Reference where
@@ -249,6 +255,6 @@ def Artifact.toJson (a : Artifact) : Json :=
 def schemaVersion : Nat := 1
 
 /-- Current extractor binary semver. -/
-def extractorVersion : String := "0.1.0"
+def extractorVersion : String := "0.2.0"
 
 end Verifier.Extract

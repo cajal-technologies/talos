@@ -1,11 +1,12 @@
 import Project.SwapElements.SwapSepLogic
 
 /-!
-# Small-step specification for `swap_elements`
+# Small-step proof milestones for `swap_elements`
 
-This is the public migration target for the exported function.  Unlike the
-legacy `Project.SwapElements.Spec`, it is stated over the authoritative
-small-step machine and expresses partial correctness through iris-lean.
+These declarations are reusable proof milestones for the exported function.
+The single public specification remains `Project.SwapElements.Spec`; tagging
+each aliasing case separately made four competing public specifications for
+one export and even named a nonexistent `swap_elements_alias` export.
 
 The footprint hypotheses expose precisely the mutable resources used by the
 generated wrapper: its scratch word, two spill slots, and the two distinct
@@ -24,7 +25,6 @@ open Wasm.SepLogic
 /-- Public small-step contract for the non-aliasing case of the generated
 `swap_elements` export.  The conclusion describes the physical memory in every
 successfully reached terminal store; it is not merely a ghost-state result. -/
-@[spec_of "rust-exported-small-step" "swap_elements::swap_elements"]
 def SwapElementsDistinctSpec : Prop :=
   ∀ (wasm : Store Unit) (ptr len i j : UInt32)
     (oldSpillPtr oldSpillLen : UInt32)
@@ -58,7 +58,6 @@ def SwapElementsDistinctSpec : Prop :=
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldB ∧
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA)
 
-@[proves SwapElementsDistinctSpec]
 theorem swap_elements_distinct_correct : SwapElementsDistinctSpec := by
   intro wasm ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
     σ globalσ hi hj hroomI hroomJ hagree hinBounds hglobals
@@ -70,7 +69,6 @@ theorem swap_elements_distinct_correct : SwapElementsDistinctSpec := by
 
 /-- Public small-step contract for equal indices.  It deliberately asks for
 one array-word owner, so it remains usable with exclusive byte ownership. -/
-@[spec_of "rust-exported-small-step" "swap_elements::swap_elements_alias"]
 def SwapElementsAliasSpec : Prop :=
   ∀ (wasm : Store Unit) (ptr len i : UInt32)
     (oldSpillPtr oldSpillLen : UInt32)
@@ -100,7 +98,6 @@ def SwapElementsAliasSpec : Prop :=
         values = [] ∧
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue)
 
-@[proves SwapElementsAliasSpec]
 theorem swap_elements_alias_correct : SwapElementsAliasSpec := by
   intro wasm ptr len i oldSpillPtr oldSpillLen oldScratch oldValue
     σ globalσ hi hroom hagree hinBounds hglobals hresources hglobalOwn
@@ -111,7 +108,6 @@ theorem swap_elements_alias_correct : SwapElementsAliasSpec := by
 /-- Total small-step contract for the non-aliasing case.  Every execution of
 `swap_elements` with distinct indices terminates and the terminal store
 satisfies the swap postcondition. -/
-@[spec_of "rust-exported-small-step-total" "swap_elements::swap_elements"]
 def SwapElementsDistinctTerminatesSpec : Prop :=
   ∀ (wasm : Store Unit) (ptr len i j : UInt32)
     (oldSpillPtr oldSpillLen : UInt32)
@@ -147,7 +143,6 @@ def SwapElementsDistinctTerminatesSpec : Prop :=
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldB ∧
           store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA)
 
-@[proves SwapElementsDistinctTerminatesSpec]
 theorem swap_elements_distinct_terminates_correct :
     SwapElementsDistinctTerminatesSpec := by
   intro wasm ptr len i j oldSpillPtr oldSpillLen oldScratch oldA oldB
@@ -159,7 +154,6 @@ theorem swap_elements_distinct_terminates_correct :
     hresources hglobalOwn
 
 /-- Total small-step contract for equal indices. -/
-@[spec_of "rust-exported-small-step-total" "swap_elements::swap_elements_alias"]
 def SwapElementsAliasTerminatesSpec : Prop :=
   ∀ (wasm : Store Unit) (ptr len i : UInt32)
     (oldSpillPtr oldSpillLen : UInt32)
@@ -191,7 +185,6 @@ def SwapElementsAliasTerminatesSpec : Prop :=
         values = [] ∧
           store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldValue)
 
-@[proves SwapElementsAliasTerminatesSpec]
 theorem swap_elements_alias_terminates_correct :
     SwapElementsAliasTerminatesSpec := by
   intro wasm ptr len i oldSpillPtr oldSpillLen oldScratch oldValue

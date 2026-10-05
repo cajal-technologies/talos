@@ -126,7 +126,7 @@ theorem execute_write_bytes (module : Module)
       some ([], writtenStore pointer store length) := by
   apply execute_write module himports
   simp only [writeHost, writeResult]
-  rw [if_pos]
+  rw [ite_eq_left]
   simp only [rangeInBounds]
   exact decide_eq_true hbound
 

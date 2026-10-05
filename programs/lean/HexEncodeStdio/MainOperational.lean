@@ -10,7 +10,7 @@ and length and reaches the encoder call. -/
 theorem main_after_read_to_encode_call
     (store : MachineStore Universal.State)
     (sp capacity pointer length : UInt32)
-    (hcapacity : store.wasm.mem.read32 (sp + 8) = capacity)
+    (_hcapacity : store.wasm.mem.read32 (sp + 8) = capacity)
     (hpointer : store.wasm.mem.read32 (sp + 12) = pointer)
     (hlength : store.wasm.mem.read32 (sp + 16) = length)
     (hptrBound : sp.toNat + 12 + 4 ≤ store.wasm.mem.pages * 65536)

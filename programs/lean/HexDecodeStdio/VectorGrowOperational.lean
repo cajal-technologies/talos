@@ -221,7 +221,7 @@ theorem grow_result_fresh_prefix
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.ltS (result := 0) (Eq.symm (if_neg hnonneg)))
+    (Step.ltS (result := 0) (Eq.symm (ite_eq_right hnonneg)))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block
@@ -288,7 +288,7 @@ theorem grow_result_realloc_prefix
   apply Reaches.prepend (Step.localGet rfl)
   apply Reaches.prepend Step.const
   apply Reaches.prepend
-    (Step.ltS (result := 0) (Eq.symm (if_neg hnonneg)))
+    (Step.ltS (result := 0) (Eq.symm (ite_eq_right hnonneg)))
   apply Reaches.prepend Step.brIfZero
   apply Reaches.prepend Step.block
   apply Reaches.prepend Step.block

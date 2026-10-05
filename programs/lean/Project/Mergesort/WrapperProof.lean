@@ -74,7 +74,7 @@ theorem readHost_invoke_of_bound
   rw [readHost_eq]
   simp only [HostFn.lift, StdIO.readHost, StdIO.readResult, Store.focus,
     Store.mapHost, stdioLens]
-  rw [if_pos]
+  rw [ite_eq_left]
   · rfl
   · exact decide_eq_true hbound
 
@@ -93,7 +93,7 @@ theorem writeHost_invoke_of_bound
   rw [writeHost_eq]
   simp only [HostFn.lift, StdIO.writeHost, StdIO.writeResult, Store.focus,
     Store.mapHost, stdioLens]
-  rw [if_pos]
+  rw [ite_eq_left]
   · rfl
   · exact decide_eq_true hbound
 

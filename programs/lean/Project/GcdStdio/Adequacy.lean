@@ -21,6 +21,9 @@ open Wasm.SepLogic Wasm.SmallStep
 open Project.GcdStdio.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev HeapIProp := IProp (WasmHeapGF Universal.State)
 
 def entryInitialStore (a b : UInt64) : Store Universal.State :=
@@ -373,7 +376,7 @@ private theorem twp_entry [WasmSmallStepGS hlc Universal.State]
   iapply twp_localGet rfl
   iapply twp_select (selected := .i32 heapBase) (by decide)
   iapply twp_add
-  rw [show heapBase + ((4294967295 : UInt32) + 1) = heapBase by decide]
+  simp only [UInt32.add_zero]
   iapply twp_localTee rfl
   simp only [List.length]
   iapply twp_localGet rfl
@@ -534,9 +537,18 @@ theorem entry_terminates (a b : UInt64) :
 
 theorem entry_adequacy :
     Project.GcdStdio.Spec.PublicEntrySpecification := by
-  intro a b
-  unfold Project.GcdStdio.Spec.RunsBytes Universal.RunsBytes Universal.Runs
-    RunsWith
-  exact ⟨entryConfig a b, startConfig_eq a b, entry_terminates a b⟩
+  rintro ⟨a, b⟩
+  refine ⟨UInt64.ofNat (Nat.gcd a.toNat b.toNat), ?_, ?_⟩
+  unfold Project.GcdStdio.Spec.Runs Project.GcdStdio.Spec.args
+    Project.GcdStdio.Spec.result Universal.RunsExport RunsExportWith
+  refine ⟨entryConfig a b, ?_, entry_terminates a b⟩
+  rw [startExportConfig?_ofHost_zero
+    Project.GcdStdio.Spec.gcd_zeroArgument]
+  exact startConfig_eq a b
+  · by_cases ha : a.toNat = 0
+    · simp [ha]
+    · rw [UInt64.toNat_ofNat', Nat.mod_eq_of_lt]
+      exact _root_.lt_of_le_of_lt
+        (Nat.gcd_le_left _ (Nat.pos_of_ne_zero ha)) (UInt64.toNat_lt a)
 
 end Project.GcdStdio.Adequacy

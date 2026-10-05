@@ -247,6 +247,7 @@ table.projects tr:hover td { background: rgba(240, 230, 214, 0.35); }
 .sidebar a .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 5px; }
 .sidebar a .dot.good { background: var(--good); }
 .sidebar a .dot.warn { background: var(--warn); }
+.sidebar a .dot.info { background: var(--info); }
 .sidebar a .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* ── Spec card (3-column) ────────────────────────────────────────────── */

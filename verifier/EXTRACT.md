@@ -94,9 +94,10 @@ carries at least one `@[spec_of "kind" "qualified::name"]` attribute.
 Defs without `@[spec_of]` are ignored — they are not specs, even when
 their type is `Prop`.
 
-Both the kind and the target are written as string literals; the
-hyphenated kind names (`"rust-exported"`, `"rust-internal"`) are not
-valid Lean identifiers, so quoting is required.
+Both the kind and the target are written as string literals; the hyphenated
+kind names (`"rust-exported"`, `"rust-exported-partial"`, `"rust-internal"`,
+`"rust-internal-partial"`, `"crate-property"`) are not valid Lean identifiers,
+so quoting is required.
 
 Kinds:
 
@@ -105,7 +106,14 @@ Kinds:
   *different* crate's export is recorded with `resolved=false` and
   emits a `cross_crate_reference` info diagnostic; cross-crate
   resolution is a job for a later graph-builder pass.
+- `"rust-exported-partial"` — the same target and resolution rules, for a
+  public partial-correctness proposition that does not establish termination.
 - `"rust-internal"` — any other Rust path. Opaque to the extractor.
+- `"rust-internal-partial"` — the same internal target provenance for a
+  partial-correctness proposition.
+- `"crate-property"` — target written as `crate::property_name`, naming a
+  property of the crate rather than a function. A composing property should
+  additionally carry one `rust-exported` reference for each export it runs.
 - `"lean"` — any Lean symbol. Opaque to the extractor.
 
 Multiple `@[spec_of …]` attributes on one def are allowed and yield
@@ -328,12 +336,16 @@ FormalSpec:
 
 ```
 Reference:
-  kind:     "rust-exported" | "rust-internal" | "lean"
+  kind:     "rust-exported" | "rust-exported-partial" |
+            "rust-internal" | "rust-internal-partial" |
+            "crate-property" | "lean"
   target:   String     // raw qualified name as written in the attribute
-  resolved: Bool       // true iff kind == "rust-exported" AND target
-                       //   names an entry in this artifact's `exported`.
-                       //   Always false for "rust-internal", "lean", and
-                       //   cross-crate "rust-exported" refs.
+  resolved: Bool       // true iff kind is "rust-exported" or
+                       //   "rust-exported-partial" AND target names an entry
+                       //   in this artifact's `exported`.
+                       //   Always false for both "rust-internal" kinds,
+                       //   "crate-property", "lean", and cross-crate
+                       //   exported refs.
 ```
 
 ### `Verification`

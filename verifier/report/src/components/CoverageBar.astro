@@ -7,6 +7,6 @@ interface Props {
 const { proven, total, small } = Astro.props;
 const pct = total === 0 ? 0 : Math.round((proven / total) * 100);
 ---
-<div class={"coverage-bar" + (small ? " small" : "")} aria-label={`${proven} of ${total} exports proven`}>
+<div class={"coverage-bar" + (small ? " small" : "")} aria-label={`${proven} of ${total} exports have a proven total-correctness specification`}>
   <div class="fill" style={`width: ${pct}%`}></div>
 </div>

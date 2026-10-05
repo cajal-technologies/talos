@@ -286,7 +286,7 @@ private theorem twp_findMin_aux
         omega
       have hnotlt : ¬ UInt32.ofNat scan < UInt32.ofNat input.length :=
         mt (nat_lt_u32_iff hscanSize hlengthSize).mp (by omega)
-      wasm_twp_pures [twp_ltU] using [if_neg hnotlt]
+      wasm_twp_pures [twp_ltU] using [ite_eq_right hnotlt]
       wasm_twp_pures [twp_eqz]
       simp only
       iapply Wasm.SmallStep.twp_iff
@@ -328,8 +328,8 @@ private theorem twp_findMin_aux
       have hcmp := nat_lt_u32_iff hscanSize hlengthSize
       wasm_twp_pures [twp_ltU]
       by_cases hs : scan < input.length
-      · simp only [if_pos (hcmp.mpr hs)]
-        wasm_twp_pures [twp_eqz] using [if_neg (by decide : ¬(1 : UInt32) = 0)]
+      · simp only [ite_eq_left (hcmp.mpr hs)]
+        wasm_twp_pures [twp_eqz] using [ite_eq_right (by decide : ¬(1 : UInt32) = 0)]
         iapply Wasm.SmallStep.twp_iff (selectedBody := []) (by simp)
         wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append, List.drop_zero]
         have hbestLen : best < input.length :=
@@ -338,8 +338,8 @@ private theorem twp_findMin_aux
         iapply_frame_intro twp_loadAt64 hbestLen hfit rfl rfl as Harray
         wasm_twp_pures [twp_ltUI64]
         by_cases hlt : input[scan] < input[best]
-        · simp only [if_pos hlt]
-          wasm_twp_pures [twp_iff] using [if_pos (by decide : (1 : UInt32) ≠ 0)]
+        · simp only [ite_eq_left hlt]
+          wasm_twp_pures [twp_iff] using [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
           wasm_twp_pures [twp_localGet twp_localSet twp_exitControl]
           simp only [List.take_zero, List.nil_append, List.drop_zero]
           wasm_twp_pures [twp_localGet twp_localGet twp_localGet
@@ -353,7 +353,7 @@ private theorem twp_findMin_aux
             have hstep := MinScan.step input hinv hs
             have hlt' : input[scan]! < input[best]! := by
               simpa only [getElem!_pos input scan hs, getElem!_pos input best hbestLen] using hlt
-            rw [if_pos hlt'] at hstep; exact hstep
+            rw [ite_eq_left hlt'] at hstep; exact hstep
           iapply ih scan (scan + 1)
             hnext
             (by omega)
@@ -372,8 +372,8 @@ private theorem twp_findMin_aux
                 input[finalBest]?.getD default ≤ input[k]?.getD default := by
             simpa only [List.getElem!_eq_getElem?_getD] using hpure
           iapply Hcont $$ %finalBest %hpure' Hruntime Harray
-        · simp only [if_neg hlt]
-          wasm_twp_pures [twp_iff] using [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+        · simp only [ite_eq_right hlt]
+          wasm_twp_pures [twp_iff] using [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
           wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append, List.drop_zero]
           wasm_twp_pures [twp_localGet twp_localGet twp_localGet
             twp_localGet twp_const twp_add]
@@ -385,7 +385,7 @@ private theorem twp_findMin_aux
             have hstep := MinScan.step input hinv hs
             have hlt' : ¬ input[scan]! < input[best]! := by
               simpa only [getElem!_pos input scan hs, getElem!_pos input best hbestLen] using hlt
-            rw [if_neg hlt'] at hstep; exact hstep
+            rw [ite_eq_right hlt'] at hstep; exact hstep
           iapply ih best (scan + 1)
             hnext
             (by omega)
@@ -405,7 +405,7 @@ private theorem twp_findMin_aux
             simpa only [List.getElem!_eq_getElem?_getD] using hpure
           iapply Hcont $$ %finalBest %hpure' Hruntime Harray
       · have hnotlt := mt hcmp.mp hs
-        simp only [if_neg hnotlt]
+        simp only [ite_eq_right hnotlt]
         wasm_twp_pures [twp_eqz]
         simp only
         iapply Wasm.SmallStep.twp_iff
@@ -747,16 +747,16 @@ private theorem twp_innerLoop
     wasm_twp_pures [twp_localGet twp_localGet twp_ltU twp_eqz]
     by_cases hs : state.scan < current.length
     · have hs' : state.scan < length := by rwa [← hlength]
-      simp only [if_pos (hcmp.mpr hs'),
-        if_neg (by decide : ¬(1 : UInt32) = 0)]
+      simp only [ite_eq_left (hcmp.mpr hs'),
+        ite_eq_right (by decide : ¬(1 : UInt32) = 0)]
       wasm_twp_pures [twp_brIfZero]
       have hbestLen : state.best < current.length := _root_.lt_of_lt_of_le hstate.2.1 hstate.2.2.1
       iapply_frame_intro twp_loadAt64 hs hfit rfl rfl as Harray
       iapply_frame_intro twp_loadAt64 hbestLen hfit rfl rfl as Harray
       wasm_twp_pures [twp_ltUI64]
       by_cases hlt : current[state.scan] < current[state.best]
-      · simp only [if_pos hlt]
-        wasm_twp_pures [twp_iff] using [if_pos (by decide : (1 : UInt32) ≠ 0)]
+      · simp only [ite_eq_left hlt]
+        wasm_twp_pures [twp_iff] using [ite_eq_left (by decide : (1 : UInt32) ≠ 0)]
         wasm_twp_pures [twp_localGet twp_localSet twp_exitControl]
         simp only [List.take_zero, List.nil_append, List.drop_zero,
           incrementLocal, List.cons_append]
@@ -777,7 +777,7 @@ private theorem twp_innerLoop
             rw [getElem!_pos current state.scan hs,
               getElem!_pos current state.best hbestLen]
             exact hlt
-          simpa only [if_pos hlt'] using hstep
+          simpa only [ite_eq_left hlt'] using hstep
         ispecialize Hrec $$ %(⟨state.scan, state.scan + 1⟩ : InnerState)
         iapply_pure Hrec =>
           change current.length - (state.scan + 1) <
@@ -785,8 +785,8 @@ private theorem twp_innerLoop
           omega
         isplitr_pureexact hnext
         iframe
-      · simp only [if_neg hlt]
-        wasm_twp_pures [twp_iff] using [if_neg (by decide : ¬(0 : UInt32) ≠ 0)]
+      · simp only [ite_eq_right hlt]
+        wasm_twp_pures [twp_iff] using [ite_eq_right (by decide : ¬(0 : UInt32) ≠ 0)]
         wasm_twp_pures [twp_exitControl] using [List.take_zero, List.nil_append, List.drop_zero,
           incrementLocal, List.cons_append]
         wasm_twp_pures [twp_localGet twp_const twp_add twp_localSet twp_br]
@@ -804,7 +804,7 @@ private theorem twp_innerLoop
             rw [getElem!_pos current state.scan hs,
               getElem!_pos current state.best hbestLen]
             exact hlt
-          simpa only [if_neg hlt'] using hstep
+          simpa only [ite_eq_right hlt'] using hstep
         ispecialize Hrec $$ %(⟨state.best, state.scan + 1⟩ : InnerState)
         iapply_pure Hrec =>
           change current.length - (state.scan + 1) <
@@ -815,7 +815,7 @@ private theorem twp_innerLoop
     · have hnlt : ¬UInt32.ofNat state.scan < UInt32.ofNat length := by
         apply mt hcmp.mp
         rwa [← hlength]
-      simp only [if_neg hnlt]
+      simp only [ite_eq_right hnlt]
       iapply Wasm.SmallStep.twp_brIf (by decide) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       have hscanEq : state.scan = current.length := by omega
@@ -922,8 +922,8 @@ private theorem twp_outerLoop
     by_cases hmore : state.outer + 1 < state.current.length
     · have hmore' : state.outer + 1 < input.length := by
         rwa [← hlength]
-      simp only [if_pos (hcmp.mpr hmore'),
-        if_neg (by decide : ¬(1 : UInt32) = 0)]
+      simp only [ite_eq_left (hcmp.mpr hmore'),
+        ite_eq_right (by decide : ¬(1 : UInt32) = 0)]
       wasm_twp_pures [twp_brIfZero]
       wasm_twp_pures [twp_localGet twp_localSet twp_localGet
         twp_const twp_add]
@@ -1018,7 +1018,7 @@ private theorem twp_outerLoop
           UInt32.ofNat input.length := by
         apply mt hcmp.mp
         rwa [← hlength]
-      simp only [if_neg hnlt]
+      simp only [ite_eq_right hnlt]
       iapply Wasm.SmallStep.twp_brIf (by decide) rfl
       simp only [List.take_zero, List.nil_append, List.drop_zero]
       have hfinished : state.current.length ≤ state.outer + 1 := by omega
