@@ -223,7 +223,7 @@ private theorem keyAndMap_u32 (key : UInt32) (rest : List UInt8) :
     omega
   have hword : WordCodec.decodeU32 (Borsh.u32 key) = key :=
     WordCodec.u32le.decode_encode key
-  rw [keyAndMap, if_neg hnot, List.take_left' hlen, List.drop_left' hlen, hword]
+  rw [keyAndMap, ite_eq_right hnot, List.take_left' hlen, List.drop_left' hlen, hword]
 
 /-- Two leading `u32` words, then the rest. -/
 private theorem keyValueAndMap_u32 (key value : UInt32) (rest : List UInt8) :
@@ -246,7 +246,7 @@ private theorem keyValueAndMap_u32 (key value : UInt32) (rest : List UInt8) :
     WordCodec.u32le.decode_encode key
   have hword' : WordCodec.decodeU32 (Borsh.u32 value) = value :=
     WordCodec.u32le.decode_encode value
-  rw [keyValueAndMap, if_neg hnot, List.take_left' hlen, hdrop, hdrop8,
+  rw [keyValueAndMap, ite_eq_right hnot, List.take_left' hlen, hdrop, hdrop8,
     List.take_left' hlen', hword, hword']
 
 /-- `MapLenSpec` on a serialized entry list: it is always accepted, so the
