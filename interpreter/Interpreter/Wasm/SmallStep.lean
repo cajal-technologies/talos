@@ -7494,6 +7494,30 @@ theorem steps_done_deterministic
   have parts := Config.mk.inj hconfig
   exact ⟨Expr.done.inj parts.1, parts.2⟩
 
+/-- An observable outcome, put back into an expression, takes no step. -/
+theorem ObservableOutcome.toExpr_terminal {outcome : ObservableOutcome}
+    {store : MachineStore α} {kind config'} :
+    ¬ Step ⟨outcome.toExpr, store⟩ kind config' := by
+  cases outcome with
+  | done => exact done_terminal
+  | trapped => exact trapped_terminal
+
+/-- Two terminal traces from the same machine end in the same observable
+outcome and the same store.  This is `steps_done_deterministic` with traps
+included. -/
+theorem steps_outcome_deterministic
+    {config : Config α} {trace₁ trace₂ : List StepKind}
+    {outcome₁ outcome₂ : ObservableOutcome} {store₁ store₂ : MachineStore α}
+    (h₁ : Steps config trace₁ ⟨outcome₁.toExpr, store₁⟩)
+    (h₂ : Steps config trace₂ ⟨outcome₂.toExpr, store₂⟩) :
+    outcome₁ = outcome₂ ∧ store₁ = store₂ := by
+  have hconfig := steps_irreducible_deterministic h₁ h₂
+    (fun _ _ => ObservableOutcome.toExpr_terminal)
+    (fun _ _ => ObservableOutcome.toExpr_terminal)
+  obtain ⟨hexpr, hstore⟩ := Config.mk.inj hconfig
+  refine ⟨?_, hstore⟩
+  cases outcome₁ <;> cases outcome₂ <;> cases hexpr <;> rfl
+
 /-- A terminating execution already pins down the result, so total correctness
 implies partial correctness: `Step` is deterministic, so any other terminal
 trace from the same machine ends in the same values and store.
@@ -7508,6 +7532,20 @@ theorem TerminatesWith.toPartiallyMeets
   obtain ⟨_, _, _, steps, hpost⟩ := execution
   intro _ _ _ observed
   obtain ⟨rfl, rfl⟩ := steps_done_deterministic steps observed
+  exact hpost
+
+/-- The outcome form of `TerminatesWith.toPartiallyMeets`.  A terminating
+execution pins down the outcome and the store, so every other terminal trace
+from the same machine, a trap included, satisfies the same postcondition.
+`RunsExportWithOutcome.toPartiallyRunsExportWithOutcome` (`Host/Run.lean`) is
+its export-level form. -/
+theorem TerminatesWithOutcome.toPartiallyMeetsOutcome
+    {initial : Config α} {post : ObservableOutcome → MachineStore α → Prop}
+    (execution : TerminatesWithOutcome initial post) :
+    PartiallyMeetsOutcome initial post := by
+  obtain ⟨_, _, _, steps, hpost⟩ := execution
+  intro _ _ _ observed
+  obtain ⟨rfl, rfl⟩ := steps_outcome_deterministic steps observed
   exact hpost
 
 /-- Weaken the postcondition of a partial-correctness result. -/

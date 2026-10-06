@@ -173,14 +173,6 @@ def RunsExportWithOutcome [Inhabited α]
     SmallStep.TerminatesWithOutcome config (fun outcome final =>
       post { outcome := outcome, final := final.wasm })
 
-private theorem observableOutcome_toExpr_injective :
-    Function.Injective
-      (SmallStep.ObservableOutcome.toExpr :
-        SmallStep.ObservableOutcome → SmallStep.Expr α) := by
-  intro first second heq
-  cases first <;> cases second <;>
-    simp_all [SmallStep.ObservableOutcome.toExpr]
-
 /-- Two total outcome specifications of the same exported call observe one
 common terminal outcome and final store. -/
 theorem RunsExportWithOutcome.deterministic
@@ -199,27 +191,8 @@ theorem RunsExportWithOutcome.deterministic
   rw [firstStart] at secondStart
   injection secondStart with configEq
   subst secondConfig
-  have firstTerminal (kind : SmallStep.StepKind)
-      (next : SmallStep.Config α) :
-      ¬ SmallStep.Step
-        ⟨firstOutcome.toExpr, firstStore⟩ kind next := by
-    cases firstOutcome with
-    | done => exact SmallStep.done_terminal
-    | trapped => exact SmallStep.trapped_terminal
-  have secondTerminal (kind : SmallStep.StepKind)
-      (next : SmallStep.Config α) :
-      ¬ SmallStep.Step
-        ⟨secondOutcome.toExpr, secondStore⟩ kind next := by
-    cases secondOutcome with
-    | done => exact SmallStep.done_terminal
-    | trapped => exact SmallStep.trapped_terminal
-  have finalEq := SmallStep.steps_irreducible_deterministic
-    firstSteps secondSteps firstTerminal secondTerminal
-  obtain ⟨exprEq, storeEq⟩ := SmallStep.Config.mk.inj finalEq
-  have outcomeEq := observableOutcome_toExpr_injective exprEq
-  subst secondOutcome
-  have storesEqual : firstStore = secondStore := storeEq
-  subst secondStore
+  obtain ⟨rfl, rfl⟩ :=
+    SmallStep.steps_outcome_deterministic firstSteps secondSteps
   exact
     ⟨{ outcome := firstOutcome, final := firstStore.wasm }, hfirst, hsecond⟩
 
@@ -244,6 +217,18 @@ def PartiallyRunsExportWithOutcome [Inhabited α]
     startExportConfig? env m op call = some config ∧
     SmallStep.PartiallyMeetsOutcome config (fun outcome final =>
       post { outcome := outcome, final := final.wasm })
+
+/-- A total outcome specification of an exported call is also a partial one.
+The start configuration is shared, so this is
+`SmallStep.TerminatesWithOutcome.toPartiallyMeetsOutcome` under
+`startExportConfig?`. -/
+theorem RunsExportWithOutcome.toPartiallyRunsExportWithOutcome
+    {α : Type} [Inhabited α] {env : HostEnv α} {m : Module} {op : String}
+    {call : ExportCall α} {post : ExportOutcome α → Prop}
+    (run : RunsExportWithOutcome env m op call post) :
+    PartiallyRunsExportWithOutcome env m op call post := by
+  rcases run with ⟨config, hstart, execution⟩
+  exact ⟨config, hstart, execution.toPartiallyMeetsOutcome⟩
 
 /-- Initialize `m` at its export named `op`, running under `env` from host
 state `initial` over the module's own initial memory, globals and tables.

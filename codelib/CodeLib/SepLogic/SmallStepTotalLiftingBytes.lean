@@ -485,4 +485,10 @@ theorem twp_store64_addr
   iexact Hword
 
 
+-- Extend the `wasm_twp_pures` macro (defined in SmallStepTotalLifting) with the
+-- `twp_drop` case here, where `Wasm.SmallStep.twp_drop` is in scope.
+macro_rules
+  | `(tactic| wasm_twp_pures [twp_drop $rest:ident*]) =>
+      `(tactic| iapply twp_drop; wasm_twp_pures [$rest:ident*])
+
 end Wasm.SmallStep
