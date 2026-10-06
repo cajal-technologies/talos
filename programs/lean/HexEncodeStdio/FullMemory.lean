@@ -289,7 +289,7 @@ theorem bytesAt_four (mem : Mem) (addr : UInt32)
     Project.HexEncodeStdio.Grow.bytesAt mem addr 4 =
       [u32Byte (mem.read32 addr) 0, u32Byte (mem.read32 addr) 1,
        u32Byte (mem.read32 addr) 2, u32Byte (mem.read32 addr) 3] := by
-  obtain ⟨_, h1, h2, h3⟩ := Project.HexEncodeStdio.Helpers.wordAccessFacts addr 0 hfit
+  obtain ⟨_, h1, h2, h3⟩ := Wasm.SepLogic.wordAccessFacts addr 0 hfit
   have h1' : (addr + 1).toNat = addr.toNat + 1 := by simpa using h1
   have h2' : (addr + 2).toNat = addr.toNat + 2 := by simpa using h2
   have h3' : (addr + 3).toNat = addr.toNat + 3 := by simpa using h3

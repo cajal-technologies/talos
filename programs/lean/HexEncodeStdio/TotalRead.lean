@@ -86,7 +86,7 @@ theorem func16_body {hlc : HasLC}
           Project.HexStdio.func16, arity, remainder, controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   obtain ⟨r4, r5, r6, r7⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 4 (by
+    Wasm.SepLogic.wordAccessFacts result 4 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   iintro ⟨Hruntime, Henv, Hhost, Hbytes, Htag, Hlength, Hnext⟩

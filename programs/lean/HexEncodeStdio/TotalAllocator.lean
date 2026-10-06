@@ -154,7 +154,7 @@ theorem func12_alloc_from_arena {hlc : HasLC}
       code arity remainder controls calls $$
     [$Hruntime $Henv $Hhost $Hbump $Harena]
   iintro ⟨Hruntime, Henv, Hhost, Hbump, Harena⟩
-  ihave Harena := Project.HexEncodeStdio.Helpers.pointsToBytes_take_drop 0
+  ihave Harena := Wasm.SepLogic.pointsToBytes_take_drop 0
     (allocPtr align oldBump) arena size.toNat hsize $$ Harena
   icases Harena with ⟨Hallocated, Hfree⟩
   iapply Hnext
@@ -244,7 +244,7 @@ theorem func15_copy_return {hlc : HasLC}
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  ihave Hnew := Project.HexEncodeStdio.Helpers.pointsToBytes_take_drop 0 newPtr
+  ihave Hnew := Wasm.SepLogic.pointsToBytes_take_drop 0 newPtr
     newArena oldSize.toNat (by rw [hlenNew]; exact hle) $$ Hnew
   icases Hnew with ⟨HnewPrefix, HnewSuffix⟩
   iapply twp_memoryCopy32 (len := oldSize)

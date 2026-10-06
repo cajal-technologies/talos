@@ -241,11 +241,11 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
           encodeLoopBody, arity, remainder, controls, calls⟩ : Expr α)
         @ s; E [{ Φ }] := by
   obtain ⟨p4, p5, p6, p7⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 4 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 4 (by omega)
   obtain ⟨p8, p9, p10, p11⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 8 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 8 (by omega)
   obtain ⟨p12, p13, p14, p15⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 12 (by omega)
   iintro ⟨Hcap, HoutputPtr, Hlength, Hout, Hfinish⟩
   iapply func6_ascii_classify result position stackPtr oldLen oldAscii oldDest
     tmp1 tmp2 digit n
@@ -278,7 +278,7 @@ theorem func6_ascii_store {hlc : HasLC} {α : Type}
     simp
   rw [hposition]
   simp only [encodeLocals,  UInt32.add_comm (UInt32.ofNat i) output]
-  ihave Hfocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus_update
+  ihave Hfocus := Wasm.SepLogic.pointsToBytes_focus_update
     (0 : Nat) output out i hpos $$ Hout
   icases Hfocus with ⟨%actual, Hbyte, Hput, %hactual⟩
   iapply twp_localGet rfl
