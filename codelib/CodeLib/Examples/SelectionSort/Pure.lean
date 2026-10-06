@@ -32,14 +32,14 @@ theorem MinScan.step (values : List UInt64) {start best scan : Nat}
       (if values[scan]! < values[best]! then scan else best) (scan + 1) := by
   rcases h with ⟨hstartBest, hbestScan, hscanLength, hmin⟩
   by_cases hlt : values[scan]! < values[best]!
-  · simp only [if_pos hlt]
+  · simp only [ite_eq_left hlt]
     refine ⟨by omega, by omega, by omega, ?_⟩
     intro k hk hks
     by_cases hkscan : k = scan
     · subst k; exact UInt64.le_refl _
     · exact UInt64.le_trans (UInt64.le_of_lt hlt)
         (hmin k hk (by omega))
-  · simp only [if_neg hlt]
+  · simp only [ite_eq_right hlt]
     refine ⟨hstartBest, by omega, by omega, ?_⟩
     intro k hk hks
     by_cases hkscan : k = scan

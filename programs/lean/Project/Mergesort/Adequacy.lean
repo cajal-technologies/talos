@@ -22,6 +22,9 @@ open Project.Mergesort.Representations
 open Project.Mergesort.Contracts
 open scoped Wasm.SmallStep.Outcome
 
+-- Unfold the definitionally equal generic/outcome Iris instances when matching WPs.
+set_option backward.isDefEq.respectTransparency false
+
 private abbrev HeapIProp := IProp (WasmHeapGF Universal.State)
 
 /-- Initial Wasm state, with only the public input stream varied. -/

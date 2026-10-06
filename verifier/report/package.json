@@ -6,6 +6,7 @@
   "type": "module",
   "description": "Static-site generator (Astro) that turns `verifier extract` JSON artifacts into a browsable progress report.",
   "scripts": {
+    "test": "node --test tests/*.test.mjs",
     "build-report": "node scripts/build.mjs",
     "dev": "astro dev",
     "preview": "astro preview",

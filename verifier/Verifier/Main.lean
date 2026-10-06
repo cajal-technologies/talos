@@ -2,6 +2,7 @@ import Verifier.Emit
 import Verifier.EmitRoundTrip
 import Verifier.Path
 import Verifier.Extract
+import Verifier.Extract.PartialRefsTests
 import Interpreter.Wasm.Decoder.Wat
 import Cli
 

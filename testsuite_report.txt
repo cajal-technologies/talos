@@ -17238,7 +17238,7 @@ func.wast:635 assert_invalid pass
 func.wast:647 assert_invalid pass
 func.wast:651 assert_invalid pass
 func.wast:655 assert_invalid pass
-func.wast:660 assert_invalid skipped:assert_invalid: not rejected
+func.wast:660 assert_invalid pass
 func.wast:671 assert_invalid pass
 func.wast:675 assert_invalid pass
 func.wast:679 assert_invalid pass
@@ -19749,10 +19749,10 @@ local_init.wast:3 module pass
 local_init.wast:21 assert_return pass
 local_init.wast:22 assert_return pass
 local_init.wast:23 assert_return pass
-local_init.wast:26 assert_invalid skipped:assert_invalid: not rejected
-local_init.wast:30 assert_invalid skipped:assert_invalid: not rejected
+local_init.wast:26 assert_invalid pass
+local_init.wast:30 assert_invalid pass
 local_init.wast:40 assert_invalid pass
-local_init.wast:53 assert_invalid skipped:assert_invalid: not rejected
+local_init.wast:53 assert_invalid pass
 local_init.wast:66 module pass
 local_init.wast:74 assert_return pass
 local_set.wast:3 module pass
@@ -31266,7 +31266,7 @@ ref.wast:60 assert_invalid skipped:assert_invalid: not rejected
 ref.wast:65 assert_invalid skipped:assert_invalid: not rejected
 ref.wast:69 assert_invalid skipped:assert_invalid: not rejected
 ref.wast:73 assert_invalid pass
-ref.wast:78 assert_invalid skipped:assert_invalid: not rejected
+ref.wast:78 assert_invalid pass
 ref_as_non_null.wast:1 module pass
 ref_as_non_null.wast:25 assert_trap pass
 ref_as_non_null.wast:27 assert_trap pass
@@ -32008,9 +32008,9 @@ select.wast:361 assert_return pass
 select.wast:364 assert_invalid pass
 select.wast:368 assert_invalid pass
 select.wast:372 assert_invalid pass
-select.wast:384 assert_invalid skipped:assert_invalid: not rejected
-select.wast:392 assert_invalid skipped:assert_invalid: not rejected
-select.wast:398 assert_invalid skipped:assert_invalid: not rejected
+select.wast:384 assert_invalid pass
+select.wast:392 assert_invalid pass
+select.wast:398 assert_invalid pass
 select.wast:403 module pass
 select.wast:408 assert_invalid pass
 select.wast:414 assert_invalid pass
@@ -58264,8 +58264,8 @@ table.wast:20 module pass
 table.wast:21 module pass
 table.wast:23 assert_invalid pass
 table.wast:24 assert_invalid pass
-table.wast:27 assert_invalid skipped:assert_invalid: not rejected
-table.wast:31 assert_invalid skipped:assert_invalid: not rejected
+table.wast:27 assert_invalid pass
+table.wast:31 assert_invalid pass
 table.wast:36 assert_invalid pass
 table.wast:40 assert_invalid pass
 table.wast:44 assert_invalid pass
@@ -58275,9 +58275,9 @@ table.wast:55 assert_invalid pass
 table.wast:59 assert_invalid pass
 table.wast:63 assert_invalid pass
 table.wast:67 assert_invalid pass
-table.wast:71 assert_invalid skipped:assert_invalid: not rejected
-table.wast:75 assert_invalid skipped:assert_invalid: not rejected
-table.wast:79 assert_invalid skipped:assert_invalid: not rejected
+table.wast:71 assert_invalid pass
+table.wast:75 assert_invalid pass
+table.wast:79 assert_invalid pass
 table.wast:86 module pass
 table.wast:91 register pass
 table.wast:93 module decode_error
@@ -58286,9 +58286,9 @@ table.wast:113 assert_return skipped:non-integer-expected
 table.wast:114 assert_return skipped:non-integer-expected
 table.wast:115 assert_return skipped:non-integer-expected
 table.wast:116 assert_return skipped:non-integer-expected
-table.wast:120 assert_invalid skipped:assert_invalid: not rejected
-table.wast:128 assert_invalid skipped:assert_invalid: not rejected
-table.wast:136 assert_invalid skipped:assert_invalid: not rejected
+table.wast:120 assert_invalid pass
+table.wast:128 assert_invalid pass
+table.wast:136 assert_invalid pass
 table.wast:147 assert_malformed pass
 table.wast:154 assert_malformed pass
 table.wast:161 assert_malformed pass
@@ -58304,8 +58304,8 @@ table64.wast:9 module_definition pass
 table64.wast:10 module pass
 table64.wast:12 module pass
 table64.wast:13 module pass
-table64.wast:16 assert_invalid skipped:assert_invalid: not rejected
-table64.wast:20 assert_invalid skipped:assert_invalid: not rejected
+table64.wast:16 assert_invalid pass
+table64.wast:20 assert_invalid pass
 table_copy.wast:6 module pass
 table_copy.wast:13 register pass
 table_copy.wast:15 module pass

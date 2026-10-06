@@ -102,12 +102,12 @@ theorem read_to_end_first_outcome
   · rfl
   · simpa [framed] using hpages
   · simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide
+      Mem.write32]; decide
   · simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide
+      Mem.write32]; decide
   · rw [show readToEndVector + 8 = readToEndStack + 12 by decide]
     simp [framed, readToEndFrameStore, Mem.read32, Mem.write64,
-      Mem.write32] <;> decide
+      Mem.write32]
   · simp only [framed, readToEndFrameStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
     · exact hbump

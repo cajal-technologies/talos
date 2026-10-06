@@ -33,7 +33,7 @@ private theorem twp_call_func8_nonempty_frame {hlc : HasLC}
       pointsTo_u32 0 (stackPtr + 4) oldLength ∗
       (R ∗ runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-        hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host bytes) -∗
+        hostStateOwn (afterWrite host bytes) -∗
         globalPointsToAt 0 0 (.i32 (stackPtr + 16)) -∗
         pointsToBytes 0 ptr bytes -∗ (⟨0, stackPtr⟩ ↦w (4 : UInt8)) -∗
         pointsTo_u32 0 (stackPtr + 4) length -∗
@@ -56,7 +56,7 @@ private theorem twp_call_func8_nonempty_frame {hlc : HasLC}
   ihave Hcont :
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-        hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host bytes) -∗
+        hostStateOwn (afterWrite host bytes) -∗
         globalPointsToAt 0 0 (.i32 (stackPtr + 16)) -∗
         pointsToBytes 0 ptr bytes -∗ (⟨0, stackPtr⟩ ↦w (4 : UInt8)) -∗
         pointsTo_u32 0 (stackPtr + 4) length -∗
@@ -79,8 +79,8 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
     (sp inputPtr inputCapacity outputPtr outputCapacity : UInt32)
     (input encoded : List UInt8) (host : Universal.State)
     (oldWriteTag : UInt8) (oldWriteLength : UInt32)
-    (hencoded : encoded = Project.HexStdio.Spec.encode input)
-    (hinputPos : 0 < input.length)
+    (_hencoded : encoded = Project.HexStdio.Spec.encode input)
+    (_hinputPos : 0 < input.length)
     (houtputLen : (UInt32.ofNat encoded.length).toNat = encoded.length)
     (houtputPos : 0 < encoded.length)
     (houtputPtr : outputPtr.toNat + encoded.length < UInt32.size)
@@ -104,7 +104,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       pointsTo_u32 0 ((sp - 16) + 4) oldWriteLength -∗
     (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
       hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-      hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host encoded) -∗
+      hostStateOwn (afterWrite host encoded) -∗
       globalPointsToAt 0 0 (.i32 (sp + 32)) -∗
       WP (.running ⟨mainLocals sp inputPtr inputCapacity outputCapacity,
           [], 0, [], [], []⟩ : Expr Universal.State) @ s; E [{ Φ }]) -∗
@@ -145,7 +145,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
       pointsToBytes 0 inputPtr input ∗
       (runtimeModuleOwn ⟨0⟩ Project.HexStdio.«module» -∗
         hostEnvOwn 0 (Universal.envFor Project.HexStdio.«module») -∗
-        hostStateOwn (Project.HexEncodeStdio.TotalWrite.afterWrite host encoded) -∗
+        hostStateOwn (afterWrite host encoded) -∗
         globalPointsToAt 0 0 (.i32 (sp + 32)) -∗
         WP (.running ⟨mainLocals sp inputPtr inputCapacity outputCapacity,
           [], 0, [], [], []⟩ : Expr Universal.State) @ s; E [{ Φ }]))

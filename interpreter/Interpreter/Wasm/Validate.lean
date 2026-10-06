@@ -138,6 +138,24 @@ def Instruction.checkBulkMemoryRefs
         else .ok ()
       else .ok ()
 
+/-- A typed `select` names exactly one result type, and a concrete reference
+in it names a declared type. Checked for every instruction (like the other
+immediate checks below), so the partial stack checker, which stops at the
+first instruction it does not model, cannot skip it. The index test is the
+two-table lookup of `Module.typeIndexKnown` (#251); once both land, the type
+reference belongs in `Instruction.valueTypeRefs` and only the arity check
+stays here. -/
+def Instruction.checkSelectAnnotation (m : Module) : Instruction → Except String Unit
+  | .select (some [selectType]) =>
+      match selectType with
+      | .ref _ (.concrete index) =>
+          if index ≥ m.types.length && index ≥ m.gcTypes.length then
+            .error "unknown type"
+          else .ok ()
+      | _ => .ok ()
+  | .select (some _) => .error "invalid result arity"
+  | _ => .ok ()
+
 /-! ### SIMD immediate validation -/
 
 def Instruction.checkSimdImmediates : Instruction → Except String Unit
@@ -770,6 +788,14 @@ structure CheckState where
   /-- Branches which leave the current instruction sequence. A surrounding
   structured construct consumes depth zero and decrements the rest. -/
   transfers : List Nat := []
+  /-- Locals known to hold a value on every path reaching this point
+  (function-references proposal, "local initialization"). Parameters are
+  initialized on entry; `local.set`/`local.tee` initialize their target; a
+  structured construct restores the set it started with when it ends. Only
+  consulted for locals whose type has no default value. Deliberately has no
+  default: every fresh state must say which locals it inherits, so a new
+  structured construct cannot silently forget the enclosing set. -/
+  initialized : List Nat
 
 def checkedCompat (m : Module) (actual : CheckedType)
     (expected : ValueType) : Bool :=
@@ -796,6 +822,18 @@ def checkedNonNull : CheckedType → CheckedType
     match valueType.reference? with
     | some (_, heapType) => some (.ref false heapType)
     | none => some valueType
+
+/-- Whether a value type has a default value, so a local of that type may be
+read before it is written. Numeric and vector types default to zero and
+nullable references to null; only a non-nullable reference lacks a default. -/
+def ValueType.isDefaultable : ValueType → Bool
+  | .ref false _ => false
+  | _ => true
+
+/-- Record that `local.set`/`local.tee` has initialized local `index`. -/
+def CheckState.initialize (state : CheckState) (index : Nat) : CheckState :=
+  if state.initialized.contains index then state
+  else { state with initialized := index :: state.initialized }
 
 def CheckState.popExpected
     (m : Module) (state : CheckState)
@@ -1185,18 +1223,36 @@ def Program.checkTypes
       | .drop => do
           let (_, next) ← state.popAny
           pure (some next)
-      | .select => do
+      | .select resultTypes => do
           let afterCondition ← state.popExpected m .i32
-          let (right, afterRight) ← afterCondition.popAny
-          let (left, afterLeft) ← afterRight.popAny
-          match left, right with
-          | some leftType, some rightType =>
-              if !m.vtCompat leftType rightType then throw "type mismatch"
-              pure (some { afterLeft with stack := some leftType :: afterLeft.stack })
-          | some valueType, none | none, some valueType =>
-              pure (some { afterLeft with stack := some valueType :: afterLeft.stack })
-          | none, none =>
-              pure (some { afterLeft with stack := none :: afterLeft.stack })
+          match resultTypes with
+          | some [selectType] =>
+              -- Typed `select t`: both operands and the result are `t`. The
+              -- annotation itself is checked by `checkSelectAnnotation`.
+              let afterOperands ←
+                afterCondition.applySig m ([selectType, selectType], [])
+              pure (some
+                { afterOperands with stack := some selectType :: afterOperands.stack })
+          -- Rejected earlier by `checkSelectAnnotation`; kept so the checker
+          -- stands alone.
+          | some _ => throw "invalid result arity"
+          | none =>
+              -- Untyped `select`: numeric or vector operands only. A reference
+              -- operand needs the typed form.
+              let (right, afterRight) ← afterCondition.popAny
+              let (left, afterLeft) ← afterRight.popAny
+              let isReference : CheckedType → Bool
+                | some valueType => valueType.reference?.isSome
+                | none => false
+              if isReference left || isReference right then throw "type mismatch"
+              match left, right with
+              | some leftType, some rightType =>
+                  if !m.vtCompat leftType rightType then throw "type mismatch"
+                  pure (some { afterLeft with stack := some leftType :: afterLeft.stack })
+              | some valueType, none | none, some valueType =>
+                  pure (some { afterLeft with stack := some valueType :: afterLeft.stack })
+              | none, none =>
+                  pure (some { afterLeft with stack := none :: afterLeft.stack })
       | .refIsNull => do
           let (referenceType, next) ← state.popAny
           if !checkedIsRef referenceType then throw "type mismatch"
@@ -1270,7 +1326,7 @@ def Program.checkTypes
                   throw "type mismatch"
             | none => pure ()
           let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) body inner
@@ -1281,6 +1337,7 @@ def Program.checkTypes
           pure (some
             { stack := fallthrough ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers :=
                 lowerTransfers bodyState.transfers ++ state.transfers })
       | .block paramArity resultArity body paramTypes resultTypes => do
@@ -1292,7 +1349,7 @@ def Program.checkTypes
                 pure (types.reverse.map some, outer)
             | none => state.popAnyN paramArity
           let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) body inner
@@ -1303,6 +1360,7 @@ def Program.checkTypes
           pure (some
             { stack := fallthrough ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers := lowerTransfers bodyState.transfers ++ state.transfers })
       | .loop paramArity resultArity body paramTypes resultTypes => do
           let parameterTypes? := declaredTypes? paramArity paramTypes
@@ -1313,7 +1371,7 @@ def Program.checkTypes
                 pure (types.reverse.map some, outer)
             | none => state.popAnyN paramArity
           let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((paramArity, parameterTypes?) :: labels) body inner
@@ -1324,6 +1382,7 @@ def Program.checkTypes
           pure (some
             { stack := fallthrough ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers := lowerTransfers bodyState.transfers ++ state.transfers })
       | .iff paramArity resultArity thenBody elseBody
           paramTypes resultTypes => do
@@ -1336,7 +1395,7 @@ def Program.checkTypes
                 pure (types.reverse.map some, outer)
             | none => afterCondition.popAnyN paramArity
           let branchStart : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some thenState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) thenBody branchStart
@@ -1363,6 +1422,7 @@ def Program.checkTypes
           pure (some
             { stack := merged ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers :=
                 lowerTransfers thenState.transfers ++
                 lowerTransfers elseState.transfers ++ state.transfers })
@@ -1465,6 +1525,22 @@ def Program.checkTypes
               stack := []
               unreachable := true
               transfers := 0 :: next.transfers })
+      | .localGet index => do
+          let some localType := locals[index]?
+            | pure none
+          if !localType.isDefaultable && !state.initialized.contains index then
+            throw "uninitialized local"
+          some <$> state.applySig m ([], [localType])
+      | .localSet index => do
+          let some localType := locals[index]?
+            | pure none
+          let next ← state.applySig m ([localType], [])
+          pure (some (next.initialize index))
+      | .localTee index => do
+          let some localType := locals[index]?
+            | pure none
+          let next ← state.applySig m ([localType], [localType])
+          pure (some (next.initialize index))
       | _ =>
           match instruction.straightSig m locals with
           | none => pure none
@@ -1482,7 +1558,7 @@ def Module.checkFuncStraight (m : Module) (f : Function) : Except String Unit :=
   let some finalState ←
       Program.checkTypes m locals f.results
         [(f.results.length, some f.results)] f.body
-        { stack := [] }
+        { stack := [], initialized := List.range f.params.length }
     | return ()
   let results ← finalState.requireArity f.results.length
   for (actual, expected) in results.reverse.zip f.results do
@@ -1504,9 +1580,41 @@ def Module.checkConstProgram
         if (m.funcSig? functionIndex).isNone then throw "unknown function"
     | _ => pure ()
 
+/-- A table's declared limits must be in range for its address type, and its
+minimum size may not exceed its declared maximum. Decoded modules already have
+in-range limits (the parser bounds them); the 32-bit range check guards
+hand-built modules, whose `min`/`max` are unbounded `Nat`s. 64-bit limits always
+fit `2^64-1` once decoded, so they are not re-checked here. -/
+def TableDecl.checkLimits (table : TableDecl) : Except String Unit :=
+  if !table.is64 && (table.min > 0xffff_ffff || table.max.any (· > 0xffff_ffff)) then
+    .error "table size"
+  else
+    match table.max with
+    | some maximum =>
+        if table.min > maximum then
+          .error "size minimum must not be greater than maximum"
+        else .ok ()
+    | none => .ok ()
+
+/-- A table the module declares itself must have an element type with a
+default value. A non-nullable element type is only valid together with an
+initializer expression, which `TableDecl` does not model (the decoder rejects
+that syntax), so such a table cannot be instantiated and is rejected here.
+Imported tables are exempt: their contents come from the exporter. -/
+def TableDecl.checkDefaultableElement (table : TableDecl) : Except String Unit :=
+  match table.elemType with
+  | .ref false _ => .error "type mismatch"
+  | _ => .ok ()
+
 /-- Run the partial structural validator. `throw` on the first violation. -/
 def Module.validate (m : Module) : Except String Unit := do
   m.checkInterface
+  -- Table types (validated before code, in spec order): limits for every
+  -- table; a defaultable element type for the module's own tables. Imports
+  -- occupy the low indices.
+  for (table, index) in m.tables.zipIdx do
+    table.checkLimits
+    if index ≥ m.importedTables.length then table.checkDefaultableElement
   if m.dataWithoutMemory then throw "unknown memory"
   match m.memory with
   | none => pure ()
@@ -1601,6 +1709,7 @@ def Module.validate (m : Module) : Except String Unit := do
       i.checkLocalRefs (f.params.length + f.locals.length)
       i.checkFunctionRefs m
       i.checkSimdImmediates
+      i.checkSelectAnnotation m
       match i with
       | .gc (.structSet t fld) =>
         match m.structField? t fld with

@@ -59,7 +59,6 @@ theorem decodeInitialVectorStore_readBytes_between
     Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint,
     Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint,
     Mem.readBytes_write8_disjoint]
-  all_goals try { simp only [h68, h64, h60, h88, h80, h72] }
   all_goals omega
 
 theorem decodeInitialVectorStore_output
@@ -77,7 +76,6 @@ theorem decodeInitialVectorStore_output
   rw [Mem.readBytes_write64_disjoint, Mem.readBytes_write64_disjoint,
     Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint,
     Mem.readBytes_write32_disjoint, Mem.readBytes_write32_disjoint]
-  all_goals try { simp only [h68, h64, h60, h88, h80, h72] }
   all_goals try { right; omega }
   exact Mem.readBytes_write8_append store.wasm.mem ptr.toNat 0 [] ptr byte
     (by simp) (by simp [Mem.readBytes]) rfl
@@ -414,12 +412,11 @@ theorem decodeEmptyCoreStore_result
       (decodeAfterCoreConfig (decodeEmptyCoreStore store data) data) := by
   left
   refine ⟨decodeEmptyCoreStore store data, 0, 1, 0, [], rfl, by simp [decode],
-    (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write64, Mem.write32] <;>
+    (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]),
+    (by
+      simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]
       bv_normalize (config := { enums := false })),
-    (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write64, Mem.write32] <;>
-      bv_normalize (config := { enums := false })),
-    (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write64, Mem.write32] <;>
-      bv_normalize (config := { enums := false })), by simp, by simp, by norm_num,
+    (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]), by simp, by simp, by norm_num,
     (by
       have hp := hfacts.pages_lower
       change 1 ≤ store.wasm.mem.pages * 65536
@@ -539,7 +536,6 @@ theorem decodeInitialVectorStore_remaining
   rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write8_disjoint]
-  all_goals try rfl
   all_goals try decide
   left
   have haddr : (coreFrame + 40 + 4).toNat + 4 = 1048480 := by decide
@@ -559,7 +555,6 @@ theorem decodeInitialVectorStore_chunk
   rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write8_disjoint]
-  all_goals try rfl
   all_goals try decide
   left
   have haddr : (coreFrame + 48).toNat + 4 = 1048484 := by decide
@@ -577,7 +572,6 @@ theorem decodeInitialVectorStore_pointer
   rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write8_disjoint]
-  all_goals try rfl
   all_goals try decide
   left
   have haddr : (coreFrame + 40).toNat + 4 = 1048476 := by decide
@@ -597,7 +591,6 @@ theorem decodeInitialVectorStore_index
   rw [Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write8_disjoint]
-  all_goals try rfl
   all_goals try decide
   left
   have haddr : (coreFrame + 48 + 4).toNat + 4 = 1048488 := by decide
@@ -615,7 +608,6 @@ theorem decodeInitialVectorStore_error_pointer
     Mem.read32_write32_same, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write8_disjoint]
-  all_goals try rfl
   all_goals try decide
   left
   have haddr : (coreFrame + 56).toNat + 4 = 1048492 := by decide
@@ -631,7 +623,6 @@ theorem decodeInitialVectorStore_error_marker
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write32_disjoint, Mem.read32_write32_disjoint,
     Mem.read32_write8_disjoint]
-  all_goals try rfl
   all_goals try decide
   left
   have haddr : secondError.toNat + 4 = 1048468 := by decide
@@ -759,7 +750,6 @@ theorem decodeSecondPairEmptyStore_readBytes_above
   have hnext : (secondPairOut + 1).toNat = 1048449 := by decide
   simp only [decodeSecondPairEmptyStore]
   rw [Mem.readBytes_write8_disjoint, Mem.readBytes_write8_disjoint]
-  all_goals try rfl
   all_goals right
   all_goals omega
 
@@ -771,7 +761,7 @@ theorem decode_second_empty_outcome
     (hiRoute loRoute : HexRoute)
     (hsplit : input = [hi, lo])
     (hhi : hiRoute.valid hi) (hlo : loRoute.valid lo)
-    (hinputBytes : store.wasm.mem.readBytes data.toNat input.length = input)
+    (_hinputBytes : store.wasm.mem.readBytes data.toNat input.length = input)
     (hinputCapacity : input.length ≤ inputCapacity.toNat)
     (hdataBump : data.toNat + inputCapacity.toNat = bump.toNat)
     (hdataLower : 1054000 ≤ data.toNat)
@@ -836,7 +826,6 @@ theorem decode_second_empty_outcome
       simp [len, hsplit]
   have hpair := decode_second_pair_empty_to_post allocStore data len ptr seed
     store.runtime.entry (by
-      change allocStore.runtime.currentModule = «module»
       rw [hsuccess.runtime_eq]
       exact hmod)
     (by exact le_trans hpagesLower hsuccess.pages_mono)
@@ -860,7 +849,7 @@ theorem decode_second_empty_outcome
   have hreturn : store.runtime.entry = paired.runtime.entry := by
     change store.runtime.entry = allocStore.runtime.entry
     rw [hsuccess.runtime_eq]
-    simp [first, decodePairValidStore, decodePairBaseStore,
+    simp [decodePairValidStore, decodePairBaseStore,
       decodeEvenPreparedStore]
   have hbytes : paired.wasm.mem.readBytes ptr.toNat 1 = [seed] := by
     rw [decodeSecondPairEmptyStore_readBytes_above]
@@ -995,7 +984,7 @@ theorem decode_loop_initial_invariant
     (hdataBump : data.toNat + inputCapacity.toNat = bump.toNat)
     (hdataLower : 1054000 ≤ data.toNat)
     (hbumpSigned : bump.toNat < 2 ^ 31)
-    (hbumpRead : store.wasm.mem.read32 1053960 = bump)
+    (_hbumpRead : store.wasm.mem.read32 1053960 = bump)
     (hmod : store.runtime.currentModule = «module»)
     (hhost : store.runtime.currentHost = Universal.envFor «module»)
     (hcap : store.wasm.memoryCap store.runtime.currentModule 0 = 65536)
@@ -1183,7 +1172,7 @@ theorem decode_loop_initial_invariant
     exact (decodeSecondPairValidStore_read32_above initial (data + 2)
       (len - 2) 1 next addr (le_trans (by decide) habove)).trans hinitial
   refine {
-    input_split := by simpa [hsplit]
+    input_split := by simp [hsplit]
     input_even := heven
     consumed_even := by simp
     decoded_consumed := by
@@ -1234,7 +1223,7 @@ theorem decode_loop_initial_invariant
         _ = 2 + (data + 2) :=
           decodeSecondPairValidStore_pointer_field initial (data + 2)
             (len - 2) 1 next
-        _ = data + 4 := by bv_normalize (config := { enums := false })
+        _ = data + 4 := by rw [UInt32.add_comm 2 (data + 2), UInt32.add_assoc]; rfl
     iterator_index := by
       rw [show loopIterator = secondIterator by decide]
       calc
@@ -1689,7 +1678,7 @@ theorem decode_after_initial_alloc_outcome
                 heightNe (by
                   change store.runtime.entry = allocStore.runtime.entry
                   rw [hsuccess.runtime_eq]
-                  simp [first, decodePairValidStore, decodePairBaseStore,
+                  simp [decodePairValidStore, decodePairBaseStore,
                     decodeEvenPreparedStore]) hdecode
                 (Or.inr ⟨heven, by
                   simp only [UInt32.toNat_and, UInt8.toUInt32_toNat,
@@ -1737,7 +1726,7 @@ theorem decode_after_initial_alloc_outcome
                     heightNe (by
                       change store.runtime.entry = allocStore.runtime.entry
                       rw [hsuccess.runtime_eq]
-                      simp [first, decodePairValidStore, decodePairBaseStore,
+                      simp [decodePairValidStore, decodePairBaseStore,
                         decodeEvenPreparedStore]) hdecode
                     (Or.inr ⟨heven, by
                       simp only [UInt32.toNat_and, UInt8.toUInt32_toNat,
@@ -1774,7 +1763,7 @@ theorem decode_after_initial_alloc_outcome
                   have hreturn : store.runtime.entry = paired.runtime.entry := by
                     change store.runtime.entry = allocStore.runtime.entry
                     rw [hsuccess.runtime_eq]
-                    simp [first, decodePairValidStore, decodePairBaseStore,
+                    simp [decodePairValidStore, decodePairBaseStore,
                       decodeEvenPreparedStore]
                   exact ReachesOrOOM.prependReaches (htoSecond.trans hpair)
                     (hinv.outcome store.runtime.entry hreturn)

@@ -1,6 +1,6 @@
 # Talos
 
-[![Lean](https://img.shields.io/badge/Lean-v4.32.0-blue?logo=lean)](lean-toolchain)
+[![Lean](https://img.shields.io/badge/Lean-v4.34.1-blue?logo=lean)](lean-toolchain)
 [![Telegram](https://img.shields.io/badge/Telegram-Join%20the%20discussion-2CA5E0?logo=telegram&logoColor=white)](https://t.me/TalosDev)
 
 **Talos** is a WebAssembly interpreter written in Lean 4, named after the bronze giant of Greek mythology who guarded Crete — a mechanical guardian, built to enforce rules.
@@ -8,6 +8,12 @@
 The same definitions that _execute_ a Wasm program are the ones you _reason about_. There is no separate spec interpreter to keep in sync: evaluation and proof share a single codebase.
 
 > **Work in progress.** Talos is under active development. APIs and proof interfaces may change.
+
+## Visual overview
+
+A visual introduction to how WebAssembly, Talos, and Lean fit together to support proofs about compiled programs.
+
+https://github.com/user-attachments/assets/70255831-491e-40b4-a658-b3bee326197f
 
 ## What this is
 
