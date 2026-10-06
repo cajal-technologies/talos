@@ -61,8 +61,6 @@ namespace Wasm.SmallStep
 Copy of the section with the same name in `BitPures.lean`. -/
 
 macro_rules
-  | `(tactic| wasm_twp_pures [twp_addI64 $rest:ident*]) =>
-      `(tactic| iapply twp_addI64; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_andI64_bits $rest:ident*]) =>
       `(tactic| iapply twp_andI64_bits; wasm_twp_pures [$rest:ident*])
   | `(tactic| wasm_twp_pures [twp_xorI64 $rest:ident*]) =>

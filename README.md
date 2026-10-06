@@ -9,6 +9,12 @@ The same definitions that _execute_ a Wasm program are the ones you _reason abou
 
 > **Work in progress.** Talos is under active development. APIs and proof interfaces may change.
 
+## Visual overview
+
+A visual introduction to how WebAssembly, Talos, and Lean fit together to support proofs about compiled programs.
+
+https://github.com/user-attachments/assets/70255831-491e-40b4-a658-b3bee326197f
+
 ## What this is
 
 The goal is a **feature-complete, executable semantics for WebAssembly** that doubles as a formal object. You can:

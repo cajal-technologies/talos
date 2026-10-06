@@ -2019,7 +2019,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
     | _, .drop => match s.values with
       | _ :: vs => .Fallthrough st { s with values := vs }
       | _ => .Invalid "drop: empty operand stack"
-    | _, .select => match s.values with
+    | _, .select _ => match s.values with
       | .i32 c :: v2 :: v1 :: vs =>
         let picked := if c ≠ 0 then v1 else v2
         .Fallthrough st { s with values := picked :: vs }

@@ -25,4 +25,6 @@ roots = [
   "CodeLib.Examples.Gcd",
   "CodeLib.Examples.MergeSort.StdIO",
   "CodeLib.Examples.Quicksort.TotalProof",
+  # Near SmallStep example (not reachable from CodeLib.Near.Proof).
+  "CodeLib.Near.Examples.KvSetter",
 ]

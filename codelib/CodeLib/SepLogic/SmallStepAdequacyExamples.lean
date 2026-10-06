@@ -2077,6 +2077,56 @@ theorem signedBranch_terminatesWith (a b : UInt32) :
     wasm_twp_terminal_value twp_returnFromFunction
     ipureexact (by simp [h])
 
+/-- A typed `select (result funcref)` choosing between two function-reference
+parameters. The annotation only matters to validation; `wp_select` and
+`twp_select` are stated over it, so this body uses the same rules as an
+untyped `select`. -/
+def typedSelectModule : Module :=
+  { funcs := [{ params := [.funcref, .funcref, .i32],
+                body := [.localGet 0, .localGet 1, .localGet 2,
+                          .select (some [.funcref]), .ret]
+                results := [.funcref] }] }
+
+def typedSelectConfig (first second : Option Nat) (condition : UInt32) : Config Unit :=
+  { expr := .running ⟨⟨[.funcref first, .funcref second, .i32 condition], [], []⟩,
+      typedSelectModule.funcs[0]!.body, 1, [], [], []⟩
+    store :=
+      { runtime := { instances := #[{ module := typedSelectModule, host := {} }], entry := ⟨0⟩ }
+        wasm := typedSelectModule.initialStore } }
+
+private theorem funcref_ite (condition : UInt32) (first second : Option Nat) :
+    Value.funcref (if condition ≠ 0 then first else second) =
+      if condition ≠ 0 then .funcref first else .funcref second :=
+  apply_ite Value.funcref (condition ≠ 0) first second
+
+theorem typedSelect_terminatesWith (first second : Option Nat) (condition : UInt32) :
+    TerminatesWith (typedSelectConfig first second condition)
+      (fun values _store =>
+        values = [.funcref (if condition ≠ 0 then first else second)]) := by
+  apply wasm_smallStep_terminates (typedSelectConfig first second condition)
+    (fun values => values = [.funcref (if condition ≠ 0 then first else second)])
+  intro hlc gs
+  simp only [typedSelectConfig,
+    show typedSelectModule.funcs[0]!.body =
+        [.localGet 0, .localGet 1, .localGet 2, .select (some [.funcref]), .ret] from rfl]
+  wasm_twp_pures [twp_localGet twp_localGet twp_localGet]
+  iapply twp_select (funcref_ite condition first second)
+  wasm_twp_terminal_value twp_returnFromFunction
+  ipureexact rfl
+
+theorem typedSelect_partiallyMeets (first second : Option Nat) (condition : UInt32) :
+    PartiallyMeets (typedSelectConfig first second condition)
+      (fun values _store =>
+        values = [.funcref (if condition ≠ 0 then first else second)]) := by
+  wasm_wp_partially_meets gs
+  simp only [typedSelectConfig,
+    show typedSelectModule.funcs[0]!.body =
+        [.localGet 0, .localGet 1, .localGet 2, .select (some [.funcref]), .ret] from rfl]
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet]
+  wasm_wp_next wp_select (funcref_ite condition first second)
+  wasm_wp_return_value
+  ipureexact rfl
+
 /-- Splat conversion for the fill-then-read example: after `memory.fill`
 writes `b` into four bytes at address 0, the byte range is the little-endian
 layout of the 32-bit word with all four bytes equal to `b`. -/

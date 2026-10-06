@@ -1,5 +1,4 @@
-import CodeLib.Entry
-import CodeLib.Near.Proof
+import CodeLib.Near.SmallStep
 
 /-!
 # Example: a NEAR key-value setter
@@ -13,15 +12,19 @@ NEAR ABI end to end:
    encoding is `le32(key.len) ++ key ++ le32(val.len) ++ val`.
 4. `storage_write(key_len, key_ptr, value_len, value_ptr, 1)` — store it.
 
-The interesting property (`SetSpec`) is a *before/after projection* of the
+The interesting property is a *before/after projection* of the
 NEAR storage trie plus a *frame condition*: after the call the chosen key
 maps to the value, and every other key is unchanged. The `∀ k` in the
 frame is the "iterate over all keys" reasoning the storage-as-a-function
 model makes free — no Wasm enumeration needed.
 
-Following the repo convention (cf. `XorSum/Spec.lean`), `SetSpec` is stated
-as a `def … : Prop` and fully proved (`set_spec`) via the WP layer. The
-kernel-checked regression theorems below additionally validate the *whole pipeline*
+The property is proved against the small-step machine through the Iris
+total-WP layer, starting from `setConfig` — the entry frame of
+`«module».funcs[0]` (the exported `set`, unified index `setIdx`; it has no
+params or locals) over the module's initial store with NEAR state `nearSt`.
+`set_terminatesWith` gives total correctness (`SmallStep.TerminatesWith`) and
+`set_partiallyMeets` the partial-correctness corollary; neither mentions fuel.
+The kernel-checked regression theorems below additionally validate the *whole pipeline*
 — registers, the memory-or-register sentinel, length-prefix parsing, and
 `storage_write` semantics — executes correctly on concrete inputs.
 -/
@@ -30,7 +33,8 @@ namespace Wasm
 namespace Near
 namespace KvSetter
 
-open Wasm
+open Wasm SepLogic SmallStep
+open Iris Iris.BI Iris.ProgramLogic OFE COFE Iris.Algebra Language.Notation Std
 
 /-! ## The contract -/
 
@@ -84,7 +88,7 @@ def le64 (n : Nat) : List UInt8 :=
 
 /-- The contract's input wire format: `le32(|key|) ++ key ++ le32(|val|) ++ val`. -/
 def encodeKV (key val : List UInt8) : List UInt8 :=
-  le32 key.length ++ key ++ le32 val.length ++ val
+  le32 key.length ++ (key ++ (le32 val.length ++ val))
 
 theorem le32_parts_or (n : Nat) :
     n % 256 ||| ((n / 256 % 256) <<< 8) ||| ((n / 65536 % 256) <<< 16) |||
@@ -270,35 +274,6 @@ theorem getMemOrReg_writeBytes_encode_val (st : Store NearState) (key val : List
 
 /-! ## Specification -/
 
-/-- **Spec for `set`.** For any non-view incoming NEAR state whose `input`
-is the length-prefixed encoding of `(key, val)` (with sizes that fit a u32,
-the single memory page, and the configured NEAR host limits), the call
-terminates and:
-
-* *projection after the call:* `storage[key] = val`;
-* *frame condition:* every other key is unchanged from the incoming state.
-
-The store is pinned to the module's `initialStore` (memory + globals set up
-by instantiation) with the NEAR projection injected as `host := ns`, per
-the repo convention for memory-touching specs. -/
-def SetSpec : Prop :=
-  ∀ (ns : NearState) (key val : List UInt8),
-    ns.context.isView = false →
-    key.length < 4294967296 → val.length < 4294967296 →
-    (encodeKV key val).length ≤ 65536 →
-    withinLimit ns.config.maxRegisterLen (encodeKV key val).length →
-    withinLimit ns.config.maxStorageKeyLen key.length →
-    withinLimit ns.config.maxStorageValueLen val.length →
-    (match ns.storage key with
-     | some old => withinLimit ns.config.maxRegisterLen old.length
-     | none     => true) →
-    ns.context.input = encodeKV key val →
-    TerminatesWith nearEnv «module» setIdx
-      { («module».initialStore : Store NearState) with host := ns } []
-      (fun st _ =>
-        st.host.storage key = some val ∧
-        (∀ k, k ≠ key → st.host.storage k = ns.storage k))
-
 def afterInputStore (ns : NearState) (key val : List UInt8) : Store NearState :=
   { («module».initialStore : Store NearState) with
     host := ns.setRegister 0 (encodeKV key val) }
@@ -368,116 +343,679 @@ theorem storageWrite_invoke_encode_absent (ns : NearState) (key val : List UInt8
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hValLim
   · simpa [storageCallStore, afterInputStore, NearState.setRegister] using hOld
 
-theorem set_spec : SetSpec := by
-  intro ns key val hView hKey hVal hLen hReg hKeyLim hValLim hOldLim hInput
-  apply TerminatesWith.of_wp_entry_for
-    (f := { params := [], locals := [], body := setBody, results := [] })
-  · simp [«module», setIdx, importCount]
-  · unfold setBody
-    wp_run
-    refine wp_call_host_cons
-      (imp := { «module» := "env", name := "input", params := [.i64], results := [] })
-      (hf := inputFn) rfl rfl ?_ ?_ ?_
-    · intro vs st' hInv
-      simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
-      rcases hInv with ⟨rfl, hst⟩
-      subst st'
-      wp_run
-      have hReg0 :
-          (ns.setRegister 0 (encodeKV key val)).registers 0 = some (encodeKV key val) := by
-        simp [NearState.setRegister]
-      have hReadBound :
-          ¬ ((«module».initialStore : Store NearState).mem.pages * 65536) <
-            (encodeKV key val).length := by
-        change ¬ 65536 < (encodeKV key val).length
-        omega
-      refine wp_call_host_cons
-        (imp := { «module» := "env", name := "read_register", params := [.i64, .i64], results := [] })
-        (hf := readRegisterFn) rfl rfl ?_ ?_ ?_
-      · intro vs st' hInv
-        simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
-        rcases hInv with ⟨rfl, hst⟩
-        subst st'
-        wp_run
-        have hEncodeLen : key.length + val.length + 8 ≤ 65536 := by
-          simpa [encodeKV, le32, Nat.add_assoc, Nat.add_comm, Nat.add_left_comm] using hLen
-        have hKeyAddr : key.length + 4 < 4294967296 := by omega
-        have hKeyMod : key.length % 4294967296 = key.length := Nat.mod_eq_of_lt hKey
-        have hValMod : val.length % 4294967296 = val.length := Nat.mod_eq_of_lt hVal
-        simp [read32_writeBytes_encode_keyLen, read32_writeBytes_encode_valLen, hKeyAddr,
-          hKeyMod, hValMod, «module», Module.initialStore, Mem.empty]
-        constructor
-        · omega
-        refine wp_call_host_cons
-          (imp := { «module» := "env", name := "storage_write", params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] })
-          (hf := storageWriteFn) rfl rfl ?_ ?_ ?_
-        · intro vs st' hInv
-          change storageWriteFn.invoke (storageCallStore ns key val)
-              [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
-                .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Return vs st' at hInv
-          cases hOldEq : ns.storage key with
-          | none =>
-            rw [storageWrite_invoke_encode_absent ns key val hView hKey hVal hLen
-              hKeyLim hValLim hOldEq] at hInv
-            injection hInv with hvs hst
-            subst hvs
-            subst st'
-            wp_run
-            constructor
-            · simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators]
-            · intro k hk
-              simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators, hk]
-          | some old =>
-            have hOldLimOld : withinLimit ns.config.maxRegisterLen old.length = true := by
-              simpa [hOldEq] using hOldLim
-            rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
-              hKeyLim hValLim hOldEq hOldLimOld] at hInv
-            injection hInv with hvs hst
-            subst hvs
-            subst st'
-            wp_run
-            constructor
-            · simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators]
-            · intro k hk
-              simp [NearState.setStorage, NearState.setRegister, NearState.invalidateIterators, hk]
-        · intro st' msg hInv
-          change storageWriteFn.invoke (storageCallStore ns key val)
-              [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
-                .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Trap st' msg at hInv
-          cases hOldEq : ns.storage key with
-          | none =>
-            rw [storageWrite_invoke_encode_absent ns key val hView hKey hVal hLen
-              hKeyLim hValLim hOldEq] at hInv
-            contradiction
-          | some old =>
-            have hOldLimOld : withinLimit ns.config.maxRegisterLen old.length = true := by
-              simpa [hOldEq] using hOldLim
-            rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
-              hKeyLim hValLim hOldEq hOldLimOld] at hInv
-            contradiction
-        · intro st' tag arguments hInv
-          change storageWriteFn.invoke (storageCallStore ns key val)
-              [.i64 (UInt64.ofNat key.length), .i64 4, .i64 (UInt64.ofNat val.length),
-                .i64 (UInt64.ofNat key.length + 8), .i64 1] = .Throw st' tag arguments at hInv
-          cases hOldEq : ns.storage key with
-          | none =>
-            rw [storageWrite_invoke_encode_absent ns key val hView hKey hVal hLen
-              hKeyLim hValLim hOldEq] at hInv
-            contradiction
-          | some old =>
-            have hOldLimOld : withinLimit ns.config.maxRegisterLen old.length = true := by
-              simpa [hOldEq] using hOldLim
-            rw [storageWrite_invoke_encode_present ns key val old hView hKey hVal hLen
-              hKeyLim hValLim hOldEq hOldLimOld] at hInv
-            contradiction
-      · intro st' msg hInv
-        simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
-      · intro st' tag arguments hInv
-        simp [readRegisterFn, hReg0, memBytes, hReadBound] at hInv
-    · intro st' msg hInv
-      simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
-    · intro st' tag arguments hInv
-      simp [inputFn, writeRegisterResult, checkedSetRegister?, hInput, hReg, u64Max] at hInv
+/-- Initial machine configuration for the `set` entry: the body of
+`«module».funcs[0]` (exported as `set`, unified index `setIdx`) running in an
+empty frame — `set` has no params or locals — over the module's initial
+store with NEAR host state `nearSt`. -/
+def setConfig (nearSt : NearState) : Config NearState :=
+  { expr := .running
+      { locals := {}
+        code := setBody
+        resultArity := 0
+        callerRemainder := [] }
+    store :=
+      { runtime := nearRuntime «module»
+        wasm := { («module».initialStore : Store NearState) with host := nearSt } } }
+
+private def setHeap (key val : List UInt8) : WasmHeapMap (Option UInt8) :=
+  insertFreshBytes ∅ 0 (physicalBytes (Mem.empty 1) 0 (key.length + val.length + 8))
+
+private theorem le32_eq_u32Bytes (n : Nat) (hn : n < UInt32.size) :
+    le32 n = [u32Byte (UInt32.ofNat n) 0, u32Byte (UInt32.ofNat n) 1,
+              u32Byte (UInt32.ofNat n) 2, u32Byte (UInt32.ofNat n) 3] := by
+  have hmod : n % 2 ^ 32 = n := Nat.mod_eq_of_lt (by simpa [UInt32.size] using hn)
+  simp only [le32, u32Byte]
+  have h0 : UInt8.ofNat (n % 256) = (UInt32.ofNat n).toUInt8 := by
+    apply UInt8.toNat.inj
+    simp only [UInt32.toNat_toUInt8]; simp
+  have h1 : UInt8.ofNat (n / 256 % 256) = ((UInt32.ofNat n) >>> 8).toUInt8 := by
+    apply UInt8.toNat.inj
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_shiftRight,
+               UInt32.toNat_ofNat, Nat.shiftRight_eq_div_pow,
+               show 8 % 32 = 8 from rfl]; simp; omega
+  have h2 : UInt8.ofNat (n / 65536 % 256) = ((UInt32.ofNat n) >>> 16).toUInt8 := by
+    apply UInt8.toNat.inj
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_shiftRight,
+               UInt32.toNat_ofNat, Nat.shiftRight_eq_div_pow,
+               show 16 % 32 = 16 from rfl]; simp; omega
+  have h3 : UInt8.ofNat (n / 16777216 % 256) = ((UInt32.ofNat n) >>> 24).toUInt8 := by
+    apply UInt8.toNat.inj
+    simp only [UInt32.toNat_toUInt8, UInt32.toNat_shiftRight,
+               UInt32.toNat_ofNat, Nat.shiftRight_eq_div_pow,
+               show 24 % 32 = 24 from rfl]; simp; omega
+  simp [h0, h1, h2, h3]
+
+private theorem setHeap_facts (nearSt : NearState) (key val : List UInt8)
+    (hLen : key.length + val.length + 8 ≤ 65536) :
+    heapAgreesWithMem (setHeap key val) (storeResolve (setConfig nearSt).store) ∧
+    heapAddressesInBounds (setHeap key val) (storeResolve (setConfig nearSt).store) := by
+  have hresolve : storeResolve (setConfig nearSt).store 0 = some (Mem.empty 1) := by
+    simp [storeResolve, setConfig]; rfl
+  refine ⟨?_, ?_⟩
+  · exact (insertFreshPhysicalBytes_facts ∅ (storeResolve (setConfig nearSt).store)
+        (Mem.empty 1) 0 (key.length + val.length + 8)
+        hresolve (heapAgreesWithMem_empty _) (heapAddressesInBounds_empty _)
+        (by simp [Mem.empty]; omega)
+        (by simp [UInt32.size]; omega)).1
+  · exact (insertFreshPhysicalBytes_facts ∅ (storeResolve (setConfig nearSt).store)
+        (Mem.empty 1) 0 (key.length + val.length + 8)
+        hresolve (heapAgreesWithMem_empty _) (heapAddressesInBounds_empty _)
+        (by simp [Mem.empty]; omega)
+        (by simp [UInt32.size]; omega)).2
+
+/-- `storageWriteFn` always returns (never traps or throws) when the view,
+key/value limits, and register-size preconditions are met. Factors out the
+identical `none`/`some` case split in the TRAP and THROW callbacks. -/
+private theorem storageWriteFn_isReturn
+    (st : Store NearState) (key val : List UInt8) (klen_u32 : UInt32)
+    (ns1 : NearState)
+    (heq : st.host = ns1)
+    (hView' : st.host.context.isView = false)
+    (hKeyLim' : withinLimit st.host.config.maxStorageKeyLen key.length = true)
+    (hValLim' : withinLimit st.host.config.maxStorageValueLen val.length = true)
+    (hkeyGet : getMemOrReg st 4 (UInt64.ofNat klen_u32.toNat) = some key)
+    (hvalGet : getMemOrReg st (UInt64.ofNat klen_u32.toNat + 8)
+        (UInt64.ofNat (UInt32.ofNat val.length).toNat) = some val)
+    (hMaxReg : ∀ old, ns1.storage key = some old →
+        withinLimit ns1.config.maxRegisterLen old.length = true) :
+    ∃ results postWasm, storageWriteFn.invoke st
+        [.i64 (UInt64.ofNat klen_u32.toNat), .i64 4,
+         .i64 (UInt64.ofNat (UInt32.ofNat val.length).toNat),
+         .i64 (UInt64.ofNat klen_u32.toNat + 8), .i64 1] =
+        .Return results postWasm := by
+  cases hOld : ns1.storage key with
+  | none =>
+    exact ⟨_, _, storageWriteFn_invoke_absent st key val
+        (UInt64.ofNat klen_u32.toNat) 4
+        (UInt64.ofNat (UInt32.ofNat val.length).toNat)
+        (UInt64.ofNat klen_u32.toNat + 8) 1
+        hView' hkeyGet hvalGet hKeyLim' hValLim'
+        (by rw [heq]; exact hOld)⟩
+  | some old =>
+    have hLim_host : withinLimit st.host.config.maxRegisterLen old.length = true := by
+      rw [heq]; exact hMaxReg old hOld
+    obtain ⟨stReg, hChecked⟩ : ∃ stReg, checkedSetRegister? st 1 old = some stReg := by
+      simp only [checkedSetRegister?, show ¬ (1 : UInt64) = u64Max from by decide,
+                 ite_false, ite_eq_left hLim_host]
+      exact ⟨_, rfl⟩
+    exact ⟨_, _, storageWriteFn_invoke_present st key val old
+        (UInt64.ofNat klen_u32.toNat) 4
+        (UInt64.ofNat (UInt32.ofNat val.length).toNat)
+        (UInt64.ofNat klen_u32.toNat + 8) 1 stReg
+        hView' hkeyGet hvalGet hKeyLim' hValLim'
+        (by rw [heq]; exact hOld) hChecked⟩
+
+theorem set_terminatesWith (nearSt : NearState) (key val : List UInt8)
+    (hView : nearSt.context.isView = false)
+    (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)
+    (hLen : key.length + val.length + 8 ≤ 65536)
+    (hReg : withinLimit nearSt.config.maxRegisterLen (encodeKV key val).length)
+    (hKeyLim : withinLimit nearSt.config.maxStorageKeyLen key.length)
+    (hValLim : withinLimit nearSt.config.maxStorageValueLen val.length)
+    (hMaxReg : ∀ old, nearSt.storage key = some old →
+        withinLimit nearSt.config.maxRegisterLen old.length)
+    (hInput : nearSt.context.input = encodeKV key val) :
+    SmallStep.TerminatesWith (setConfig nearSt)
+      (fun _ store => store.wasm.host.storage key = some val ∧
+        ∀ k, k ≠ key → store.wasm.host.storage k = nearSt.storage k) := by
+  apply wasm_smallStep_heap_globals_runtime_host_store_terminates
+      (setConfig nearSt) (setHeap key val) (∅ : WasmGlobalMap Value)
+  · exact (setHeap_facts nearSt key val hLen).1
+  · exact (setHeap_facts nearSt key val hLen).2
+  · exact globalHeapAgrees_empty _
+  · simp [setConfig, nearRuntime]
+  · intro hlc inst
+    set N := key.length + val.length + 8
+    have hNnowrap : (0 : UInt32).toNat + (physicalBytes (Mem.empty 1) 0 N).length < UInt32.size := by
+      simp [UInt32.size]; omega
+    have hNbelow : HeapBelow (∅ : WasmHeapMap (Option UInt8)) 0 :=
+      fun _ _ h _ => by simp [LawfulPartialMap.get?_empty] at h
+    simp only [BI.BigSepM.bigSepM_empty.to_eq, BI.emp_sep.to_eq,
+               setConfig, nearRuntime, setHeap, setBody,
+               RuntimeEnv.currentModule_mk1, RuntimeEnv.currentHost_mk1]
+    iintro ⟨Hheap, Hruntime, Henv, Hhost⟩
+    ihave ⟨Hbytes0, _Hemp⟩ :=
+      insertFreshBytes_bigSep_pointsToBytes ∅ (0 : UInt32)
+        (physicalBytes (Mem.empty 1) 0 N) hNbelow hNnowrap $$ Hheap
+    -- input(0)
+    wasm_twp_pures [twp_constI64]
+    set ns0 := nearSt
+    set ns1 := nearSt.setRegister 0 (encodeKV key val)
+    ihave ⟨Henv_pass1, Henv1⟩ := persistent_sep_dup_mp $$ Henv
+    iapply twp_callHost «module» 0
+        { «module» := "env", name := "input", params := [.i64], results := [] }
+        inputFn
+        (by decide) rfl nearEnv (by rfl)
+        (iprop(hostStateOwn ns0 ∗ pointsToBytes 0 (0 : UInt32) (physicalBytes (Mem.empty 1) 0 N) ∗ hostEnvOwn 0 nearEnv))
+        (fun _ => iprop(hostStateOwn ns1 ∗ pointsToBytes 0 (0 : UInt32) (physicalBytes (Mem.empty 1) 0 N) ∗ hostEnvOwn 0 nearEnv))
+        (iprop(False)) (iprop(False)) ⟨0⟩
+        (fun store ns obs nt hModule results postWasm hinvoke => by
+          iintro ⟨⟨HP, HbytesSuc, HenvK⟩, Hσ⟩
+          have heqNs1 : ns0.setRegister 0 ns0.context.input = ns1 := by
+            simp [ns0, ns1, hInput]
+          rw [← heqNs1]
+          have hxfer := @twp_near_input hlc inst ns0 «module» store ns obs nt hModule results postWasm hinvoke
+          imod hxfer $$ [$HP $Hσ] with ⟨HP1, Hσ1⟩
+          imodintro
+          isplitl [HP1 HbytesSuc HenvK]; iframe; iexact Hσ1)
+        (fun store ns obs nt _ postWasm msg hinvoke => by
+          iintro ⟨⟨HP, _, _⟩, Hσ⟩
+          ihave %heq : ⌜store.wasm.host = ns0⌝ $$ [Hσ HP]
+          · iapply (stateInterp_host_agree store ns obs nt ns0); iframe Hσ HP
+          simp [inputFn, writeRegisterResult, checkedSetRegister?, u64Max, hReg, heq, hInput] at hinvoke)
+        (fun store ns obs nt _ postWasm tag xs hinvoke => by
+          iintro ⟨⟨HP, _, _⟩, Hσ⟩
+          ihave %heq : ⌜store.wasm.host = ns0⌝ $$ [Hσ HP]
+          · iapply (stateInterp_host_agree store ns obs nt ns0); iframe Hσ HP
+          simp [inputFn, writeRegisterResult, checkedSetRegister?, u64Max, hReg, heq, hInput] at hinvoke)
+        $$ [$Hhost $Hbytes0 $Henv1] Hruntime Henv_pass1
+    · iintro %_pre %_results %_post %_hinvoke ⟨⟨Hhost1, Hbytes0, Henv1_back⟩, Hruntime1⟩
+      -- read_register(0, 0)
+      wasm_twp_pures [twp_constI64 twp_constI64]
+      have hReg0 : ns1.registers 0 = some (encodeKV key val) := by
+        simp [ns1, NearState.setRegister]
+      have hEncLen : (encodeKV key val).length = N := by
+        simp [encodeKV, le32, N]; ring
+      have hNowrapRR : (encodeKV key val).length < UInt32.size := by
+        simp only [UInt32.size]; omega
+      ihave ⟨Henv_pass2, Henv2⟩ := persistent_sep_dup_mp $$ Henv1_back
+      iapply twp_callHost «module» 1
+          { «module» := "env", name := "read_register", params := [.i64, .i64], results := [] }
+          readRegisterFn
+          (by decide) rfl nearEnv (by rfl)
+          (iprop(hostStateOwn ns1 ∗ pointsToBytes 0 (0 : UInt32)
+            (physicalBytes (Mem.empty 1) 0 N) ∗ hostEnvOwn 0 nearEnv))
+          (fun _ => iprop(hostStateOwn ns1 ∗ pointsToBytes 0 (0 : UInt32) (encodeKV key val) ∗ hostEnvOwn 0 nearEnv))
+          (iprop(False)) (iprop(False)) ⟨0⟩
+          (fun store ns obs nt hModule results postWasm hinvoke => by
+            iintro ⟨⟨HP1, Hbytes0', HenvRR⟩, Hσ⟩
+            have hLenEq : (physicalBytes (Mem.empty 1) 0 N).length =
+                (encodeKV key val).length := by
+              rw [physicalBytes_length]; exact hEncLen.symm
+            have hxfer := @twp_near_readRegister hlc inst ns1 (encodeKV key val)
+                (physicalBytes (Mem.empty 1) 0 N) «module»
+                hReg0 hLenEq hNowrapRR store ns obs nt hModule
+                results postWasm hinvoke
+            imod hxfer $$ [$HP1 $Hbytes0' $Hσ] with ⟨⟨HP2, Hbytes1⟩, Hσ2⟩
+            imodintro
+            isplitl [HP2 Hbytes1 HenvRR]
+            iframe
+            iexact Hσ2)
+          (fun store ns obs nt _ postWasm msg hinvoke => by
+            iintro ⟨⟨HP1, HbytesTrap, _⟩, Hσ⟩
+            wasm_points_to_bytes_agree hbfactsTrap, (0 : UInt32), (physicalBytes (Mem.empty 1) 0 N), obs $$ [Hσ HbytesTrap]
+            have hboundTrap : (encodeKV key val).length ≤ store.wasm.mem.pages * 65536 := by
+              have hpos : 0 < (physicalBytes (Mem.empty 1) 0 N).length := by
+                simp [physicalBytes_length]; omega
+              have hb := pointsToBytes_facts_bound hbfactsTrap hpos hNnowrap
+              simp only [UInt32.toNat_zero, Nat.zero_add, physicalBytes_length] at hb
+              omega
+            ihave %heq : ⌜store.wasm.host = ns1⌝ $$ [Hσ HP1]
+            · iapply (stateInterp_host_agree store ns obs nt ns1); iframe Hσ HP1
+            have hreg0 : store.wasm.host.registers 0 =
+                some (encodeKV key val) := by simp [heq, ns1, NearState.setRegister]
+            have hNOOB : ¬ (memBytes store.wasm < (encodeKV key val).length) := by
+              simp only [memBytes]; omega
+            simp [readRegisterFn, hreg0, hNOOB] at hinvoke)
+          (fun store ns obs nt _ postWasm tag xs hinvoke => by
+            iintro ⟨⟨HP1, _, _⟩, Hσ⟩
+            ihave %heq : ⌜store.wasm.host = ns1⌝ $$ [Hσ HP1]
+            · iapply (stateInterp_host_agree store ns obs nt ns1); iframe Hσ HP1
+            have hreg0 : store.wasm.host.registers 0 =
+                some (encodeKV key val) := by simp [heq, ns1, NearState.setRegister]
+            simp [readRegisterFn, hreg0] at hinvoke
+            split_ifs at hinvoke)
+          $$ [$Hhost1 $Hbytes0 $Henv2] Hruntime1 Henv_pass2
+      · iintro %_pre %_results %_post %_hinvoke ⟨⟨Hhost2, Hbytes1, Henv2_back⟩, Hruntime2⟩
+        -- Convert Hbytes1 from encodeKV form to explicit concat for IntoWand
+        have hEncConv : pointsToBytes 0 (0 : UInt32) (encodeKV key val) ⊢
+            pointsToBytes 0 (0 : UInt32) (le32 key.length ++ (key ++ (le32 val.length ++ val))) :=
+          BI.entails_refl
+        ihave Hbytes1_exp := hEncConv $$ Hbytes1
+        -- Split: klen | rest
+        ihave ⟨Hklen_raw, Hrest1_raw⟩ :=
+          (pointsToBytes_append 0 (0 : UInt32)
+            (le32 key.length) (key ++ (le32 val.length ++ val))).mp $$ Hbytes1_exp
+        -- Bridge offset: 0 + UInt32.ofNat (le32 key.length).length → 4
+        have h4Eq : (0 : UInt32) + UInt32.ofNat (le32 key.length).length = 4 := by
+          simp [le32]
+        have hRest1Conv : pointsToBytes 0 ((0 : UInt32) + UInt32.ofNat (le32 key.length).length)
+            (key ++ (le32 val.length ++ val)) ⊢
+            pointsToBytes 0 (4 : UInt32) (key ++ (le32 val.length ++ val)) :=
+          h4Eq ▸ BI.entails_refl
+        ihave Hrest1 := hRest1Conv $$ Hrest1_raw
+        have hklenEq : le32 key.length =
+            [u32Byte (UInt32.ofNat key.length) 0, u32Byte (UInt32.ofNat key.length) 1,
+             u32Byte (UInt32.ofNat key.length) 2, u32Byte (UInt32.ofNat key.length) 3] :=
+          le32_eq_u32Bytes key.length (by simpa [UInt32.size] using hKey)
+        have hKlenConv : pointsToBytes 0 (0 : UInt32) (le32 key.length) ⊢
+            pointsTo_u32 0 (0 : UInt32) (UInt32.ofNat key.length) :=
+          hklenEq ▸ (pointsTo_u32_as_bytes 0 (0 : UInt32) (UInt32.ofNat key.length)).mpr
+        ihave Hklen := hKlenConv $$ Hklen_raw
+        ihave ⟨Hkey_raw, Hrest2⟩ :=
+          (pointsToBytes_append 0 (4 : UInt32) key (le32 val.length ++ val)).mp $$
+            Hrest1
+        set klen_u32 := UInt32.ofNat key.length
+        ihave ⟨Hvlen_raw, Hval_raw⟩ :=
+          (pointsToBytes_append 0 (4 + klen_u32)
+            (le32 val.length) val).mp $$ Hrest2
+        have hvlenEq : le32 val.length =
+            [u32Byte (UInt32.ofNat val.length) 0, u32Byte (UInt32.ofNat val.length) 1,
+             u32Byte (UInt32.ofNat val.length) 2, u32Byte (UInt32.ofNat val.length) 3] :=
+          le32_eq_u32Bytes val.length (by simpa [UInt32.size] using hVal)
+        have hVlenConv : pointsToBytes 0 (4 + klen_u32) (le32 val.length) ⊢
+            pointsTo_u32 0 (4 + klen_u32) (UInt32.ofNat val.length) :=
+          hvlenEq ▸ (pointsTo_u32_as_bytes 0 (4 + klen_u32) (UInt32.ofNat val.length)).mpr
+        ihave Hvlen := hVlenConv $$ Hvlen_raw
+        -- Bridge Hval_raw offset from (4+klen_u32)+len(le32 vlen) to 4+klen_u32+4
+        have h4valLen : (4 + klen_u32) + UInt32.ofNat (le32 val.length).length =
+            4 + klen_u32 + 4 := by simp [le32]
+        have hValRawConv : pointsToBytes 0
+            ((4 + klen_u32) + UInt32.ofNat (le32 val.length).length) val ⊢
+            pointsToBytes 0 (4 + klen_u32 + 4) val :=
+          h4valLen ▸ BI.entails_refl
+        ihave Hval_raw := hValRawConv $$ Hval_raw
+        -- Arithmetic helpers
+        have hklen_toNat : klen_u32.toNat = key.length := by
+          simp [klen_u32, Nat.mod_eq_of_lt hKey]
+        have h0add1 : ((0 : UInt32) + 1).toNat = 1 := by decide
+        have h0add2 : ((0 : UInt32) + 2).toNat = 2 := by decide
+        have h0add3 : ((0 : UInt32) + 3).toNat = 3 := by decide
+        have hk4nowrap : (klen_u32 + 4 : UInt32).toNat = key.length + 4 := by
+          rw [UInt32.toNat_add, hklen_toNat]
+          simp; omega
+        have hk4add1 : (klen_u32 + 4 + 1 : UInt32).toNat = key.length + 5 := by
+          rw [UInt32.toNat_add]; simp [hk4nowrap]; omega
+        have hk4add2 : (klen_u32 + 4 + 2 : UInt32).toNat = key.length + 6 := by
+          rw [UInt32.toNat_add]; simp [hk4nowrap]; omega
+        have hk4add3 : (klen_u32 + 4 + 3 : UInt32).toNat = key.length + 7 := by
+          rw [UInt32.toNat_add]; simp [hk4nowrap]; omega
+        -- Convert Hvlen to klen_u32+4 form for twp_load32 address matching
+        have hComm4k : (4 : UInt32) + klen_u32 = klen_u32 + 4 := by exact UInt32.add_comm 4 klen_u32
+        have hHvlenComm : pointsTo_u32 0 (4 + klen_u32) (UInt32.ofNat val.length) ⊢
+            pointsTo_u32 0 (klen_u32 + 4) (UInt32.ofNat val.length) :=
+          hComm4k ▸ BI.entails_refl
+        ihave Hvlen_k4 := hHvlenComm $$ Hvlen
+        -- Pure arithmetic steps up to storage_write
+        wasm_twp_pures [twp_const]
+        wasm_twp_rebind (twp_load32_addr (UInt32.ofNat key.length)
+            h0add1 h0add2 h0add3) with Hklen
+        wasm_twp_pures [twp_extendUI32 twp_constI64 twp_const]
+        wasm_twp_rebind (twp_load32_addr (UInt32.ofNat key.length)
+            h0add1 h0add2 h0add3) with Hklen
+        wasm_twp_rebind (twp_load32 (UInt32.ofNat val.length)
+            (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl, hk4nowrap]; omega)
+            (by simp only [hk4add1]; omega)
+            (by simp only [hk4add2]; omega)
+            (by simp only [hk4add3]; omega)) with Hvlen_k4
+        -- Restore Hvlen to 4+klen_u32 form for storage_write pre-condition
+        have hHvlenCommBack : pointsTo_u32 0 (klen_u32 + 4) (UInt32.ofNat val.length) ⊢
+            pointsTo_u32 0 (4 + klen_u32) (UInt32.ofNat val.length) :=
+          hComm4k.symm ▸ BI.entails_refl
+        ihave Hvlen := hHvlenCommBack $$ Hvlen_k4
+        wasm_twp_pures [twp_extendUI32 twp_const]
+        wasm_twp_rebind (twp_load32_addr (UInt32.ofNat key.length)
+            h0add1 h0add2 h0add3) with Hklen
+        wasm_twp_pures [twp_extendUI32 twp_constI64 twp_addI64 twp_constI64]
+        -- storage_write(keyLen, keyPtr, valLen, valPtr, regId)
+        iapply twp_callHost «module» 5
+            { «module» := "env", name := "storage_write",
+              params := [.i64, .i64, .i64, .i64, .i64], results := [.i64] }
+            storageWriteFn
+            (by decide) rfl nearEnv (by rfl)
+            (iprop(hostStateOwn ns1 ∗ pointsToBytes 0 4 key ∗
+              pointsToBytes 0 (4 + klen_u32 + 4) val ∗
+              pointsTo_u32 0 (0 : UInt32) klen_u32 ∗
+              pointsTo_u32 0 (4 + klen_u32) (UInt32.ofNat val.length)))
+            (fun results5 => iprop(
+              ⌜results5 = [.i64 0] ∨ results5 = [.i64 1]⌝ ∗
+              (∃ ns_final : NearState, hostStateOwn ns_final ∗
+                ⌜ns_final.storage key = some val ∧
+                  ∀ k, k ≠ key → ns_final.storage k = nearSt.storage k⌝) ∗
+              pointsToBytes 0 4 key ∗
+              pointsToBytes 0 (4 + klen_u32 + 4) val ∗
+              pointsTo_u32 0 (0 : UInt32) klen_u32 ∗
+              pointsTo_u32 0 (4 + klen_u32) (UInt32.ofNat val.length)))
+            (iprop(False)) (iprop(False)) ⟨0⟩
+            (fun store ns obs nt hModule results5 postWasm hinvoke => by
+              iintro ⟨⟨HP2, Hkey_raw2, Hval_raw2, Hklen2, Hvlen2⟩, Hσ⟩
+              ihave %heq : ⌜store.wasm.host = ns1⌝ $$ [Hσ HP2]
+              · iapply (stateInterp_host_agree store ns obs nt ns1); iframe Hσ HP2
+              have hView' : ns1.context.isView = false := by
+                simp only [ns1, NearState.setRegister]; exact hView
+              have hKeyLim' : withinLimit ns1.config.maxStorageKeyLen key.length = true := by
+                simp only [ns1, NearState.setRegister]; exact hKeyLim
+              have hValLim' : withinLimit ns1.config.maxStorageValueLen val.length = true := by
+                simp only [ns1, NearState.setRegister]; exact hValLim
+              have hMaxReg' : ∀ old, ns1.storage key = some old →
+                  withinLimit ns1.config.maxRegisterLen old.length = true := by
+                intro old hold
+                simp only [ns1, NearState.setRegister] at hold
+                exact hMaxReg old hold
+              wasm_points_to_bytes_agree hkeyFacts, (4 : UInt32), key, obs $$
+                [Hσ Hkey_raw2]
+              wasm_points_to_bytes_agree hvalFacts, (4 + klen_u32 + 4), val, obs $$
+                [Hσ Hval_raw2]
+              ihave Hklen2_bytes := (pointsTo_u32_as_bytes 0 (0 : UInt32) klen_u32).mp $$ Hklen2
+              wasm_points_to_bytes_agree hklenFacts, (0 : UInt32),
+                [u32Byte klen_u32 0, u32Byte klen_u32 1, u32Byte klen_u32 2, u32Byte klen_u32 3],
+                obs $$ [Hσ Hklen2_bytes]
+              ihave Hklen2 := (pointsTo_u32_as_bytes 0 (0 : UInt32) klen_u32).mpr $$ Hklen2_bytes
+              have hNbound : key.length + val.length + 8 ≤ 65536 := hLen
+              have hmem3 : 3 < store.wasm.mem.pages * 65536 := by
+                have h := (hklenFacts 3 (u32Byte klen_u32 3) (by simp)).2
+                simpa using h
+              have hkeyRead : store.wasm.mem.readBytes 4 key.length = key :=
+                pointsToBytes_facts_readBytes
+                  (fun i b hi => (hkeyFacts i b hi).1)
+                  (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl]; omega)
+              have hvalRead : store.wasm.mem.readBytes
+                  (key.length + 8) val.length = val := by
+                have := pointsToBytes_facts_readBytes
+                  (fun i b hi => (hvalFacts i b hi).1)
+                  (by have h44 : (4 + klen_u32 + 4 : UInt32).toNat = key.length + 8 := by
+                          rw [show (4 + klen_u32 + 4 : UInt32) = klen_u32 + 4 + 4 from by
+                            rw [hComm4k]]
+                          rw [UInt32.toNat_add, hk4nowrap]
+                          simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl]
+                          omega
+                      simp only [h44, UInt32.size]; omega)
+                convert this using 2
+                simp [klen_u32, hklen_toNat]; omega
+              have hkeyGet : getMemOrReg store.wasm 4
+                  (UInt64.ofNat klen_u32.toNat) = some key := by
+                rw [show UInt64.ofNat klen_u32.toNat = UInt64.ofNat key.length from
+                    by simp [hklen_toNat], getMemOrReg_mem]
+                · simp [u64_toNat_of_u32_len key.length hKey]; exact hkeyRead
+                · exact u64_ofNat_ne_u64Max_of_u32_len key.length hKey
+                · simp only [u64_toNat_of_u32_len key.length hKey, memBytes]
+                  rcases Nat.eq_zero_or_pos key.length with hz | hpos
+                  · simp only [show UInt64.toNat (4 : UInt64) = 4 from rfl]; omega
+                  · exact pointsToBytes_facts_bound hkeyFacts hpos
+                      (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl];
+                          omega)
+              have hvalGet : getMemOrReg store.wasm
+                  (UInt64.ofNat klen_u32.toNat + 8)
+                  (UInt64.ofNat (UInt32.ofNat val.length).toNat) = some val := by
+                rw [show UInt64.ofNat klen_u32.toNat = UInt64.ofNat key.length from
+                    by simp [hklen_toNat],
+                    show UInt64.ofNat (UInt32.ofNat val.length).toNat =
+                        UInt64.ofNat val.length from by
+                      simp [Nat.mod_eq_of_lt hVal],
+                    getMemOrReg_mem]
+                · simp [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal]
+                  exact hvalRead
+                · exact u64_ofNat_ne_u64Max_of_u32_len val.length hVal
+                · simp only [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal,
+                              memBytes]
+                  rcases Nat.eq_zero_or_pos val.length with hz | hpos
+                  · omega
+                  · have := pointsToBytes_facts_bound hvalFacts hpos
+                        (by simp [klen_u32, hklen_toNat]; omega)
+                    simp [klen_u32, hklen_toNat] at this; omega
+              have hxfer := @twp_near_storageWrite
+                  (P := iprop(pointsToBytes 0 4 key ∗
+                    pointsToBytes 0 (4 + klen_u32 + 4) val ∗
+                    pointsTo_u32 0 (0 : UInt32) klen_u32 ∗
+                    pointsTo_u32 0 (4 + klen_u32) (UInt32.ofNat val.length)))
+                  hlc inst ns1 key val «module»
+                  (UInt64.ofNat klen_u32.toNat) 4
+                  (UInt64.ofNat (UInt32.ofNat val.length).toNat)
+                  (UInt64.ofNat klen_u32.toNat + 8) 1
+                  store ns obs nt
+                  hView' hkeyGet hvalGet hKeyLim' hValLim' hMaxReg'
+                  hModule results5 postWasm hinvoke
+              imod hxfer $$ [$HP2 $Hkey_raw2 $Hval_raw2 $Hklen2 $Hvlen2 $Hσ] with
+                ⟨⟨⟨%ns_final, Hhost_final, %hStorageFacts⟩, HcP⟩, Hσ2⟩
+              have hresults5 : results5 = [.i64 0] ∨ results5 = [.i64 1] := by
+                have hView_host : store.wasm.host.context.isView = false := heq ▸ hView'
+                have hKeyLim_host : withinLimit store.wasm.host.config.maxStorageKeyLen key.length = true :=
+                  heq ▸ hKeyLim'
+                have hValLim_host : withinLimit store.wasm.host.config.maxStorageValueLen val.length = true :=
+                  heq ▸ hValLim'
+                cases hOld : ns1.storage key with
+                | none =>
+                  have hStorage' : store.wasm.host.storage key = none := by
+                    rw [heq]; exact hOld
+                  have := storageWriteFn_invoke_absent store.wasm key val
+                      (UInt64.ofNat klen_u32.toNat) 4
+                      (UInt64.ofNat (UInt32.ofNat val.length).toNat)
+                      (UInt64.ofNat klen_u32.toNat + 8) 1
+                      hView_host hkeyGet hvalGet hKeyLim_host hValLim_host hStorage'
+                  have hinvoke_flat : storageWriteFn.invoke store.wasm
+                      [.i64 (UInt64.ofNat klen_u32.toNat), .i64 4,
+                       .i64 (UInt64.ofNat (UInt32.ofNat val.length).toNat),
+                       .i64 (UInt64.ofNat klen_u32.toNat + 8), .i64 1] =
+                      .Return results5 postWasm := hinvoke
+                  rw [this] at hinvoke_flat; simp at hinvoke_flat
+                  exact Or.inl hinvoke_flat.1.symm
+                | some old =>
+                  have hStorage' : store.wasm.host.storage key = some old := by
+                    rw [heq]; exact hOld
+                  have hLim : withinLimit ns1.config.maxRegisterLen old.length = true := by
+                    simp only [ns1, NearState.setRegister]
+                    exact hMaxReg old (by simp [ns1, NearState.setRegister] at hOld; exact hOld)
+                  have hLim_host : withinLimit store.wasm.host.config.maxRegisterLen old.length = true := by
+                    rw [heq]; exact hLim
+                  obtain ⟨stReg, hChecked⟩ :
+                      ∃ stReg, checkedSetRegister? store.wasm 1 old = some stReg := by
+                    simp only [checkedSetRegister?,
+                               show ¬ (1 : UInt64) = u64Max from by decide, ite_false,
+                               ite_eq_left hLim_host]
+                    exact ⟨_, rfl⟩
+                  have := storageWriteFn_invoke_present store.wasm key val old
+                      (UInt64.ofNat klen_u32.toNat) 4
+                      (UInt64.ofNat (UInt32.ofNat val.length).toNat)
+                      (UInt64.ofNat klen_u32.toNat + 8) 1 stReg
+                      hView_host hkeyGet hvalGet hKeyLim_host hValLim_host hStorage' hChecked
+                  have hinvoke_flat : storageWriteFn.invoke store.wasm
+                      [.i64 (UInt64.ofNat klen_u32.toNat), .i64 4,
+                       .i64 (UInt64.ofNat (UInt32.ofNat val.length).toNat),
+                       .i64 (UInt64.ofNat klen_u32.toNat + 8), .i64 1] =
+                      .Return results5 postWasm := hinvoke
+                  rw [this] at hinvoke_flat; simp at hinvoke_flat
+                  exact Or.inr hinvoke_flat.1.symm
+              imodintro
+              isplitl [Hhost_final HcP]
+              · isplitr [Hhost_final HcP]
+                · ipureexact hresults5
+                · isplitr [HcP]
+                  · iexists ns_final; isplitl_exact Hhost_final; ipureexact hStorageFacts
+                  · iexact HcP
+              · iexact Hσ2)
+            (fun store ns obs nt _ postWasm msg hinvoke => by
+              iintro ⟨⟨HP2, Hkey_raw2, Hval_raw2, Hklen2, _⟩, Hσ⟩
+              ihave %heq : ⌜store.wasm.host = ns1⌝ $$ [Hσ HP2]
+              · iapply (stateInterp_host_agree store ns obs nt ns1); iframe Hσ HP2
+              have hView' : store.wasm.host.context.isView = false := by
+                rw [heq]; simp only [ns1, NearState.setRegister]; exact hView
+              have hKeyLim' : withinLimit store.wasm.host.config.maxStorageKeyLen key.length = true := by
+                rw [heq]; simp only [ns1, NearState.setRegister]; exact hKeyLim
+              have hValLim' : withinLimit store.wasm.host.config.maxStorageValueLen val.length = true := by
+                rw [heq]; simp only [ns1, NearState.setRegister]; exact hValLim
+              wasm_points_to_bytes_agree hkeyFacts, (4 : UInt32), key, obs $$
+                [Hσ Hkey_raw2]
+              wasm_points_to_bytes_agree hvalFacts, (4 + klen_u32 + 4), val, obs $$
+                [Hσ Hval_raw2]
+              ihave Hklen2_bytes := (pointsTo_u32_as_bytes 0 (0 : UInt32) klen_u32).mp $$ Hklen2
+              wasm_points_to_bytes_agree hklenFacts, (0 : UInt32),
+                [u32Byte klen_u32 0, u32Byte klen_u32 1, u32Byte klen_u32 2, u32Byte klen_u32 3],
+                obs $$ [Hσ Hklen2_bytes]
+              have hNbound : key.length + val.length + 8 ≤ 65536 := hLen
+              have hmem3 : 3 < store.wasm.mem.pages * 65536 := by
+                have h := (hklenFacts 3 (u32Byte klen_u32 3) (by simp)).2
+                simpa using h
+              have hkeyRead : store.wasm.mem.readBytes 4 key.length = key :=
+                pointsToBytes_facts_readBytes (fun i b hi => (hkeyFacts i b hi).1)
+                  (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl]; omega)
+              have hvalRead : store.wasm.mem.readBytes (key.length + 8) val.length = val := by
+                have := pointsToBytes_facts_readBytes (fun i b hi => (hvalFacts i b hi).1)
+                  (by have h44 : (4 + klen_u32 + 4 : UInt32).toNat = key.length + 8 := by
+                          rw [show (4 + klen_u32 + 4 : UInt32) = klen_u32 + 4 + 4 from by
+                            rw [hComm4k]]
+                          rw [UInt32.toNat_add, hk4nowrap]
+                          simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl]
+                          omega
+                      simp only [h44, UInt32.size]; omega)
+                convert this using 2; simp [klen_u32, hklen_toNat]; omega
+              have hkeyGet : getMemOrReg store.wasm 4
+                  (UInt64.ofNat klen_u32.toNat) = some key := by
+                rw [show UInt64.ofNat klen_u32.toNat = UInt64.ofNat key.length from
+                    by simp [hklen_toNat], getMemOrReg_mem]
+                · simp [u64_toNat_of_u32_len key.length hKey]; exact hkeyRead
+                · exact u64_ofNat_ne_u64Max_of_u32_len key.length hKey
+                · simp only [u64_toNat_of_u32_len key.length hKey, memBytes]
+                  rcases Nat.eq_zero_or_pos key.length with hz | hpos
+                  · simp only [show UInt64.toNat (4 : UInt64) = 4 from rfl]; omega
+                  · exact pointsToBytes_facts_bound hkeyFacts hpos
+                      (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl];
+                          omega)
+              have hvalGet : getMemOrReg store.wasm
+                  (UInt64.ofNat klen_u32.toNat + 8)
+                  (UInt64.ofNat (UInt32.ofNat val.length).toNat) = some val := by
+                rw [show UInt64.ofNat klen_u32.toNat = UInt64.ofNat key.length from
+                    by simp [hklen_toNat],
+                    show UInt64.ofNat (UInt32.ofNat val.length).toNat =
+                        UInt64.ofNat val.length from by
+                      simp [Nat.mod_eq_of_lt hVal],
+                    getMemOrReg_mem]
+                · simp [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal]
+                  exact hvalRead
+                · exact u64_ofNat_ne_u64Max_of_u32_len val.length hVal
+                · simp only [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal,
+                              memBytes]
+                  rcases Nat.eq_zero_or_pos val.length with hz | hpos
+                  · omega
+                  · have := pointsToBytes_facts_bound hvalFacts hpos
+                        (by simp [klen_u32, hklen_toNat]; omega)
+                    simp [klen_u32, hklen_toNat] at this; omega
+              obtain ⟨results', postWasm', hret⟩ :=
+                  storageWriteFn_isReturn store.wasm key val klen_u32 ns1 heq
+                    hView' hKeyLim' hValLim' hkeyGet hvalGet
+                    (fun old hOld => by
+                      simp only [ns1, NearState.setRegister] at hOld
+                      exact hMaxReg old hOld)
+              have hinvoke_flat : storageWriteFn.invoke store.wasm
+                  [.i64 (UInt64.ofNat klen_u32.toNat), .i64 4,
+                   .i64 (UInt64.ofNat (UInt32.ofNat val.length).toNat),
+                   .i64 (UInt64.ofNat klen_u32.toNat + 8), .i64 1] =
+                  .Trap postWasm msg := hinvoke
+              rw [hret] at hinvoke_flat; contradiction)
+            (fun store ns obs nt _ postWasm tag xs hinvoke => by
+              iintro ⟨⟨HP2, Hkey_raw2, Hval_raw2, Hklen2, _⟩, Hσ⟩
+              ihave %heq : ⌜store.wasm.host = ns1⌝ $$ [Hσ HP2]
+              · iapply (stateInterp_host_agree store ns obs nt ns1); iframe Hσ HP2
+              have hView' : store.wasm.host.context.isView = false := by
+                rw [heq]; simp only [ns1, NearState.setRegister]; exact hView
+              have hKeyLim' : withinLimit store.wasm.host.config.maxStorageKeyLen key.length = true := by
+                rw [heq]; simp only [ns1, NearState.setRegister]; exact hKeyLim
+              have hValLim' : withinLimit store.wasm.host.config.maxStorageValueLen val.length = true := by
+                rw [heq]; simp only [ns1, NearState.setRegister]; exact hValLim
+              wasm_points_to_bytes_agree hkeyFacts, (4 : UInt32), key, obs $$
+                [Hσ Hkey_raw2]
+              wasm_points_to_bytes_agree hvalFacts, (4 + klen_u32 + 4), val, obs $$
+                [Hσ Hval_raw2]
+              ihave Hklen2_bytes := (pointsTo_u32_as_bytes 0 (0 : UInt32) klen_u32).mp $$ Hklen2
+              wasm_points_to_bytes_agree hklenFacts, (0 : UInt32),
+                [u32Byte klen_u32 0, u32Byte klen_u32 1, u32Byte klen_u32 2, u32Byte klen_u32 3],
+                obs $$ [Hσ Hklen2_bytes]
+              have hNbound : key.length + val.length + 8 ≤ 65536 := hLen
+              have hmem3 : 3 < store.wasm.mem.pages * 65536 := by
+                have h := (hklenFacts 3 (u32Byte klen_u32 3) (by simp)).2
+                simpa using h
+              have hkeyRead : store.wasm.mem.readBytes 4 key.length = key :=
+                pointsToBytes_facts_readBytes (fun i b hi => (hkeyFacts i b hi).1)
+                  (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl]; omega)
+              have hvalRead : store.wasm.mem.readBytes (key.length + 8) val.length = val := by
+                have := pointsToBytes_facts_readBytes (fun i b hi => (hvalFacts i b hi).1)
+                  (by have h44 : (4 + klen_u32 + 4 : UInt32).toNat = key.length + 8 := by
+                          rw [show (4 + klen_u32 + 4 : UInt32) = klen_u32 + 4 + 4 from by
+                            rw [hComm4k]]
+                          rw [UInt32.toNat_add, hk4nowrap]
+                          simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl]
+                          omega
+                      simp only [h44, UInt32.size]; omega)
+                convert this using 2; simp [klen_u32, hklen_toNat]; omega
+              have hkeyGet : getMemOrReg store.wasm 4
+                  (UInt64.ofNat klen_u32.toNat) = some key := by
+                rw [show UInt64.ofNat klen_u32.toNat = UInt64.ofNat key.length from
+                    by simp [hklen_toNat], getMemOrReg_mem]
+                · simp [u64_toNat_of_u32_len key.length hKey]; exact hkeyRead
+                · exact u64_ofNat_ne_u64Max_of_u32_len key.length hKey
+                · simp only [u64_toNat_of_u32_len key.length hKey, memBytes]
+                  rcases Nat.eq_zero_or_pos key.length with hz | hpos
+                  · simp only [show UInt64.toNat (4 : UInt64) = 4 from rfl]; omega
+                  · exact pointsToBytes_facts_bound hkeyFacts hpos
+                      (by simp only [show UInt32.toNat (4 : UInt32) = 4 from rfl];
+                          omega)
+              have hvalGet : getMemOrReg store.wasm
+                  (UInt64.ofNat klen_u32.toNat + 8)
+                  (UInt64.ofNat (UInt32.ofNat val.length).toNat) = some val := by
+                rw [show UInt64.ofNat klen_u32.toNat = UInt64.ofNat key.length from
+                    by simp [hklen_toNat],
+                    show UInt64.ofNat (UInt32.ofNat val.length).toNat =
+                        UInt64.ofNat val.length from by
+                      simp [Nat.mod_eq_of_lt hVal],
+                    getMemOrReg_mem]
+                · simp [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal]
+                  exact hvalRead
+                · exact u64_ofNat_ne_u64Max_of_u32_len val.length hVal
+                · simp only [u64_key_add8_toNat key hKey, u64_toNat_of_u32_len val.length hVal,
+                              memBytes]
+                  rcases Nat.eq_zero_or_pos val.length with hz | hpos
+                  · omega
+                  · have := pointsToBytes_facts_bound hvalFacts hpos
+                        (by simp [klen_u32, hklen_toNat]; omega)
+                    simp [klen_u32, hklen_toNat] at this; omega
+              obtain ⟨results', postWasm', hret⟩ :=
+                  storageWriteFn_isReturn store.wasm key val klen_u32 ns1 heq
+                    hView' hKeyLim' hValLim' hkeyGet hvalGet
+                    (fun old hOld => by
+                      simp only [ns1, NearState.setRegister] at hOld
+                      exact hMaxReg old hOld)
+              have hinvoke_flat : storageWriteFn.invoke store.wasm
+                  [.i64 (UInt64.ofNat klen_u32.toNat), .i64 4,
+                   .i64 (UInt64.ofNat (UInt32.ofNat val.length).toNat),
+                   .i64 (UInt64.ofNat klen_u32.toNat + 8), .i64 1] =
+                  .Throw postWasm tag xs := hinvoke
+              rw [hret] at hinvoke_flat; contradiction)
+            $$ [$Hhost2 $Hkey_raw $Hval_raw $Hklen $Hvlen] Hruntime2 Henv2_back
+        · iintro %_pre %results5 %_post %_hinvoke
+              ⟨⟨%hresults5, ⟨%ns_final, Hhost_final, %hStorageFacts⟩, _, _, _, _⟩,
+               Hruntime3⟩
+          obtain ⟨v, rfl⟩ : ∃ v : UInt64, results5 = [Value.i64 v] := by
+            rcases hresults5 with rfl | rfl <;> exact ⟨_, rfl⟩
+          simp only [List.length_cons, List.length_nil, List.take_succ_cons, List.take_zero,
+            List.drop_succ_cons, List.drop_zero, List.append_nil]
+          wasm_twp_pures [twp_drop]
+          wasm_twp_terminal_value (twp_finish (locals := { }))
+          iintro %store_final %_obs Hσ_final
+          ihave %hfinalHost : ⌜store_final.wasm.host = ns_final⌝ $$ [Hσ_final Hhost_final]
+          · iapply (stateInterp_host_agree store_final 0 [] 0 ns_final)
+            iframe Hσ_final Hhost_final
+          ipureexact ⟨hfinalHost ▸ hStorageFacts.1,
+            fun k hk => hfinalHost ▸ hStorageFacts.2 k hk⟩
+        · iintro %_pre %_post %_msg %_h Hfalse; iexfalso; iexact Hfalse
+        · iintro %_pre %_post %_tag %_xs %_h Hfalse; iexfalso; iexact Hfalse
+      · iintro %_pre %_post %_msg %_h Hfalse; iexfalso; iexact Hfalse
+      · iintro %_pre %_post %_tag %_xs %_h Hfalse; iexfalso; iexact Hfalse
+    · iintro %_pre %_results %_post %_h Hfalse; iexfalso; iexact Hfalse
+    · iintro %_pre %_post %_tag %_xs %_h Hfalse; iexfalso; iexact Hfalse
+
+theorem set_partiallyMeets (nearSt : NearState) (key val : List UInt8)
+    (hView : nearSt.context.isView = false)
+    (hKey : key.length < 4294967296) (hVal : val.length < 4294967296)
+    (hLen : key.length + val.length + 8 ≤ 65536)
+    (hReg : withinLimit nearSt.config.maxRegisterLen (encodeKV key val).length)
+    (hKeyLim : withinLimit nearSt.config.maxStorageKeyLen key.length)
+    (hValLim : withinLimit nearSt.config.maxStorageValueLen val.length)
+    (hMaxReg : ∀ old, nearSt.storage key = some old →
+        withinLimit nearSt.config.maxRegisterLen old.length)
+    (hInput : nearSt.context.input = encodeKV key val) :
+    SmallStep.PartiallyMeets (setConfig nearSt)
+      (fun _ store => store.wasm.host.storage key = some val ∧
+        ∀ k, k ≠ key → store.wasm.host.storage k = nearSt.storage k) :=
+  (set_terminatesWith nearSt key val hView hKey hVal hLen hReg hKeyLim hValLim hMaxReg hInput).toPartiallyMeets
 
 /-! ## Concrete end-to-end validation
 

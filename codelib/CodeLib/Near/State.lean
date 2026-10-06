@@ -1,5 +1,4 @@
 import Interpreter.Wasm
-import Interpreter.Wasm.Spec.Termination
 
 /-!
 # NEAR host state (`α := NearState`)

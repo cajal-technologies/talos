@@ -67,6 +67,12 @@ just differential --mode recgroup -n 300   # reproduce the full #108 cluster
 
 It drives the runner as the custom system-under-test for [miscast](https://github.com/jasisz/miscast) (pinned as an external dependency). Requires `wasm-tools`, `python3`, `git`, and `node` ≥ 22 (on `PATH` or under `~/.nvm`). See [`differential/README.md`](differential/README.md) for details.
 
+`just differential-ci` runs the fixed corpus used by the `Differential testing`
+workflow and fails on new per-case regressions or lost coverage. It requires
+the CI tool versions and writes raw results and replayable failing inputs to
+`.differential-cache/ci/`. See the [gate and baseline instructions](differential/README.md#ci-regression-gate)
+before intentionally changing a tool pin, seed corpus, or known exception.
+
 ## Contributing code
 
 Pull requests are welcome. A few guidelines:

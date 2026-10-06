@@ -89,13 +89,10 @@ variable {Φ : Terminal → IProp (WasmHeapGF α)}
 
 /-! ## The 64-bit operations of the SipHash round
 
-`twp_subI64`, `twp_mulI64`, `twp_orI64`, `twp_shlI64` and `twp_shrUI64`
-already exist.  The four rules below complete the set that the round needs.
+`twp_addI64`, `twp_subI64`, `twp_mulI64`, `twp_orI64`, `twp_shlI64` and
+`twp_shrUI64` already exist.  The three rules below complete the set that the
+round needs.
 -/
-
-wasm_twp_pure_rule twp_addI64 {lhs rhs : UInt64} :
-  .addI64, .i64 rhs :: .i64 lhs :: values =>
-    .i64 (lhs + rhs) :: values := Step.addI64
 
 -- The same statement as `twp_andI64` in PR #235, under a suffix so that
 -- neither merge order declares the name twice.  When that PR merges, delete

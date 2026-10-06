@@ -459,15 +459,15 @@ private theorem main_after_encode_finishes {hlc : HasLC}
     (values := []) (arity := 0) (remainder := [])
   iapply twp.value rfl
   iintro %doneStore %observations Hstate
-  imod Project.HexEncodeStdio.TotalHost.stateInterp_host_set_expected doneStore 0 [] 0
-    (Project.HexEncodeStdio.TotalWrite.afterWrite store.wasm.host (encode input))
-    (Project.HexEncodeStdio.TotalWrite.afterWrite store.wasm.host (encode input)) $$
+  imod stateInterp_host_set_expected doneStore 0 [] 0
+    (afterWrite store.wasm.host (encode input))
+    (afterWrite store.wasm.host (encode input)) $$
     [$Hstate $Hhost] with ⟨%hhostPhysical, Hstate, Hhost⟩
   ipureintro
   constructor
   · rfl
   · rw [hhostPhysical]
-    simp [Project.HexEncodeStdio.TotalWrite.afterWrite, hhostOutput]
+    simp [afterWrite, hhostOutput]
 
 set_option maxHeartbeats 2000000 in
 set_option maxRecDepth 100000000 in

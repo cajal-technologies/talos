@@ -76,6 +76,7 @@ import CodeLib.SepLogic.SmallStepOutcomeLanguage
 import CodeLib.SepLogic.SmallStepOutcomeExample
 import CodeLib.SepLogic.SmallStepAdequacy
 import CodeLib.SepLogic.SmallStepAdequacyExamples
+import CodeLib.Host.UniversalStdIO
 import CodeLib.SepLogic.SmallStepOutcomeAdequacy
 import CodeLib.SepLogic.SmallStepOutcomeAdequacyFrontier
 import CodeLib.Examples.MergeSort.TotalProof

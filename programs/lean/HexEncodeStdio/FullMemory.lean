@@ -1,5 +1,4 @@
 import CodeLib
-import HexEncodeStdio.TotalAdequacy
 import HexEncodeStdio.Grow
 import HexEncodeStdio.Helpers
 
@@ -375,7 +374,7 @@ theorem terminates
             stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
             ⌜post values store⌝ }]) :
     TerminatesWith config post := by
-  apply Wasm.SmallStep.heap_globals_runtime_host_store_terminates
+  apply wasm_smallStep_heap_globals_runtime_host_store_terminates
     config (heap config.store) globalσ post
   · exact heap_agrees config.store hpages
   · exact heap_inBounds config.store hpages
