@@ -269,9 +269,7 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
       (by decide) (by decide) (by decide) (by decide) with Hcapacity' => Hcapacity
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
-  iapply twp_load32 ptr (by decide) (by decide) (by decide) (by decide) $$
-    Hpointer
-  iintro Hpointer
+  wasm_mem
   wasm_twp_pures [twp_localGet twp_localGet twp_const twp_shl]
   rw [show (1 : UInt32) % 32 = 1 by decide, hdoubleWord]
   wasm_twp_localTee [List.set]

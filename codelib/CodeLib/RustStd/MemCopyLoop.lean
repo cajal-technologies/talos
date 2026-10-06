@@ -1,6 +1,7 @@
 import CodeLib.RustStd.MemArray
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLoop
+import CodeLib.Tactics.Control
 
 /-!
 # A verified copy loop over a `u32` array
@@ -805,21 +806,13 @@ theorem copyWords_loop_twp
       arrayAt 0 src (state.copied ++ state.srcTail)
   simp only [List.cons_append, List.nil_append]
   iintro ⟨HR, Hdst, Hsrc⟩
-  iapply Wasm.SmallStep.twp_loop_wf_family
-    (ι := CopyWordsLoopState)
-    (measure := fun state => n.toNat - state.index.toNat)
-    (locals := fun state =>
-      ⟨[.i32 dst, .i32 src, .i32 n], [.i32 state.index], []⟩)
-    (I := Inv)
-    (initial := ⟨0, [], destination, source⟩)
-    (initialLocals := ⟨[.i32 dst, .i32 src, .i32 n], [.i32 0], []⟩)
-    (body := CopyWordsLoopBody)
-    (code := afterLoop)
-    rfl rfl
-  · intro state
-    simp only [Inv]
+  wasm_loop Inv using
+    (fun state => n.toNat - state.index.toNat),
+    (⟨0, [], destination, source⟩ : CopyWordsLoopState),
+    (fun state => ⟨[.i32 dst, .i32 src, .i32 n], [.i32 state.index], []⟩)
+  · simp only [Inv]
     iintro IH ⟨%hcopied, %hdstInv, %hsource, HR, Hdst, Hsrc⟩
-    simp only [Wasm.SmallStep.loopBodyExpr, List.drop_zero]
+    simp only [List.drop_zero]
     have hframe :
         ({ kind := .loop
            paramArity := 0

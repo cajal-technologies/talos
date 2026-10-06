@@ -1,4 +1,5 @@
 import CodeLib.SepLogic.SmallStepState
+import CodeLib.Tactics.Rule
 import Iris.ProgramLogic.Lifting
 
 /-!
@@ -90,7 +91,7 @@ macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
         "wasm_wp_pure_rule takes implicit value binders and explicit side conditions"
   let valueBinders := binders.filter isValueBinder
   let sideConditions := binders.filter isSideCondition
-  `(command|
+  let thm ← `(command|
     theorem $name:ident
         {params localValues values : List Value}
         $valueBinders:bracketedBinder*
@@ -106,6 +107,10 @@ macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
             $instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
           {{ Φ }} :=
       wp_pureStep _ _ _ (fun _ => $step))
+  -- Register the rule at its definition site (see `CodeLib.Tactics.wasmPureRuleAttr?`).
+  match ← CodeLib.Tactics.wasmPureRuleAttr? `wp name instruction sideConditions with
+  | some attr => return ⟨Lean.mkNullNode #[thm, attr]⟩
+  | none => return thm
 
 /-! ## Generic scalar numeric rules
 
@@ -136,6 +141,80 @@ wasm_wp_pure_rule wp_scalarTruncSuccess
     {instruction : Instruction} {operand value : Value}
     (heval : evalScalarTrunc? instruction operand = some (.ok value)) :
   instruction, operand :: values => value :: values := Step.scalarTruncSuccess heval
+
+/-! The generic scalar-float rules take the instruction as a variable, so
+`wasm_wp_pure_rule` cannot key them; register each instruction they serve here,
+next to the rules, for `wasm_pure` / `wasm_pures`. -/
+attribute [
+    wasm_rule wp f32Const rfl,
+    wasm_rule wp f64Const rfl]
+  wp_scalarFloat0
+attribute [
+    wasm_rule wp f32Abs rfl,
+    wasm_rule wp f32Neg rfl,
+    wasm_rule wp f32Sqrt rfl,
+    wasm_rule wp f32Ceil rfl,
+    wasm_rule wp f32Floor rfl,
+    wasm_rule wp f32Trunc rfl,
+    wasm_rule wp f32Nearest rfl,
+    wasm_rule wp f64Abs rfl,
+    wasm_rule wp f64Neg rfl,
+    wasm_rule wp f64Sqrt rfl,
+    wasm_rule wp f64Ceil rfl,
+    wasm_rule wp f64Floor rfl,
+    wasm_rule wp f64Trunc rfl,
+    wasm_rule wp f64Nearest rfl,
+    wasm_rule wp f32ConvertI32S rfl,
+    wasm_rule wp f32ConvertI32U rfl,
+    wasm_rule wp f32ConvertI64S rfl,
+    wasm_rule wp f32ConvertI64U rfl,
+    wasm_rule wp f64ConvertI32S rfl,
+    wasm_rule wp f64ConvertI32U rfl,
+    wasm_rule wp f64ConvertI64S rfl,
+    wasm_rule wp f64ConvertI64U rfl,
+    wasm_rule wp i32TruncSatF32S rfl,
+    wasm_rule wp i32TruncSatF32U rfl,
+    wasm_rule wp i32TruncSatF64S rfl,
+    wasm_rule wp i32TruncSatF64U rfl,
+    wasm_rule wp i64TruncSatF32S rfl,
+    wasm_rule wp i64TruncSatF32U rfl,
+    wasm_rule wp i64TruncSatF64S rfl,
+    wasm_rule wp i64TruncSatF64U rfl,
+    wasm_rule wp f32DemoteF64 rfl,
+    wasm_rule wp f64PromoteF32 rfl,
+    wasm_rule wp i32ReinterpretF32 rfl,
+    wasm_rule wp i64ReinterpretF64 rfl,
+    wasm_rule wp f32ReinterpretI32 rfl,
+    wasm_rule wp f64ReinterpretI64 rfl]
+  wp_scalarFloat1
+attribute [
+    wasm_rule wp f32Add rfl,
+    wasm_rule wp f32Sub rfl,
+    wasm_rule wp f32Mul rfl,
+    wasm_rule wp f32Div rfl,
+    wasm_rule wp f32Min rfl,
+    wasm_rule wp f32Max rfl,
+    wasm_rule wp f32Copysign rfl,
+    wasm_rule wp f64Add rfl,
+    wasm_rule wp f64Sub rfl,
+    wasm_rule wp f64Mul rfl,
+    wasm_rule wp f64Div rfl,
+    wasm_rule wp f64Min rfl,
+    wasm_rule wp f64Max rfl,
+    wasm_rule wp f64Copysign rfl,
+    wasm_rule wp f32Eq rfl,
+    wasm_rule wp f32Ne rfl,
+    wasm_rule wp f32Lt rfl,
+    wasm_rule wp f32Gt rfl,
+    wasm_rule wp f32Le rfl,
+    wasm_rule wp f32Ge rfl,
+    wasm_rule wp f64Eq rfl,
+    wasm_rule wp f64Ne rfl,
+    wasm_rule wp f64Lt rfl,
+    wasm_rule wp f64Gt rfl,
+    wasm_rule wp f64Le rfl,
+    wasm_rule wp f64Ge rfl]
+  wp_scalarFloat2
 
 theorem wp_finish
     {params localValues values remainder : List Value} {arity : Nat} :
@@ -211,6 +290,7 @@ macro "wasm_wp_return_value_rfl_exact " resource:ident : tactic =>
      isplitr_pureexact rfl
      · iexact $resource))
 
+@[wasm_rule wp const]
 theorem wp_const
     {params localValues values : List Value}
     {value : UInt32} {code : Program} {arity : Nat}
@@ -225,6 +305,7 @@ theorem wp_const
   dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.const)
 
 /-- Pure primitive rule for wrapping i32 subtraction. -/
+@[wasm_rule wp sub]
 theorem wp_sub
     {params localValues values : List Value}
     {lhs rhs : UInt32} {code : Program} {arity : Nat}
@@ -527,6 +608,7 @@ wasm_wp_pure_rule wp_remUI64 {dividend divisor : UInt64} (hdivisor : divisor ≠
   .remUI64, .i64 divisor :: .i64 dividend :: values =>
     .i64 (dividend % divisor) :: values := Step.remUI64 hdivisor
 
+@[wasm_rule wp block]
 theorem wp_block
     {locals : Locals} {paramArity resultArity arity : Nat}
     {body code : Program} {remainder : List Value}
@@ -612,6 +694,7 @@ theorem wp_loop_löb_family
   iapply_exact body_closes initial with IH
   · iexact HI
 
+@[wasm_rule wp iff rfl]
 theorem wp_iff
     {params localValues values : List Value}
     {condition : UInt32}
@@ -635,6 +718,7 @@ theorem wp_iff
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.iff hselected)
 
+@[wasm_rule wp nil rfl]
 theorem wp_exitControl
     {locals : Locals} {frame : ControlFrame}
     {arity : Nat} {remainder : List Value}
@@ -650,6 +734,7 @@ theorem wp_exitControl
         Expr α) @ s; E {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.exitControl hkind)
 
+@[wasm_rule wp br_if]
 theorem wp_brIfZero
     {params localValues values : List Value}
     {depth arity : Nat} {code : Program} {remainder : List Value}
@@ -662,6 +747,7 @@ theorem wp_brIfZero
         arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.brIfZero)
 
+@[wasm_rule wp br_if]
 theorem wp_brIf
     {params localValues values targetValues : List Value}
     {condition : UInt32} {depth arity : Nat}
@@ -679,6 +765,7 @@ theorem wp_brIf
         Expr α) @ s; E {{ Φ }} :=
   wp_pureStep _ _ _ (fun _ => Step.brIf hcondition htarget)
 
+@[wasm_rule wp br rfl]
 theorem wp_br
     {params localValues values targetValues : List Value}
     {depth arity : Nat} {code targetCode : Program}
@@ -724,6 +811,7 @@ theorem wp_refIsNull
     · exact Step.refIsNullTrue hnull
   wasm_wp_step_frame expectedStep
 
+@[wasm_rule wp localGet rfl]
 theorem wp_localGet
     {params localValues values : List Value}
     {index : Nat} {value : Value} {code : Program} {arity : Nat}
@@ -740,6 +828,7 @@ theorem wp_localGet
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.localGet hget)
 
+@[wasm_rule wp localSet rfl]
 theorem wp_localSet
     {params localValues values : List Value}
     {index : Nat} {value : Value} {locals' : Locals}
@@ -757,6 +846,7 @@ theorem wp_localSet
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   dsimp only; exact wp_pureStep _ _ _ (fun _ => Step.localSet hset)
 
+@[wasm_rule wp localTee rfl]
 theorem wp_localTee
     {params localValues values : List Value}
     {index : Nat} {value : Value} {locals' : Locals}
@@ -1406,6 +1496,7 @@ theorem wp_globalSet_of_canonical
 /-- Common non-aliased rule for the distinguished global at index zero.
 Index zero is definitionally canonical even when other local indices alias
 the same instantiated global. -/
+@[wasm_mem_rule wp globalGet global]
 theorem wp_globalGet
     {params localValues values : List Value}
     {value : Value} {code : Program} {arity : Nat}
@@ -1423,6 +1514,7 @@ theorem wp_globalGet
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} :=
   wp_globalGet_of_canonical (fun _ => rfl)
 
+@[wasm_mem_rule wp globalSet global]
 theorem wp_globalSet
     {params localValues values : List Value}
     {oldValue newValue : Value}
@@ -1910,6 +2002,7 @@ theorem wp_tableCopyDistinct
 /-- Primitive rule for `i32.load8_u`. The arithmetic premise rules out
 32-bit effective-address wraparound; physical bounds follow from ownership
 through `StateInterp`, rather than being assumed about an external store. -/
+@[wasm_mem_rule wp load8U byte]
 theorem wp_load8U
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -2286,6 +2379,7 @@ theorem wp_load32SI64
 
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
+@[wasm_mem_rule wp store8 byte]
 theorem wp_store8
     {params localValues values : List Value}
     {address offset value : UInt32} {code : Program} {arity : Nat}
@@ -2503,6 +2597,7 @@ theorem wp_store32I64
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
+@[wasm_mem_rule wp load32 u32]
 theorem wp_load32
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -2536,6 +2631,7 @@ theorem wp_load32
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
+@[wasm_mem_rule wp store32 u32]
 theorem wp_store32
     {params localValues values : List Value}
     {address offset value : UInt32} {code : Program} {arity : Nat}
@@ -2581,6 +2677,7 @@ theorem wp_store32
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
+@[wasm_mem_rule wp f32Load u32]
 theorem wp_f32Load
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -2614,6 +2711,7 @@ theorem wp_f32Load
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_wp_frame
 
+@[wasm_mem_rule wp f32Store u32]
 theorem wp_f32Store
     {params localValues values : List Value}
     {address offset value : UInt32} {code : Program} {arity : Nat}
@@ -2660,6 +2758,7 @@ theorem wp_f32Store
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
+@[wasm_mem_rule wp load64 u64]
 theorem wp_load64
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -2697,6 +2796,7 @@ theorem wp_load64
       (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
+@[wasm_mem_rule wp store64 u64]
 theorem wp_store64
     {params localValues values : List Value}
     {address offset : UInt32} {value : UInt64}
@@ -2747,6 +2847,7 @@ theorem wp_store64
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
+@[wasm_mem_rule wp f64Load u64]
 theorem wp_f64Load
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -2784,6 +2885,7 @@ theorem wp_f64Load
       (Step.f64Load (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
+@[wasm_mem_rule wp f64Store u64]
 theorem wp_f64Store
     {params localValues values : List Value}
     {address offset : UInt32} {value : UInt64}

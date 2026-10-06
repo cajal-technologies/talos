@@ -1003,9 +1003,8 @@ theorem twp_func5_lowered_body_smallStep_wp
   · irw_exact [show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   wasm_twp_bind twp_f32Store oldWord
     (by decide) (by decide) (by decide) (by decide) with Hword' => Hword
-  wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind twp_f32Load (f32Nearest x)
-    (by decide) (by decide) (by decide) (by decide) with Hword
+  -- `localGet 0`, then `f32Load 12` through `wasm_mem` (rebinding `Hword`).
+  wasm_pures
   ihave HwordExact : pointsTo_u32 0 1048556 (f32Nearest x) $$ [Hword]
   · irw_exact [← show (1048544 : UInt32) + 12 = 1048556 by decide] with Hword
   iapply_frame hreturn

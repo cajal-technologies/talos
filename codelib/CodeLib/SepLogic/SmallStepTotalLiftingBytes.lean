@@ -7,7 +7,7 @@ Total weakest-precondition lifting rules on top of `SmallStepTotalLifting`,
 factored out of the `hex_stdio` worked examples for reuse:
 
 * byte-granular memory access — `twp_load8U`, `twp_load8U_addr`, `twp_store8`,
-  `twp_store8_addr`, `twp_store32_addr`, `twp_store64_addr`;
+  `twp_store8_addr`, `twp_store64_addr`;
 * the signed comparison `twp_ltS` and `twp_drop`; and
 * `twp_memorySize_framed` / `twp_memoryGrow_framed`, `memory.size` / `memory.grow`
   rules that thread an arbitrary owned resource through the instruction (a
@@ -31,6 +31,7 @@ variable {Φ : List Value → IProp (WasmHeapGF α)}
 
 
 /-- Total primitive rule for `i32.load8_u`. -/
+@[wasm_mem_rule twp load8U byte Wasm.SmallStep.twp_load8U_addr]
 theorem twp_load8U
     {params localValues values : List Value}
     {address offset : UInt32} {code : Program} {arity : Nat}
@@ -129,6 +130,7 @@ theorem twp_load8U_addr
       (calls := calls) byte (by simp))
 
 /-- Total primitive rule for `i32.store8`. -/
+@[wasm_mem_rule twp store8 byte Wasm.SmallStep.twp_store8_addr]
 theorem twp_store8
     {params localValues values : List Value}
     {address offset value : UInt32} {code : Program} {arity : Nat}
@@ -238,33 +240,10 @@ theorem twp_store8_addr
       (code := code) (arity := arity) (remainder := remainder)
       (controls := controls) (calls := calls) oldByte (by simp))
 
-theorem twp_store32_addr
-    {params localValues values : List Value}
-    {address value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
-    (h1 : (address + 1).toNat = address.toNat + 1)
-    (h2 : (address + 2).toNat = address.toNat + 2)
-    (h3 : (address + 3).toNat = address.toNat + 3) :
-    pointsTo_u32 0 address oldWord -∗
-    (pointsTo_u32 0 address value -∗
-      WP (.running ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }]) -∗
-    WP (.running
-      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-        .store32 0 :: code, arity, remainder, controls, calls⟩ : Expr α) @
-      s; E [{ Φ }] := by
-  simpa only [UInt32.add_zero] using
-    (twp_store32 (α := α) (s := s) (E := E) (Φ := Φ)
-      (address := address) (offset := 0) (value := value)
-      (params := params) (localValues := localValues) (values := values)
-      (code := code) (arity := arity) (remainder := remainder)
-      (controls := controls) (calls := calls) oldWord (by simp)
-      (by simpa using h1) (by simpa using h2) (by simpa using h3))
-
 
 -- `twp_ltS` is supplied by the imported generic total lifting layer.
 
+@[wasm_rule twp drop]
 theorem twp_drop
     {params localValues values : List Value}
     {value : Value} {code : Program} {arity : Nat}

@@ -2,6 +2,7 @@ import CodeLib.Examples.SelectionSort.Pure
 import CodeLib.RustStd.MemArray
 import CodeLib.SepLogic.SmallStepAdequacy
 import CodeLib.SepLogic.SmallStepTotalLoop
+import CodeLib.Tactics.Control
 
 /-!
 # Total Iris proofs for the two selection-sort implementations
@@ -720,18 +721,11 @@ private theorem twp_innerLoop
   iintro ⟨Harray, Hfinish⟩
   simp only [whileDo, List.cons_append, List.nil_append]
   wasm_twp_pures [twp_block]
-  iapply Wasm.SmallStep.twp_loop_wf_family
-    (measure := fun state : InnerState => current.length - state.scan)
-    (locals := fun state => loopSortLocals arr length outer
-      state.best state.scan temporary stack)
-    (I := Inv) (initial := ⟨best, scan⟩)
-    (initialLocals := loopSortLocals arr length outer best scan
-      temporary stack)
-    (body := whileLoopCode loopSelectionSortInnerCondition
-      loopSelectionSortInnerStep)
-    (code := []) (belowStack := stack) rfl rfl
-  · intro state
-    simp only [Inv, Wasm.SmallStep.loopBodyExpr]
+  wasm_loop Inv using
+    (fun state : InnerState => current.length - state.scan),
+    (⟨best, scan⟩ : InnerState),
+    (fun state => loopSortLocals arr length outer state.best state.scan temporary stack)
+  · simp only [Inv]
     iintro Hrec Hinv
     icases Hinv with ⟨%hstate, Harray, Hfinish⟩
     unfold MinScan at hstate

@@ -1,4 +1,5 @@
 import CodeLib.Examples.Quicksort.Laws
+import CodeLib.Tactics.Control
 
 /-!
 # Total (TWP) Iris verification of the handwritten quicksort
@@ -407,10 +408,7 @@ theorem twp_partition
         .call partitionIdx :: code, arity, remainder, controls, calls⟩ : Expr Unit)
         @ s; E [{ Φ }] := by
   iintro ⟨Hruntime, Harray, Hcont⟩
-  wasm_twp_rebind Wasm.SmallStep.twp_call runtimeModule partitionIdx partitionFunction
-    himports hfunction with Hruntime
-  simp [partitionFunction, Function.toLocals, Function.numParams, ValueType.zero]
-  iapply twp_partitionBody_from
+  wasm_call twp_partitionBody_from
     (⟨[.i32 arr, .i32 (UInt32.ofNat lo), .i32 (UInt32.ofNat hi)],
       [.i32 0, .i32 0, .i32 0, .i32 0, .i32 0], []⟩ : Locals)
     arr input lo hi hbounds hfit rfl
