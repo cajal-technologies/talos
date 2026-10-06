@@ -224,6 +224,26 @@ def validEqualTableLimitsValidationModule : Module :=
 def validUnboundedTableValidationModule : Module :=
   { funcs := [], tables := [{ min := 0xffff_ffff }] }
 
+/-! ### Memory declarations
+
+Reversed page limits and the 65536-page bound of 32-bit memories
+(`memory.wast`, "size minimum must not be greater than maximum" / "memory
+size"). 64-bit memories may declare page counts past that bound. -/
+
+def invalidReversedMemoryLimitsValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 1, pagesMax := some 0 } }
+
+def invalidMemory32MinOverLimitValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 65537 } }
+
+def invalidMemory32MaxOverLimitValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 0, pagesMax := some 65537 } }
+
+/-- The 32-bit page limit does not apply to 64-bit memories. -/
+def validMemory64AboveMemory32LimitValidationModule : Module :=
+  { funcs := []
+    memory := some { pagesMin := 65537, pagesMax := some 65538, is64 := true } }
+
 def invalidMemoryFillWithoutMemoryModule : Module :=
   { funcs := [{ body := [.const 0, .const 0, .const 0, .memoryFill] }] }
 
@@ -916,6 +936,21 @@ theorem validator_accepts_equal_table_limits :
 
 theorem validator_accepts_unbounded_table :
     validationSucceeds validUnboundedTableValidationModule = true := by decide +kernel
+
+theorem validator_rejects_reversed_memory_limits :
+    validationErrorIs invalidReversedMemoryLimitsValidationModule
+      "size minimum must not be greater than maximum" = true := by decide +kernel
+
+theorem validator_rejects_memory32_minimum_over_limit :
+    validationErrorIs invalidMemory32MinOverLimitValidationModule
+      "memory size" = true := by decide +kernel
+
+theorem validator_rejects_memory32_maximum_over_limit :
+    validationErrorIs invalidMemory32MaxOverLimitValidationModule
+      "memory size" = true := by decide +kernel
+
+theorem validator_accepts_memory64_above_memory32_limit :
+    validationSucceeds validMemory64AboveMemory32LimitValidationModule = true := by decide +kernel
 
 theorem validator_rejects_memory_fill_without_memory :
     validationErrorIs invalidMemoryFillWithoutMemoryModule

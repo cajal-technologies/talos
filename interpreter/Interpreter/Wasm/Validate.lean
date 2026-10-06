@@ -1606,6 +1606,24 @@ def TableDecl.checkDefaultableElement (table : TableDecl) : Except String Unit :
   | .ref false _ => .error "type mismatch"
   | _ => .ok ()
 
+/-- A memory's declared page bounds must be in range for its address type, and
+its minimum size may not exceed its declared maximum. A 32-bit memory holds at
+most 65536 pages (`memory.wast`, "memory size"); the memory64 limit (2^48
+pages) is checked by the decoder, before the page counts are clamped into
+`UInt32`. -/
+def MemDecl.checkLimits (memory : MemDecl) : Except String Unit :=
+  if !memory.is64 && memory.pagesMin.toNat > 65536 then
+    .error "memory size"
+  else
+    match memory.pagesMax with
+    | none => .ok ()
+    | some maximum =>
+        if memory.pagesMin.toNat > maximum.toNat then
+          .error "size minimum must not be greater than maximum"
+        else if !memory.is64 && maximum.toNat > 65536 then
+          .error "memory size"
+        else .ok ()
+
 /-- Run the partial structural validator. `throw` on the first violation. -/
 def Module.validate (m : Module) : Except String Unit := do
   m.checkInterface
@@ -1615,6 +1633,9 @@ def Module.validate (m : Module) : Except String Unit := do
   for (table, index) in m.tables.zipIdx do
     table.checkLimits
     if index ≥ m.importedTables.length then table.checkDefaultableElement
+  -- Memory types: page bounds for every memory, the default one first.
+  for memory in m.memory.toList ++ m.extraMemories do
+    memory.checkLimits
   if m.dataWithoutMemory then throw "unknown memory"
   match m.memory with
   | none => pure ()
