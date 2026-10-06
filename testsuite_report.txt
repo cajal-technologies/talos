@@ -1121,10 +1121,10 @@ annotations.wast:154 module pass
 annotations.wast:206 module decode_error
 annotations.wast:207 module decode_error
 array.wast:3 module pass
-array.wast:28 assert_invalid skipped:assert_invalid: not rejected
+array.wast:28 assert_invalid pass
 array.wast:37 module pass
-array.wast:49 assert_invalid skipped:assert_invalid: not rejected
-array.wast:53 assert_invalid skipped:assert_invalid: not rejected
+array.wast:49 assert_invalid pass
+array.wast:53 assert_invalid pass
 array.wast:60 module pass
 array.wast:97 assert_return pass
 array.wast:98 assert_return pass
@@ -31255,16 +31255,16 @@ obsolete-keywords.wast:64 assert_malformed pass
 obsolete-keywords.wast:71 assert_malformed pass
 obsolete-keywords.wast:78 assert_malformed pass
 ref.wast:3 module pass
-ref.wast:28 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:32 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:37 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:42 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:47 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:52 assert_invalid skipped:assert_invalid: not rejected
+ref.wast:28 assert_invalid pass
+ref.wast:32 assert_invalid pass
+ref.wast:37 assert_invalid pass
+ref.wast:42 assert_invalid pass
+ref.wast:47 assert_invalid pass
+ref.wast:52 assert_invalid pass
 ref.wast:56 assert_invalid pass
-ref.wast:60 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:65 assert_invalid skipped:assert_invalid: not rejected
-ref.wast:69 assert_invalid skipped:assert_invalid: not rejected
+ref.wast:60 assert_invalid pass
+ref.wast:65 assert_invalid pass
+ref.wast:69 assert_invalid pass
 ref.wast:73 assert_invalid pass
 ref.wast:78 assert_invalid pass
 ref_as_non_null.wast:1 module pass
@@ -58188,8 +58188,8 @@ store2.wast:65 assert_return pass
 struct.wast:3 module pass
 struct.wast:16 assert_malformed pass
 struct.wast:25 module pass
-struct.wast:37 assert_invalid skipped:assert_invalid: not rejected
-struct.wast:41 assert_invalid skipped:assert_invalid: not rejected
+struct.wast:37 assert_invalid pass
+struct.wast:41 assert_invalid pass
 struct.wast:48 module pass
 struct.wast:59 assert_invalid pass
 struct.wast:70 module pass
@@ -64001,7 +64001,7 @@ type-equivalence.wast:16 module pass
 type-equivalence.wast:30 module pass
 type-equivalence.wast:38 module pass
 type-equivalence.wast:49 module pass
-type-equivalence.wast:77 assert_invalid skipped:assert_invalid: not rejected
+type-equivalence.wast:77 assert_invalid pass
 type-equivalence.wast:89 module pass
 type-equivalence.wast:102 assert_return pass
 type-equivalence.wast:107 module pass
@@ -64029,8 +64029,8 @@ type-equivalence.wast:290 module pass
 type-equivalence.wast:307 register pass
 type-equivalence.wast:308 module pass
 type-rec.wast:3 module pass
-type-rec.wast:22 assert_invalid skipped:assert_invalid: not rejected
-type-rec.wast:29 assert_invalid skipped:assert_invalid: not rejected
+type-rec.wast:22 assert_invalid pass
+type-rec.wast:29 assert_invalid pass
 type-rec.wast:39 module pass
 type-rec.wast:45 module pass
 type-rec.wast:52 assert_invalid pass

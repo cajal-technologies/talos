@@ -635,6 +635,79 @@ def invalidRefEqAnyValidationModule : Module :=
       [{ params := [.ref true .any],
          body := [.localGet 0, .localGet 0, .gc .refEq, .drop] }] }
 
+/-! ### Unknown type indices in value types (`ref.wast:28-69`)
+
+A concrete `(ref N)` / `(ref null N)` anywhere in a declaration must name a
+declared type. -/
+
+def invalidUnknownTypeInFuncTypeValidationModule : Module :=
+  { funcs := [], types := [{ params := [.ref false (.concrete 1)] }] }
+
+def invalidUnknownTypeInParamValidationModule : Module :=
+  { funcs := [{ params := [.ref false (.concrete 1)], body := [] }] }
+
+def invalidUnknownTypeInResultValidationModule : Module :=
+  { funcs := [{ body := [.unreachable], results := [.ref false (.concrete 1)] }] }
+
+def invalidUnknownTypeInLocalValidationModule : Module :=
+  { funcs := [{ locals := [.ref true (.concrete 1)], body := [] }] }
+
+def invalidUnknownTypeInGlobalValidationModule : Module :=
+  { funcs := []
+    globals :=
+      [{ init := .funcref none, declaredType := some (.ref true (.concrete 1)),
+         isMut := false }] }
+
+def invalidUnknownTypeInTableValidationModule : Module :=
+  { funcs := [], tables := [{ min := 10, elemType := .ref true (.concrete 1) }] }
+
+def invalidUnknownTypeInElementSegmentValidationModule : Module :=
+  { funcs := [], elements := [{ elemType := some (.ref false (.concrete 1)) }] }
+
+def invalidUnknownTypeInBlockResultValidationModule : Module :=
+  { funcs :=
+      [{ body := [.block 0 1 [.unreachable] [] [.ref false (.concrete 1)], .drop] }] }
+
+def invalidUnknownTypeInRefNullValidationModule : Module :=
+  { funcs := [{ body := [.refNull (.ref true (.concrete 1)), .drop] }] }
+
+def validKnownTypeRefsValidationModule : Module :=
+  { types := [{}]
+    funcs :=
+      [{ params := [.ref true (.concrete 0)], locals := [.ref true (.concrete 0)],
+         body := [.localGet 0, .drop, .refNull (.ref true (.concrete 0)), .drop] }]
+    tables := [{ min := 1, elemType := .ref true (.concrete 0) }] }
+
+/-! ### Forward type references across recursion groups (`type-rec.wast:22,29`,
+`type-equivalence.wast:77`)
+
+A type definition may name only types in its own `rec` group or in earlier
+ones, and a declared supertype must precede the type. -/
+
+def invalidForwardTypeRefValidationModule : Module :=
+  { funcs := []
+    gcTypes :=
+      [{ comp := .func { params := [.ref false (.concrete 1)] } },
+       { comp := .func {} }] }
+
+def invalidForwardTypeRefAcrossRecGroupsValidationModule : Module :=
+  { funcs := []
+    gcTypes :=
+      [{ comp := .func { params := [.ref false (.concrete 1)] }, recGroup := some 0 },
+       { comp := .func {}, recGroup := some 1 }] }
+
+def invalidForwardSupertypeValidationModule : Module :=
+  { funcs := []
+    gcTypes :=
+      [{ comp := .func {}, super := some 1, «final» := false },
+       { comp := .func {}, «final» := false }] }
+
+def validForwardTypeRefWithinRecGroupValidationModule : Module :=
+  { funcs := []
+    gcTypes :=
+      [{ comp := .func { params := [.ref false (.concrete 1)] }, recGroup := some 0 },
+       { comp := .func { results := [.ref false (.concrete 0)] }, recGroup := some 0 }] }
+
 def validationErrorIs (module : Module) (expected : String) : Bool :=
   match module.validate with
   | .error actual => actual == expected
@@ -722,6 +795,61 @@ def brOnNonNullRefinementValidationModule : Module :=
            (block (result (ref $t))
              (br_on_non_null 0 (local.get 0))
              unreachable))))"
+
+theorem validator_rejects_unknown_type_in_func_type :
+    validationErrorIs invalidUnknownTypeInFuncTypeValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_param :
+    validationErrorIs invalidUnknownTypeInParamValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_result :
+    validationErrorIs invalidUnknownTypeInResultValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_local :
+    validationErrorIs invalidUnknownTypeInLocalValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_global :
+    validationErrorIs invalidUnknownTypeInGlobalValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_table :
+    validationErrorIs invalidUnknownTypeInTableValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_element_segment :
+    validationErrorIs invalidUnknownTypeInElementSegmentValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_block_result :
+    validationErrorIs invalidUnknownTypeInBlockResultValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_unknown_type_in_ref_null :
+    validationErrorIs invalidUnknownTypeInRefNullValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_accepts_known_type_refs :
+    validationSucceeds validKnownTypeRefsValidationModule = true := by decide +kernel
+
+theorem validator_rejects_forward_type_ref :
+    validationErrorIs invalidForwardTypeRefValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_forward_type_ref_across_rec_groups :
+    validationErrorIs invalidForwardTypeRefAcrossRecGroupsValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_forward_supertype :
+    validationErrorIs invalidForwardSupertypeValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_accepts_forward_type_ref_within_rec_group :
+    validationSucceeds validForwardTypeRefWithinRecGroupValidationModule = true := by
+  decide +kernel
 
 theorem validator_accepts_passive_data_without_linear_memory :
     passiveDataWithoutMemoryModule.dataWithoutMemory = false ∧
