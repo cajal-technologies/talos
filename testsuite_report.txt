@@ -4640,7 +4640,7 @@ exports.wast:55 assert_invalid pass
 exports.wast:59 assert_invalid pass
 exports.wast:63 assert_invalid pass
 exports.wast:67 assert_invalid pass
-exports.wast:71 assert_invalid skipped:assert_invalid: not rejected
+exports.wast:71 assert_invalid pass
 exports.wast:78 module pass
 exports.wast:79 module pass
 exports.wast:80 module pass
