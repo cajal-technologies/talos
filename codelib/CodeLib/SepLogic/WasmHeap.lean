@@ -305,7 +305,7 @@ abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
   | 12 => ⟨constOF (HeapView Nat (Agree (DiscreteO (HostEnv α))) WasmHostEnvMap), by infer_instance⟩
   | 13 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO α)))), by infer_instance⟩
   | 14 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))), by infer_instance⟩
-  | 15 => ⟨constOF (Agree (DiscreteO (Array (ModuleInstance α)))), by infer_instance⟩
+  | 15 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO (Array (ModuleInstance α)))))), by infer_instance⟩
   | 16 => ⟨constOF
       (HeapView Nat (Agree (DiscreteO (Nat × List Value)))
         WasmExceptionMap), by infer_instance⟩
@@ -381,7 +381,8 @@ attribute [instance] WasmRuntimeModuleGS.toGhostMapG
 
 class WasmRuntimeInstancesGS (α : outParam Type) where
   runtimeInstancesElem :
-    ElemG (WasmHeapGF α) (constOF (Agree (DiscreteO (Array (ModuleInstance α)))))
+    ElemG (WasmHeapGF α)
+      (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO (Array (ModuleInstance α)))))))
   runtimeInstancesName : GName
 
 attribute [reducible, instance] WasmRuntimeInstancesGS.runtimeInstancesElem
@@ -687,31 +688,54 @@ theorem runtimeModuleElem_lookup {α : Type} [gs : WasmRuntimeModuleGS α]
   unfold runtimeModuleElem
   iapply ghost_map_lookup
 
-/-- Persistent knowledge of the immutable instances array. Agreement with the
-copy held by `StateInterp` lets cross-instance call rules verify instance
-lookups against the actual machine. -/
+/-- Authoritative half of the exclusive instances array held inside `stateInterp`. -/
+def runtimeInstancesAuth {α : Type} [gs : WasmRuntimeInstancesGS α]
+    (instances : Array (ModuleInstance α)) : IProp (WasmHeapGF α) :=
+  iOwn (E := gs.runtimeInstancesElem) gs.runtimeInstancesName
+    (ExclAuth.auth (⟨instances⟩ : DiscreteO (Array (ModuleInstance α))))
+
+/-- Fragment half of the exclusive instances array held by the user. Agreement
+with the `runtimeInstancesAuth` in `stateInterp` lets cross-instance call rules
+verify instance lookups against the actual machine. -/
 def runtimeInstancesOwn {α : Type} [gs : WasmRuntimeInstancesGS α]
     (instances : Array (ModuleInstance α)) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.runtimeInstancesElem) gs.runtimeInstancesName (toAgree ⟨instances⟩)
-
-instance {α : Type} [WasmRuntimeInstancesGS α] (instances : Array (ModuleInstance α)) :
-    BI.Persistent (runtimeInstancesOwn instances) := by
-  unfold runtimeInstancesOwn
-  infer_instance
+  iOwn (E := gs.runtimeInstancesElem) gs.runtimeInstancesName
+    (ExclAuth.frag (⟨instances⟩ : DiscreteO (Array (ModuleInstance α))))
 
 instance {α : Type} [WasmRuntimeInstancesGS α] (instances : Array (ModuleInstance α)) :
     BI.Timeless (runtimeInstancesOwn instances) := by
   unfold runtimeInstancesOwn
   infer_instance
 
+instance {α : Type} [WasmRuntimeInstancesGS α] (instances : Array (ModuleInstance α)) :
+    BI.Timeless (runtimeInstancesAuth instances) := by
+  unfold runtimeInstancesAuth
+  infer_instance
+
 theorem runtimeInstancesOwn_agree {α : Type} [gs : WasmRuntimeInstancesGS α]
     (actual expected : Array (ModuleInstance α)) :
-    runtimeInstancesOwn actual ∗ runtimeInstancesOwn expected ⊢
+    runtimeInstancesAuth actual ∗ runtimeInstancesOwn expected ⊢
       iprop(⌜actual = expected⌝) := by
-  unfold runtimeInstancesOwn
-  iintro ⟨Hactual, Hexpected⟩
-  icombine Hactual Hexpected gives %Hvalid
-  ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
+  unfold runtimeInstancesAuth runtimeInstancesOwn
+  iintro ⟨Hauth, Hfrag⟩
+  icombine Hauth Hfrag gives %Hvalid
+  ipureexact congrArg DiscreteO.car
+    (ExclAuth.agree (A := DiscreteO (Array (ModuleInstance α))) Hvalid)
+
+theorem runtimeInstancesOwn_update {α : Type} [gs : WasmRuntimeInstancesGS α]
+    (old new' : Array (ModuleInstance α)) :
+    runtimeInstancesAuth old ∗ runtimeInstancesOwn old ==∗
+      runtimeInstancesAuth new' ∗ runtimeInstancesOwn new' := by
+  unfold runtimeInstancesAuth runtimeInstancesOwn
+  iintro ⟨Hauth, Hfrag⟩
+  imod iOwn_update_op (E := gs.runtimeInstancesElem)
+      (ExclAuth.update (A := DiscreteO (Array (ModuleInstance α)))
+        (a := (⟨old⟩ : DiscreteO (Array (ModuleInstance α))))
+        (b := ⟨old⟩) (a' := ⟨new'⟩))
+      $$ [Hauth Hfrag] with Hboth
+  · iframe
+  imodintro
+  icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Persistent knowledge of the host environment for a given instance. -/
 def hostEnvOwn {α : Type} [gs : WasmHostEnvGS α] (instanceId : Nat) (env : HostEnv α) :

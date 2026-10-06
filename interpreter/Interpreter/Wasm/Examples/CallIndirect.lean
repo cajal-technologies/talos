@@ -99,8 +99,8 @@ theorem dispatch_steps (n : UInt32) :
        (.administrative .finish)]
       ⟨.done [.i32 (n + 1)], (dispatchConfig n).store⟩ := by
   wasm_steps [(.localGet rfl), .const]
-  apply Steps.cons (.callIndirect rfl rfl rfl (by decide) (by decide)
-    rfl rfl rfl rfl)
+  apply Steps.cons (.callIndirect (functionIndex := 0) rfl rfl rfl (by decide +kernel)
+    (by decide) rfl rfl rfl rfl)
   wasm_steps [(.localGet rfl), .const, .add, (.returnFromCallFallthrough rfl), .finish]
   simpa [dispatchConfig, Incr, Function.numParams, Function.toLocals,
     UInt32.add_comm] using

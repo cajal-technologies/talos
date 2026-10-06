@@ -298,7 +298,10 @@ theorem execute_read_trap (store wasm : Store Wasm.StdIO.State)
       [.i32 length, .i32 pointer] = .Trap wasm message) :
     execute 2 0 store [.i32 pointer, .i32 length] = none := by
   let machine : MachineStore Wasm.StdIO.State :=
-    { runtime := { instances := #[{ module, host := Wasm.StdIO.env }], entry := ⟨0⟩ }, wasm := store }
+    { runtime :=
+        { instances := #[{ module, host := Wasm.StdIO.env }]
+          entry := ⟨0⟩ }
+      wasm := store }
   let initial : Config Wasm.StdIO.State :=
     { expr := .running
         ⟨⟨[], [], [.i32 pointer, .i32 length]⟩, [.call 0], 1, [], [], []⟩
@@ -377,7 +380,9 @@ def sortConfig (input : List UInt32) : Config Unit :=
       ⟨sortLocals source scratch input.length 0 0 0 0 [],
         mergeSortBody 3, 0, [], [], []⟩
     store :=
-      { runtime := { instances := #[{ module, host := {} }], entry := ⟨0⟩ }
+      { runtime :=
+          { instances := #[{ module, host := {} }]
+            entry := ⟨0⟩ }
         wasm := replaceHost (afterRead input) () } }
 
 theorem initConfig_sort (input : List UInt32) :
@@ -815,7 +820,7 @@ theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
   · intro _
     have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (sortConfig input).store.runtime.currentModule = module := by
-      simp [sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [sortConfig]
     rw [hentry, hmod]
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
@@ -838,7 +843,7 @@ theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
   · intro _
     have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (sortConfig input).store.runtime.currentModule = module := by
-      simp [sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [sortConfig]
     rw [hentry, hmod]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     iapply (twp.mono (fun _ => BI.true_intro))
@@ -859,7 +864,7 @@ theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
   · intro _
     have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (sortConfig input).store.runtime.currentModule = module := by
-      simp [sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [sortConfig]
     rw [hentry, hmod]
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp

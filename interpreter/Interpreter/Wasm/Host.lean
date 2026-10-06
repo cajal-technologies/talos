@@ -48,10 +48,6 @@ structure HostFn (α : Type) where
 indexed identically to the declaring module's `imports` field. -/
 structure HostEnv (α : Type) where
   funcs : List (HostFn α) := []
-  /-- Script-wide function instances reachable through shared funcref
-  tables. Ordinary module imports remain in `funcs`; these entries are
-  addressed by the reserved foreign-function range. -/
-  foreignFuncs : List (HostFn α) := []
 
 @[inline] def HostEnv.empty : HostEnv α := {}
 

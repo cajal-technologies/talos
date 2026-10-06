@@ -171,7 +171,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
       config.store.runtime.currentModule)
     iexists (PartialMap.singleton config.store.runtime.entry.id
       config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesAuth hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureexact ⟨hagree, hinBounds, hglobals,
@@ -301,7 +301,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
       config.store.runtime.currentModule)
     iexists (PartialMap.singleton config.store.runtime.entry.id
     config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
+    unfold runtimeModuleElem runtimeInstancesAuth hostStateAuth currentInstanceAuth currentInstanceAuthN
     simp only [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureexact ⟨hagree, hinBounds, hglobals,

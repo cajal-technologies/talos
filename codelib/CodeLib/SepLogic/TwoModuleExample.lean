@@ -29,6 +29,24 @@ def xInst : ModuleInstance Unit where
     ({ instances := #[xInst, xInst], entry := ⟨0⟩ } : RuntimeEnv Unit).currentModule = xInst.module := by
   simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
 
+-- Single-instance predecessor: one copy of xInst, same shape as twoModuleConfig
+def oneModuleConfig : Config Unit :=
+  { expr := .running
+      { locals          := { params := [], locals := [], values := [] }
+        code            := [.call 0]
+        resultArity     := 0
+        callerRemainder := []
+        control         := []
+        calls           := [] }
+    store :=
+      { runtime :=
+          { instances := #[xInst]
+            entry     := ⟨0⟩ }
+        wasm :=
+          { globals := { globals := [] }
+            mem     := Mem.empty 0
+            host    := () } } }
+
 def twoModuleConfig : Config Unit :=
   { expr := .running
       { locals          := { params := [], locals := [], values := [] }
@@ -45,6 +63,26 @@ def twoModuleConfig : Config Unit :=
           { globals := { globals := [] }
             mem     := Mem.empty 0
             host    := () } } }
+
+-- twoModuleConfig's store is oneModuleConfig's store with xInst pushed
+private theorem twoModule_store_eq_push :
+    twoModuleConfig.store =
+      { oneModuleConfig.store with runtime :=
+          { oneModuleConfig.store.runtime with
+            instances := oneModuleConfig.store.runtime.instances.push xInst } } := rfl
+
+/-- Ghost-state update: the two-instance stateInterp can be derived from a
+one-instance stateInterp together with the runtimeInstancesOwn fragment via
+`stateInterp_instantiate`.  This is the ghost counterpart of a successful
+`SmallStep.instantiate` call that adds the second copy of `xInst`. -/
+theorem twoModule_stateInterp_from_instantiate [WasmSmallStepGS .hasLC Unit] :
+    stateInterp (GF := WasmHeapGF Unit) oneModuleConfig.store 0 [] 0 ∗
+      runtimeInstancesOwn oneModuleConfig.store.runtime.instances ==∗
+      stateInterp (GF := WasmHeapGF Unit) twoModuleConfig.store 0 [] 0 ∗
+      runtimeInstancesOwn #[xInst, xInst] ∗
+      runtimeModuleElem 1 xInst.module := by
+  rw [twoModule_store_eq_push]
+  exact stateInterp_instantiate oneModuleConfig.store 0 [] 0 xInst
 
 /-- Cross-instance call then immediate void return: instance 0 calls import 0
 (resolved to instance 1, function 0), which executes a single `.ret` and
@@ -68,7 +106,7 @@ theorem twoModule_partiallyMeets :
           $$ [HinstanceOwn'] HruntimeInstances'
       · inext; iexact HinstanceOwn'
       · inext
-        iintro _HinstanceCaller
+        iintro ⟨_HinstanceCaller, -⟩
         simp only [List.take_zero, List.nil_append]
         wasm_wp_finish_value_rfl
 

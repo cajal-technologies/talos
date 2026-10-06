@@ -138,7 +138,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
           $$ [HinstanceOwn'] HruntimeInstances'
       · inext; iexact HinstanceOwn'
       · inext
-        iintro _HinstanceCaller
+        iintro ⟨_HinstanceCaller, -⟩
         -- back in instanceR: [.const 0, .load8U 0, .ret]
         wasm_wp_pures [wp_const]
         ihave HptLater2 :

@@ -76,7 +76,7 @@ private def exportValueMatches (m : Module) (st : Store α) :
   | .exnref none, .ref nullable heap =>
       nullable && (heap == .exn || heap == .noExn)
   | .exnref (some _), .ref _ heap => heap == .exn
-  | value, .ref nullable heap => gcRefMatches m st nullable heap value
+  | value, .ref nullable heap => gcRefMatches m st nullable heap #[] value
   | _, _ => false
 
 private def exportArgumentsMatch (m : Module) (call : ExportCall α)

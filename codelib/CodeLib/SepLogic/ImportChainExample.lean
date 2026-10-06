@@ -146,7 +146,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
           $$ [HinstanceOwn'] HruntimeInstances'
       · inext; iexact HinstanceOwn'
       · inext
-        iintro HinstanceCaller
+        iintro ⟨HinstanceCaller, -⟩
         simp only [List.length_nil, List.take_zero, List.drop_zero, List.nil_append]
         -- back in mainFn: [localGet 0, call 0, localGet 0, call 0, ret]
         wasm_wp_pures [wp_localGet]

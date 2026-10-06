@@ -674,7 +674,7 @@ theorem quicksort_terminatesWith (arr : UInt32) (input : List UInt32)
     (fun hlc gs => by
       have hentry : (quicksortConfig arr input).store.runtime.entry = ⟨0⟩ := rfl
       have hmod : (quicksortConfig arr input).store.runtime.currentModule = quicksortModule := by
-        simp [quicksortConfig, RuntimeEnv.currentModule_mk1]
+        simp [quicksortConfig]
       rw [hentry, hmod]
       iintro ⟨Hbytes, Hruntime⟩
       have hfitStrict : arr.toNat + 4 * input.length < UInt32.size := by

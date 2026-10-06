@@ -46,7 +46,9 @@ theorem execute_read (module : Module) (himports : module.imports = imports)
     SmallStep.runFunction? module env 2 0 store [.i32 pointer, .i32 length] =
       some ([.i32 count], wasm) := by
   let machine : MachineStore State :=
-    { runtime := { instances := #[{ module, host := env }], entry := ⟨0⟩ }
+    { runtime :=
+        { instances := #[{ module := module, host := env }],
+          entry := ⟨0⟩ }
       wasm := store }
   let initial : Config State :=
     { expr := .running
@@ -86,7 +88,9 @@ theorem execute_write (module : Module) (himports : module.imports = imports)
     SmallStep.runFunction? module env 2 1 store [.i32 pointer, .i32 length] =
       some ([], wasm) := by
   let machine : MachineStore State :=
-    { runtime := { instances := #[{ module, host := env }], entry := ⟨0⟩ }
+    { runtime :=
+        { instances := #[{ module := module, host := env }],
+          entry := ⟨0⟩ }
       wasm := store }
   let initial : Config State :=
     { expr := .running

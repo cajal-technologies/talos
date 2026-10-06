@@ -2982,9 +2982,10 @@ and a `params := [], results := []` stub. Named param/local ids inside
 an import are ignored (they're never referenced by id from the wasm
 body — imports have no body). -/
 private def parseImportSig (types : Array TypeEntry) (xs : List Sexpr)
-    : Except Err (List Wasm.ValueType × List Wasm.ValueType) := do
+    : Except Err (List Wasm.ValueType × List Wasm.ValueType × Option Nat) := do
   let mut params : List Wasm.ValueType := []
   let mut results : List Wasm.ValueType := []
+  let mut typeIdx : Option Nat := none
   for x in xs do
     match x with
     | .list (.atom "param" :: tail) =>
@@ -3008,12 +3009,14 @@ private def parseImportSig (types : Array TypeEntry) (xs : List Sexpr)
       -- `(type N)` / `(type $sig)` — resolve against the module's type
       -- table. Overwrites any previously accumulated `(param …)` /
       -- `(result …)`, matching the wasm convention that a referenced
-      -- type fully specifies the signature.
+      -- type fully specifies the signature. Record the index for
+      -- cross-module iso-recursive type matching.
       let (ps, rs) ← resolveTypeRef types ref
       params := ps
       results := rs
+      typeIdx := some (← resolveTypeIdxRef types ref)
     | _ => pure ()
-  return (params, results)
+  return (params, results, typeIdx)
 
 /-- Collect `$name → tag index` (imports first, then declarations). -/
 private def collectTagNames (fields : List Sexpr) : NameMap := Id.run do
@@ -3040,9 +3043,11 @@ private def collectTagNames (fields : List Sexpr) : NameMap := Id.run do
   return idOf
 
 /-- Parse a tag's signature: `(tag $id? (type N))` or inline
-`(param …)*` forms (tags have no results). -/
+`(param …)*` forms (tags have no results).  Returns both the `FuncType`
+and the `gcTypes` index of the declared type (when `(type N)` form is
+used) for cross-module iso-recursive type matching. -/
 private def parseTagSig (types : Array TypeEntry) (xs : List Sexpr)
-    : Except Err Wasm.FuncType := do
+    : Except Err (Wasm.FuncType × Option Nat) := do
   let xs := match xs with
     | .atom a :: r => if startsWith a "$" then r else xs
     | _ => xs
@@ -3052,7 +3057,8 @@ private def parseTagSig (types : Array TypeEntry) (xs : List Sexpr)
   match xs with
   | .list [.atom "type", .atom ref] :: _ =>
     let (ps, _) ← resolveTypeRef types ref
-    .ok { params := ps }
+    let idx ← resolveTypeIdxRef types ref
+    .ok ({ params := ps }, some idx)
   | _ =>
     let mut ps : List Wasm.ValueType := []
     for x in xs do
@@ -3065,7 +3071,7 @@ private def parseTagSig (types : Array TypeEntry) (xs : List Sexpr)
             else ps := ps ++ [(atomToValueType? a).getD .i32]
           | .list l => ps := ps ++ [listToValueType l]
       | _ => pure ()
-    .ok { params := ps }
+    .ok ({ params := ps }, none)
 
 /-- Parse the type body of an imported global (`(global $id? <gt>)`) into
 a zero-initialised `GlobalDecl`. -/
@@ -3114,8 +3120,9 @@ forms. Each function import gets a positional unified-index `0 … N-1`
 and is recorded in `idOf` if it carries a `$name`. Imports of memory,
 global, and table are silently dropped (unsupported). -/
 private def collectImports (types : Array TypeEntry) (fields : List Sexpr)
-    : Except Err (List Wasm.ImportDecl × NameMap) := do
+    : Except Err (List Wasm.ImportDecl × List (Option Nat) × NameMap) := do
   let mut imports : List Wasm.ImportDecl := []
+  let mut importTypeIdxes : List (Option Nat) := []
   let mut idOf : NameMap := {}
   let mut i := 0
   for f in fields do
@@ -3134,14 +3141,13 @@ private def collectImports (types : Array TypeEntry) (fields : List Sexpr)
           if startsWith a "$" then
             idOf := idOf.insert (a.drop 1).toString i
         | _ => pure ()
-        let (params, results) ← parseImportSig types funcBodyAfterId
-        imports := imports ++ [{ «module» := modName',
-                                  name := importName',
-                                  params, results }]
+        let (params, results, typeIdx) ← parseImportSig types funcBodyAfterId
+        imports := imports ++ [{ «module» := modName', name := importName', params, results }]
+        importTypeIdxes := importTypeIdxes ++ [typeIdx]
         i := i + 1
       | _ => pure ()  -- (import … (memory|global|table …)) — drop silently
     | _ => pure ()
-  return (imports, idOf)
+  return (imports, importTypeIdxes, idOf)
 
 /-- Walk a `(module ...)` form. `(type …)`, `(func …)`, `(export …)`,
 `(global …)`, `(table …)`, `(memory …)`, `(elem …)`, `(data …)`,
@@ -3185,7 +3191,7 @@ private def parseModuleWith (rejectUnsupported : Bool)
           types := types.push { parseTypeField body with recGroup := marker }
         | _ => pure ()
     | _ => pure ()
-  let (imports, importFuncIds) ← collectImports types rest
+  let (imports, importTypeIdxes, importFuncIds) ← collectImports types rest
   let (globImps, tblImps, memImps) ← collectEntityImports importFuncIds rest
   let inModuleFuncIds ← collectFuncNames rest
   -- Unified function index space: imports occupy `0 … imports.length - 1`,
@@ -3200,18 +3206,23 @@ private def parseModuleWith (rejectUnsupported : Bool)
   let tagNames := collectTagNames rest
   -- Tag index space: imported tags first, then declarations.
   let mut tags : Array Wasm.FuncType := #[]
+  let mut tagTypeIdxes : Array (Option Nat) := #[]
   let mut tagImps : Array (String × String) := #[]
   for f in rest do
     match f with
     | .list [.atom "import", .atom modName, .atom name,
         .list (.atom "tag" :: body)] =>
-      tags := tags.push (← parseTagSig types body)
+      let (ft, tidx) ← parseTagSig types body
+      tags := tags.push ft
+      tagTypeIdxes := tagTypeIdxes.push tidx
       tagImps := tagImps.push (decodeWatString modName, decodeWatString name)
     | _ => pure ()
   for f in rest do
     match f with
     | .list (.atom "tag" :: body) =>
-      tags := tags.push (← parseTagSig types body)
+      let (ft, tidx) ← parseTagSig types body
+      tags := tags.push ft
+      tagTypeIdxes := tagTypeIdxes.push tidx
     | _ => pure ()
   let inlineExportsOf : List Sexpr → List String := fun body =>
     (body.filterMap fun
@@ -3406,7 +3417,9 @@ private def parseModuleWith (rejectUnsupported : Bool)
            tableExports  := tableExports.toList
            memoryExports := memoryExports.toList
            tagExports := tagExports.toList
-           tags := tags.toList }
+           tags := tags.toList
+           tagTypeIdxes := tagTypeIdxes.toList
+           importTypeIdxes := importTypeIdxes }
 
 /-- Parse an already-tokenized module with the permissive testsuite policy. -/
 def parseModule (xs : List Sexpr) : Except Err Wasm.Module :=

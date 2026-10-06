@@ -29,27 +29,33 @@ def refReflectConfig (m : Module) (st : Store α) : Config α :=
         callerRemainder := [] }
     store := { runtime := { instances := #[{ module := m, host := {} }], entry := ⟨0⟩ }, wasm := st } }
 
-theorem refReflect_steps (m : Module) (st : Store α) :
+theorem refReflect_steps (m : Module) (st : Store α)
+    (hm : 0 < m.imports.length + m.funcs.length) :
     Steps (refReflectConfig m st)
       [(.instruction .refNull), (.instruction .refIsNull),
        (.instruction (.refFunc 0)), (.instruction .refIsNull),
        (.administrative .finish)]
       ⟨.done [.i32 0, .i32 1], (refReflectConfig m st).store⟩ := by
-  wasm_steps [.refNull, (.refIsNullTrue rfl), .refFunc, (.refIsNullFalse rfl)]
-  exact Steps.cons .finish (Steps.refl _)
+  wasm_steps [.refNull, (.refIsNullTrue rfl)]
+  refine Steps.cons (Step.refFunc (addr := 0) ?_) ?_
+  · simp [ite_eq_left hm]
+  · wasm_steps [(.refIsNullFalse rfl)]
+    exact Steps.cons .finish (Steps.refl _)
 
-theorem refReflect_terminates (m : Module) (st : Store α) :
+theorem refReflect_terminates (m : Module) (st : Store α)
+    (hm : 0 < m.imports.length + m.funcs.length) :
     TerminatesWith (refReflectConfig m st)
       (fun values store =>
         values = [.i32 0, .i32 1] ∧ store.wasm = st) := by
-  refine ⟨_, _, _, refReflect_steps m st, ?_⟩
+  refine ⟨_, _, _, refReflect_steps m st hm, ?_⟩
   exact ⟨rfl, rfl⟩
 
-theorem refReflect_partial (m : Module) (st : Store α) :
+theorem refReflect_partial (m : Module) (st : Store α)
+    (hm : 0 < m.imports.length + m.funcs.length) :
     PartiallyMeets (refReflectConfig m st)
       (fun values store =>
         values = [.i32 0, .i32 1] ∧ store.wasm = st) :=
-  (refReflect_terminates m st).toPartiallyMeets
+  (refReflect_terminates m st hm).toPartiallyMeets
 
 namespace Decoded
 

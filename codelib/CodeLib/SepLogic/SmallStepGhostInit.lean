@@ -86,11 +86,11 @@ namespace GhostSlot
       (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat))))) := by
   exists 14
 
-/-- Agreement element holding the runtime instance table: `WasmHeapGF` slot
-15. -/
+/-- Exclusive-auth element holding the runtime instance table: `WasmHeapGF`
+slot 15. -/
 @[reducible] def runtimeInstancesElem :
     ElemG (WasmHeapGF α)
-      (constOF (Agree (DiscreteO (Array (ModuleInstance α))))) := by
+      (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO (Array (ModuleInstance α))))))) := by
   exists 15
 
 /-- Ghost map of in-flight exception payloads: `WasmHeapGF` slot 16. -/
@@ -348,16 +348,26 @@ macro "wasm_alloc_current_instance " config:term : tactic =>
          instanceName }))
 
 set_option hygiene false in
-/-- Allocate agreement on the runtime instance table. -/
+/-- Allocate exclusive-auth ownership of the runtime instance table.
+The fragment is discarded; callers that need to hand the fragment to a WP
+proof should use an inline allocation with an explicit split. -/
 macro "wasm_alloc_runtime_instances " config:term : tactic =>
   `(tactic|
     (letI runtimeInstancesElem :
         ElemG (WasmHeapGF α)
-          (constOF (Agree (DiscreteO (Array (ModuleInstance α))))) :=
+          (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF
+              (DiscreteO (Array (ModuleInstance α))))))) :=
       GhostSlot.runtimeInstancesElem
      imod (iOwn_alloc (E := runtimeInstancesElem)
-         (toAgree ⟨($config).store.runtime.instances⟩) (fun _ => trivial)) with
-       ⟨%runtimeInstancesName, HruntimeInstances⟩
+         (ExclAuth.auth (⟨($config).store.runtime.instances⟩ :
+             DiscreteO (Array (ModuleInstance α))) •
+          ExclAuth.frag (⟨($config).store.runtime.instances⟩ :
+             DiscreteO (Array (ModuleInstance α))))
+         ExclAuth.valid) with
+       ⟨%runtimeInstancesName, HruntimeInstancesAll⟩
+     ihave ⟨HruntimeInstances, HruntimeInstancesFrag⟩ :=
+         iOwn_op.mp $$ HruntimeInstancesAll
+     iclear HruntimeInstancesFrag
      letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
        { runtimeInstancesElem
          runtimeInstancesName }))

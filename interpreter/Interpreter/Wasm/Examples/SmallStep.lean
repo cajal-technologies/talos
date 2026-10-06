@@ -1855,7 +1855,14 @@ theorem call_indirect_uninitialized_trapsWith :
 theorem call_indirect_type_mismatch_trapsWith :
     TrapsWith (indirectCallConfig 8) .indirectCallTypeMismatch
       (fun store => store = (indirectCallConfig 8).store) :=
-  runSteps_trapped_trapsWith_store (fuel := 2) (by rfl)
+  TrapsWith.of_steps
+    (by
+      wasm_steps [.const]
+      exact Steps.cons
+        (.callIndirectTypeMismatch (functionIndex := 1) rfl rfl rfl (by decide +kernel)
+          (by decide) rfl rfl rfl (by decide +kernel))
+        (Steps.refl _))
+    rfl
 
 theorem call_ref_null_trapsWith :
     TrapsWith (indirectCallConfig 9) .nullFunctionReference
@@ -2421,11 +2428,15 @@ theorem host_call_matches_big_step :
         smallStepHostModule.initialStore [.i32 41] smallStepHostEnv) := by decide +kernel
 
 def smallStepHostEntryConfig : Config Unit :=
+  let inst := smallStepHostRuntime.currentInstance
+  let funcaddrs := ModuleInstance.identityFuncaddrs inst.module
   { expr := .running
       { locals := { values := [.i32 10] },
         code := [.call 0], resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := smallStepHostRuntime,
+      { runtime :=
+          { instances := #[{ inst with funcaddrs }],
+            entry := ⟨0⟩ },
         wasm := smallStepHostModule.initialStore } }
 
 theorem host_entry_initialization :

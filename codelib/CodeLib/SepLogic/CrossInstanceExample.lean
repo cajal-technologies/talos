@@ -77,7 +77,7 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
           $$ [HinstanceOwn'] HruntimeInstances'
       · inext; iexact HinstanceOwn'
       · inext
-        iintro _HinstanceCaller
+        iintro ⟨_HinstanceCaller, -⟩
         wasm_wp_finish_value_rfl
 
 theorem crossInstance_terminates :

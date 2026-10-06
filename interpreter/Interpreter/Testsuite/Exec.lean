@@ -22,29 +22,6 @@ namespace Wasm.Testsuite
 open Wasm Wasm.Decoder.Wat
 open Lean (Json)
 
-/-- Invoke through the migrated small-step semantics. The iterator has its own
-explicit cap so an intentionally divergent program cannot consume the
-testsuite's full fuel allowance. Initialization failures and invariant
-violations remain observable driver errors rather than falling back to a
-second semantics. -/
-private def runSmallStep
-    (fuel : Nat) (m : Wasm.Module) (idx : Nat)
-    (store : Wasm.Store Unit) (args : List Wasm.Value)
-    (env : Wasm.HostEnv Unit) : Wasm.Result Unit :=
-  let instance_ : Wasm.SmallStep.ModuleInstance Unit := { module := m, host := env }
-  match Wasm.SmallStep.initConfig instance_ idx store args with
-  | .error error => .Invalid s!"small-step initialization error: {error.message}"
-  | .ok config =>
-    match (Wasm.SmallStep.runSteps (min fuel 15_000_000) config).result with
-    | .success values finalStore => .Success values finalStore.wasm
-    | .trapped (.uncaughtException tag arguments) finalStore =>
-      .Thrown tag arguments finalStore.wasm
-    | .trapped reason finalStore =>
-      .Trap finalStore.wasm reason.message
-    | .outOfFuel _ => .OutOfFuel
-    | .internalError error _ =>
-      .Invalid s!"small-step internal error: {error.message}"
-
 /-! ## Outcomes -/
 
 inductive Outcome where
@@ -381,14 +358,17 @@ structure ScriptState where
   sharedGlobals : Array Wasm.Value := #[]
   /-- Allocated exception-tag identities (payload-free but generative). -/
   sharedTags : Array Unit := #[]
-  /-- Script-wide callable function instances referenced by shared tables. -/
-  sharedFunctions : Array (Wasm.HostFn Unit) := #[]
   /-- Script-wide instantiated memories. Module-local memory indices carry
   stable IDs into this array, so imports alias resources rather than copying
   snapshots. The cap travels with the resource. -/
   sharedMemories : Array (Wasm.Mem × Nat) := #[]
   /-- Script-wide instantiated tables, indexed by stable table identity. -/
   sharedTables : Array (Wasm.TableInst × Nat) := #[]
+  /-- Global function address table: index = global funcaddr,
+  value = (slotIdx into `modules`, localFuncIdx). Populated at module
+  instantiation so cross-module `call_indirect` through a shared table
+  resolves correctly. -/
+  sharedFuncs : Array (Nat × Nat) := #[]
 
 /-- Look up the index of the module an action wants. With no name, it's
 the last declared one. Returning the index (rather than the slot itself)
@@ -404,6 +384,223 @@ private def resolveModuleIdx (st : ScriptState) (name? : Option String) : Except
   | none =>
     if st.modules.isEmpty then .error "no module declared yet"
     else .ok (st.modules.size - 1)
+
+/-! ## Funcref translation helper -/
+
+/-- Translate funcref values from module-local indices to global function
+addresses by adding `baseAddr`. Leaves all non-funcref values unchanged. -/
+private def translateFuncrefs (baseAddr : Nat) : List Wasm.Value → List Wasm.Value :=
+  List.map fun
+    | .funcref (some i) => .funcref (some (baseAddr + i))
+    | v => v
+
+/-! ## Small-step interpreter entry point -/
+
+/-- Build a `Config` for a multi-instance run starting at `globalFuncAddr`. -/
+private def initConfigGlobal (runtime : Wasm.SmallStep.RuntimeEnv Unit)
+    (globalFuncAddr : Nat) (initial : Wasm.Store Unit) (params : List Wasm.Value) :
+    Except Wasm.SmallStep.InternalError (Wasm.SmallStep.Config Unit) :=
+  match runtime.resolveFunc globalFuncAddr with
+  | none => .error ⟨s!"global function address {globalFuncAddr} out of range"⟩
+  | some (instId, localIdx) =>
+    match runtime.instances[instId.id]? with
+    | none => .error ⟨s!"instance {instId.id} out of range"⟩
+    | some (inst : Wasm.SmallStep.ModuleInstance Unit) =>
+      if localIdx < inst.module.imports.length then
+        match inst.module.imports[localIdx]? with
+        | none => .error ⟨s!"initConfigGlobal: import index {localIdx} out of range"⟩
+        | some imp =>
+          let callerRemainder := params.drop imp.params.length
+          .ok ⟨.running
+            { locals := { values := params.take imp.params.length }
+              code := [.call localIdx]
+              resultArity := imp.results.length
+              callerRemainder },
+            { runtime := { runtime with entry := instId }, wasm := initial }⟩
+      else
+        match inst.module.funcs[localIdx - inst.module.imports.length]? with
+        | none => .error ⟨s!"function index {localIdx} out of range"⟩
+        | some (fn : Wasm.Function) =>
+          let callerRemainder := params.drop fn.numParams
+          let locals := fn.toLocals (params.take fn.numParams).reverse
+          .ok ⟨.running
+            { locals, code := fn.body
+              resultArity := fn.results.length
+              callerRemainder },
+            { runtime := { runtime with entry := instId }, wasm := initial }⟩
+
+/-- Refresh a store from the shared resource arrays in `sst`.
+Defined here so `runSmallStep` can use it before `hydrateStore` is defined. -/
+private def refreshStoreFromSst (sst : ScriptState) (store0 : Wasm.Store Unit) :
+    Wasm.Store Unit := Id.run do
+  let mut store := store0
+  for (id, index) in store0.globalIds.zipIdx do
+    match sst.sharedGlobals[id]? with
+    | some value =>
+      store := { store with globals :=
+        { globals := Wasm.listSetAt store.globals.globals index value } }
+    | none => pure ()
+  for (id, index) in store0.memoryIds.zipIdx do
+    match sst.sharedMemories[id]? with
+    | some (memory, cap) =>
+      store :=
+        if index = 0 then { store with mem := memory }
+        else { store with extraMems := Wasm.listSetAt store.extraMems (index - 1) memory }
+      store := { store with memoryCaps := Wasm.listSetAt store.memoryCaps index cap }
+    | none => pure ()
+  for (id, index) in store0.tableIds.zipIdx do
+    match sst.sharedTables[id]? with
+    | some (table, _) =>
+      store := { store with tables := Wasm.listSetAt store.tables index table }
+    | none => pure ()
+  return store
+
+/-- Invoke through the migrated small-step semantics. When `sst.sharedFuncs`
+is non-empty a multi-instance `RuntimeEnv` is built so that `call_indirect`
+through a shared table resolves cross-module function addresses correctly. -/
+private def runSmallStep
+    (fuel : Nat) (m : Wasm.Module) (idx : Nat)
+    (store : Wasm.Store Unit) (args : List Wasm.Value)
+    (env : Wasm.HostEnv Unit)
+    (sst : ScriptState := {}) (slotIdx : Nat := 0) : Wasm.Result Unit :=
+  let finish (config : Wasm.SmallStep.Config Unit) : Wasm.Result Unit :=
+    match (Wasm.SmallStep.runSteps (min fuel 15_000_000) config).result with
+    | .success values finalStore => .Success values finalStore.wasm
+    | .trapped (.uncaughtException tag arguments) finalStore =>
+      .Thrown tag arguments finalStore.wasm
+    | .trapped reason finalStore => .Trap finalStore.wasm reason.message
+    | .outOfFuel _ => .OutOfFuel
+    | .internalError error _ =>
+      .Invalid s!"small-step internal error: {error.message}"
+  if sst.sharedFuncs.isEmpty then
+    -- Single-module fast path.
+    let instance_ : Wasm.SmallStep.ModuleInstance Unit := { module := m, host := env }
+    match Wasm.SmallStep.initConfig instance_ idx store args with
+    | .error error => .Invalid s!"small-step initialization error: {error.message}"
+    | .ok config => finish config
+  else
+    -- Multi-instance: build a runtime covering all known modules so that
+    -- cross-module call_indirect through a shared table resolves correctly.
+    let slotIdxes : List Nat :=
+      (sst.sharedFuncs.toList.map (·.1)).eraseDups
+    let canonId : Nat → Nat := fun si =>
+      (slotIdxes.findIdx? (· = si)).getD 0
+    -- Build a ResolvedImport array for each module: wasm imports become
+    -- .wasm entries (cross-instance dispatch); everything else uses the host env.
+    let buildResolvedImports (_ : Nat) (sm : Wasm.Module) (senv : Wasm.HostEnv Unit) :
+        Array (Wasm.SmallStep.ResolvedImport Unit) :=
+      (Array.range sm.imports.length).map fun i =>
+        let imp := sm.imports[i]!
+        match sst.registered.find? (·.1 = imp.«module») with
+        | some (_, regSlotIdx) =>
+          match sst.modules[regSlotIdx]? with
+          | some (.ok rm _ _) =>
+            match rm.findExport imp.name with
+            | some funcIdx =>
+              -- callCrossInstance indexes module.funcs (own only); subtract imports.
+              if funcIdx >= rm.imports.length then
+                .wasm ⟨slotIdxes.findIdx? (· = regSlotIdx) |>.getD 0⟩
+                  (funcIdx - rm.imports.length)
+              else
+                match senv.funcs[i]? with
+                | some fn => .host fn
+                | none => .host (HostFn.unresolved (α := Unit) (sm.imports[i]!))
+            | none =>
+              match senv.funcs[i]? with
+              | some fn => .host fn
+              | none => .host (HostFn.unresolved (α := Unit) (sm.imports[i]!))
+          | _ =>
+            match senv.funcs[i]? with
+            | some fn => .host fn
+            | none => .host (HostFn.unresolved (α := Unit) (sm.imports[i]!))
+        | none =>
+          match senv.funcs[i]? with
+          | some fn => .host fn
+          | none => .host (HostFn.unresolved (α := Unit) (sm.imports[i]!))
+    -- Build instances: assign funcaddrs using the Wasm §4.5.4 rule — wasm
+    -- imports alias the exporter's funcaddr; host imports and own functions
+    -- each get a slot-local address (slotBase + localIdx).
+    let instance0 : Wasm.SmallStep.ModuleInstance Unit := { module := m, host := env }
+    let instances : Array (Wasm.SmallStep.ModuleInstance Unit) :=
+      slotIdxes.toArray.map fun si =>
+        let slotBase := sst.sharedFuncs.toList.findIdx? (·.1 = si) |>.getD 0
+        match (sst.modules[si]? : Option ModuleSlot) with
+        | some (.ok sm _ senv) =>
+          -- Use the fresh env for the invoking slot (it was rebuilt with the
+          -- current sst by hydrateSlot); other slots keep their stored env.
+          let effectiveEnv := if si = slotIdx then env else senv
+          let resolvedImports_i := buildResolvedImports si sm effectiveEnv
+          let funcaddrs :=
+            (Array.range (sm.imports.length + sm.funcs.length)).map fun localIdx =>
+              match resolvedImports_i[localIdx]? with
+              | some (.wasm calleeId ownFnIdx) =>
+                -- wasm import: alias the exporter's own-function funcaddr
+                let exporterSi := slotIdxes.toArray[calleeId.id]?.getD si
+                let exporterSlotBase :=
+                  sst.sharedFuncs.toList.findIdx? (·.1 = exporterSi) |>.getD 0
+                match sst.modules[exporterSi]? with
+                | some (.ok rm _ _) => exporterSlotBase + rm.imports.length + ownFnIdx
+                | _ => slotBase + localIdx
+              | _ => slotBase + localIdx
+          ({ module := sm, host := effectiveEnv,
+             resolvedImports := resolvedImports_i,
+             funcaddrs } : Wasm.SmallStep.ModuleInstance Unit)
+        | _ => instance0
+    let runtime : Wasm.SmallStep.RuntimeEnv Unit :=
+      { instances, entry := ⟨0⟩ }
+    -- Use the entry instance's funcaddrs to resolve the export index to a
+    -- global funcaddr, following imports if the export re-exports one.
+    let globalFuncAddr :=
+      match instances[canonId slotIdx]? with
+      | some (inst : Wasm.SmallStep.ModuleInstance Unit) =>
+        inst.funcaddrs[idx]?.getD idx
+      | none => idx
+    -- Follow one level of the import chain to find the owning module.
+    -- Returns (canonIdx, unifiedFnIdx) of the owning instance.
+    let followImports : Nat → Nat → Nat × Nat := fun si li =>
+      match sst.modules[si]? with
+      | some (.ok sm _ _) =>
+        if li < sm.imports.length then
+          let imp := sm.imports[li]!
+          match sst.registered.find? (·.1 = imp.«module») with
+          | some (_, regSlotIdx) =>
+            match sst.modules[regSlotIdx]? with
+            | some (.ok rm _ _) =>
+              (canonId regSlotIdx, rm.findExport imp.name |>.getD li)
+            | _ => (canonId si, li)
+          | none => (canonId si, li)
+        else (canonId si, li)
+      | _ => (canonId si, li)
+    -- When the target function lives in a different instance than the
+    -- invoking module (re-exported import), run with THAT instance's
+    -- hydrated store so memory/table accesses hit the right backing data.
+    let entryInstCanon : Nat :=
+      match sst.sharedFuncs[globalFuncAddr]? with
+      | some p => (followImports p.1 p.2).1
+      | none => canonId slotIdx
+    let entryStore : Wasm.Store Unit :=
+      if entryInstCanon = canonId slotIdx then store
+      else
+        let entrySi := slotIdxes.toArray[entryInstCanon]?.getD slotIdx
+        match sst.modules[entrySi]? with
+        | some (.ok _ estore _) => refreshStoreFromSst sst estore
+        | _ => store
+    -- Cross-instance: entry module's store layout differs from the invoking
+    -- module's, so returning finalStore.wasm would corrupt the invoking slot.
+    -- Return the original invoking store unchanged instead.
+    let finishCross (config : Wasm.SmallStep.Config Unit) : Wasm.Result Unit :=
+      match (Wasm.SmallStep.runSteps (min fuel 15_000_000) config).result with
+      | .success values _ => .Success values store
+      | .trapped (.uncaughtException tag arguments) _ => .Thrown tag arguments store
+      | .trapped reason _ => .Trap store reason.message
+      | .outOfFuel _ => .OutOfFuel
+      | .internalError error _ =>
+        .Invalid s!"small-step internal error: {error.message}"
+    match initConfigGlobal runtime globalFuncAddr entryStore args with
+    | .error error => .Invalid s!"small-step initialization error: {error.message}"
+    | .ok config =>
+      if entryInstCanon = canonId slotIdx then finish config
+      else finishCross config
 
 /-! ## wasm-tools subprocess helpers -/
 
@@ -467,37 +664,39 @@ private def resolveRegistered (st : ScriptState) (modName : String)
 /-- Build the host environment backing a module's function imports. -/
 private def buildEnv (st : ScriptState) (m : Wasm.Module) (fuel : Nat)
     : Wasm.HostEnv Unit :=
-  { foreignFuncs := st.sharedFunctions.toList
-    funcs := m.imports.map fun imp =>
+  { funcs := m.imports.map fun imp =>
       if imp.module == "spectest" && spectestPrintNames.contains imp.name then
         { params := imp.params, results := imp.results,
           invoke := fun s _ => .Return [] s }
       else
-        match resolveRegistered st imp.module with
-        | some (em, estore, eenv) =>
-          match em.findExport imp.name with
-          | some fidx =>
-            { params := imp.params, results := imp.results,
-              invoke := fun s args =>
-                -- `args` arrive first-declared-first; `initConfig` expects
-                -- stack order (head = last argument).
-                match runSmallStep fuel em fidx estore args.reverse eenv with
-                | .Success vs _ => .Return vs s
-                | .Trap _ msg   => .Trap s msg
-                | .Invalid msg  => .Trap s s!"invalid in imported function: {msg}"
-                | .OutOfFuel    => .Trap s "out of fuel in imported function"
-                | .Thrown tag arguments _ =>
-                  let globalTag := estore.tagIds[tag]?.getD tag
-                  let localTag :=
-                    (s.tagIds.findIdx? (· = globalTag)).getD
-                      (s.tagIds.length + globalTag)
-                  .Throw s localTag arguments }
-          | none =>
-            { invoke := fun s _ =>
-                .Trap s s!"unknown import {imp.module}.{imp.name}" }
+        match st.registered.find? (·.1 = imp.module) with
+        | some (_, calleeSlot) =>
+          match st.modules[calleeSlot]? with
+          | some (.ok em estore eenv) =>
+            match em.findExport imp.name with
+            | some fidx =>
+              { params := imp.params, results := imp.results,
+                invoke := fun s args =>
+                  -- `args` arrive first-declared-first; `initConfig` expects
+                  -- stack order (head = last argument).
+                  match runSmallStep fuel em fidx estore args.reverse eenv st calleeSlot with
+                  | .Success vs _ => .Return vs s
+                  | .Trap _ msg   => .Trap s msg
+                  | .Invalid msg  => .Trap s s!"invalid in imported function: {msg}"
+                  | .OutOfFuel    => .Trap s "out of fuel in imported function"
+                  | .Thrown tag arguments _ =>
+                    let globalTag := estore.tagIds[tag]?.getD tag
+                    let localTag :=
+                      (s.tagIds.findIdx? (· = globalTag)).getD
+                        (s.tagIds.length + globalTag)
+                    .Throw s localTag arguments }
+            | none =>
+              { invoke := fun s _ =>
+                  .Trap s s!"unknown import {imp.module}.{imp.name}" }
+          | _ =>
+            HostFn.unresolved imp
         | none =>
-          { invoke := fun s _ =>
-              .Trap s s!"unresolved import {imp.module}.{imp.name}" } }
+          HostFn.unresolved imp }
 
 /-- Spectest's ambient global values. -/
 private def spectestGlobal? : String → Option Wasm.Value
@@ -507,12 +706,47 @@ private def spectestGlobal? : String → Option Wasm.Value
   | "global_f64" => some (.f64 (666.6 : Float).toBits)
   | _ => none
 
+/-- Synthetic spectest module for link-time import validation in assert_unlinkable.
+    Provides the declared shapes for all standard spectest exports without running
+    code; used to detect §4.5.4 type mismatches via the wasm registry path. -/
+private def spectestModuleDecl : Wasm.Module := {
+  funcs := [
+    { body := [] },                          -- print ()→()
+    { body := [], params := [.i32] },        -- print_i32
+    { body := [], params := [.i64] },        -- print_i64
+    { body := [], params := [.f32] },        -- print_f32
+    { body := [], params := [.f64] },        -- print_f64
+    { body := [], params := [.i32, .f32] },  -- print_i32_f32
+    { body := [], params := [.f64, .f64] },  -- print_f64_f64
+  ],
+  exports := [
+    { name := "print",         funcIdx := 0 },
+    { name := "print_i32",     funcIdx := 1 },
+    { name := "print_i64",     funcIdx := 2 },
+    { name := "print_f32",     funcIdx := 3 },
+    { name := "print_f64",     funcIdx := 4 },
+    { name := "print_i32_f32", funcIdx := 5 },
+    { name := "print_f64_f64", funcIdx := 6 },
+  ],
+  globals := [
+    { init := .i32 666, declaredType := some .i32, isMut := false },
+    { init := .i64 666, declaredType := some .i64, isMut := false },
+    { init := .f32 0,   declaredType := some .f32, isMut := false },
+    { init := .f64 0,   declaredType := some .f64, isMut := false },
+  ],
+  globalExports := [("global_i32", 0), ("global_i64", 1), ("global_f32", 2), ("global_f64", 3)],
+  tables := [{ min := 10, max := some 20 }],
+  tableExports := [("table", 0)],
+  memory := some { pagesMin := 1, pagesMax := some 2 },
+  memoryExports := [("memory", 0)],
+}
+
 /-- Copy imported entity values (globals/tables/memories) into a fresh
 initial store, then re-apply the module's active element and data
 segments so segments targeting an imported table/memory land on the
 copied contents (the re-application is idempotent for local targets). -/
 private def applyEntityImports (sst : ScriptState) (m : Wasm.Module)
-    (store : Wasm.Store Unit) : Wasm.Store Unit := Id.run do
+    (store : Wasm.Store Unit) (funcBaseAddr : Nat := 0) : Wasm.Store Unit := Id.run do
   let mut store := store
   let mut gi := 0
   for (modN, name) in m.importedGlobals do
@@ -600,7 +834,7 @@ private def applyEntityImports (sst : ScriptState) (m : Wasm.Module)
       | some tbl =>
         if off + seg.plainValues.length ≤ tbl.length then
           let tbls' := Wasm.listSetAt store.tables t
-            (Wasm.listWriteAt tbl off seg.plainValues)
+            (Wasm.listWriteAt tbl off (translateFuncrefs funcBaseAddr seg.plainValues))
           store := { store with tables := tbls' }
       | none => pure ()
     | _, _ => pure ()
@@ -626,7 +860,7 @@ hydrated from their canonical script-wide identities. `initialStore` and
 `applyEntityImports` necessarily run before those identities are assigned;
 without this pass their writes can be hidden by the subsequent hydration. -/
 private def reapplyLiteralActiveSegments (m : Wasm.Module)
-    (store0 : Wasm.Store Unit) : Wasm.Store Unit := Id.run do
+    (store0 : Wasm.Store Unit) (funcBaseAddr : Nat := 0) : Wasm.Store Unit := Id.run do
   let mut store := store0
   match m.memory with
   | some memory =>
@@ -654,7 +888,8 @@ private def reapplyLiteralActiveSegments (m : Wasm.Module)
             store :=
               { store with
                 tables := Wasm.listSetAt store.tables tableIndex
-                  (Wasm.listWriteAt table offset segment.plainValues) }
+                  (Wasm.listWriteAt table offset
+                    (translateFuncrefs funcBaseAddr segment.plainValues)) }
         | none => pure ()
     | _, _ => pure ()
   return store
@@ -718,19 +953,8 @@ private def assignResourceIds (sst : ScriptState) (m : Wasm.Module)
       | some id =>
         match tables[id]? with
         | some (table, _) =>
-          let decode : Wasm.Value → Wasm.Value
-            | .funcref (some encoded) =>
-              if Wasm.SmallStep.foreignFunctionBase ≤ encoded then
-                let functionId :=
-                  encoded - Wasm.SmallStep.foreignFunctionBase
-                match store.functionIds.findIdx? (· = functionId) with
-                | some localIndex => .funcref (some localIndex)
-                | none => .funcref (some encoded)
-              else .funcref (some encoded)
-            | value => value
           store :=
-            { store with
-              tables := Wasm.listSetAt store.tables index (table.map decode) }
+            { store with tables := Wasm.listSetAt store.tables index table }
         | none => pure ()
         pure id
       | none =>
@@ -794,68 +1018,6 @@ private def assignTagIds (sst : ScriptState) (m : Wasm.Module)
     tagIds := tagIds ++ [id]
   return ({ store0 with tagIds }, tags)
 
-private def assignFunctionIds (sst : ScriptState) (m : Wasm.Module)
-    (store0 : Wasm.Store Unit) (env : Wasm.HostEnv Unit) (fuel : Nat) :
-    Wasm.Store Unit × Array (Wasm.HostFn Unit) := Id.run do
-  let mut functions := sst.sharedFunctions
-  let mut functionIds : List Nat := []
-  let functionCount := m.imports.length + m.funcs.length
-  for index in List.range functionCount do
-    let importedId? :=
-      if index < m.imports.length then
-        let imp := m.imports[index]!
-        match resolveRegistered sst imp.module with
-        | some (em, estore, _) =>
-          match em.findExport imp.name with
-          | some exportIndex => estore.functionIds[exportIndex]?
-          | none => none
-        | none => none
-      else none
-    let id ← match importedId? with
-      | some id => pure id
-      | none =>
-        let id := functions.size
-        let signature := (m.funcSig? index).getD {}
-        let capturedStore := store0
-        let function : Wasm.HostFn Unit :=
-          { params := signature.params
-            results := signature.results
-            invoke := fun callerStore args =>
-              match runSmallStep fuel m index capturedStore args.reverse env with
-              | .Success values _ => .Return values callerStore
-              | .Trap _ message => .Trap callerStore message
-              | .Invalid message =>
-                .Trap callerStore s!"invalid in foreign function: {message}"
-              | .OutOfFuel => .Trap callerStore "out of fuel in foreign function"
-              | .Thrown tag arguments _ =>
-                let globalTag := capturedStore.tagIds[tag]?.getD tag
-                let localTag :=
-                  (callerStore.tagIds.findIdx? (· = globalTag)).getD
-                    (callerStore.tagIds.length + globalTag)
-                .Throw callerStore localTag arguments }
-        functions := functions.push function
-        pure id
-    functionIds := functionIds ++ [id]
-  return ({ store0 with functionIds }, functions)
-
-private def encodeSharedFuncref (store : Wasm.Store Unit) : Wasm.Value → Wasm.Value
-  | .funcref (some index) =>
-    if Wasm.SmallStep.foreignFunctionBase ≤ index then .funcref (some index)
-    else
-      match store.functionIds[index]? with
-      | some id => .funcref (some (Wasm.SmallStep.foreignFunctionBase + id))
-      | none => .funcref (some index)
-  | value => value
-
-private def decodeSharedFuncref (store : Wasm.Store Unit) : Wasm.Value → Wasm.Value
-  | .funcref (some index) =>
-    if Wasm.SmallStep.foreignFunctionBase ≤ index then
-      let id := index - Wasm.SmallStep.foreignFunctionBase
-      match store.functionIds.findIdx? (· = id) with
-      | some localIndex => .funcref (some localIndex)
-      | none => .funcref (some index)
-    else .funcref (some index)
-  | value => value
 
 /-- Refresh a module-local store from the script-wide shared resources before
 an action. -/
@@ -880,9 +1042,7 @@ private def hydrateStore (sst : ScriptState) (store0 : Wasm.Store Unit) :
     match sst.sharedTables[id]? with
     | some (table, _) =>
       store :=
-        { store with
-          tables := Wasm.listSetAt store.tables index
-            (table.map (decodeSharedFuncref store0)) }
+        { store with tables := Wasm.listSetAt store.tables index table }
     | none => pure ()
   return store
 
@@ -912,8 +1072,7 @@ private def commitStore (sst : ScriptState) (m : Wasm.Module)
     match store.tables[index]? with
     | some table =>
       if id < tables.size then
-        tables := tables.set! id
-          (table.map (encodeSharedFuncref store), m.tableCap index)
+        tables := tables.set! id (table, m.tableCap index)
     | none => pure ()
   return { sst with
     sharedGlobals := globals
@@ -1017,6 +1176,7 @@ and invalid leave the slot unchanged. -/
 def runAssertReturn
     (slot : ModuleSlot) (field : String) (args : List Value)
     (expected : List ExpectedVal) (fuel : Nat)
+    (sst : ScriptState := {}) (slotIdx : Nat := 0)
     : Outcome × ModuleSlot :=
   match slot with
   | .unavailable _ => (.moduleUnavailable, slot)
@@ -1028,7 +1188,7 @@ def runAssertReturn
       -- because WAT-decoded functions reverse params to assign locals[0] to
       -- the first source argument. The testsuite parses args in source
       -- order, so we reverse here to match the call convention.
-      match runSmallStep fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env sst slotIdx with
       | .Success rs store' =>
         let actual := rs.reverse
         let slot' := .ok m store' env
@@ -1047,14 +1207,15 @@ before the trap are visible to later commands, per the wasm spec); on
 an unexpected return we likewise commit the post-call store. -/
 def runAssertTrap
     (slot : ModuleSlot) (field : String) (args : List Value)
-    (expectedReason : String) (fuel : Nat) : Outcome × ModuleSlot :=
+    (expectedReason : String) (fuel : Nat)
+    (sst : ScriptState := {}) (slotIdx : Nat := 0) : Outcome × ModuleSlot :=
   match slot with
   | .unavailable _ => (.moduleUnavailable, slot)
   | .ok m store env =>
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      match runSmallStep fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env sst slotIdx with
       | .Success rs store' =>
         (.fail s!"expected trap `{expectedReason}`, returned {renderValues rs.reverse}", .ok m store' env)
       | .Trap store' msg =>
@@ -1071,6 +1232,7 @@ The post-call (or post-trap) store is propagated so subsequent commands
 observe the side effects. -/
 def runActionOnly
     (slot : ModuleSlot) (field : String) (args : List Value) (fuel : Nat)
+    (sst : ScriptState := {}) (slotIdx : Nat := 0)
     : Outcome × ModuleSlot :=
   match slot with
   | .unavailable _ => (.moduleUnavailable, slot)
@@ -1078,7 +1240,7 @@ def runActionOnly
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      match runSmallStep fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env sst slotIdx with
       | .Success _ store' => (.pass, .ok m store' env)
       | .Trap store' msg => (.fail s!"unexpected trap `{msg}`", .ok m store' env)
       | .OutOfFuel => (.outOfFuel, slot)
@@ -1088,6 +1250,7 @@ def runActionOnly
 /-- `assert_exception`: invoke and require an uncaught exception. -/
 def runAssertException
     (slot : ModuleSlot) (field : String) (args : List Value) (fuel : Nat)
+    (sst : ScriptState := {}) (slotIdx : Nat := 0)
     : Outcome × ModuleSlot :=
   match slot with
   | .unavailable _ => (.moduleUnavailable, slot)
@@ -1095,7 +1258,7 @@ def runAssertException
     match m.findExport field with
     | none => (.fail s!"unknown export `{field}`", slot)
     | some idx =>
-      match runSmallStep fuel m idx store args.reverse env with
+      match runSmallStep fuel m idx store args.reverse env sst slotIdx with
       | .Thrown _ _ store' => (.pass, .ok m store' env)
       | .Success rs store' =>
         (.fail s!"expected exception, returned {renderValues rs.reverse}", .ok m store' env)
@@ -1117,74 +1280,111 @@ def parseInvokeAction (j : Json) : Except String (Option String × String × Lis
 /-! ## Per-file driver -/
 
 private def instantiateModule (st : ScriptState) (m : Wasm.Module) (fuel : Nat) :
-    ModuleSlot × Array Wasm.Value × Array Unit × Array (Wasm.HostFn Unit) ×
-      Array (Wasm.Mem × Nat) × Array (Wasm.TableInst × Nat) :=
+    ModuleSlot × Array Wasm.Value × Array Unit ×
+      Array (Wasm.Mem × Nat) × Array (Wasm.TableInst × Nat) ×
+      Array (Nat × Nat) :=
+  -- Track global function addresses: this module's slot index and base address.
+  let slotIdx := st.modules.size
+  let baseAddr := st.sharedFuncs.size
+  let totalFns := m.imports.length + m.funcs.length
+  let newSharedFuncs :=
+    st.sharedFuncs ++ (Array.range totalFns).map fun i => (slotIdx, i)
   let env := buildEnv st m fuel
-  let store0 := applyEntityImports st m m.initialStore
+  let store0 := applyEntityImports st m m.initialStore (funcBaseAddr := baseAddr)
   let (store0, sharedGlobals) := assignGlobalIds st m store0
   let (store0, sharedTags) := assignTagIds st m store0
-  let (store0, sharedFunctions) := assignFunctionIds st m store0 env fuel
-  let functionState := { st with sharedFunctions := sharedFunctions }
   let (store0, sharedMemories, sharedTables) :=
-    assignResourceIds functionState m store0
-  let store0 := reapplyLiteralActiveSegments m store0
+    assignResourceIds st m store0
+  let store0 := reapplyLiteralActiveSegments m store0 (funcBaseAddr := baseAddr)
   let store0 := m.runConstGlobals fuel store0 env
-  let store0 := m.runConstElems fuel store0 env
-  let store0 := m.runActiveSegments fuel store0 env
+  let store0 := m.runConstElems fuel store0 env (funcBaseAddr := baseAddr)
+  let store0 := m.runActiveSegments fuel store0 env (funcBaseAddr := baseAddr)
+  -- Fix wasm-import funcref entries: runActiveSegments wrote baseAddr+i for
+  -- every import, but wasm imports must alias the exporter's funcaddr.
+  let store0 := Id.run do
+    let mut s := store0
+    for i in List.range m.imports.length do
+      let imp := m.imports[i]!
+      let oldAddr := baseAddr + i
+      match st.registered.find? (·.1 = imp.«module») with
+      | some (_, regSlotIdx) =>
+        match st.modules[regSlotIdx]? with
+        | some (.ok rm _ _) =>
+          match rm.findExport imp.name with
+          | some funcIdx =>
+            if funcIdx >= rm.imports.length then
+              let ownFnIdx := funcIdx - rm.imports.length
+              let exporterSlotBase :=
+                st.sharedFuncs.toList.findIdx? (·.1 = regSlotIdx) |>.getD 0
+              let newAddr := exporterSlotBase + rm.imports.length + ownFnIdx
+              for ti in List.range s.tables.length do
+                match s.tables[ti]? with
+                | some table =>
+                  let newTable := table.map fun entry =>
+                    match entry with
+                    | .funcref (some a) => if a == oldAddr then .funcref (some newAddr) else entry
+                    | v => v
+                  s := { s with tables := Wasm.listSetAt s.tables ti newTable }
+                | none => pure ()
+          | _ => pure ()
+        | _ => pure ()
+      | none => pure ()
+    return s
+  -- Build an updated ScriptState with this module's sharedFuncs entry so the
+  -- start function (if any) can resolve cross-module calls correctly.
+  let stForStart :=
+    { st with
+      modules := st.modules.push (.ok m store0 env)
+      sharedFuncs := newSharedFuncs }
   match m.startFunc with
   | none =>
     let sharedState := commitStore
       { st with
         sharedGlobals := sharedGlobals
         sharedTags := sharedTags
-        sharedFunctions := sharedFunctions
         sharedMemories := sharedMemories
         sharedTables := sharedTables } m store0
-    (.ok m store0 env, sharedState.sharedGlobals, sharedTags, sharedFunctions,
-      sharedState.sharedMemories, sharedState.sharedTables)
+    (.ok m store0 env, sharedState.sharedGlobals, sharedTags,
+      sharedState.sharedMemories, sharedState.sharedTables, newSharedFuncs)
   | some idx =>
-    match runSmallStep fuel m idx store0 [] env with
+    match runSmallStep fuel m idx store0 [] env (sst := stForStart) (slotIdx := slotIdx) with
     | .Success _ store' =>
       let sharedState := commitStore
         { st with
           sharedGlobals := sharedGlobals
           sharedTags := sharedTags
-          sharedFunctions := sharedFunctions
           sharedMemories := sharedMemories
           sharedTables := sharedTables } m store'
-      (.ok m store' env, sharedState.sharedGlobals, sharedTags, sharedFunctions,
-        sharedState.sharedMemories, sharedState.sharedTables)
+      (.ok m store' env, sharedState.sharedGlobals, sharedTags,
+        sharedState.sharedMemories, sharedState.sharedTables, newSharedFuncs)
     | .Trap store' msg =>
       let sharedState := commitStore
         { st with
           sharedGlobals := sharedGlobals
           sharedTags := sharedTags
-          sharedFunctions := sharedFunctions
           sharedMemories := sharedMemories
           sharedTables := sharedTables } m store'
       (.unavailable s!"start trapped: {msg}",
-        sharedState.sharedGlobals, sharedTags, sharedFunctions,
+        sharedState.sharedGlobals, sharedTags,
         sharedState.sharedMemories,
-        sharedState.sharedTables)
+        sharedState.sharedTables, newSharedFuncs)
     | .OutOfFuel =>
-      (.unavailable "start out of fuel", sharedGlobals, sharedTags, sharedFunctions,
-        sharedMemories, sharedTables)
+      (.unavailable "start out of fuel", sharedGlobals, sharedTags,
+        sharedMemories, sharedTables, newSharedFuncs)
     | .Invalid msg =>
       (.unavailable s!"start invalid: {msg}", sharedGlobals, sharedTags,
-        sharedFunctions,
-        sharedMemories, sharedTables)
+        sharedMemories, sharedTables, newSharedFuncs)
     | .Thrown _ _ store' =>
       let sharedState := commitStore
         { st with
           sharedGlobals := sharedGlobals
           sharedTags := sharedTags
-          sharedFunctions := sharedFunctions
           sharedMemories := sharedMemories
           sharedTables := sharedTables } m store'
       (.unavailable "uncaught exception in start",
-        sharedState.sharedGlobals, sharedTags, sharedFunctions,
+        sharedState.sharedGlobals, sharedTags,
         sharedState.sharedMemories,
-        sharedState.sharedTables)
+        sharedState.sharedTables, newSharedFuncs)
 
 /-- Process a single command JSON object, possibly mutating `st`. Returns
 the outcome to record (and `none` if the command itself was just a state
@@ -1212,8 +1412,7 @@ def runCommand
       return (st, mk (.interpreterError
         s!"unknown module definition `{definitionName}`"))
     | some (_, m) =>
-      let (slot, sharedGlobals, sharedTags, sharedFunctions,
-          sharedMemories, sharedTables) :=
+      let (slot, sharedGlobals, sharedTags, sharedMemories, sharedTables, sharedFuncs) :=
         instantiateModule st m fuel
       let idx := st.modules.size
       let modules := st.modules.push slot
@@ -1226,21 +1425,19 @@ def runCommand
         named := named
         sharedGlobals := sharedGlobals
         sharedTags := sharedTags
-        sharedFunctions := sharedFunctions
         sharedMemories := sharedMemories
-        sharedTables := sharedTables }, mk outcome)
+        sharedTables := sharedTables
+        sharedFuncs := sharedFuncs }, mk outcome)
   | "module" =>
     let filename := jstr? cmd "filename" |>.getD ""
     let name?    := jstr? cmd "name"
-    let (slot, sharedGlobals, sharedTags, sharedFunctions,
-        sharedMemories, sharedTables) ← (do
+    let (slot, sharedGlobals, sharedTags, sharedMemories, sharedTables, sharedFuncs) ← (do
       let res ← decodeModuleFile s!"{wasmDir}/{filename}"
       match res with
       | .ok m => pure (instantiateModule st m fuel)
       | .error e =>
         pure (ModuleSlot.unavailable e, st.sharedGlobals, st.sharedTags,
-          st.sharedFunctions,
-          st.sharedMemories, st.sharedTables))
+          st.sharedMemories, st.sharedTables, st.sharedFuncs))
     let idx := st.modules.size
     let modules := st.modules.push slot
     let named := match name? with
@@ -1255,9 +1452,9 @@ def runCommand
       named := named
       sharedGlobals := sharedGlobals
       sharedTags := sharedTags
-      sharedFunctions := sharedFunctions
       sharedMemories := sharedMemories
-      sharedTables := sharedTables }, mk outcome)
+      sharedTables := sharedTables
+      sharedFuncs := sharedFuncs }, mk outcome)
   | "register" =>
     let asName := jstr? cmd "as" |>.getD ""
     match resolveModuleIdx st (jstr? cmd "name") with
@@ -1302,7 +1499,7 @@ def runCommand
         | .error e => return (st, mk (.skipped s!"non-integer expected: {e}"))
         | .ok expected =>
           let slot := hydrateSlot st fuel st.modules[i]!
-          let (outcome, slot') := runAssertReturn slot field args expected fuel
+          let (outcome, slot') := runAssertReturn slot field args expected fuel st i
           let st' := { st with modules := st.modules.set! i slot' }
           return (commitSlot st' slot', mk outcome)
   | "assert_trap" =>
@@ -1315,7 +1512,7 @@ def runCommand
       | .ok i =>
         let reason := jstr? cmd "text" |>.getD ""
         let slot := hydrateSlot st fuel st.modules[i]!
-        let (outcome, slot') := runAssertTrap slot field args reason fuel
+        let (outcome, slot') := runAssertTrap slot field args reason fuel st i
         let st' := { st with modules := st.modules.set! i slot' }
         return (commitSlot st' slot', mk outcome)
   | "assert_exception" =>
@@ -1327,7 +1524,7 @@ def runCommand
       | .error e => return (st, mk (.interpreterError e))
       | .ok i =>
         let slot := hydrateSlot st fuel st.modules[i]!
-        let (outcome, slot') := runAssertException slot field args fuel
+        let (outcome, slot') := runAssertException slot field args fuel st i
         let st' := { st with modules := st.modules.set! i slot' }
         return (commitSlot st' slot', mk outcome)
   | "action" =>
@@ -1339,38 +1536,53 @@ def runCommand
       | .error e => return (st, mk (.interpreterError e))
       | .ok i =>
         let slot := hydrateSlot st fuel st.modules[i]!
-        let (outcome, slot') := runActionOnly slot field args fuel
+        let (outcome, slot') := runActionOnly slot field args fuel st i
         let st' := { st with modules := st.modules.set! i slot' }
         return (commitSlot st' slot', mk outcome)
   | "assert_uninstantiable" =>
+    -- §4.5.4: start-function or active-segment trap after a successful link
+    -- (imports resolved).  Import-resolution failure is §4.5.3 / assert_unlinkable.
     let filename := jstr? cmd "filename" |>.getD ""
     let expected := jstr? cmd "text" |>.getD ""
     match (← decodeModuleFile s!"{wasmDir}/{filename}") with
     | .error error =>
       return (st, mk (.skipped s!"assert_uninstantiable decode: {error}"))
     | .ok m =>
+      let slotIdx := st.modules.size
+      let baseAddr := st.sharedFuncs.size
+      let totalFns := m.imports.length + m.funcs.length
       let env := buildEnv st m fuel
-      let imported := applyEntityImports st m m.initialStore
+      let imported := applyEntityImports st m m.initialStore (funcBaseAddr := baseAddr)
       let (store0, sharedGlobals) := assignGlobalIds st m imported
       let (store0, sharedTags) := assignTagIds st m store0
-      let (store0, sharedFunctions) := assignFunctionIds st m store0 env fuel
-      let functionState := { st with sharedFunctions := sharedFunctions }
       let (store0, sharedMemories, sharedTables) :=
-        assignResourceIds functionState m store0
-      let store0 := reapplyLiteralActiveSegments m store0
+        assignResourceIds st m store0
+      let store0 := reapplyLiteralActiveSegments m store0 (funcBaseAddr := baseAddr)
       let store0 := m.runConstGlobals fuel store0 env
-      let store0 := m.runConstElems fuel store0 env
-      let store0 := m.runActiveSegments fuel store0 env
+      let store0 := m.runConstElems fuel store0 env (funcBaseAddr := baseAddr)
+      let store0 := m.runActiveSegments fuel store0 env (funcBaseAddr := baseAddr)
+      let newSharedFuncs :=
+        st.sharedFuncs ++ (Array.range totalFns).map fun i => (slotIdx, i)
+      let stForStart :=
+        { st with
+          modules := st.modules.push (.ok m store0 env)
+          sharedFuncs := newSharedFuncs }
       let preparedState :=
         { st with
           sharedGlobals := sharedGlobals
           sharedTags := sharedTags
-          sharedFunctions := sharedFunctions
           sharedMemories := sharedMemories
           sharedTables := sharedTables }
+      -- Persist module + funcs so funcrefs written to shared tables by active
+      -- segments remain callable from other instances, even when the trap fires.
+      let persistModule : ScriptState → Wasm.Store Unit → ScriptState :=
+        fun sst' store' =>
+          { sst' with
+            modules := sst'.modules.push (.ok m store' env)
+            sharedFuncs := newSharedFuncs }
       match activeSegmentTrap? m store0 with
       | some actual =>
-        let st' := commitStore preparedState m store0
+        let st' := persistModule (commitStore preparedState m store0) store0
         if actual.contains expected || expected.contains actual then
           return (st', mk .pass)
         else
@@ -1382,16 +1594,16 @@ def runCommand
           return (st, mk (.fail
             s!"expected instantiation trap `{expected}`, module instantiated"))
         | some startIndex =>
-          match runSmallStep fuel m startIndex store0 [] env with
+          match runSmallStep fuel m startIndex store0 [] env stForStart slotIdx with
           | .Trap store' actual =>
-            let st' := commitStore preparedState m store'
+            let st' := persistModule (commitStore preparedState m store') store'
             if actual.contains expected || expected.contains actual then
               return (st', mk .pass)
             else
               return (st', mk (.fail
                 s!"expected instantiation trap `{expected}`, got `{actual}`"))
           | .Thrown tag _ store' =>
-            let st' := commitStore preparedState m store'
+            let st' := persistModule (commitStore preparedState m store') store'
             let actual := s!"uncaught exception with tag {tag}"
             if actual.contains expected || expected.contains actual then
               return (st', mk .pass)
@@ -1399,11 +1611,59 @@ def runCommand
               return (st', mk (.fail
                 s!"expected instantiation trap `{expected}`, got `{actual}`"))
           | .Success _ store' =>
-            let st' := commitStore preparedState m store'
+            let st' := persistModule (commitStore preparedState m store') store'
             return (st', mk (.fail
               s!"expected instantiation trap `{expected}`, start returned"))
           | .OutOfFuel => return (st, mk .outOfFuel)
           | .Invalid error => return (st, mk (.interpreterError error))
+  | "assert_unlinkable" =>
+    -- §4.5.3: import-resolution failure at link time (not a start-function trap,
+    -- which is §4.5.4 / assert_uninstantiable).
+    let filename := jstr? cmd "filename" |>.getD ""
+    let expected := jstr? cmd "text" |>.getD ""
+    match (← decodeModuleFile s!"{wasmDir}/{filename}") with
+    | .error error =>
+      return (st, mk (.skipped s!"assert_unlinkable decode: {error}"))
+    | .ok m =>
+      -- Build wasm-only instances and registry from the script's registered modules,
+      -- then append a synthetic spectest instance so function-type and non-function
+      -- import checks can use the wasm path for spectest exports.
+      let (instances, registry) :=
+        st.registered.foldl (fun (insts, reg) (name, slotIdx) =>
+          match st.modules[slotIdx]? with
+          | some (.ok rm _ renv) =>
+            let id : Wasm.SmallStep.ModuleInstanceId := ⟨insts.size⟩
+            (insts.push { module := rm, host := renv }, (name, id) :: reg)
+          | _ => (insts, reg))
+        ((#[] : Array (Wasm.SmallStep.ModuleInstance Unit)),
+         ([] : Wasm.SmallStep.ImportRegistry))
+      let spectestId : Wasm.SmallStep.ModuleInstanceId := ⟨instances.size⟩
+      let instances := instances.push { module := spectestModuleDecl, host := {} }
+      let registry  := ("spectest", spectestId) :: registry
+      let linkConfig : Wasm.SmallStep.Config Unit :=
+        { expr := .done [],
+          store := { runtime := { instances := instances, entry := ⟨0⟩ },
+                     wasm := { globals := {}, mem := Wasm.Mem.empty 0, host := () } } }
+      match Wasm.SmallStep.instantiate linkConfig m {} registry with
+      | .error err =>
+        -- Pass when the error kind matches the spec's expected text.
+        -- "unknown import" maps to unresolvedImport; "incompatible import
+        -- type" maps to signatureMismatch / limitMismatch.  Any other
+        -- expected text (no unambiguous constructor mapping) accepts any
+        -- InstantiationError.
+        let textMatch := match expected with
+          | "unknown import" =>
+            match err with | .unresolvedImport .. => true | _ => false
+          | "incompatible import type" =>
+            match err with
+            | .signatureMismatch .. | .limitMismatch .. => true | _ => false
+          | _ => true
+        if textMatch then return (st, mk .pass)
+        else return (st, mk (.fail
+          s!"assert_unlinkable: expected '{expected}', got {repr err}"))
+      | .ok _ =>
+        return (st, mk (.fail
+          s!"assert_unlinkable: expected link failure for '{expected}', module linked"))
   | "assert_invalid" | "assert_malformed" =>
     -- The module is declared ill-formed; we pass when our decoder or the
     -- partial static validator rejects it, and fail only if we accept it.

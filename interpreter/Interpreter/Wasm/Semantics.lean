@@ -85,7 +85,7 @@ subtype of `$ft` (issue #96). When the declared type is unrecorded
 structural equality of the function's signature against the target's
 composite type, mirroring `Module.indirectCallTypeOk`. -/
 def gcRefMatches (m : Module) (st : Store α) (nullable : Bool)
-    (ht : GcHeapType) : Value → Bool
+    (ht : GcHeapType) (funcaddrs : Array Nat := #[]) : Value → Bool
   | .anyref none      => nullable && ht.inAnyHierarchy
   | .anyref (some r)  => r.matchesHeap m st ht
   | .funcref none     =>
@@ -98,12 +98,15 @@ def gcRefMatches (m : Module) (st : Store α) (nullable : Bool)
         | some (.func _) => true
         | _ => false
       | _ => false))
-  | .funcref (some f) => match ht with
+  | .funcref (some f) =>
+    -- Translate global funcaddr back to local index when funcaddrs is provided.
+    let localIdx := funcaddrs.findIdx? (· = f) |>.getD f
+    match ht with
     | .func       => true
     | .concrete t =>
-      (match m.funcTypeIdx? f with
+      (match m.funcTypeIdx? localIdx with
        | some src => m.gcTypeSubtype src t
-       | none     => match m.funcSig? f, m.gcComposite? t with
+       | none     => match m.funcSig? localIdx, m.gcComposite? t with
          | some fn, some (.func ty) => fn == ty
          | _, _ => false)
     | _ => false
@@ -192,7 +195,8 @@ recurse into `exec`/`run` — `struct.new`/`array.new` allocate on
 `st.gcHeap`, the accessors read/update it, and `ref.test`/`ref.cast` decide
 subtyping via `gcRefMatches` — so they live outside the fuel-threaded
 `execOne` mutual block, dispatched from it by a single `gc` arm. -/
-def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation α
+def execGcOp (m : Module) (st : Store α) (s : Locals)
+    (funcaddrs : Array Nat := #[]) : GcOp → Continuation α
   | .refNullAny _ =>
       .Fallthrough st { s with values := .anyref none :: s.values }
   | .refI31 => match s.values with
@@ -232,13 +236,13 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
     | v :: vs => match v with
       | .anyref _ | .funcref _ | .externref _ | .exnref _ =>
         .Fallthrough st
-          { s with values := .i32 (if gcRefMatches m st nullable ht v then 1 else 0) :: vs }
+          { s with values := .i32 (if gcRefMatches m st nullable ht funcaddrs v then 1 else 0) :: vs }
       | _ => .Invalid "refTest: non-reference operand"
     | _ => .Invalid "refTest: ill-shaped operand stack"
   | .refCast nullable ht => match s.values with
     | v :: vs => match v with
       | .anyref _ | .funcref _ | .externref _ | .exnref _ =>
-        if gcRefMatches m st nullable ht v then
+        if gcRefMatches m st nullable ht funcaddrs v then
           .Fallthrough st { s with values := v :: vs }
         else .Trap st "cast failure"
       | _ => .Invalid "refCast: non-reference operand"
@@ -247,11 +251,11 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
   -- both the taken and the fall-through case.
   | .brOnCast label nullable ht => match s.values with
     | v :: _ =>
-      if gcRefMatches m st nullable ht v then .Break label st s else .Fallthrough st s
+      if gcRefMatches m st nullable ht funcaddrs v then .Break label st s else .Fallthrough st s
     | _ => .Invalid "brOnCast: ill-shaped operand stack"
   | .brOnCastFail label nullable ht => match s.values with
     | v :: _ =>
-      if gcRefMatches m st nullable ht v then .Fallthrough st s else .Break label st s
+      if gcRefMatches m st nullable ht funcaddrs v then .Fallthrough st s else .Break label st s
     | _ => .Invalid "brOnCastFail: ill-shaped operand stack"
   -- Structs. `struct.new` pops one value per field (last field on top).
   | .structNew t => match m.structFields? t with
@@ -436,7 +440,10 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
     | .i32 n :: .i32 off :: vs =>
       match st.elementSegments[e]?, st.elementValues[e]? with
       | some status, some cached =>
-        let refs := if status.isSome then cached.getD [] else []
+        let rawRefs := if status.isSome then cached.getD [] else []
+        let refs := rawRefs.map fun
+          | .funcref (some i) => .funcref (some (funcaddrs[i]?.getD i))
+          | v => v
         if off.toNat + n.toNat > refs.length then .Trap st "out of bounds table access"
         else
           let elems := (List.range n.toNat).map fun i => refs[off.toNat + i]!
@@ -448,7 +455,10 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
     | .i32 n :: .i32 off :: .i32 dstD :: .anyref (some (.array addr)) :: vs =>
       match st.gcHeap[addr]?, st.elementSegments[e]?, st.elementValues[e]? with
       | some (.array ty elems), some status, some cached =>
-        let refs := if status.isSome then cached.getD [] else []
+        let rawRefs := if status.isSome then cached.getD [] else []
+        let refs := rawRefs.map fun
+          | .funcref (some i) => .funcref (some (funcaddrs[i]?.getD i))
+          | v => v
         if dstD.toNat + n.toNat > elems.length then
           .Trap st "out of bounds array access"
         else if off.toNat + n.toNat > refs.length then
@@ -2051,7 +2061,7 @@ def execOne (fuel : Nat) (m : Module) (st : Store α) (s : Locals) (inst : Instr
 
     -- GC-proposal instructions (i31/structs/arrays/casts): all are
     -- non-recursive single steps, handled by `execGcOp`.
-    | _, .gc g => execGcOp m st s g
+    | _, .gc g => execGcOp m st s #[] g
 
     -- Table read instructions. Both look the runtime table up on the
     -- store; neither mutates it. An out-of-range *table* index is a
@@ -2348,11 +2358,16 @@ def Module.runConstGlobals (fuel : Nat) (m : Module) (st : Store α)
 Runs after `runConstGlobals` so items may read globals. Plain funcref
 segments (`funcs`) are applied separately and have no `exprs`. -/
 def Module.runConstElems (fuel : Nat) (m : Module) (st : Store α)
-    (env : HostEnv α := {}) : Store α := Id.run do
+    (env : HostEnv α := {}) (funcBaseAddr : Nat := 0) : Store α := Id.run do
+  let translateFuncref : Value → Value
+    | .funcref (some i) => .funcref (some (funcBaseAddr + i))
+    | v => v
   let mut st := st
   for (seg, segIndex) in m.elements.zipIdx do
     -- Passive/declarative GC segments need their item expressions evaluated
     -- into runtime values even though they are not written to a table yet.
+    -- Values are stored as evaluated (local function indices); `funcBaseAddr`
+    -- translation applies only to active table segments written below.
     if seg.offset.isNone && !seg.exprs.isEmpty then
       let mut values : List Value := []
       for e in seg.exprs do
@@ -2378,7 +2393,7 @@ def Module.runConstElems (fuel : Nat) (m : Module) (st : Store α)
             st := st'
             match s'.values, st'.tables[ti]? with
             | v :: _, some tbl =>
-              st := { st' with tables := st'.tables.set ti (tbl.set (off + i) v) }
+              st := { st' with tables := st'.tables.set ti (tbl.set (off + i) (translateFuncref v)) }
             | _, _ => pure ()
           | _ => pure ()
           i := i + 1
@@ -2393,7 +2408,7 @@ each `offsetExpr` against the current store and writes the segment at
 the computed offset. Runs after `runConstGlobals` so the offsets see the
 evaluated (and imported) globals. -/
 def Module.runActiveSegments (fuel : Nat) (m : Module) (st : Store α)
-    (env : HostEnv α := {}) : Store α := Id.run do
+    (env : HostEnv α := {}) (funcBaseAddr : Nat := 0) : Store α := Id.run do
   let mut st := st
   -- Evaluate one offset const-expr to a byte/element offset. `i64`
   -- results come from memory64/table64 modules.
@@ -2437,11 +2452,15 @@ def Module.runActiveSegments (fuel : Nat) (m : Module) (st : Store α)
           let length := if seg.exprs.isEmpty then
             seg.funcs.length else seg.exprs.length
           if off + length ≤ tbl.length && seg.exprs.isEmpty then
-            let tbls := st.tables.set ti (listWriteAt tbl off (seg.funcs.map Value.funcref))
+            let tbls := st.tables.set ti (listWriteAt tbl off
+              (seg.funcs.map fun f => Value.funcref (f.map (· + funcBaseAddr))))
             st := { st with tables := tbls }
           else if off + length ≤ tbl.length then
             -- GC const-expr items, as in `runConstElems`, but at the
-            -- evaluated offset.
+            -- evaluated offset. Translate funcref local indices to global addrs.
+            let translateFuncref : Value → Value
+              | .funcref (some i) => .funcref (some (funcBaseAddr + i))
+              | v => v
             let mut i := 0
             for e in seg.exprs do
               match exec fuel m st {} e env with
@@ -2449,7 +2468,7 @@ def Module.runActiveSegments (fuel : Nat) (m : Module) (st : Store α)
                 st := st'
                 match s'.values, st'.tables[ti]? with
                 | v :: _, some tbl' =>
-                  st := { st' with tables := st'.tables.set ti (tbl'.set (off + i) v) }
+                  st := { st' with tables := st'.tables.set ti (tbl'.set (off + i) (translateFuncref v)) }
                 | _, _ => pure ()
               | _ => pure ()
               i := i + 1

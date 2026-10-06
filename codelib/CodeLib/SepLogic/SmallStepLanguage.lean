@@ -206,11 +206,11 @@ macro_rules
      imodintro
      isplit
      next =>
-       ipureexact rfl
+       ipureintro; trivial
      next =>
        isplit
        next =>
-         ipureexact rfl
+         ipureintro; trivial
        next =>
          isplitl [Hσ]
          next => iexact Hσ

@@ -485,11 +485,48 @@ wasm_wp_pure_rule wp_refNullExtern {staticType : ValueType} :
 wasm_wp_pure_rule wp_refNullExn {staticType : ValueType} :
   .refNullExn staticType, values => .exnref none :: values := Step.refNullExn
 
-wasm_wp_pure_rule wp_refFunc {functionIndex : Nat} :
-  .refFunc functionIndex, values => .funcref (some functionIndex) :: values := Step.refFunc
-
 wasm_wp_pure_rule wp_refAsNonNull {value : Value} (h : value.isNullRef? = some false) :
   .refAsNonNull, value :: values => value :: values := Step.refAsNonNull h
+
+/-- Push a function reference whose global address is derived from the current
+instance's `funcaddrs` table via ghost-state agreement on `runtimeInstancesOwn`. -/
+theorem wp_refFunc
+    (runtimeModule : Module) (callerId : ModuleInstanceId)
+    {functionIndex : Nat} (funcaddr : Nat)
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat}
+    {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame}
+    {instances : Array (ModuleInstance α)}
+    {callerInst : ModuleInstance α}
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (hfuncaddr : callerInst.funcaddrs[functionIndex]? = some funcaddr) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, values⟩,
+        .refFunc functionIndex :: code, arity, remainder, controls, calls⟩
+    let next : ThreadState α :=
+      ⟨⟨params, localValues, .funcref (some funcaddr) :: values⟩,
+        code, arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId runtimeModule -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ (runtimeModuleOwn callerId runtimeModule ∗ runtimeInstancesOwn instances -∗
+       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+    WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >Hruntime >HruntimeInstances Hwp
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
+    simp [getElem!_def, hcallerLookup]
+  have hstep_funcaddr :
+      store.runtime.currentInstance.funcaddrs[functionIndex]? = some funcaddr :=
+    hcurrentInst ▸ hfuncaddr
+  wasm_wp_step Step.refFunc hstep_funcaddr =>
+    wasm_wp_frame
 
 wasm_wp_pure_rule wp_brOnNullFallthrough
     {value : Value} {depth : Nat} (hnull : value.isNullRef? = some false) :
@@ -3877,13 +3914,17 @@ theorem wp_tableInitLive
     {code : Program} {arity : Nat}
     {remainder : List Value} {controls : List ControlFrame}
     {calls : List CallFrame}
+    {instances : Array (ModuleInstance α)}
+    {callerInst : ModuleInstance α}
     (hdestination : destination.addrNat? = some destinationNat)
     (hsourceBound :
       source.toNat + length.toNat ≤
         ((runtimeModule.elements[elementIndex]?.map
           ElementSegment.values).getD []).length)
     (hdestinationBound :
-      destinationNat + length.toNat ≤ table.length) :
+      destinationNat + length.toNat ≤ table.length)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (hfuncaddrs : ∀ i : Nat, callerInst.funcaddrs[i]?.getD i = i) :
     let segmentValues :=
       (runtimeModule.elements[elementIndex]?.map
         ElementSegment.values).getD []
@@ -3900,18 +3941,29 @@ theorem wp_tableInitLive
         code, arity, remainder, controls, calls⟩
     (tablePointsToAt 0 tableIndex table ∗
       elementSegmentPointsToAt 0 elementIndex (some entries) ∗
-      runtimeModuleOwn callerId runtimeModule) -∗
+      runtimeModuleOwn callerId runtimeModule ∗
+      runtimeInstancesOwn instances) -∗
     ▷ (tablePointsToAt 0 tableIndex newTable -∗
       elementSegmentPointsToAt 0 elementIndex (some entries) -∗
       runtimeModuleOwn callerId runtimeModule -∗
+      runtimeInstancesOwn instances -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  wasm_wp_start_with iintro ⟨Htable, Hsegment, Hruntime⟩ Hwp
+  wasm_wp_start_with iintro ⟨Htable, Hsegment, Hruntime, HruntimeInstances⟩ Hwp
   wasm_table_agree HtablePhysical, tableIndex, table, (obs ++ obs') $$
     [Hσ Htable]
   wasm_element_segment_agree HsegmentPhysical, elementIndex,
     (some entries), (obs ++ obs') $$ [Hσ Hsegment]
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
+    simp [getElem!_def, hcallerLookup]
   let segmentValues :=
     (runtimeModule.elements[elementIndex]?.map
       ElementSegment.values).getD []
@@ -3919,7 +3971,26 @@ theorem wp_tableInitLive
       segmentValues =
         _root_.Wasm.SmallStep.elementSegmentValues
           store elementIndex (some entries) := by
-    simp [segmentValues, elementSegmentValues, Hmodule]
+    simp only [segmentValues, elementSegmentValues, Hmodule, hcurrentInst]
+    generalize (runtimeModule.elements[elementIndex]?.map ElementSegment.values).getD [] = raw
+    induction raw with
+    | nil => rfl
+    | cons hd tl ih =>
+      simp only [List.map_cons]
+      cases hd with
+      | i32 n => exact congrArg (Value.i32 n :: ·) ih
+      | i64 n => exact congrArg (Value.i64 n :: ·) ih
+      | f32 n => exact congrArg (Value.f32 n :: ·) ih
+      | f64 n => exact congrArg (Value.f64 n :: ·) ih
+      | v128 n => exact congrArg (Value.v128 n :: ·) ih
+      | externref r => exact congrArg (Value.externref r :: ·) ih
+      | exnref r => exact congrArg (Value.exnref r :: ·) ih
+      | anyref r => exact congrArg (Value.anyref r :: ·) ih
+      | funcref idx => cases idx with
+        | none => exact congrArg (Value.funcref none :: ·) ih
+        | some i =>
+          simp only [hfuncaddrs] at ih ⊢
+          exact congrArg (Value.funcref (some i) :: ·) ih
   have hsourceBound' :
       source.toNat + length.toNat ≤ segmentValues.length := hsourceBound
   let newTable :=
@@ -4926,7 +4997,8 @@ theorem wp_returnFromCallCrossInstance
         callerCode, callerArity, callerRemainder, callerControls, calls⟩
     ▷ currentInstanceOwn calleeId -∗
     ▷ runtimeInstancesOwn instances -∗
-    ▷ (currentInstanceOwn returningInstance -∗ WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+    ▷ (currentInstanceOwn returningInstance ∗ runtimeInstancesOwn instances -∗
+        WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   wasm_wp_start_with iintro >HinstanceOwn >HruntimeInstances Hwp
   wasm_current_instance_agree (obs ++ obs'), calleeId $$ [$Hσ $HinstanceOwn]
@@ -4939,40 +5011,148 @@ theorem wp_returnFromCallCrossInstance
     imod stateInterp_currentInstance_update_of_any store ns obs' nt calleeId returningInstance $$
         [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
     wasm_wp_frame
-      iapply_exact Hwp with HinstanceOwn'
+      iapply_splitl_exact Hwp with HinstanceOwn'
+      · iexact HruntimeInstances
 
-/-- Call an indirect function through a table entry. `runtimeModule` owns the
-current module (provides `himports`, `hfn`, `hsignature`, `hexpected`, `htype`).
-`table` owns the indexed table (provides `helement` via `htable`).
-Both resources are returned to the continuation so the callee can use them. -/
+/-- Call an in-module (non-import) function through a table entry.
+`haddr` ties the table element's global address to the caller instance via
+the ghost `runtimeInstancesOwn instances` resource, bridged to the physical
+store through `stateInterp_instances_agree`. -/
 theorem wp_callIndirect
-    (runtimeModule : Module) (callerId : ModuleInstanceId)
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
     (typeIndex tableIndex : Nat)
-    (table : TableInst) (elementIndex functionIndex : Nat) (fn : Function)
+    (table : TableInst) (elementIndex address functionIndex : Nat) (fn : Function)
     (signature expected : FuncType)
-    (himports : ¬functionIndex < runtimeModule.imports.length)
-    (hnotforeign : Wasm.SmallStep.isForeignFunctionIndex
-      runtimeModule.imports.length functionIndex = false)
-    (hfn : runtimeModule.funcs[
-      functionIndex - runtimeModule.imports.length]? = some fn)
-    (hsignature : runtimeModule.funcSig? functionIndex = some signature)
-    (hexpected : runtimeModule.types[typeIndex]? = some expected)
-    (htype : runtimeModule.indirectCallTypeOk
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (himports : ¬functionIndex < callerInst.module.imports.length)
+    (hfn : callerInst.module.funcs[
+      functionIndex - callerInst.module.imports.length]? = some fn)
+    (hsignature : callerInst.module.funcSig? functionIndex = some signature)
+    (hexpected : callerInst.module.types[typeIndex]? = some expected)
+    (htype : callerInst.module.indirectCallTypeOk
       functionIndex typeIndex signature expected = true)
     {params localValues values : List Value}
     {selector : Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     (hselector : selector.addrNat? = some elementIndex)
-    (helement : table[elementIndex]? = some (.funcref (some functionIndex))) :
+    (helement : table[elementIndex]? = some (.funcref (some address)))
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address =
+             some (callerId, functionIndex)) :
     let current : ThreadState α :=
       ⟨⟨params, localValues, selector :: values⟩,
         .callIndirect typeIndex tableIndex :: code,
         arity, remainder, controls, calls⟩
-    ▷ runtimeModuleOwn callerId runtimeModule -∗
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
     ▷ tablePointsToAt 0 tableIndex table -∗
     ▷ (∀ ri : ModuleInstanceId,
-        runtimeModuleOwn callerId runtimeModule ∗ tablePointsToAt 0 tableIndex table -∗
+        runtimeModuleOwn callerId callerInst.module ∗ tablePointsToAt 0 tableIndex table ∗
+          runtimeInstancesOwn instances -∗
+        WP (Expr.running
+            ⟨fn.toLocals (values.take fn.numParams).reverse,
+              fn.body, fn.results.length, [], [],
+              { locals := ⟨params, localValues, values.drop fn.numParams⟩
+                continuation := code
+                resultArity := arity
+                callerRemainder := remainder
+                control := controls
+                returningInstance := ri } :: calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+    WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  dsimp only
+  simp only [tablePointsToAt]
+  wasm_wp_begin_with iintro >Hruntime >HruntimeInstances >Htable Hwp
+  simp only [← tablePointsToAt_eq]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
+    simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have himports' : ¬functionIndex < store.runtime.currentModule.imports.length := hmod ▸ himports
+  have hfn' : store.runtime.currentModule.funcs[
+      functionIndex - store.runtime.currentModule.imports.length]? = some fn := hmod ▸ hfn
+  have hsignature' : store.runtime.currentModule.funcSig? functionIndex = some signature :=
+    hmod ▸ hsignature
+  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected :=
+    hmod ▸ hexpected
+  have htype' : store.runtime.currentModule.indirectCallTypeOk
+      functionIndex typeIndex signature expected = true := hmod ▸ htype
+  have haddr' : store.runtime.resolveFunc address = some (store.runtime.entry, functionIndex) := by
+    have heq : store.runtime.resolveFunc address =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq, Hentry]; exact haddr
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$ [Hσ Htable]
+  wasm_wp_step Step.callIndirect (α := α) hselector Hphysical helement haddr' himports' hfn'
+      hsignature' hexpected' htype' =>
+    simp only [Hentry]
+    wasm_wp_frame
+      ispecialize Hwp $$ %callerId
+      iapply Hwp
+      isplitl [HruntimeElem HinstanceOwn]
+      · isplitl_exact HruntimeElem
+        iexact HinstanceOwn
+      · isplitl [Htable]
+        · iexact Htable
+        · iexact HruntimeInstances
+
+/-! ### WP rules for `call_ref`, `return_call`, `return_call_ref`, `return_call_indirect` -/
+
+/-- Trapping `call_ref` on a null funcref. -/
+theorem wp_callRefNull
+    {typeIndex : Nat}
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .funcref none :: values⟩,
+        .callRef typeIndex :: code, arity, remainder, controls, calls⟩
+    True ⊢ WP (Expr.running current : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.callRefNull)
+
+/-- Trapping `return_call_ref` on a null funcref. -/
+theorem wp_returnCallRefNull
+    {typeIndex : Nat}
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .funcref none :: values⟩,
+        .returnCallRef typeIndex :: code, arity, remainder, controls, calls⟩
+    True ⊢ WP (Expr.running current : Expr α) @ E ?{{ Φ }} :=
+  wp_trapStep _ _ _ (fun _ => Step.returnCallRefNull)
+
+/-- Same-instance `call_ref` via a non-null funcref.
+`haddr` and `himports`/`hfn` are stated against the static `instances`/`callerId`
+pair and lifted to the physical store in the proof. -/
+theorem wp_callRef
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex : Nat) (rawAddr functionIndex : Nat) (fn : Function)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (himports : ¬functionIndex < callerInst.module.imports.length)
+    (hfn : callerInst.module.funcs[
+      functionIndex - callerInst.module.imports.length]? = some fn)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr =
+             some (callerId, functionIndex))
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .funcref (some rawAddr) :: values⟩,
+        .callRef typeIndex :: code, arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ (runtimeModuleOwn callerId callerInst.module ∗ runtimeInstancesOwn instances -∗
         WP (Expr.running
           ⟨fn.toLocals (values.take fn.numParams).reverse,
             fn.body, fn.results.length, [], [],
@@ -4981,35 +5161,651 @@ theorem wp_callIndirect
               resultArity := arity
               callerRemainder := remainder
               control := controls
-              returningInstance := ri } :: calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
-    WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
-  dsimp only
-  simp only [tablePointsToAt]
-  wasm_wp_begin_with iintro >Hruntime >Htable Hwp
+              returningInstance := callerId } :: calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >Hruntime >HruntimeInstances Hwp
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
+    simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have himports' : ¬functionIndex < store.runtime.currentModule.imports.length :=
+    hmod ▸ himports
+  have hfn' : store.runtime.currentModule.funcs[
+      functionIndex - store.runtime.currentModule.imports.length]? = some fn :=
+    hmod ▸ hfn
+  have haddr' : store.runtime.resolveFunc rawAddr = some (store.runtime.entry, functionIndex) := by
+    have heq : store.runtime.resolveFunc rawAddr =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq, Hentry]; exact haddr
+  wasm_wp_step Step.callRef (α := α) haddr' himports' hfn' =>
+    simp only [Hentry]
+    wasm_wp_frame
+      iapply Hwp
+      isplitl [HruntimeElem HinstanceOwn]
+      · isplitl_exact HruntimeElem
+        iexact HinstanceOwn
+      · iexact HruntimeInstances
+
+/-- Cross-instance `call_ref` via a non-null funcref.
+Only `currentInstanceOwn callerId` (entry agreement) and
+`runtimeInstancesOwn instances` are consumed; the continuation
+receives `currentInstanceOwn calleeId` to continue reasoning about
+the callee. -/
+theorem wp_callRefCrossInstance
+    (callerId : ModuleInstanceId)
+    (calleeId : ModuleInstanceId)
+    (calleeInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex : Nat) (rawAddr fnIdx : Nat) (fn : Function)
+    (hcalleeLookup : instances[calleeId.id]? = some calleeInst)
+    (himports : ¬fnIdx < calleeInst.module.imports.length)
+    (hfn : calleeInst.module.funcs[fnIdx - calleeInst.module.imports.length]? = some fn)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr =
+             some (calleeId, fnIdx))
+    (howner : calleeId ≠ callerId)
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .funcref (some rawAddr) :: values⟩,
+        .callRef typeIndex :: code, arity, remainder, controls, calls⟩
+    let next : ThreadState α :=
+      ⟨fn.toLocals (values.take fn.numParams).reverse,
+        fn.body, fn.results.length, [], [],
+        { locals := ⟨params, localValues, values.drop fn.numParams⟩
+          continuation := code
+          resultArity := arity
+          callerRemainder := remainder
+          control := controls
+          returningInstance := callerId } :: calls⟩
+    ▷ currentInstanceOwn callerId -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ (currentInstanceOwn calleeId ∗ runtimeInstancesOwn instances -∗
+        WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >HinstanceOwn >HruntimeInstances Hwp
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have haddr' : store.runtime.resolveFunc rawAddr = some (calleeId, fnIdx) := by
+    have heq : store.runtime.resolveFunc rawAddr =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq]; exact haddr
+  have howner' : calleeId ≠ store.runtime.entry := Hentry ▸ howner
+  have hcallee' : store.runtime.instances[calleeId.id]? = some calleeInst :=
+    Hinst ▸ hcalleeLookup
+  wasm_wp_step Step.callRefCrossInstance (α := α) haddr' howner' hcallee' himports hfn =>
+    simp only [Hentry]
+    imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
+        [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
+    wasm_wp_frame
+      iapply_splitl_exact Hwp with HinstanceOwn'
+      · iexact HruntimeInstances
+
+/-- Same-instance `return_call` (tail call via function index).
+Mirrors `wp_call` but with inherited `arity`/`remainder` and no new `CallFrame`. -/
+theorem wp_returnCall
+    (runtimeModule : Module) (functionIndex : Nat) (fn : Function)
+    (himports : ¬functionIndex < runtimeModule.imports.length)
+    (hfn : runtimeModule.funcs[
+      functionIndex - runtimeModule.imports.length]? = some fn)
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (callerId : ModuleInstanceId) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, values⟩, .returnCall functionIndex :: code,
+        arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId runtimeModule -∗
+    ▷ (runtimeModuleOwn callerId runtimeModule -∗
+        WP (Expr.running
+          ⟨fn.toLocals (values.take fn.numParams).reverse,
+            fn.body, arity, remainder, [], calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >Hruntime Hwp
   wasm_runtime_module_agree (obs ++ obs'), callerId, runtimeModule $$ [$Hσ $Hruntime]
-  simp only [← tablePointsToAt_eq]
-  wasm_table_agree Htablephys, tableIndex, table, (obs ++ obs') $$
-    [Hσ Htable]
   have himports' :
       ¬functionIndex < store.runtime.currentModule.imports.length := by
     simpa only [Hmodule] using himports
-  have hnotforeign' : Wasm.SmallStep.isForeignFunctionIndex
-      store.runtime.currentModule.imports.length functionIndex = false := by
-    simpa only [Hmodule] using hnotforeign
   have hfn' : store.runtime.currentModule.funcs[
       functionIndex - store.runtime.currentModule.imports.length]? = some fn := by
     simpa only [Hmodule] using hfn
-  have hsignature' : store.runtime.currentModule.funcSig? functionIndex = some signature := by
-    simpa only [Hmodule] using hsignature
-  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected := by
-    simpa only [Hmodule] using hexpected
-  have htype' : store.runtime.currentModule.indirectCallTypeOk
-      functionIndex typeIndex signature expected = true := by simpa only [Hmodule] using htype
-  wasm_wp_step Step.callIndirect (α := α) hselector Htablephys helement
-    himports' hnotforeign' hfn' hsignature' hexpected' htype' =>
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  wasm_wp_step Step.returnCall (α := α) himports' hfn' =>
     wasm_wp_frame
-      ispecialize Hwp $$ %store.runtime.entry
-      iapply_splitl_exact Hwp with Hruntime
-      · iexact Htable
+      iapply_splitl_exact Hwp with HruntimeElem
+      · iexact HinstanceOwn
+
+/-- Cross-instance `return_call` (tail call via import resolution).
+Mirrors `wp_callCrossInstance` but with inherited `arity`/`remainder`
+and no new `CallFrame`. -/
+theorem wp_returnCallCrossInstance
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (calleeId : ModuleInstanceId)
+    (calleeInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (functionIndex : Nat) (imp : ImportDecl)
+    (localIdx : Nat) (fn : Function)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (hcalleeLookup : instances[calleeId.id]? = some calleeInst)
+    (himports : functionIndex < callerInst.module.imports.length)
+    (himport : callerInst.module.imports[functionIndex]'himports = imp)
+    (hnoHost : callerInst.host.funcs.length ≤ functionIndex)
+    (hresolved : callerInst.resolvedImports[functionIndex]? = some (.wasm calleeId localIdx))
+    (hfn : calleeInst.module.funcs[localIdx]? = some fn)
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, values⟩, .returnCall functionIndex :: code,
+        arity, remainder, controls, calls⟩
+    let next : ThreadState α :=
+      ⟨fn.toLocals (values.take imp.params.length).reverse,
+        fn.body, arity, remainder, [], calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ (currentInstanceOwn calleeId ∗ runtimeInstancesOwn instances -∗
+        WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >Hruntime >HruntimeInstances Hwp
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  iclear HruntimeElem
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
+    simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have hcurrentHost : store.runtime.currentHost = callerInst.host :=
+    congrArg (·.host) hcurrentInst
+  have himports' : functionIndex < store.runtime.currentModule.imports.length :=
+    hmod ▸ himports
+  have himport' : store.runtime.currentModule.imports[functionIndex]'himports' = imp := by
+    have hmodimps : store.runtime.currentModule.imports = callerInst.module.imports :=
+      congrArg (·.imports) hmod
+    exact (show store.runtime.currentModule.imports[functionIndex]'himports' =
+        callerInst.module.imports[functionIndex]'himports by congr 1).trans himport
+  have hnoHost' : store.runtime.currentHost.funcs.length ≤ functionIndex :=
+    hcurrentHost ▸ hnoHost
+  have hresolved' : store.runtime.currentInstance.resolvedImports[functionIndex]? =
+      some (.wasm calleeId localIdx) :=
+    hcurrentInst ▸ hresolved
+  have hcallee' : store.runtime.instances[calleeId.id]? = some calleeInst :=
+    Hinst ▸ hcalleeLookup
+  wasm_wp_step Step.returnCallCrossInstance himports' himport' hnoHost' hresolved' hcallee' hfn =>
+    imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
+        [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
+    wasm_wp_frame
+      iapply_splitl_exact Hwp with HinstanceOwn'
+      · iexact HruntimeInstances
+
+/-- Same-instance `return_call_ref` via a non-null funcref (tail call).
+Mirrors `wp_callRef` but with inherited `arity`/`remainder` and no new `CallFrame`. -/
+theorem wp_returnCallRef
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex : Nat) (rawAddr functionIndex : Nat) (fn : Function)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (himports : ¬functionIndex < callerInst.module.imports.length)
+    (hfn : callerInst.module.funcs[
+      functionIndex - callerInst.module.imports.length]? = some fn)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr =
+             some (callerId, functionIndex))
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .funcref (some rawAddr) :: values⟩,
+        .returnCallRef typeIndex :: code, arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ (runtimeModuleOwn callerId callerInst.module ∗ runtimeInstancesOwn instances -∗
+        WP (Expr.running
+          ⟨fn.toLocals (values.take fn.numParams).reverse,
+            fn.body, arity, remainder, [], calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >Hruntime >HruntimeInstances Hwp
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]
+    simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have himports' : ¬functionIndex < store.runtime.currentModule.imports.length :=
+    hmod ▸ himports
+  have hfn' : store.runtime.currentModule.funcs[
+      functionIndex - store.runtime.currentModule.imports.length]? = some fn :=
+    hmod ▸ hfn
+  have haddr' : store.runtime.resolveFunc rawAddr = some (store.runtime.entry, functionIndex) := by
+    have heq : store.runtime.resolveFunc rawAddr =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq, Hentry]; exact haddr
+  wasm_wp_step Step.returnCallRef (α := α) haddr' himports' hfn' =>
+    wasm_wp_frame
+      iapply Hwp
+      isplitl [HruntimeElem HinstanceOwn]
+      · isplitl_exact HruntimeElem
+        iexact HinstanceOwn
+      · iexact HruntimeInstances
+
+/-- Cross-instance `return_call_ref` via a non-null funcref (tail call).
+Mirrors `wp_callRefCrossInstance` but with inherited `arity`/`remainder`
+and no new `CallFrame`. -/
+theorem wp_returnCallRefCrossInstance
+    (callerId : ModuleInstanceId)
+    (calleeId : ModuleInstanceId)
+    (calleeInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex : Nat) (rawAddr fnIdx : Nat) (fn : Function)
+    (hcalleeLookup : instances[calleeId.id]? = some calleeInst)
+    (himports : ¬fnIdx < calleeInst.module.imports.length)
+    (hfn : calleeInst.module.funcs[fnIdx - calleeInst.module.imports.length]? = some fn)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr =
+             some (calleeId, fnIdx))
+    (howner : calleeId ≠ callerId)
+    {params localValues values : List Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame} :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, .funcref (some rawAddr) :: values⟩,
+        .returnCallRef typeIndex :: code, arity, remainder, controls, calls⟩
+    ▷ currentInstanceOwn callerId -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ (currentInstanceOwn calleeId ∗ runtimeInstancesOwn instances -∗
+        WP (Expr.running
+          ⟨fn.toLocals (values.take fn.numParams).reverse,
+            fn.body, arity, remainder, [], calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  wasm_wp_start_with iintro >HinstanceOwn >HruntimeInstances Hwp
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have haddr' : store.runtime.resolveFunc rawAddr = some (calleeId, fnIdx) := by
+    have heq : store.runtime.resolveFunc rawAddr =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc rawAddr :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq]; exact haddr
+  have howner' : calleeId ≠ store.runtime.entry := Hentry ▸ howner
+  have hcallee' : store.runtime.instances[calleeId.id]? = some calleeInst :=
+    Hinst ▸ hcalleeLookup
+  wasm_wp_step Step.returnCallRefCrossInstance (α := α) haddr' howner' hcallee' himports hfn =>
+    imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
+        [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
+    wasm_wp_frame
+      iapply_splitl_exact Hwp with HinstanceOwn'
+      · iexact HruntimeInstances
+
+/-- Type-mismatch trap for `call_indirect` (same-instance wasm callee). -/
+theorem wp_callIndirectTypeMismatch
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex tableIndex : Nat)
+    (table : TableInst) (elementIndex address functionIndex : Nat)
+    (fn : Function) (signature expected : FuncType)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (himports : ¬functionIndex < callerInst.module.imports.length)
+    (hfn : callerInst.module.funcs[
+      functionIndex - callerInst.module.imports.length]? = some fn)
+    (hsignature : callerInst.module.funcSig? functionIndex = some signature)
+    (hexpected : callerInst.module.types[typeIndex]? = some expected)
+    (htype : callerInst.module.indirectCallTypeOk
+      functionIndex typeIndex signature expected = false)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address =
+             some (callerId, functionIndex))
+    {params localValues values : List Value} {selector : Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hselector : selector.addrNat? = some elementIndex)
+    (helement : table[elementIndex]? = some (.funcref (some address))) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, selector :: values⟩,
+        .callIndirect typeIndex tableIndex :: code,
+        arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ tablePointsToAt 0 tableIndex table -∗
+    WP (Expr.running current : Expr α) @ E ?{{ Φ }} := by
+  dsimp only
+  simp only [tablePointsToAt]
+  wasm_wp_begin_with iintro >Hruntime >HruntimeInstances >Htable
+  simp only [← tablePointsToAt_eq]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]; simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have himports' : ¬functionIndex < store.runtime.currentModule.imports.length := hmod ▸ himports
+  have hfn' : store.runtime.currentModule.funcs[
+      functionIndex - store.runtime.currentModule.imports.length]? = some fn := hmod ▸ hfn
+  have hsignature' : store.runtime.currentModule.funcSig? functionIndex = some signature :=
+    hmod ▸ hsignature
+  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected :=
+    hmod ▸ hexpected
+  have htype' : store.runtime.currentModule.indirectCallTypeOk
+      functionIndex typeIndex signature expected = false := hmod ▸ htype
+  have haddr' : store.runtime.resolveFunc address = some (store.runtime.entry, functionIndex) := by
+    have heq : store.runtime.resolveFunc address =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq, Hentry]; exact haddr
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$ [Hσ Htable]
+  wasm_wp_step Step.callIndirectTypeMismatch (α := α) hselector Hphysical helement haddr'
+      himports' hfn' hsignature' hexpected' htype' =>
+    wasm_wp_trap_frame
+
+/-- Same-instance `return_call_indirect` via a table funcaddr (tail call).
+Mirrors `wp_callIndirect` but with inherited `arity`/`remainder` and no new `CallFrame`. -/
+theorem wp_returnCallIndirectFuncAddr
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex tableIndex : Nat)
+    (table : TableInst) (elementIndex address functionIndex : Nat)
+    (fn : Function) (signature expected : FuncType)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (himports : ¬functionIndex < callerInst.module.imports.length)
+    (hfn : callerInst.module.funcs[
+      functionIndex - callerInst.module.imports.length]? = some fn)
+    (hsignature : callerInst.module.funcSig? functionIndex = some signature)
+    (hexpected : callerInst.module.types[typeIndex]? = some expected)
+    (htype : callerInst.module.indirectCallTypeOk
+      functionIndex typeIndex signature expected = true)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address =
+             some (callerId, functionIndex))
+    {params localValues values : List Value} {selector : Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hselector : selector.addrNat? = some elementIndex)
+    (helement : table[elementIndex]? = some (.funcref (some address))) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, selector :: values⟩,
+        .returnCallIndirect typeIndex tableIndex :: code,
+        arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ tablePointsToAt 0 tableIndex table -∗
+    ▷ (runtimeModuleOwn callerId callerInst.module ∗ tablePointsToAt 0 tableIndex table ∗
+          runtimeInstancesOwn instances -∗
+        WP (Expr.running
+          ⟨fn.toLocals (values.take fn.numParams).reverse,
+            fn.body, arity, remainder, [], calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  dsimp only
+  simp only [tablePointsToAt]
+  wasm_wp_begin_with iintro >Hruntime >HruntimeInstances >Htable Hwp
+  simp only [← tablePointsToAt_eq]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]; simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have himports' : ¬functionIndex < store.runtime.currentModule.imports.length := hmod ▸ himports
+  have hfn' : store.runtime.currentModule.funcs[
+      functionIndex - store.runtime.currentModule.imports.length]? = some fn := hmod ▸ hfn
+  have hsignature' : store.runtime.currentModule.funcSig? functionIndex = some signature :=
+    hmod ▸ hsignature
+  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected :=
+    hmod ▸ hexpected
+  have htype' : store.runtime.currentModule.indirectCallTypeOk
+      functionIndex typeIndex signature expected = true := hmod ▸ htype
+  have haddr' : store.runtime.resolveFunc address = some (store.runtime.entry, functionIndex) := by
+    have heq : store.runtime.resolveFunc address =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq, Hentry]; exact haddr
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$ [Hσ Htable]
+  wasm_wp_step Step.returnCallIndirect (α := α) hselector Hphysical helement haddr'
+      himports' hfn' hsignature' hexpected' htype' =>
+    wasm_wp_frame
+      iapply Hwp
+      isplitl [HruntimeElem HinstanceOwn]
+      · isplitl_exact HruntimeElem
+        iexact HinstanceOwn
+      · isplitl [Htable]
+        · iexact Htable
+        · iexact HruntimeInstances
+
+/-- Type-mismatch trap for `return_call_indirect` (same-instance wasm callee). -/
+theorem wp_returnCallIndirectTypeMismatch
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex tableIndex : Nat)
+    (table : TableInst) (elementIndex address functionIndex : Nat)
+    (fn : Function) (signature expected : FuncType)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (himports : ¬functionIndex < callerInst.module.imports.length)
+    (hfn : callerInst.module.funcs[
+      functionIndex - callerInst.module.imports.length]? = some fn)
+    (hsignature : callerInst.module.funcSig? functionIndex = some signature)
+    (hexpected : callerInst.module.types[typeIndex]? = some expected)
+    (htype : callerInst.module.indirectCallTypeOk
+      functionIndex typeIndex signature expected = false)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address =
+             some (callerId, functionIndex))
+    {params localValues values : List Value} {selector : Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hselector : selector.addrNat? = some elementIndex)
+    (helement : table[elementIndex]? = some (.funcref (some address))) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, selector :: values⟩,
+        .returnCallIndirect typeIndex tableIndex :: code,
+        arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ tablePointsToAt 0 tableIndex table -∗
+    WP (Expr.running current : Expr α) @ E ?{{ Φ }} := by
+  dsimp only
+  simp only [tablePointsToAt]
+  wasm_wp_begin_with iintro >Hruntime >HruntimeInstances >Htable
+  simp only [← tablePointsToAt_eq]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]; simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have himports' : ¬functionIndex < store.runtime.currentModule.imports.length := hmod ▸ himports
+  have hfn' : store.runtime.currentModule.funcs[
+      functionIndex - store.runtime.currentModule.imports.length]? = some fn := hmod ▸ hfn
+  have hsignature' : store.runtime.currentModule.funcSig? functionIndex = some signature :=
+    hmod ▸ hsignature
+  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected :=
+    hmod ▸ hexpected
+  have htype' : store.runtime.currentModule.indirectCallTypeOk
+      functionIndex typeIndex signature expected = false := hmod ▸ htype
+  have haddr' : store.runtime.resolveFunc address = some (store.runtime.entry, functionIndex) := by
+    have heq : store.runtime.resolveFunc address =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq, Hentry]; exact haddr
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$ [Hσ Htable]
+  wasm_wp_step Step.returnCallIndirectTypeMismatch (α := α) hselector Hphysical helement haddr'
+      himports' hfn' hsignature' hexpected' htype' =>
+    wasm_wp_trap_frame
+
+/-- Cross-instance `return_call_indirect` via a table funcaddr (tail call). -/
+theorem wp_returnCallIndirectFuncAddrCrossInstance
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (calleeId : ModuleInstanceId)
+    (calleeInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex tableIndex : Nat)
+    (table : TableInst) (elementIndex address fnIdx : Nat)
+    (fn : Function) (expected : FuncType)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (hcalleeLookup : instances[calleeId.id]? = some calleeInst)
+    (hexpected : callerInst.module.types[typeIndex]? = some expected)
+    (himports : ¬fnIdx < calleeInst.module.imports.length)
+    (hfn : calleeInst.module.funcs[fnIdx - calleeInst.module.imports.length]? = some fn)
+    (htype : calleeInst.module.crossIndirectCallTypeOk fnIdx callerInst.module typeIndex
+      { params := fn.params, results := fn.results } expected = true)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address =
+             some (calleeId, fnIdx))
+    (howner : calleeId ≠ callerId)
+    {params localValues values : List Value} {selector : Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hselector : selector.addrNat? = some elementIndex)
+    (helement : table[elementIndex]? = some (.funcref (some address))) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, selector :: values⟩,
+        .returnCallIndirect typeIndex tableIndex :: code,
+        arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ tablePointsToAt 0 tableIndex table -∗
+    ▷ (currentInstanceOwn calleeId ∗ runtimeInstancesOwn instances ∗
+        tablePointsToAt 0 tableIndex table -∗
+        WP (Expr.running
+          ⟨fn.toLocals (values.take fn.numParams).reverse,
+            fn.body, arity, remainder, [], calls⟩ : Expr α) @ s; E {{ Φ }}) -∗
+      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  dsimp only
+  simp only [tablePointsToAt]
+  wasm_wp_begin_with iintro >Hruntime >HruntimeInstances >Htable Hwp
+  simp only [← tablePointsToAt_eq]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  iclear HruntimeElem
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]; simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected :=
+    hmod ▸ hexpected
+  have haddr' : store.runtime.resolveFunc address = some (calleeId, fnIdx) := by
+    have heq : store.runtime.resolveFunc address =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq]; exact haddr
+  have howner' : calleeId ≠ store.runtime.entry := Hentry ▸ howner
+  have hcallee' : store.runtime.instances[calleeId.id]? = some calleeInst :=
+    Hinst ▸ hcalleeLookup
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$ [Hσ Htable]
+  have htype' : calleeInst.module.crossIndirectCallTypeOk fnIdx store.runtime.currentModule
+      typeIndex { params := fn.params, results := fn.results } expected = true := hmod ▸ htype
+  wasm_wp_step Step.returnCallIndirectFuncAddrCrossInstance (α := α) hselector Hphysical helement
+      haddr' howner' hexpected' hcallee' himports hfn htype' =>
+    imod stateInterp_currentInstance_update_of_any store ns obs' nt callerId calleeId $$
+        [$Hσ $HinstanceOwn] with ⟨Hσ, HinstanceOwn', %_⟩
+    wasm_wp_frame
+      iapply Hwp
+      isplitl [HinstanceOwn']
+      · iexact HinstanceOwn'
+      · isplitl [HruntimeInstances]
+        · iexact HruntimeInstances
+        · iexact Htable
+
+/-- Cross-instance type-mismatch trap for `return_call_indirect`. -/
+theorem wp_returnCallIndirectFuncAddrCrossInstanceTypeMismatch
+    (callerId : ModuleInstanceId)
+    (callerInst : ModuleInstance α)
+    (calleeId : ModuleInstanceId)
+    (calleeInst : ModuleInstance α)
+    (instances : Array (ModuleInstance α))
+    (typeIndex tableIndex : Nat)
+    (table : TableInst) (elementIndex address fnIdx : Nat)
+    (fn : Function) (expected : FuncType)
+    (hcallerLookup : instances[callerId.id]? = some callerInst)
+    (hcalleeLookup : instances[calleeId.id]? = some calleeInst)
+    (hexpected : callerInst.module.types[typeIndex]? = some expected)
+    (himports : ¬fnIdx < calleeInst.module.imports.length)
+    (hfn : calleeInst.module.funcs[fnIdx - calleeInst.module.imports.length]? = some fn)
+    (htype : calleeInst.module.crossIndirectCallTypeOk fnIdx callerInst.module typeIndex
+      { params := fn.params, results := fn.results } expected = false)
+    (haddr : ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address =
+             some (calleeId, fnIdx))
+    (howner : calleeId ≠ callerId)
+    {params localValues values : List Value} {selector : Value}
+    {code : Program} {arity : Nat} {remainder : List Value}
+    {controls : List ControlFrame} {calls : List CallFrame}
+    (hselector : selector.addrNat? = some elementIndex)
+    (helement : table[elementIndex]? = some (.funcref (some address))) :
+    let current : ThreadState α :=
+      ⟨⟨params, localValues, selector :: values⟩,
+        .returnCallIndirect typeIndex tableIndex :: code,
+        arity, remainder, controls, calls⟩
+    ▷ runtimeModuleOwn callerId callerInst.module -∗
+    ▷ runtimeInstancesOwn instances -∗
+    ▷ tablePointsToAt 0 tableIndex table -∗
+    WP (Expr.running current : Expr α) @ E ?{{ Φ }} := by
+  dsimp only
+  simp only [tablePointsToAt]
+  wasm_wp_begin_with iintro >Hruntime >HruntimeInstances >Htable
+  simp only [← tablePointsToAt_eq]
+  simp only [runtimeModuleOwn]
+  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
+  wasm_current_instance_agree (obs ++ obs'), callerId $$ [$Hσ $HinstanceOwn]
+  iclear HruntimeElem
+  ihave_pure Hinst : ⌜store.runtime.instances = instances⌝ using
+    stateInterp_instances_agree store ns (obs ++ obs') nt instances $$
+      [Hσ HruntimeInstances]
+  have hcurrentInst : store.runtime.currentInstance = callerInst := by
+    simp only [RuntimeEnv.currentInstance, Hinst, Hentry]; simp [getElem!_def, hcallerLookup]
+  have hmod : store.runtime.currentModule = callerInst.module :=
+    congrArg (·.module) hcurrentInst
+  have hexpected' : store.runtime.currentModule.types[typeIndex]? = some expected :=
+    hmod ▸ hexpected
+  have haddr' : store.runtime.resolveFunc address = some (calleeId, fnIdx) := by
+    have heq : store.runtime.resolveFunc address =
+        ({ instances, entry := callerId } : RuntimeEnv α).resolveFunc address :=
+      by simp only [RuntimeEnv.resolveFunc, Hinst]
+    rw [heq]; exact haddr
+  have howner' : calleeId ≠ store.runtime.entry := Hentry ▸ howner
+  have hcallee' : store.runtime.instances[calleeId.id]? = some calleeInst :=
+    Hinst ▸ hcalleeLookup
+  wasm_table_agree Hphysical, tableIndex, table, (obs ++ obs') $$ [Hσ Htable]
+  have htype' : calleeInst.module.crossIndirectCallTypeOk fnIdx store.runtime.currentModule
+      typeIndex { params := fn.params, results := fn.results } expected = false := hmod ▸ htype
+  wasm_wp_step Step.returnCallIndirectFuncAddrCrossInstanceTypeMismatch (α := α)
+      hselector Hphysical helement haddr' howner' hexpected' hcallee' himports hfn htype' =>
+    wasm_wp_trap_frame
 
 end Wasm.SmallStep

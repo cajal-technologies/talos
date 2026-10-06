@@ -811,6 +811,12 @@ structure Module where
   /-- Imported functions, in declaration order. See `ImportDecl` for the
   index-space convention. Empty for modules with no imports. -/
   imports  : List ImportDecl := []
+  /-- `gcTypes` index for each function import's declared `(type N)`, parallel
+  to `imports` (same length).  `none` entries mean the declared GC type is
+  unrecorded; matching then falls back to structural `FuncType` equality.
+  Kept separate from `ImportDecl` so that hand-built import lists remain
+  unchanged and `decide`-based proof obligations stay valid. -/
+  importTypeIdxes : List (Option Nat) := []
   /-- Index of the optional `(start $f)` function. Per the wasm spec it is
   invoked once during instantiation, after data/elem segments are written,
   with no arguments and no results. A trap during start makes the whole
@@ -850,6 +856,10 @@ structure Module where
   /-- Exception tags (exception-handling proposal), indexed by position;
   each carries the tag's parameter types (`results` is always empty). -/
   tags : List FuncType := []
+  /-- `gcTypes` index for each tag's declared `(type N)`, parallel to `tags`
+  (imports first, then declarations).  `none` entries mean the declared GC
+  type is unrecorded; matching then falls back to `FuncType` equality. -/
+  tagTypeIdxes : List (Option Nat) := []
 deriving Repr, Inhabited
 
 /-- Runtime representation of a single table: a list of reference
@@ -1152,12 +1162,11 @@ private def gcCompositeEquivWith
     (typeEquiv : Nat → Nat → Bool) : CompositeType → CompositeType → Bool
   | .func a, .func b =>
       a.params.length == b.params.length &&
-      (a.params.zip b.params).all fun (x, y) =>
-        gcValueTypeEquivWith typeEquiv x y
-      &&
+      (a.params.zip b.params).all (fun (x, y) =>
+        gcValueTypeEquivWith typeEquiv x y) &&
       a.results.length == b.results.length &&
-      (a.results.zip b.results).all fun (x, y) =>
-        gcValueTypeEquivWith typeEquiv x y
+      (a.results.zip b.results).all (fun (x, y) =>
+        gcValueTypeEquivWith typeEquiv x y)
   | .struct a, .struct b =>
       a.length == b.length &&
       (a.zip b).all fun (x, y) => gcFieldTypeEquivWith typeEquiv x y
@@ -1238,6 +1247,65 @@ def Module.gcTypeSubtype (m : Module) (a b : Nat) : Bool :=
         | none   => false
   go m.gcTypes.length a
 
+/-- Cross-module iso-recursive equivalence: type `a` in module `ma` is
+equivalent to type `b` in module `mb`.  Extends `gcTypeEquiv` to work across
+two different modules by using `ma` for lookups on the `a` side and `mb` for
+lookups on the `b` side.  Two types are equivalent when their recursion groups
+have the same shape, their positions in those groups match, and pairwise: the
+members' composite types match (with same-group refs compared by position,
+cross-group refs compared recursively), finality matches, and declared
+supertypes are either at the same relative group position or recursively
+equivalent. -/
+def gcTypeEquivCross (ma : Module) (a : Nat) (mb : Module) (b : Nat) : Bool :=
+  let rec go (fuel : Nat) (a : Nat) (b : Nat) : Bool :=
+    (let ga := ma.gcRecGroup a
+     let gb := mb.gcRecGroup b
+     ga.length == gb.length &&
+     ga.idxOf a == gb.idxOf b &&
+     (ga.zip gb).all fun (x, y) =>
+       match ma.gcTypes[x]?, mb.gcTypes[y]? with
+       | some dx, some dy =>
+         dx.final == dy.final &&
+         gcCompositeEquivWith
+           (fun px py =>
+             match ga.idxOf? px, gb.idxOf? py with
+             | some i, some j => i == j
+             | none, none =>
+                 match fuel with
+                 | 0 => false
+                 | f + 1 => go f px py
+             | _, _ => false)
+           dx.comp dy.comp &&
+         (match dx.super, dy.super with
+          | none, none => true
+          | some px, some py =>
+            (match ga.idxOf? px, gb.idxOf? py with
+             | some i, some j => i == j
+             | none, none =>
+               (match fuel with
+                | 0     => false
+                | f + 1 => go f px py)
+             | _, _ => false)
+          | _, _ => false)
+       | _, _ => false)
+  go (ma.gcTypes.length + mb.gcTypes.length) a b
+
+/-- Cross-module subtyping: type `a` in module `ma` is a (reflexive,
+transitive) subtype of type `b` in module `mb` when some type on `a`'s
+declared `sub $super` chain in `ma` is cross-module equivalent to `b`.
+Extends `gcTypeSubtype` to work across two different modules. -/
+def gcTypeSubtypeCross (ma : Module) (a : Nat) (mb : Module) (b : Nat) : Bool :=
+  let rec go (fuel x : Nat) : Bool :=
+    if gcTypeEquivCross ma x mb b then true
+    else match fuel with
+      | 0      => false
+      | f + 1  => match ma.gcTypes[x]? with
+        | some d => match d.super with
+          | some p => go f p
+          | none   => false
+        | none   => false
+  go ma.gcTypes.length a
+
 /-- Runtime type check shared by all four `(return_)call_indirect` arms
 (issue #95). A table entry resolving to function `fid` is callable at the
 call-site type `typeIdx` when:
@@ -1256,6 +1324,18 @@ def Module.indirectCallTypeOk (m : Module) (fid typeIdx : Nat)
     (fn ty : FuncType) : Bool :=
   match m.funcTypeIdx? fid with
   | some src => m.gcTypeSubtype src typeIdx
+  | none => fn.params == ty.params && fn.results == ty.results
+
+/-- Cross-instance counterpart of `Module.indirectCallTypeOk`: the target `fid`
+lives in module `callee` while the call-site type `typeIdx` belongs to
+`caller`. When the target's declared nominal type is recorded it must be a
+cross-module subtype (`gcTypeSubtypeCross`) of the call-site type; otherwise
+the check degrades to the structural signature comparison, exactly as the
+same-instance check does. -/
+def Module.crossIndirectCallTypeOk (callee : Module) (fid : Nat) (caller : Module)
+    (typeIdx : Nat) (fn ty : FuncType) : Bool :=
+  match callee.funcTypeIdx? fid with
+  | some src => gcTypeSubtypeCross callee src caller typeIdx
   | none => fn.params == ty.params && fn.results == ty.results
 
 /-- Look up the struct/array composite type at index `i`. -/

@@ -403,7 +403,7 @@ instance instStateInterp [WasmSmallStepGS hlc α] :
         ghost_map_auth WasmSmallStepGS.runtime.runtimeName
           (DFrac.own 1) runtimeModuleσ ∗
         ([∗map] id ↦ m ∈ runtimeModuleσ, runtimeModuleElem id m) ∗
-        runtimeInstancesOwn store.runtime.instances ∗
+        runtimeInstancesAuth store.runtime.instances ∗
         currentInstanceAuth store.runtime.entry ∗
         ghost_map_auth WasmSmallStepGS.hostEnv.hostEnvName
           (DFrac.own 1) hostEnvσ ∗
@@ -447,7 +447,7 @@ theorem stateInterp_eq [WasmSmallStepGS hlc α]
           ghost_map_auth WasmSmallStepGS.runtime.runtimeName
             (DFrac.own 1) runtimeModuleσ ∗
           ([∗map] id ↦ m ∈ runtimeModuleσ, runtimeModuleElem id m) ∗
-          runtimeInstancesOwn store.runtime.instances ∗
+          runtimeInstancesAuth store.runtime.instances ∗
           currentInstanceAuth store.runtime.entry ∗
           ghost_map_auth WasmSmallStepGS.hostEnv.hostEnvName
             (DFrac.own 1) hostEnvσ ∗
@@ -2112,9 +2112,124 @@ theorem stateInterp_instances_agree [WasmSmallStepGS hlc α]
       runtimeInstancesOwn instances ==∗
       ⌜store.runtime.instances = instances⌝ := by
   iopen_state Hstate from ⟨Hstate, Hexpected⟩
-  icombine HruntimeInstances Hexpected as Hinst
-  ihave %hagrees := runtimeInstancesOwn_agree store.runtime.instances instances $$ Hinst
+  icombine HruntimeInstances Hexpected as Hcombined
+  ihave %hagrees := runtimeInstancesOwn_agree store.runtime.instances instances $$ Hcombined
   ipureexact hagrees
+
+/-- Pushing a new module instance into the store updates the stateInterp and
+the instances fragment, and produces a persistent `runtimeModuleElem` for the
+new entry.  Note: `runtimeModuleOwn` is not returned because it includes an
+exclusive `currentInstanceOwnN` token that would conflict with the
+stateInterp's current-instance authority; use `runtimeModuleElem` when only
+module-identity information is needed. -/
+theorem stateInterp_instantiate [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (newInst : ModuleInstance α) :
+    let newId : ModuleInstanceId := ⟨store.runtime.instances.size⟩
+    let newInstances := store.runtime.instances.push newInst
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      runtimeInstancesOwn store.runtime.instances ==∗
+      stateInterp (GF := WasmHeapGF α)
+        { store with runtime := { store.runtime with instances := newInstances } }
+        steps observations threads ∗
+      runtimeInstancesOwn newInstances ∗
+      runtimeModuleElem newId.id newInst.module := by
+  intro newId newInstances
+  iopen_state Hstate from ⟨Hstate, HruntimeInstancesFrag⟩
+  -- Freshness: the new slot is beyond every entry currently in runtimeModuleσ
+  have hfresh : get? runtimeModuleσ newId.id = none := by
+    rcases Hfacts with ⟨_, _, _, _, _, _, hmod, _⟩
+    cases h : get? runtimeModuleσ newId.id with
+    | none => rfl
+    | some m =>
+      have hc := hmod newId.id m h
+      simp [newId] at hc
+  -- Insert module into the auth and obtain a persistent elem
+  imod ghost_map_insert_persist (k := newId.id) (v := newInst.module) hfresh $$
+      HruntimeModuleAuth with ⟨HruntimeModuleAuth', HruntimeModuleElem⟩
+  iintuitionistic HruntimeModuleElem
+  -- Update instances auth + frag atomically
+  imod runtimeInstancesOwn_update store.runtime.instances newInstances $$
+      [$HruntimeInstances $HruntimeInstancesFrag] with ⟨HruntimeInstances', HruntimeInstancesOwn'⟩
+  -- Extend the big-sep to cover the new entry
+  ihave HruntimeModuleBigSep' :
+      [∗map] k ↦ v ∈ insert runtimeModuleσ newId.id newInst.module, runtimeModuleElem k v $$
+      [HruntimeModuleBigSep]
+  · iapply (BI.BigSepM.bigSepM_insert hfresh).mpr
+    isplitl []
+    · unfold runtimeModuleElem; iexact HruntimeModuleElem
+    · iexact HruntimeModuleBigSep
+  imodintro
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth'
+    HruntimeModuleBigSep' HruntimeInstances' HinstanceAuth HhostEnvAuth Hstate_auth Hexc]
+  · iapply (stateInterp_eq
+        { store with runtime := { store.runtime with instances := newInstances } }
+        steps observations threads).mpr
+    iexists σ, globalσ, dataSegmentσ, tableσ,
+      elementSegmentσ, (insert runtimeModuleσ newId.id newInst.module), hostEnvσ
+    iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth'
+      HruntimeModuleBigSep' HruntimeInstances' HinstanceAuth HhostEnvAuth Hstate_auth Hexc
+    ipureintro
+    rcases Hfacts with ⟨h1, h2, h3, h4, h5, h6, hmod, henv⟩
+    refine ⟨h1, h2, h3, h4, h5, h6, ?_, ?_⟩
+    · intro id m hget
+      by_cases hid : id = newId.id
+      · subst hid
+        rw [get?_insert_eq rfl] at hget; cases hget
+        simp [newInstances, newId]
+      · rw [get?_insert_ne (Ne.symm hid)] at hget
+        have hold := hmod id m hget
+        cases h : store.runtime.instances[id]? with
+        | none => simp [h] at hold
+        | some inst =>
+          have hlt : id < store.runtime.instances.size := by
+            cases Nat.lt_or_ge id store.runtime.instances.size with
+            | inl hlt => exact hlt
+            | inr hge =>
+              rw [Array.getElem?_eq_none hge] at h; exact absurd h (by simp)
+          simp only [newInstances, Array.getElem?_push_lt hlt, Option.map_some]
+          rw [Array.getElem?_eq_getElem hlt, Option.map_some] at hold
+          exact hold
+    · intro id env hget
+      have hold := henv id env hget
+      cases h : store.runtime.instances[id]? with
+      | none => simp [h] at hold
+      | some inst =>
+        have hlt : id < store.runtime.instances.size := by
+          cases Nat.lt_or_ge id store.runtime.instances.size with
+          | inl hlt => exact hlt
+          | inr hge =>
+            rw [Array.getElem?_eq_none hge] at h; exact absurd h (by simp)
+        simp only [newInstances, Array.getElem?_push_lt hlt]
+        rw [Array.getElem?_eq_getElem hlt] at hold
+        exact hold
+  · isplitl [HruntimeInstancesOwn']
+    · iexact HruntimeInstancesOwn'
+    · unfold runtimeModuleElem; iexact HruntimeModuleElem
+
+/-- Corollary of `stateInterp_instantiate` phrased over a successful
+`SmallStep.instantiate` call.  Unfolds the interpreter's output to extract the
+pushed instance and forwards to `stateInterp_instantiate`. -/
+theorem stateInterp_instantiate_of_ok [WasmSmallStepGS hlc α]
+    (config : Config α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat)
+    (newModule : Module) (hostEnv : HostEnv α) (registry : ImportRegistry)
+    (config' : Config α) (newId : ModuleInstanceId)
+    (hok : SmallStep.instantiate config newModule hostEnv registry = .ok (config', newId)) :
+    stateInterp (GF := WasmHeapGF α) config.store steps observations threads ∗
+      runtimeInstancesOwn config.store.runtime.instances ==∗
+      stateInterp (GF := WasmHeapGF α) config'.store steps observations threads ∗
+      runtimeInstancesOwn config'.store.runtime.instances ∗
+      runtimeModuleElem newId.id newModule := by
+  simp only [SmallStep.instantiate] at hok
+  split at hok
+  · simp at hok
+  rename_i resolvedImports _
+  simp only [Except.ok.injEq] at hok
+  obtain ⟨hc, hid⟩ := Prod.mk.inj hok
+  symm at hc hid; subst hc hid
+  exact stateInterp_instantiate config.store steps observations threads _
 
 /-- Owned fragment for the current instance id agrees with the stateInterp value. -/
 theorem stateInterp_currentInstance_agree [WasmSmallStepGS hlc α]

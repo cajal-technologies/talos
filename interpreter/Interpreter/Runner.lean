@@ -97,22 +97,6 @@ def loadWat (path : String) : IO (Except String String) := do
     catch e =>
       return .error s!"could not read {path}: {e.toString}"
 
-/-! ## Pre-flight: imports -/
-
-/-- Count `(import …)` forms inside a `(module …)` body. Used for the
-pre-flight rejection; the decoder itself only flags function imports. -/
-def countImports (src : String) : Nat :=
-  match parseAll src with
-  | .error _ => 0
-  | .ok xs =>
-    match xs with
-    | [.list (.atom "module" :: body)] =>
-      body.foldl (fun n e =>
-        match e with
-        | .list (.atom "import" :: _) => n + 1
-        | _ => n) 0
-    | _ => 0
-
 /-! ## Argument coercion -/
 
 def parseArgForType (t : ValueType) (s : String) : Except String Value :=
@@ -223,16 +207,16 @@ def runOnce (a : Args) : IO UInt32 := do
     | .ok s => pure s
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
 
-  -- Pre-flight: imports
-  let n := countImports wat
-  if n > 0 then
-    IO.eprintln s!"error: module declares imports ({n}), runner has no host environment"
-    return EXIT_ERR
-
   -- Decode
   let m ← match decode wat with
     | .ok m => pure m
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
+
+  -- Instantiation: validate imports. The runner carries no linked modules, so
+  -- any function import is an InstantiationError — link-time, not runtime.
+  match Wasm.SmallStep.resolveImports [] ({} : Wasm.HostEnv Unit) m #[] with
+  | .error err => IO.eprintln s!"error: {repr err}"; return EXIT_ERR
+  | .ok _ => pure ()
 
   -- Resolve method
   let idx ← match resolveMethod m a.method with
@@ -266,7 +250,7 @@ def runOnce (a : Args) : IO UInt32 := do
   -- fresh store before running, the same way the testsuite driver does
   -- at instantiation — otherwise those globals keep their zero
   -- placeholder. There are no imports here, so `global.get` of an
-  -- imported global is unreachable; the import pre-flight above
+  -- imported global is unreachable; the instantiation validation above
   -- rejects any module that would need one.
   let store0 := m.runConstGlobals a.fuel (m.initialStore (α := Unit)) {}
   -- GC element segment items (`ref.i31`, `struct.new`, `array.new*`) are

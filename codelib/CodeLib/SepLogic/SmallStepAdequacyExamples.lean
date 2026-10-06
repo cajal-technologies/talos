@@ -1337,44 +1337,52 @@ theorem tableSetGet_store_partiallyMeets :
   · exact tableSetGetMap_agrees
   · exact elementSegmentHeapAgrees_empty _
   wasm_adequacy_intro gs =>
-    simp only [BI.BigSepM.bigSepM_empty.to_eq]
-    simp only [runtimeModuleOwn]
-    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
+    simp only [BI.BigSepM.bigSepM_empty.to_eq,
+      tableSetGetAdequacyConfig, RuntimeEnv.currentModule_mk1]
+    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments,
+      HruntimeOwn, HruntimeInstances⟩
     ihave Htable := tableSetGetMap_pointsTo $$ Htables
-    simp only [tableSetGetAdequacyConfig, tableSetGetAdequacyModule]
     have hpost : ∀ values : List Value,
-        (iprop% ⌜values = [.i32 0]⌝ ∗
+        (iprop%
+          ⌜values = [.i32 0]⌝ ∗
           tablePointsTo ⟨0, 0⟩
-            (listSetAt [.funcref none] (UInt32.toNat 0)
-              (.funcref (some 1)))) ⊢
+            (listSetAt [.funcref none] (UInt32.toNat 0) (.funcref (some 1)))) ⊢
         (iprop% ∀ (store : MachineStore Unit)
             (_observations : List StepKind),
           stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
           ⌜values = [.i32 0] ∧
-            store.wasm.tables[0]? =
-              some [.funcref (some 1)]⌝) := by
+            store.wasm.tables[0]? = some [.funcref (some 1)]⌝) := by
       intro values
       iintro ⟨%hvalues, Htable⟩
         %store %_observations Hstate
       simp only [← tablePointsToAt_eq]
       imod stateInterp_table_facts_frame
         store 0 [] 0 0
-          (listSetAt [.funcref none] (UInt32.toNat 0)
-            (.funcref (some 1))) $$
+          (listSetAt [.funcref none] (UInt32.toNat 0) (.funcref (some 1))) $$
           [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
       ipureexact ⟨hvalues, by simpa [listSetAt] using Hphysical⟩
-    iapply wp_mono hpost
-    wasm_wp_pures [wp_const]
-    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
     simp only [← tablePointsToAt_eq]
-    wasm_wp_next_rebind wp_tableSet rfl (by decide) with Htable
-    wasm_wp_pures [wp_const]
-    wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
-      rfl (by simp [listSetAt]) with Htable
+    wasm_wp_next wp_const
+    wasm_wp_next wp_refFunc tableSetGetAdequacyModule ⟨0⟩ 1
+      (functionIndex := 1)
+      (instances := #[{ module := tableSetGetAdequacyModule, host := {} }])
+      (callerInst := { module := tableSetGetAdequacyModule, host := {} })
+      (hcallerLookup := by rfl) (hfuncaddr := by decide) $$
+        [$HruntimeOwn] [$HruntimeInstances]
+    iintro ⟨_HruntimeOwn, _HruntimeInstances⟩
+    wasm_wp_next wp_tableSet (hindex := by rfl) (hbound := by decide) $$
+      [$Htable]
+    iintro Htable
+    wasm_wp_next wp_const
+    wasm_wp_next wp_tableGet (hindex := by rfl) (helement := by rfl) $$
+      [$Htable]
+    iintro Htable
+    wasm_wp_next (wp_refIsNull (hnull := by rfl))
+    iapply wp_mono hpost
+    simp only [← tablePointsToAt_eq]
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply_splitl_exact wp_frame_l with Htable
-    wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value_rfl
 
 def tableGrowFillAdequacyModule : Module :=
@@ -1426,17 +1434,15 @@ theorem tableGrowFill_store_partiallyMeets :
   wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableGrowFillAdequacyConfig, RuntimeEnv.currentModule_mk1]
-    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn⟩
+    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments,
+      HruntimeOwn, HruntimeInstances⟩
     ihave Htable := tableSetGetMap_pointsTo $$ Htables
     have hpost : ∀ values : List Value,
-        (iprop% ⌜values = [.i32 0]⌝ ∗
+        (iprop%
+          ⌜values = [.i32 0]⌝ ∗
           tablePointsTo ⟨0, 0⟩
-            (listWriteAt
-              ([.funcref none] ++
-                List.replicate (UInt32.toNat 2) (.funcref (some 1)))
-              (UInt32.toNat 0)
-              (List.replicate (UInt32.toNat 3)
-                (.funcref (some 1))))) ⊢
+            (listWriteAt ([.funcref none] ++ List.replicate (UInt32.toNat 2) (.funcref (some 1)))
+              (UInt32.toNat 0) (List.replicate (UInt32.toNat 3) (.funcref (some 1))))) ⊢
         (iprop% ∀ (store : MachineStore Unit)
             (_observations : List StepKind),
           stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
@@ -1450,41 +1456,39 @@ theorem tableGrowFill_store_partiallyMeets :
       simp only [← tablePointsToAt_eq]
       imod stateInterp_table_facts_frame
         store 0 [] 0 0
-          (listWriteAt
-            ([.funcref none] ++
-              List.replicate (UInt32.toNat 2) (.funcref (some 1)))
-            (UInt32.toNat 0)
-            (List.replicate (UInt32.toNat 3)
-              (.funcref (some 1)))) $$
-          [$Hstate $Htable] with
+          (listWriteAt ([.funcref none] ++ List.replicate (UInt32.toNat 2) (.funcref (some 1)))
+            (UInt32.toNat 0) (List.replicate (UInt32.toNat 3) (.funcref (some 1)))) $$
+            [$Hstate $Htable] with
         ⟨Hstate, Htable, %Hphysical⟩
-      ipureexact ⟨hvalues, by
-        simpa [listWriteAt] using Hphysical⟩
+      ipureexact ⟨hvalues, by simpa [listWriteAt] using Hphysical⟩
     simp only [← tablePointsToAt_eq]
     wasm_wp_next wp_tableGrow32 tableGrowFillAdequacyModule ⟨0⟩
       (tableIndex := 0) (table := [.funcref none])
-      (delta := 2) (initial := .funcref (some 1)) (by decide) $$
+      (hbound := by decide) $$
         [$Htable $HruntimeOwn]
-    iintro Htable _HruntimeOwn
-    simp only [tableGrowFillAdequacyModule]
+    iintro Htable HruntimeOwn
+    wasm_wp_next wp_const
+    wasm_wp_next wp_refFunc tableGrowFillAdequacyModule ⟨0⟩ 1
+      (functionIndex := 1)
+      (instances := #[{ module := tableGrowFillAdequacyModule, host := {} }])
+      (callerInst := { module := tableGrowFillAdequacyModule, host := {} })
+      (hcallerLookup := by rfl) (hfuncaddr := by decide) $$
+        [$HruntimeOwn] [$HruntimeInstances]
+    iintro ⟨_HruntimeOwn, _HruntimeInstances⟩
+    wasm_wp_next wp_const
+    wasm_wp_next wp_tableFill
+      (hlength := by rfl) (hdestination := by rfl) (hbound := by decide) $$
+        [$Htable]
+    iintro Htable
+    wasm_wp_next wp_const
+    wasm_wp_next wp_tableGet (hindex := by rfl) (helement := by rfl) $$
+      [$Htable]
+    iintro Htable
+    wasm_wp_next (wp_refIsNull (hnull := by rfl))
     iapply wp_mono hpost
     simp only [← tablePointsToAt_eq]
-    wasm_wp_pures [wp_const]
-    wasm_wp_next wp_pureStep _ _ _ (fun _ => Step.refFunc)
-    wasm_wp_pures [wp_const]
-    wasm_wp_next_bind wp_tableFill
-      (tableIndex := 0) (destination := .i32 0) (length := .i32 3)
-      (value := .funcref (some 1))
-      (table :=
-        [.funcref none] ++
-          List.replicate (UInt32.toNat 2) (.funcref (some 1)))
-      rfl rfl (by decide) with Htable => Htable
-    wasm_wp_pures [wp_const]
-    wasm_wp_next_rebind wp_tableGet (value := .funcref (some 1))
-      rfl (by simp [listWriteAt]) with Htable
     iapply wp_mono (fun _ => BI.sep_comm.mp)
     iapply_splitl_exact wp_frame_l with Htable
-    wasm_wp_next wp_refIsNull rfl
     wasm_wp_finish_value_rfl
 
 def tableGrow64FailureAdequacyModule : Module :=
@@ -1534,7 +1538,8 @@ theorem tableGrow64Failure_store_partiallyMeets :
   wasm_adequacy_intro gs =>
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableGrow64FailureAdequacyConfig, RuntimeEnv.currentModule_mk1]
-    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn⟩
+    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, HruntimeOwn,
+      _HruntimeInstances⟩
     ihave Htable := tableSetGetMap_pointsTo $$ Htables
     have hpost : ∀ values : List Value,
         (iprop%
@@ -1647,7 +1652,8 @@ theorem tableCopyOverlap_store_partiallyMeets :
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableCopyOverlapAdequacyConfig]
     simp only [runtimeModuleOwn]
-    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
+    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, ⟨_Hruntime, _HinstFrag⟩,
+      _HruntimeInstances⟩
     ihave Htable := tableCopyOverlapMap_pointsTo $$ Htables
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
@@ -1778,7 +1784,8 @@ theorem tableCopyDistinct_store_partiallyMeets :
     simp only [BI.BigSepM.bigSepM_empty.to_eq,
       tableCopyDistinctAdequacyConfig]
     simp only [runtimeModuleOwn]
-    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, _Hruntime, _HinstFrag⟩
+    iintro ⟨_Hbytes, _Hglobals, _Hsegments, Htables, _HelementSegments, ⟨_Hruntime, _HinstFrag⟩,
+      _HruntimeInstances⟩
     ihave ⟨Hdestination, Hsource⟩ := tableCopyDistinctMap_pointsTo $$ Htables
     have hpost : ∀ values : List Value,
         (iprop% ⌜values = []⌝ ∗
@@ -1953,7 +1960,7 @@ theorem tableInitDrop_store_partiallyMeets :
     simp only [runtimeModuleOwn]
     iintro
       ⟨_Hbytes, _Hglobals, _HdataSegments, Htables,
-        HelementSegments, Hruntime, HinstFrag⟩
+        HelementSegments, ⟨Hruntime, HinstFrag⟩, HruntimeInstances⟩
     iintuitionistic Hruntime
     ihave Htable := tableInitDropTableMap_pointsTo $$ Htables
     ihave Helement :=
@@ -2008,22 +2015,30 @@ theorem tableInitDrop_store_partiallyMeets :
             [.funcref none, .funcref none, .funcref none,
               .funcref none] ∗
           elementSegmentPointsToAt 0 0 (some [some 0, none, some 0]) ∗
-          runtimeModuleOwn ⟨0⟩ tableInitDropAdequacyModule $$
-        [Htable Helement Hruntime HinstFrag]
+          runtimeModuleOwn ⟨0⟩ tableInitDropAdequacyModule ∗
+          runtimeInstancesOwn _ $$
+        [Htable Helement Hruntime HinstFrag HruntimeInstances]
     · isplitl_exact Htable
       · isplitl_exact Helement
-        · unfold runtimeModuleOwn
-          isplitl [Hruntime]
-          · unfold runtimeModuleElem; iexact Hruntime
-          · unfold currentInstanceOwnN; iexact HinstFrag
+        · isplitl [Hruntime HinstFrag]
+          · unfold runtimeModuleOwn
+            isplitl [Hruntime]
+            · unfold runtimeModuleElem; iexact Hruntime
+            · unfold currentInstanceOwnN; iexact HinstFrag
+          · iexact HruntimeInstances
     wasm_wp_next wp_tableInitLive tableInitDropAdequacyModule ⟨0⟩
       (tableIndex := 0) (elementIndex := 0)
       (table :=
         [.funcref none, .funcref none, .funcref none, .funcref none])
       (entries := [some 0, none, some 0])
       (destination := .i32 1) (source := 0) (length := 3)
-      rfl (by decide) (by decide) $$ Hresources
-    iintro Htable Helement Hruntime
+      rfl (by decide) (by decide)
+      (hcallerLookup := rfl)
+      (hfuncaddrs := fun i => by
+        rcases Nat.lt_or_ge i 1 with h | h
+        · simp only [show i = 0 from by omega]; rfl
+        · rw [Array.getElem?_eq_none (by simp [tableInitDropAdequacyModule]; omega)]; simp) $$ Hresources
+    iintro Htable Helement Hruntime HruntimeInstances
     wasm_wp_next_rebind wp_elemDrop with Helement
     iapply wp_mono (fun _ => sep_pair_pure_rotate _ _ _)
     iapply wp_frame_l

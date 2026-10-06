@@ -156,14 +156,52 @@ theorem imported_tail_call_exception_trapsWith :
       (fun store => store = throwTailConfig.store) :=
   runSteps_trapped_trapsWith_store imported_tail_call_propagates_exception
 
+private theorem throwIndirectConfig_steps :
+    Steps throwIndirectConfig
+      [.instruction (.const 0), .host 0, .administrative .unwindException]
+      ⟨.trapped (.uncaughtException 0 [.i32 7]), throwIndirectConfig.store⟩ := by
+  wasm_steps [.const]
+  exact Steps.cons
+    (.callIndirectHostThrow (functionIndex := 0) rfl rfl rfl (by decide +kernel)
+      (by decide) rfl rfl rfl rfl (by decide) rfl)
+    (Steps.cons (.uncaughtException rfl) (Steps.refl _))
+
 theorem imported_indirect_call_propagates_exception :
     (runSteps 3 throwIndirectConfig).result =
-      .trapped (.uncaughtException 0 [.i32 7]) throwIndirectConfig.store := by rfl
+      .trapped (.uncaughtException 0 [.i32 7]) throwIndirectConfig.store :=
+  runSteps_finalConfig_of_steps throwIndirectConfig_steps
 
 theorem imported_indirect_call_exception_trapsWith :
     TrapsWith throwIndirectConfig (.uncaughtException 0 [.i32 7])
       (fun store => store = throwIndirectConfig.store) :=
   runSteps_trapped_trapsWith_store imported_indirect_call_propagates_exception
+
+private theorem throwIndirectTailConfig_steps :
+    Steps throwIndirectTailConfig
+      [.instruction (.const 0), .host 0, .administrative .unwindException]
+      ⟨.trapped (.uncaughtException 0 [.i32 7]), throwIndirectTailConfig.store⟩ := by
+  wasm_steps [.const]
+  exact Steps.cons
+    (.returnCallIndirectHostThrow (functionIndex := 0) rfl rfl rfl (by decide +kernel) (by decide) rfl rfl rfl rfl (by decide) rfl)
+    (Steps.cons (.uncaughtException rfl) (Steps.refl _))
+
+private theorem throwCallRefConfig_steps :
+    Steps throwCallRefConfig
+      [.instruction (.refFunc 0), .host 0, .administrative .unwindException]
+      ⟨.trapped (.uncaughtException 0 [.i32 7]), throwCallRefConfig.store⟩ := by
+  apply Steps.cons (Step.refFunc (addr := 0) (by decide +kernel))
+  exact Steps.cons
+    (.callRefHostThrow (functionIndex := 0) (by decide +kernel) (by decide) rfl rfl rfl)
+    (Steps.cons (.uncaughtException rfl) (Steps.refl _))
+
+private theorem throwReturnCallRefConfig_steps :
+    Steps throwReturnCallRefConfig
+      [.instruction (.refFunc 0), .host 0, .administrative .unwindException]
+      ⟨.trapped (.uncaughtException 0 [.i32 7]), throwReturnCallRefConfig.store⟩ := by
+  apply Steps.cons (Step.refFunc (addr := 0) (by decide +kernel))
+  exact Steps.cons
+    (.returnCallRefHostThrow (functionIndex := 0) (by decide +kernel) (by decide) rfl rfl rfl)
+    (Steps.cons (.uncaughtException rfl) (Steps.refl _))
 
 theorem remaining_imported_call_forms_propagate_exceptions :
     (runSteps 3 throwIndirectTailConfig).result =
@@ -174,7 +212,10 @@ theorem remaining_imported_call_forms_propagate_exceptions :
           throwCallRefConfig.store ∧
       (runSteps 3 throwReturnCallRefConfig).result =
         .trapped (.uncaughtException 0 [.i32 7])
-          throwReturnCallRefConfig.store := ⟨rfl, rfl, rfl⟩
+          throwReturnCallRefConfig.store :=
+  ⟨runSteps_finalConfig_of_steps throwIndirectTailConfig_steps,
+   runSteps_finalConfig_of_steps throwCallRefConfig_steps,
+   runSteps_finalConfig_of_steps throwReturnCallRefConfig_steps⟩
 
 theorem memLoad_reads_caller_memory :
     (runSteps 3 memLoadConfig).result.values? = some [.i32 42] := by decide +kernel

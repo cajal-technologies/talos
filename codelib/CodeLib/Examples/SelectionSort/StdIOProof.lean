@@ -621,7 +621,7 @@ theorem recursive_sort_stronglyNormalizing
   · intro _
     have hentry : (concreteSortConfig recursive input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig recursive input).store.runtime.currentModule = recursive.module := by
-      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [concreteSortConfig, sortConfig]
     rw [hentry, hmod]
     iintro Hresources
     ihave Hsort := twp_recursiveSortCall input hfit $$ Hresources
@@ -645,7 +645,7 @@ theorem recursive_sort_terminatesWith
   · intro _
     have hentry : (concreteSortConfig recursive input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig recursive input).store.runtime.currentModule = recursive.module := by
-      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [concreteSortConfig, sortConfig]
     rw [hentry, hmod]
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
@@ -670,7 +670,7 @@ theorem loop_sort_stronglyNormalizing
   · intro _
     have hentry : (concreteSortConfig loop input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig loop input).store.runtime.currentModule = loop.module := by
-      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [concreteSortConfig, sortConfig]
     rw [hentry, hmod]
     iintro Hresources
     ihave Hsort := twp_loopSortCall input hfit $$ Hresources
@@ -694,7 +694,7 @@ theorem loop_sort_terminatesWith
   · intro _
     have hentry : (concreteSortConfig loop input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig loop input).store.runtime.currentModule = loop.module := by
-      simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
+      simp [concreteSortConfig, sortConfig]
     rw [hentry, hmod]
     iintro ⟨Hheap, Hglobals, Hruntime, _Hhost⟩
     iapply twp.to_wp
