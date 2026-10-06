@@ -314,5 +314,4 @@ theorem twp_store64_addr
   rw [UInt32.add_zero]
   iexact Hword
 
-
 end Wasm.SmallStep

@@ -1668,6 +1668,73 @@ theorem stateInterp_host_set [WasmSmallStepGS hlc α]
     ipureexact Hfacts
   · iexact HP'
 
+private theorem hostStateOwn_agree_update {α : Type} [gs : WasmHostStateGS α]
+    (actual expected newHost : α) :
+    hostStateAuth actual ∗ hostStateOwn expected ==∗
+      ⌜actual = expected⌝ ∗ hostStateAuth newHost ∗ hostStateOwn newHost := by
+  unfold hostStateAuth hostStateOwn
+  iintro ⟨Hauth, Hfrag⟩
+  icombine Hauth Hfrag as Hboth gives %Hvalid
+  have heq : actual = expected :=
+    congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO α) Hvalid)
+  subst expected
+  icases iOwn_op $$ Hboth with ⟨Hauth, Hfrag⟩
+  imod iOwn_update_op (E := gs.hostStateElem)
+      (ExclAuth.update (A := DiscreteO α)
+      (a := (⟨actual⟩ : DiscreteO α))
+      (b := ⟨actual⟩) (a' := ⟨newHost⟩)) $$ [Hauth Hfrag] with Hboth
+  · iframe
+  icases iOwn_op $$ Hboth with ⟨Hauth, Hfrag⟩
+  imodintro
+  isplit
+  · ipureintro; rfl
+  · isplitl [Hauth]
+    · iexact Hauth
+    · iexact Hfrag
+
+/-- Simultaneously learn that the client host fragment describes the physical
+host and update both sides.  The agreement fact is returned alongside the
+updated ownership, so callers can calculate the concrete host result without
+discarding the exclusive fragment. -/
+theorem stateInterp_host_set_expected {hlc : HasLC} {α : Type}
+    [WasmSmallStepGS hlc α]
+    (store : MachineStore α) (steps : Nat)
+    (observations : List StepKind) (threads : Nat) (expected newHost : α) :
+    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
+      hostStateOwn expected ==∗
+      ⌜store.wasm.host = expected⌝ ∗
+      stateInterp (GF := WasmHeapGF α)
+        { store with wasm := { store.wasm with host := newHost } }
+        steps observations threads ∗
+      hostStateOwn newHost := by
+  iintro ⟨Hstate, HP⟩
+  icases (stateInterp_eq store steps observations threads).mp $$ Hstate with
+    ⟨%σ, %globalσ, %dataSegmentσ, %tableσ, %elementSegmentσ,
+      %runtimeModuleσ, %hostEnvσ, Hheap, Hglobals, Hsegments, Htables,
+      HelementSegments, HruntimeModuleAuth, HruntimeModuleBigSep,
+      HruntimeInstances, HinstanceAuth, HhostEnvAuth, Hstate_auth,
+      %Hfacts, Hexc⟩
+  imod hostStateOwn_agree_update store.wasm.host expected newHost
+      $$ [$Hstate_auth $HP] with ⟨%heq, Hstate_auth, HP⟩
+  subst expected
+  imodintro
+  isplit
+  · ipureintro; rfl
+  isplitl [Hheap Hglobals Hsegments Htables HelementSegments
+      HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
+      HhostEnvAuth Hstate_auth Hexc]
+  · iapply (stateInterp_eq
+      { store with wasm := { store.wasm with host := newHost } }
+      steps observations threads).mpr
+    iexists σ; iexists globalσ; iexists dataSegmentσ; iexists tableσ
+    iexists elementSegmentσ; iexists runtimeModuleσ; iexists hostEnvσ
+    iframe Hheap Hglobals Hsegments Htables HelementSegments
+      HruntimeModuleAuth HruntimeModuleBigSep HruntimeInstances HinstanceAuth
+      HhostEnvAuth Hstate_auth Hexc
+    ipureintro
+    exact Hfacts
+  · iexact HP
+
 /-- Owned global state determines the corresponding physical instantiated
 global. -/
 theorem stateInterp_global_facts [WasmSmallStepGS hlc α]
