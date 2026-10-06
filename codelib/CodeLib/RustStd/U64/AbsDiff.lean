@@ -231,7 +231,7 @@ theorem absDiffHeap_pointsTo (oldScratch : UInt64) [WasmHeapGS Unit] :
 
 theorem absDiffGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ absDiffGlobals,
-      globalPointsTo index value) ⊢
+      globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
       globalPointsToAt 0 0 (.i32 1048576) := by
   unfold absDiffGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,

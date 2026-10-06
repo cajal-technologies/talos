@@ -76,8 +76,8 @@ def SwapOptEquiv : Prop :=
       pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) →
     (∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) →
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) →
     SmallStep.ObservationallyEquivOn
       (Project.SwapElements.SwapSepLogic.func4ConfigFromStore wasm ptr len i j)
       (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j)

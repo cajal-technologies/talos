@@ -34,7 +34,7 @@ theorem address64Facts (address : UInt32)
 
 theorem pointsTo_u64_two_as_u32 [WasmSmallStepGS hlc Universal.State]
     (address : UInt32) :
-    pointsTo_u64 (α := Universal.State) 0 address 2 ⊣⊢
+    pointsTo_u64 (GF := WasmHeapGF Universal.State) 0 address 2 ⊣⊢
       pointsTo_u32 0 address 2 ∗ pointsTo_u32 0 (address + 4) 0 := by
   simp only [pointsTo_u64, pointsTo_u32, u64Byte, u32Byte]
   rw [show address + 4 + 1 = address + 5 by bv_normalize (config := { enums := false }),

@@ -431,7 +431,8 @@ class WasmHeapDomainGS (α : outParam Type) where
       (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))
   heapFrontierName : GName
 
-attribute [reducible, instance] WasmHeapDomainGS.heapFrontierElem
+attribute [reducible, instance 50] WasmHeapDomainGS.heapFrontierElem
+attribute [reducible] WasmHeapDomainGS.heapFrontierName
 
 /-- Monotone authority for the number of pages in the primary memory.
 
@@ -454,235 +455,367 @@ class WasmInstanceGS (α : outParam Type) where
 
 attribute [reducible, instance] WasmInstanceGS.instanceElem
 
-def globalPointsTo {α : Type} [gs : WasmGlobalGS α] (key : GlobalKey) (value : Value) :
-    IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.globalName (DFrac.own 1) key value
+/-- Ghost-name providers — one per ghost-map component.  Each is a thin
+wrapper around `GName`; `WasmGS` (priority 200) and the per-component
+concrete classes (priority 100) provide instances. -/
+class WasmGlobalGhostName (GF : BundledGFunctors) where
+  globalName : GName
 
-def globalPointsToAt {α : Type} [gs : WasmGlobalGS α] (instanceId : Nat) (index : Nat)
-    (value : Value) : IProp (WasmHeapGF α) :=
+class WasmDataSegmentGhostName (GF : BundledGFunctors) where
+  dataSegmentName : GName
+
+class WasmTableGhostName (GF : BundledGFunctors) where
+  tableName : GName
+
+class WasmElementSegmentGhostName (GF : BundledGFunctors) where
+  elementSegmentName : GName
+
+class WasmExceptionGhostName (GF : BundledGFunctors) where
+  exceptionName : GName
+
+class WasmTagTableGhostName (GF : BundledGFunctors) where
+  tagTableName : GName
+
+/-- Carries both names needed by `runtimeModuleOwn`. -/
+class WasmRuntimeModuleGhostNames (GF : BundledGFunctors) where
+  runtimeName  : GName
+  instanceName : GName
+  instanceElem : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))
+
+class WasmRuntimeInstancesGhostName (GF : BundledGFunctors) where
+  runtimeInstancesName : GName
+
+class WasmHostEnvGhostName (GF : BundledGFunctors) where
+  hostEnvName : GName
+
+class WasmHostStateGhostName (GF : BundledGFunctors) (α : outParam Type) where
+  hostStateName : GName
+  hostStateElem : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO α)))))
+
+attribute [reducible, instance] WasmHostStateGhostName.hostStateElem
+
+class WasmHeapFrontierGhostName (GF : BundledGFunctors) where
+  heapFrontierName : GName
+  heapFrontierElem : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))
+
+attribute [reducible, instance] WasmHeapFrontierGhostName.heapFrontierElem
+-- Must be registered after heapFrontierElem so it wins for bare [ElemG GF (Auth.AuthRF ...)]
+-- synthesis in [WasmGS] context (currentInstance* resources live at this slot).
+attribute [reducible, instance] WasmRuntimeModuleGhostNames.instanceElem
+
+class WasmMemoryPagesGhostName (GF : BundledGFunctors) where
+  memoryPagesName : GName
+
+-- Instances from concrete component classes (priority 100)
+@[reducible] instance (priority := 100) instWasmGlobalGhostName_of_WasmGlobalGS
+    {α : Type} [g : WasmGlobalGS α] : WasmGlobalGhostName (WasmHeapGF α) :=
+  ⟨g.globalName⟩
+
+@[reducible] instance (priority := 100) instWasmDataSegmentGhostName_of_WasmDataSegmentGS
+    {α : Type} [g : WasmDataSegmentGS α] : WasmDataSegmentGhostName (WasmHeapGF α) :=
+  ⟨g.dataSegmentName⟩
+
+@[reducible] instance (priority := 100) instWasmTableGhostName_of_WasmTableGS
+    {α : Type} [g : WasmTableGS α] : WasmTableGhostName (WasmHeapGF α) :=
+  ⟨g.tableName⟩
+
+@[reducible] instance (priority := 100) instWasmElementSegmentGhostName_of_WasmElementSegmentGS
+    {α : Type} [g : WasmElementSegmentGS α] : WasmElementSegmentGhostName (WasmHeapGF α) :=
+  ⟨g.elementSegmentName⟩
+
+@[reducible] instance (priority := 100) instWasmExceptionGhostName_of_WasmExceptionGS
+    {α : Type} [g : WasmExceptionGS α] : WasmExceptionGhostName (WasmHeapGF α) :=
+  ⟨g.exceptionName⟩
+
+@[reducible] instance (priority := 100) instWasmTagTableGhostName_of_WasmTagTableGS
+    {α : Type} [g : WasmTagTableGS α] : WasmTagTableGhostName (WasmHeapGF α) :=
+  ⟨g.tagTableName⟩
+
+@[reducible] instance (priority := 100) instWasmRuntimeModuleGhostNames_of_concrete
+    {α : Type} [r : WasmRuntimeModuleGS α] [i : WasmInstanceGS α] :
+    WasmRuntimeModuleGhostNames (WasmHeapGF α) :=
+  ⟨r.runtimeName, i.instanceName, i.instanceElem⟩
+
+@[reducible] instance (priority := 100) instWasmRuntimeInstancesGhostName_of_WasmRuntimeInstancesGS
+    {α : Type} [g : WasmRuntimeInstancesGS α] : WasmRuntimeInstancesGhostName (WasmHeapGF α) :=
+  ⟨g.runtimeInstancesName⟩
+
+@[reducible] instance (priority := 100) instWasmHostEnvGhostName_of_WasmHostEnvGS
+    {α : Type} [g : WasmHostEnvGS α] : WasmHostEnvGhostName (WasmHeapGF α) :=
+  ⟨g.hostEnvName⟩
+
+@[reducible] instance (priority := 100) instWasmHostStateGhostName_of_WasmHostStateGS
+    {α : Type} [g : WasmHostStateGS α] : WasmHostStateGhostName (WasmHeapGF α) α :=
+  ⟨g.hostStateName, g.hostStateElem⟩
+
+@[reducible] instance (priority := 100) instWasmHeapFrontierGhostName_of_WasmHeapDomainGS
+    {α : Type} [g : WasmHeapDomainGS α] : WasmHeapFrontierGhostName (WasmHeapGF α) :=
+  ⟨g.heapFrontierName, g.heapFrontierElem⟩
+
+@[reducible] instance (priority := 100) instWasmMemoryPagesGhostName_of_WasmMemoryPagesGS
+    {α : Type} [g : WasmMemoryPagesGS α] : WasmMemoryPagesGhostName (WasmHeapGF α) :=
+  ⟨g.memoryPagesName⟩
+
+def globalPointsTo {GF : BundledGFunctors} [GhostMapG GF GlobalKey Value WasmGlobalMap]
+    [gn : WasmGlobalGhostName GF] (key : GlobalKey) (value : Value) : IProp GF :=
+  ghost_map_elem gn.globalName (DFrac.own 1) key value
+
+def globalPointsToAt {GF : BundledGFunctors} [GhostMapG GF GlobalKey Value WasmGlobalMap]
+    [WasmGlobalGhostName GF] (instanceId : Nat) (index : Nat) (value : Value) : IProp GF :=
   globalPointsTo ⟨instanceId, index⟩ value
 
-theorem globalPointsToAt_eq {α : Type} [WasmGlobalGS α] (i j : Nat) (v : Value) :
-    globalPointsToAt i j v = globalPointsTo ⟨i, j⟩ v := rfl
+theorem globalPointsToAt_eq {GF : BundledGFunctors} [GhostMapG GF GlobalKey Value WasmGlobalMap]
+    [WasmGlobalGhostName GF] (i j : Nat) (v : Value) :
+    globalPointsToAt (GF := GF) i j v = globalPointsTo ⟨i, j⟩ v := rfl
 
-instance {α : Type} [WasmGlobalGS α] (key : GlobalKey) (value : Value) :
-    BI.Timeless (globalPointsTo key value) := by
+instance {GF : BundledGFunctors} [GhostMapG GF GlobalKey Value WasmGlobalMap]
+    [WasmGlobalGhostName GF] (key : GlobalKey) (value : Value) :
+    BI.Timeless (globalPointsTo (GF := GF) key value) := by
   unfold globalPointsTo
   infer_instance
 
-theorem globalPointsTo_lookup {α : Type} [gs : WasmGlobalGS α]
-    (σ : WasmGlobalMap Value) (key : GlobalKey) (value : Value) :
-    ghost_map_auth gs.globalName (DFrac.own 1) σ -∗
+theorem globalPointsTo_lookup {GF : BundledGFunctors} [GhostMapG GF GlobalKey Value WasmGlobalMap]
+    [gn : WasmGlobalGhostName GF] (σ : WasmGlobalMap Value) (key : GlobalKey) (value : Value) :
+    ghost_map_auth (GF := GF) gn.globalName (DFrac.own 1) σ -∗
       globalPointsTo key value -∗
       iprop(⌜get? σ key = some value⌝) := by
   unfold globalPointsTo
   iapply ghost_map_lookup
 
 /-- Authoritative update for one owned global entry. -/
-theorem globalPointsTo_update {α : Type} [gs : WasmGlobalGS α]
-    (σ : WasmGlobalMap Value) (key : GlobalKey)
+theorem globalPointsTo_update {GF : BundledGFunctors} [GhostMapG GF GlobalKey Value WasmGlobalMap]
+    [gn : WasmGlobalGhostName GF] (σ : WasmGlobalMap Value) (key : GlobalKey)
     (oldValue newValue : Value) :
-    ghost_map_auth gs.globalName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.globalName (DFrac.own 1) σ -∗
       globalPointsTo key oldValue ==∗
-      ghost_map_auth gs.globalName (DFrac.own 1)
+      ghost_map_auth gn.globalName (DFrac.own 1)
         (insert σ key newValue) ∗
       globalPointsTo key newValue := by
   unfold globalPointsTo
   iapply ghost_map_update
 
-def dataSegmentPointsTo {α : Type} [gs : WasmDataSegmentGS α]
-    (key : DataSegmentKey) (value : Option (List UInt8)) : IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.dataSegmentName (DFrac.own 1) key value
+def dataSegmentPointsTo {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [gn : WasmDataSegmentGhostName GF] (key : DataSegmentKey) (value : Option (List UInt8)) :
+    IProp GF :=
+  ghost_map_elem gn.dataSegmentName (DFrac.own 1) key value
 
-def dataSegmentPointsToAt {α : Type} [gs : WasmDataSegmentGS α]
-    (instanceId : Nat) (index : Nat) (value : Option (List UInt8)) :
-    IProp (WasmHeapGF α) :=
+def dataSegmentPointsToAt {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [WasmDataSegmentGhostName GF] (instanceId : Nat) (index : Nat) (value : Option (List UInt8)) :
+    IProp GF :=
   dataSegmentPointsTo ⟨instanceId, index⟩ value
 
-theorem dataSegmentPointsToAt_eq {α : Type} [WasmDataSegmentGS α] (i j : Nat) (v : Option (List UInt8)) :
-    dataSegmentPointsToAt i j v = dataSegmentPointsTo ⟨i, j⟩ v := rfl
+theorem dataSegmentPointsToAt_eq {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [WasmDataSegmentGhostName GF] (i j : Nat) (v : Option (List UInt8)) :
+    dataSegmentPointsToAt (GF := GF) i j v = dataSegmentPointsTo ⟨i, j⟩ v := rfl
 
-instance {α : Type} [WasmDataSegmentGS α] (key : DataSegmentKey)
-    (value : Option (List UInt8)) :
-    BI.Timeless (dataSegmentPointsTo key value) := by
+instance {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [WasmDataSegmentGhostName GF] (key : DataSegmentKey) (value : Option (List UInt8)) :
+    BI.Timeless (dataSegmentPointsTo (GF := GF) key value) := by
   unfold dataSegmentPointsTo
   infer_instance
 
-instance {α : Type} [WasmDataSegmentGS α] (instanceId index : Nat)
-    (value : Option (List UInt8)) :
-    BI.Timeless (dataSegmentPointsToAt (α := α) instanceId index value) := by
+instance {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [WasmDataSegmentGhostName GF] (instanceId index : Nat) (value : Option (List UInt8)) :
+    BI.Timeless (dataSegmentPointsToAt (GF := GF) instanceId index value) := by
   unfold dataSegmentPointsToAt
   infer_instance
 
-theorem dataSegmentPointsTo_lookup {α : Type} [gs : WasmDataSegmentGS α]
-    (σ : WasmDataSegmentMap (Option (List UInt8)))
+theorem dataSegmentPointsTo_lookup {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [gn : WasmDataSegmentGhostName GF] (σ : WasmDataSegmentMap (Option (List UInt8)))
     (key : DataSegmentKey) (value : Option (List UInt8)) :
-    ghost_map_auth gs.dataSegmentName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.dataSegmentName (DFrac.own 1) σ -∗
       dataSegmentPointsTo key value -∗
       iprop(⌜get? σ key = some value⌝) := by
   unfold dataSegmentPointsTo
   iapply ghost_map_lookup
 
-theorem dataSegmentPointsTo_update {α : Type} [gs : WasmDataSegmentGS α]
-    (σ : WasmDataSegmentMap (Option (List UInt8)))
+theorem dataSegmentPointsTo_update {GF : BundledGFunctors}
+    [GhostMapG GF DataSegmentKey (Option (List UInt8)) WasmDataSegmentMap]
+    [gn : WasmDataSegmentGhostName GF] (σ : WasmDataSegmentMap (Option (List UInt8)))
     (key : DataSegmentKey) (oldValue newValue : Option (List UInt8)) :
-    ghost_map_auth gs.dataSegmentName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.dataSegmentName (DFrac.own 1) σ -∗
       dataSegmentPointsTo key oldValue ==∗
-      ghost_map_auth gs.dataSegmentName (DFrac.own 1)
+      ghost_map_auth gn.dataSegmentName (DFrac.own 1)
         (insert σ key newValue) ∗
       dataSegmentPointsTo key newValue := by
   unfold dataSegmentPointsTo
   iapply ghost_map_update
 
-def tablePointsTo {α : Type} [gs : WasmTableGS α]
-    (key : TableKey) (table : TableInst) : IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.tableName (DFrac.own 1) key table
+def tablePointsTo {GF : BundledGFunctors} [GhostMapG GF TableKey TableInst WasmTableMap]
+    [gn : WasmTableGhostName GF] (key : TableKey) (table : TableInst) : IProp GF :=
+  ghost_map_elem gn.tableName (DFrac.own 1) key table
 
-def tablePointsToAt {α : Type} [gs : WasmTableGS α]
-    (instanceId : Nat) (index : Nat) (table : TableInst) :
-    IProp (WasmHeapGF α) :=
+def tablePointsToAt {GF : BundledGFunctors} [GhostMapG GF TableKey TableInst WasmTableMap]
+    [WasmTableGhostName GF] (instanceId : Nat) (index : Nat) (table : TableInst) :
+    IProp GF :=
   tablePointsTo ⟨instanceId, index⟩ table
 
-theorem tablePointsToAt_eq {α : Type} [WasmTableGS α] (i j : Nat) (t : TableInst) :
-    tablePointsToAt i j t = tablePointsTo ⟨i, j⟩ t := rfl
+theorem tablePointsToAt_eq {GF : BundledGFunctors} [GhostMapG GF TableKey TableInst WasmTableMap]
+    [WasmTableGhostName GF] (i j : Nat) (t : TableInst) :
+    tablePointsToAt (GF := GF) i j t = tablePointsTo ⟨i, j⟩ t := rfl
 
-instance {α : Type} [WasmTableGS α] (key : TableKey) (table : TableInst) :
-    BI.Timeless (tablePointsTo key table) := by
+instance {GF : BundledGFunctors} [GhostMapG GF TableKey TableInst WasmTableMap]
+    [WasmTableGhostName GF] (key : TableKey) (table : TableInst) :
+    BI.Timeless (tablePointsTo (GF := GF) key table) := by
   unfold tablePointsTo
   infer_instance
 
-theorem tablePointsTo_lookup {α : Type} [gs : WasmTableGS α]
-    (σ : WasmTableMap TableInst) (key : TableKey) (table : TableInst) :
-    ghost_map_auth gs.tableName (DFrac.own 1) σ -∗
+theorem tablePointsTo_lookup {GF : BundledGFunctors} [GhostMapG GF TableKey TableInst WasmTableMap]
+    [gn : WasmTableGhostName GF] (σ : WasmTableMap TableInst) (key : TableKey) (table : TableInst) :
+    ghost_map_auth (GF := GF) gn.tableName (DFrac.own 1) σ -∗
       tablePointsTo key table -∗
       iprop(⌜get? σ key = some table⌝) := by
   unfold tablePointsTo
   iapply ghost_map_lookup
 
-theorem tablePointsTo_update {α : Type} [gs : WasmTableGS α]
-    (σ : WasmTableMap TableInst) (key : TableKey)
+theorem tablePointsTo_update {GF : BundledGFunctors} [GhostMapG GF TableKey TableInst WasmTableMap]
+    [gn : WasmTableGhostName GF] (σ : WasmTableMap TableInst) (key : TableKey)
     (oldTable newTable : TableInst) :
-    ghost_map_auth gs.tableName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.tableName (DFrac.own 1) σ -∗
       tablePointsTo key oldTable ==∗
-      ghost_map_auth gs.tableName (DFrac.own 1)
+      ghost_map_auth gn.tableName (DFrac.own 1)
         (insert σ key newTable) ∗
       tablePointsTo key newTable := by
   unfold tablePointsTo
   iapply ghost_map_update
 
-def elementSegmentPointsTo {α : Type} [gs : WasmElementSegmentGS α]
-    (key : ElementSegmentKey) (value : Option (List (Option Nat))) :
-    IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.elementSegmentName (DFrac.own 1) key value
+def elementSegmentPointsTo {GF : BundledGFunctors}
+    [GhostMapG GF ElementSegmentKey (Option (List (Option Nat))) WasmElementSegmentMap]
+    [gn : WasmElementSegmentGhostName GF] (key : ElementSegmentKey)
+    (value : Option (List (Option Nat))) : IProp GF :=
+  ghost_map_elem gn.elementSegmentName (DFrac.own 1) key value
 
-def elementSegmentPointsToAt {α : Type} [gs : WasmElementSegmentGS α]
-    (instanceId : Nat) (index : Nat) (value : Option (List (Option Nat))) :
-    IProp (WasmHeapGF α) :=
+def elementSegmentPointsToAt {GF : BundledGFunctors}
+    [GhostMapG GF ElementSegmentKey (Option (List (Option Nat))) WasmElementSegmentMap]
+    [WasmElementSegmentGhostName GF] (instanceId : Nat) (index : Nat)
+    (value : Option (List (Option Nat))) : IProp GF :=
   elementSegmentPointsTo ⟨instanceId, index⟩ value
 
-theorem elementSegmentPointsToAt_eq {α : Type} [WasmElementSegmentGS α] (i j : Nat)
-    (v : Option (List (Option Nat))) :
-    elementSegmentPointsToAt i j v = elementSegmentPointsTo ⟨i, j⟩ v := rfl
+theorem elementSegmentPointsToAt_eq {GF : BundledGFunctors}
+    [GhostMapG GF ElementSegmentKey (Option (List (Option Nat))) WasmElementSegmentMap]
+    [WasmElementSegmentGhostName GF] (i j : Nat) (v : Option (List (Option Nat))) :
+    elementSegmentPointsToAt (GF := GF) i j v = elementSegmentPointsTo ⟨i, j⟩ v := rfl
 
-instance {α : Type} [WasmElementSegmentGS α] (key : ElementSegmentKey)
+instance {GF : BundledGFunctors}
+    [GhostMapG GF ElementSegmentKey (Option (List (Option Nat))) WasmElementSegmentMap]
+    [WasmElementSegmentGhostName GF] (key : ElementSegmentKey)
     (value : Option (List (Option Nat))) :
-    BI.Timeless (elementSegmentPointsTo key value) := by
+    BI.Timeless (elementSegmentPointsTo (GF := GF) key value) := by
   unfold elementSegmentPointsTo
   infer_instance
 
-theorem elementSegmentPointsTo_lookup {α : Type} [gs : WasmElementSegmentGS α]
-    (σ : WasmElementSegmentMap (Option (List (Option Nat))))
+theorem elementSegmentPointsTo_lookup {GF : BundledGFunctors}
+    [GhostMapG GF ElementSegmentKey (Option (List (Option Nat))) WasmElementSegmentMap]
+    [gn : WasmElementSegmentGhostName GF] (σ : WasmElementSegmentMap (Option (List (Option Nat))))
     (key : ElementSegmentKey) (value : Option (List (Option Nat))) :
-    ghost_map_auth gs.elementSegmentName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.elementSegmentName (DFrac.own 1) σ -∗
       elementSegmentPointsTo key value -∗
       iprop(⌜get? σ key = some value⌝) := by
   unfold elementSegmentPointsTo
   iapply ghost_map_lookup
 
-theorem elementSegmentPointsTo_update {α : Type} [gs : WasmElementSegmentGS α]
-    (σ : WasmElementSegmentMap (Option (List (Option Nat))))
+theorem elementSegmentPointsTo_update {GF : BundledGFunctors}
+    [GhostMapG GF ElementSegmentKey (Option (List (Option Nat))) WasmElementSegmentMap]
+    [gn : WasmElementSegmentGhostName GF] (σ : WasmElementSegmentMap (Option (List (Option Nat))))
     (key : ElementSegmentKey) (oldValue newValue : Option (List (Option Nat))) :
-    ghost_map_auth gs.elementSegmentName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.elementSegmentName (DFrac.own 1) σ -∗
       elementSegmentPointsTo key oldValue ==∗
-      ghost_map_auth gs.elementSegmentName (DFrac.own 1)
+      ghost_map_auth gn.elementSegmentName (DFrac.own 1)
         (insert σ key newValue) ∗
       elementSegmentPointsTo key newValue := by
   unfold elementSegmentPointsTo
   iapply ghost_map_update
 
 -- raw ghost_map_elem for a module instance; used internally in stateInterp bigOpL
-def exceptionPointsTo [gs : WasmExceptionGS α]
-    (index : Nat) (dq : DFrac) (tagAndArgs : Nat × List Value) :
-    IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.exceptionName dq index tagAndArgs
+def exceptionPointsTo {GF : BundledGFunctors}
+    [GhostMapG GF Nat (Nat × List Value) WasmExceptionMap]
+    (ghostName : GName) (index : Nat) (dq : DFrac) (tagAndArgs : Nat × List Value) :
+    IProp GF :=
+  ghost_map_elem ghostName dq index tagAndArgs
 
-instance [WasmExceptionGS α] (index : Nat) (dq : DFrac)
-    (tagAndArgs : Nat × List Value) :
-    BI.Timeless (exceptionPointsTo (α := α) index dq tagAndArgs) := by
+instance {GF : BundledGFunctors} [GhostMapG GF Nat (Nat × List Value) WasmExceptionMap]
+    (ghostName : GName) (index : Nat) (dq : DFrac) (tagAndArgs : Nat × List Value) :
+    BI.Timeless (exceptionPointsTo (GF := GF) ghostName index dq tagAndArgs) := by
   unfold exceptionPointsTo
   infer_instance
 
-theorem exceptionPointsTo_lookup [gs : WasmExceptionGS α]
-    (σ : WasmExceptionMap (Nat × List Value))
+theorem exceptionPointsTo_lookup {GF : BundledGFunctors}
+    [GhostMapG GF Nat (Nat × List Value) WasmExceptionMap]
+    (ghostName : GName) (σ : WasmExceptionMap (Nat × List Value))
     (index : Nat) (dq : DFrac) (tagAndArgs : Nat × List Value) :
-    ghost_map_auth gs.exceptionName (DFrac.own 1) σ -∗
-      exceptionPointsTo index dq tagAndArgs -∗
+    ghost_map_auth (GF := GF) ghostName (DFrac.own 1) σ -∗
+      exceptionPointsTo ghostName index dq tagAndArgs -∗
       iprop(⌜get? σ index = some tagAndArgs⌝) := by
   unfold exceptionPointsTo
   iapply ghost_map_lookup
 
-theorem exceptionPointsTo_update [gs : WasmExceptionGS α]
-    (σ : WasmExceptionMap (Nat × List Value))
+theorem exceptionPointsTo_update {GF : BundledGFunctors}
+    [GhostMapG GF Nat (Nat × List Value) WasmExceptionMap]
+    (ghostName : GName) (σ : WasmExceptionMap (Nat × List Value))
     (index : Nat) (oldVal newVal : Nat × List Value) :
-    ghost_map_auth gs.exceptionName (DFrac.own 1) σ -∗
-      exceptionPointsTo index (DFrac.own 1) oldVal ==∗
-      ghost_map_auth gs.exceptionName (DFrac.own 1)
+    ghost_map_auth (GF := GF) ghostName (DFrac.own 1) σ -∗
+      exceptionPointsTo ghostName index (DFrac.own 1) oldVal ==∗
+      ghost_map_auth ghostName (DFrac.own 1)
         (insert σ index newVal) ∗
-      exceptionPointsTo index (DFrac.own 1) newVal := by
+      exceptionPointsTo ghostName index (DFrac.own 1) newVal := by
   unfold exceptionPointsTo
   iapply ghost_map_update
 
 /-- Persistent knowledge of the entry instance's tag-identity table.  Only the
 exception rules need it; every other rule is oblivious to tags. -/
-def tagTableOwn [gs : WasmTagTableGS α] (ids : List Nat) :
-    IProp (WasmHeapGF α) :=
-  iOwn (E := gs.tagTableElem) gs.tagTableName (toAgree ⟨ids⟩)
+@[reducible] def tagTableOwn {GF : BundledGFunctors}
+    [E : ElemG GF (constOF (Agree (DiscreteO (List Nat))))]
+    [gn : WasmTagTableGhostName GF] (ids : List Nat) : IProp GF :=
+  iOwn (E := E) gn.tagTableName (toAgree ⟨ids⟩)
 
-instance [WasmTagTableGS α] (ids : List Nat) :
-    BI.Persistent (tagTableOwn (α := α) ids) := by
+instance {GF : BundledGFunctors} [ElemG GF (constOF (Agree (DiscreteO (List Nat))))]
+    [WasmTagTableGhostName GF] (ids : List Nat) :
+    BI.Persistent (tagTableOwn (GF := GF) ids) := by
   unfold tagTableOwn
   infer_instance
 
-instance [WasmTagTableGS α] (ids : List Nat) :
-    BI.Timeless (tagTableOwn (α := α) ids) := by
+instance {GF : BundledGFunctors} [ElemG GF (constOF (Agree (DiscreteO (List Nat))))]
+    [WasmTagTableGhostName GF] (ids : List Nat) :
+    BI.Timeless (tagTableOwn (GF := GF) ids) := by
   unfold tagTableOwn
   infer_instance
 
-theorem tagTableOwn_agree [gs : WasmTagTableGS α]
-    (actual expected : List Nat) :
-    tagTableOwn (α := α) actual ∗ tagTableOwn expected ⊢
+theorem tagTableOwn_agree {GF : BundledGFunctors}
+    [ElemG GF (constOF (Agree (DiscreteO (List Nat))))]
+    [WasmTagTableGhostName GF] (actual expected : List Nat) :
+    tagTableOwn (GF := GF) actual ∗ tagTableOwn expected ⊢
       iprop(⌜actual = expected⌝) := by
   unfold tagTableOwn
   iintro ⟨Hactual, Hexpected⟩
   icombine Hactual Hexpected gives %Hvalid
   ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
 
-def runtimeModuleElem {α : Type} [gs : WasmRuntimeModuleGS α]
-    (id : Nat) (m : Module) : IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.runtimeName DFrac.discard id m
+def runtimeModuleElem {GF : BundledGFunctors}
+    [GhostMapG GF Nat Module WasmRuntimeModuleMap]
+    (ghostName : GName) (id : Nat) (m : Module) : IProp GF :=
+  ghost_map_elem ghostName DFrac.discard id m
 
-instance {α : Type} [WasmRuntimeModuleGS α] (id : Nat) (m : Module) :
-    BI.Persistent (runtimeModuleElem id m) := by
+instance {GF : BundledGFunctors} [GhostMapG GF Nat Module WasmRuntimeModuleMap]
+    (ghostName : GName) (id : Nat) (m : Module) :
+    BI.Persistent (runtimeModuleElem (GF := GF) ghostName id m) := by
   unfold runtimeModuleElem; infer_instance
 
-instance {α : Type} [WasmRuntimeModuleGS α] (id : Nat) (m : Module) :
-    BI.Timeless (runtimeModuleElem id m) := by
+instance {GF : BundledGFunctors} [GhostMapG GF Nat Module WasmRuntimeModuleMap]
+    (ghostName : GName) (id : Nat) (m : Module) :
+    BI.Timeless (runtimeModuleElem (GF := GF) ghostName id m) := by
   unfold runtimeModuleElem; infer_instance
 
-theorem runtimeModuleElem_lookup {α : Type} [gs : WasmRuntimeModuleGS α]
-    (σ : WasmRuntimeModuleMap Module) (id : Nat) (m : Module) :
-    ghost_map_auth gs.runtimeName (DFrac.own 1) σ -∗
-      runtimeModuleElem id m -∗
+theorem runtimeModuleElem_lookup {GF : BundledGFunctors}
+    [GhostMapG GF Nat Module WasmRuntimeModuleMap]
+    (ghostName : GName) (σ : WasmRuntimeModuleMap Module) (id : Nat) (m : Module) :
+    ghost_map_auth (GF := GF) ghostName (DFrac.own 1) σ -∗
+      runtimeModuleElem ghostName id m -∗
       iprop(⌜get? σ id = some m⌝) := by
   unfold runtimeModuleElem
   iapply ghost_map_lookup
@@ -690,23 +823,29 @@ theorem runtimeModuleElem_lookup {α : Type} [gs : WasmRuntimeModuleGS α]
 /-- Persistent knowledge of the immutable instances array. Agreement with the
 copy held by `StateInterp` lets cross-instance call rules verify instance
 lookups against the actual machine. -/
-def runtimeInstancesOwn {α : Type} [gs : WasmRuntimeInstancesGS α]
-    (instances : Array (ModuleInstance α)) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.runtimeInstancesElem) gs.runtimeInstancesName (toAgree ⟨instances⟩)
+def runtimeInstancesOwn {α : Type} {GF : BundledGFunctors}
+    [E : ElemG GF (constOF (Agree (DiscreteO (Array (ModuleInstance α)))))]
+    [gn : WasmRuntimeInstancesGhostName GF] (instances : Array (ModuleInstance α)) : IProp GF :=
+  iOwn (E := E) gn.runtimeInstancesName (toAgree ⟨instances⟩)
 
-instance {α : Type} [WasmRuntimeInstancesGS α] (instances : Array (ModuleInstance α)) :
-    BI.Persistent (runtimeInstancesOwn instances) := by
+instance {α : Type} {GF : BundledGFunctors}
+    [ElemG GF (constOF (Agree (DiscreteO (Array (ModuleInstance α)))))]
+    [WasmRuntimeInstancesGhostName GF] (instances : Array (ModuleInstance α)) :
+    BI.Persistent (runtimeInstancesOwn (GF := GF) instances) := by
   unfold runtimeInstancesOwn
   infer_instance
 
-instance {α : Type} [WasmRuntimeInstancesGS α] (instances : Array (ModuleInstance α)) :
-    BI.Timeless (runtimeInstancesOwn instances) := by
+instance {α : Type} {GF : BundledGFunctors}
+    [ElemG GF (constOF (Agree (DiscreteO (Array (ModuleInstance α)))))]
+    [WasmRuntimeInstancesGhostName GF] (instances : Array (ModuleInstance α)) :
+    BI.Timeless (runtimeInstancesOwn (GF := GF) instances) := by
   unfold runtimeInstancesOwn
   infer_instance
 
-theorem runtimeInstancesOwn_agree {α : Type} [gs : WasmRuntimeInstancesGS α]
-    (actual expected : Array (ModuleInstance α)) :
-    runtimeInstancesOwn actual ∗ runtimeInstancesOwn expected ⊢
+theorem runtimeInstancesOwn_agree {α : Type} {GF : BundledGFunctors}
+    [ElemG GF (constOF (Agree (DiscreteO (Array (ModuleInstance α)))))]
+    [WasmRuntimeInstancesGhostName GF] (actual expected : Array (ModuleInstance α)) :
+    runtimeInstancesOwn (GF := GF) actual ∗ runtimeInstancesOwn expected ⊢
       iprop(⌜actual = expected⌝) := by
   unfold runtimeInstancesOwn
   iintro ⟨Hactual, Hexpected⟩
@@ -714,54 +853,57 @@ theorem runtimeInstancesOwn_agree {α : Type} [gs : WasmRuntimeInstancesGS α]
   ipureexact congrArg DiscreteO.car (toAgree_op_valid_iff_eq.mp Hvalid)
 
 /-- Persistent knowledge of the host environment for a given instance. -/
-def hostEnvOwn {α : Type} [gs : WasmHostEnvGS α] (instanceId : Nat) (env : HostEnv α) :
-    IProp (WasmHeapGF α) :=
-  ghost_map_elem gs.hostEnvName DFrac.discard instanceId env
+@[reducible] def hostEnvOwn {α : Type} {GF : BundledGFunctors}
+    [GhostMapG GF Nat (HostEnv α) WasmHostEnvMap]
+    [gn : WasmHostEnvGhostName GF] (instanceId : Nat) (env : HostEnv α) : IProp GF :=
+  ghost_map_elem gn.hostEnvName DFrac.discard instanceId env
 
-instance {α : Type} [WasmHostEnvGS α] (instanceId : Nat) (env : HostEnv α) :
-    BI.Persistent (hostEnvOwn instanceId env) := by
+instance {α : Type} {GF : BundledGFunctors} [GhostMapG GF Nat (HostEnv α) WasmHostEnvMap]
+    [WasmHostEnvGhostName GF] (instanceId : Nat) (env : HostEnv α) :
+    BI.Persistent (hostEnvOwn (GF := GF) instanceId env) := by
   unfold hostEnvOwn; infer_instance
 
-instance {α : Type} [WasmHostEnvGS α] (instanceId : Nat) (env : HostEnv α) :
-    BI.Timeless (hostEnvOwn instanceId env) := by
+instance {α : Type} {GF : BundledGFunctors} [GhostMapG GF Nat (HostEnv α) WasmHostEnvMap]
+    [WasmHostEnvGhostName GF] (instanceId : Nat) (env : HostEnv α) :
+    BI.Timeless (hostEnvOwn (GF := GF) instanceId env) := by
   unfold hostEnvOwn; infer_instance
 
-theorem hostEnvOwn_lookup {α : Type} [gs : WasmHostEnvGS α]
-    (σ : WasmHostEnvMap (HostEnv α)) (instanceId : Nat) (env : HostEnv α) :
-    ghost_map_auth gs.hostEnvName (DFrac.own 1) σ -∗
+theorem hostEnvOwn_lookup {α : Type} {GF : BundledGFunctors}
+    [GhostMapG GF Nat (HostEnv α) WasmHostEnvMap]
+    [gn : WasmHostEnvGhostName GF] (σ : WasmHostEnvMap (HostEnv α))
+    (instanceId : Nat) (env : HostEnv α) :
+    ghost_map_auth (GF := GF) gn.hostEnvName (DFrac.own 1) σ -∗
       hostEnvOwn instanceId env -∗
       iprop(⌜get? σ instanceId = some env⌝) := by
   unfold hostEnvOwn
   iapply ghost_map_lookup
 
 /-- Authoritative ownership of the mutable host state. Held by `StateInterp`. -/
-def hostStateAuth {α : Type} [gs : WasmHostStateGS α] (st : α) :
-    IProp (WasmHeapGF α) :=
-  iOwn (E := gs.hostStateElem) gs.hostStateName
-    (ExclAuth.auth (⟨st⟩ : DiscreteO α))
+def hostStateAuth {α : Type} {GF : BundledGFunctors}
+    [gn : WasmHostStateGhostName GF α] (ghostName : GName) (st : α) : IProp GF :=
+  iOwn (E := gn.hostStateElem) ghostName (ExclAuth.auth (⟨st⟩ : DiscreteO α))
 
 /-- Fragment ownership of the mutable host state. Given to WP proofs. -/
-def hostStateOwn {α : Type} [gs : WasmHostStateGS α] (st : α) :
-    IProp (WasmHeapGF α) :=
-  iOwn (E := gs.hostStateElem) gs.hostStateName
-    (ExclAuth.frag (⟨st⟩ : DiscreteO α))
+def hostStateOwn {α : Type} {GF : BundledGFunctors}
+    [gn : WasmHostStateGhostName GF α] (st : α) : IProp GF :=
+  iOwn (E := gn.hostStateElem) gn.hostStateName (ExclAuth.frag (⟨st⟩ : DiscreteO α))
 
-theorem hostStateOwn_agree {α : Type} [gs : WasmHostStateGS α]
-    (actual expected : α) :
-    hostStateAuth actual ∗ hostStateOwn expected ⊢
+theorem hostStateOwn_agree {α : Type} {GF : BundledGFunctors}
+    [gn : WasmHostStateGhostName GF α] (actual expected : α) :
+    hostStateAuth (GF := GF) gn.hostStateName actual ∗ hostStateOwn expected ⊢
       iprop(⌜actual = expected⌝) := by
   unfold hostStateAuth hostStateOwn
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
   ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO α) Hvalid)
 
-theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
-    (old new' : α) :
-    hostStateAuth old ∗ hostStateOwn old ==∗
-      hostStateAuth new' ∗ hostStateOwn new' := by
+theorem hostStateOwn_update {α : Type} {GF : BundledGFunctors}
+    [gn : WasmHostStateGhostName GF α] (old new' : α) :
+    hostStateAuth (GF := GF) gn.hostStateName old ∗ hostStateOwn old ==∗
+      hostStateAuth gn.hostStateName new' ∗ hostStateOwn new' := by
   unfold hostStateAuth hostStateOwn
   iintro ⟨Hauth, Hfrag⟩
-  imod iOwn_update_op (E := gs.hostStateElem)
+  imod iOwn_update_op (E := gn.hostStateElem)
       (ExclAuth.update (A := DiscreteO α) (a := (⟨old⟩ : DiscreteO α))
         (b := ⟨old⟩) (a' := ⟨new'⟩))
       $$ [Hauth Hfrag] with Hboth
@@ -770,21 +912,19 @@ theorem hostStateOwn_update {α : Type} [gs : WasmHostStateGS α]
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Authoritative sparse-heap frontier, held inside `stateInterp`. -/
-def heapFrontierAuth {α : Type} [gs : WasmHeapDomainGS α]
-    (frontier : Nat) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.heapFrontierElem) gs.heapFrontierName
-    (ExclAuth.auth (⟨frontier⟩ : DiscreteO Nat))
+@[reducible] def heapFrontierAuth {GF : BundledGFunctors}
+    [gn : WasmHeapFrontierGhostName GF] (frontier : Nat) : IProp GF :=
+  iOwn (E := gn.heapFrontierElem) gn.heapFrontierName (ExclAuth.auth (⟨frontier⟩ : DiscreteO Nat))
 
 /-- Exclusive allocator-client fragment agreeing with the sparse-heap
 frontier protected by `stateInterp`. -/
-def heapFrontierOwn {α : Type} [gs : WasmHeapDomainGS α]
-    (frontier : Nat) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.heapFrontierElem) gs.heapFrontierName
-    (ExclAuth.frag (⟨frontier⟩ : DiscreteO Nat))
+@[reducible] def heapFrontierOwn {GF : BundledGFunctors}
+    [gn : WasmHeapFrontierGhostName GF] (frontier : Nat) : IProp GF :=
+  iOwn (E := gn.heapFrontierElem) gn.heapFrontierName (ExclAuth.frag (⟨frontier⟩ : DiscreteO Nat))
 
-theorem heapFrontierOwn_agree {α : Type} [gs : WasmHeapDomainGS α]
-    (actual expected : Nat) :
-    heapFrontierAuth (α := α) actual ∗ heapFrontierOwn expected ⊢
+theorem heapFrontierOwn_agree {GF : BundledGFunctors}
+    [gn : WasmHeapFrontierGhostName GF] (actual expected : Nat) :
+    heapFrontierAuth (GF := GF) actual ∗ heapFrontierOwn expected ⊢
       iprop(⌜actual = expected⌝) := by
   unfold heapFrontierAuth heapFrontierOwn
   iintro ⟨Hauth, Hfrag⟩
@@ -792,13 +932,13 @@ theorem heapFrontierOwn_agree {α : Type} [gs : WasmHeapDomainGS α]
   ipureexact congrArg DiscreteO.car
     (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
 
-theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
-    (old new' : Nat) :
-    heapFrontierAuth (α := α) old ∗ heapFrontierOwn old ==∗
+theorem heapFrontierOwn_update {GF : BundledGFunctors}
+    [gn : WasmHeapFrontierGhostName GF] (old new' : Nat) :
+    heapFrontierAuth (GF := GF) old ∗ heapFrontierOwn old ==∗
       heapFrontierAuth new' ∗ heapFrontierOwn new' := by
   unfold heapFrontierAuth heapFrontierOwn
   iintro ⟨Hauth, Hfrag⟩
-  imod iOwn_update_op (E := gs.heapFrontierElem)
+  imod iOwn_update_op (E := gn.heapFrontierElem)
       (ExclAuth.update (A := DiscreteO Nat)
         (a := (⟨old⟩ : DiscreteO Nat)) (b := ⟨old⟩) (a' := ⟨new'⟩))
       $$ [Hauth Hfrag] with Hboth
@@ -807,36 +947,36 @@ theorem heapFrontierOwn_update {α : Type} [gs : WasmHeapDomainGS α]
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
 /-- Exact authoritative primary-memory page count, held inside `stateInterp`. -/
-def memoryPagesAuth {α : Type} [gs : WasmMemoryPagesGS α]
-    (pages : Nat) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
-    (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
+@[reducible] def memoryPagesAuth {GF : BundledGFunctors} [E : ElemG GF MonoNatRF]
+    (ghostName : GName) (pages : Nat) : IProp GF :=
+  iOwn (E := E) ghostName (MonoNat.auth (DFrac.own 1) (MaxNat.ofNat pages))
 
 /-- Persistent knowledge that the primary memory has at least `pages` pages. -/
-def memoryPagesOwn {α : Type} [gs : WasmMemoryPagesGS α]
-    (pages : Nat) : IProp (WasmHeapGF α) :=
-  iOwn (E := gs.memoryPagesElem) gs.memoryPagesName
-    (MonoNat.lb (MaxNat.ofNat pages))
+@[reducible] def memoryPagesOwn {GF : BundledGFunctors} [E : ElemG GF MonoNatRF]
+    [gn : WasmMemoryPagesGhostName GF] (pages : Nat) : IProp GF :=
+  iOwn (E := E) gn.memoryPagesName (MonoNat.lb (MaxNat.ofNat pages))
 
-instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
-    BI.Timeless (memoryPagesAuth (α := α) pages) := by
+instance {GF : BundledGFunctors} [ElemG GF MonoNatRF] (ghostName : GName) (pages : Nat) :
+    BI.Timeless (memoryPagesAuth (GF := GF) ghostName pages) := by
   unfold memoryPagesAuth
   infer_instance
 
-instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
-    BI.Timeless (memoryPagesOwn (α := α) pages) := by
+instance {GF : BundledGFunctors} [ElemG GF MonoNatRF]
+    [WasmMemoryPagesGhostName GF] (pages : Nat) :
+    BI.Timeless (memoryPagesOwn (GF := GF) pages) := by
   unfold memoryPagesOwn
   infer_instance
 
-instance {α : Type} [WasmMemoryPagesGS α] (pages : Nat) :
-    BI.Persistent (memoryPagesOwn (α := α) pages) := by
+instance {GF : BundledGFunctors} [ElemG GF MonoNatRF]
+    [WasmMemoryPagesGhostName GF] (pages : Nat) :
+    BI.Persistent (memoryPagesOwn (GF := GF) pages) := by
   unfold memoryPagesOwn
   infer_instance
 
 /-- A page snapshot is a lower bound on the exact authoritative count. -/
-theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
-    (actual expected : Nat) :
-    memoryPagesAuth (α := α) actual ∗ memoryPagesOwn expected ⊢
+theorem memoryPagesOwn_agree {GF : BundledGFunctors} [ElemG GF MonoNatRF]
+    [gn : WasmMemoryPagesGhostName GF] (actual expected : Nat) :
+    memoryPagesAuth (GF := GF) gn.memoryPagesName actual ∗ memoryPagesOwn expected ⊢
       iprop(⌜expected ≤ actual⌝) := by
   unfold memoryPagesAuth memoryPagesOwn
   iintro ⟨Hauth, Hsnapshot⟩
@@ -845,19 +985,20 @@ theorem memoryPagesOwn_agree {α : Type} [gs : WasmMemoryPagesGS α]
     (MaxNat.ofNat actual) (MaxNat.ofNat expected)).mp Hvalid
 
 /-- Obtain an exact persistent snapshot from the page-count authority. -/
-theorem memoryPagesOwn_snapshot {α : Type} [gs : WasmMemoryPagesGS α]
-    (pages : Nat) :
-    memoryPagesAuth (α := α) pages ⊢ memoryPagesOwn pages := by
+theorem memoryPagesOwn_snapshot {GF : BundledGFunctors} [ElemG GF MonoNatRF]
+    [gn : WasmMemoryPagesGhostName GF] (pages : Nat) :
+    memoryPagesAuth (GF := GF) gn.memoryPagesName pages ⊢ memoryPagesOwn pages := by
   unfold memoryPagesAuth memoryPagesOwn
   iintro Hauth
   iapply iOwn_mono $$ Hauth
   exact MonoNat.included _ _
 
 /-- Advance the exact page-count authority and issue an exact new snapshot. -/
-theorem memoryPagesAuth_update {α : Type} [gs : WasmMemoryPagesGS α]
-    (old new' : Nat) (hmono : old ≤ new') :
-    memoryPagesAuth (α := α) old ==∗
-      memoryPagesAuth new' ∗ memoryPagesOwn new' := by
+theorem memoryPagesAuth_update {GF : BundledGFunctors} [E : ElemG GF MonoNatRF]
+    (ghostName : GName) (old new' : Nat) (hmono : old ≤ new') :
+    memoryPagesAuth (GF := GF) ghostName old ==∗
+      memoryPagesAuth ghostName new' ∗
+        @memoryPagesOwn GF E ⟨ghostName⟩ new' := by
   unfold memoryPagesAuth memoryPagesOwn
   iintro Hauth
   imod iOwn_update $$ Hauth with Hauth
@@ -877,7 +1018,9 @@ do not expose page snapshots use this form. -/
 theorem memoryPages_init_authority {α : Type} (pages : Nat) :
     ⊢@{IProp (WasmHeapGF α)} |==>
       ∃ gs : WasmMemoryPagesGS α,
-        @memoryPagesAuth α gs pages := by
+        memoryPagesAuth (GF := WasmHeapGF α) (E := gs.memoryPagesElem)
+          (@WasmMemoryPagesGhostName.memoryPagesName (WasmHeapGF α) ⟨gs.memoryPagesName⟩)
+          pages := by
   letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
     exists 20
   imod (iOwn_alloc (E := memoryPagesElem)
@@ -887,6 +1030,7 @@ theorem memoryPages_init_authority {α : Type} (pages : Nat) :
   let gs : WasmMemoryPagesGS α :=
     { memoryPagesElem
       memoryPagesName }
+  letI : WasmMemoryPagesGS α := gs
   imodintro
   iexists gs
   unfold memoryPagesAuth
@@ -897,8 +1041,11 @@ Allocator-aware adequacy frontends expose the snapshot to their client proof. -/
 theorem memoryPages_init {α : Type} (pages : Nat) :
     ⊢@{IProp (WasmHeapGF α)} |==>
       ∃ gs : WasmMemoryPagesGS α,
-        @memoryPagesAuth α gs pages ∗
-          @memoryPagesOwn α gs pages := by
+        memoryPagesAuth (GF := WasmHeapGF α) (E := gs.memoryPagesElem)
+          (@WasmMemoryPagesGhostName.memoryPagesName (WasmHeapGF α) ⟨gs.memoryPagesName⟩)
+          pages ∗
+          @memoryPagesOwn (WasmHeapGF α) gs.memoryPagesElem ⟨gs.memoryPagesName⟩
+            pages := by
   letI memoryPagesElem : ElemG (WasmHeapGF α) MonoNatRF := by
     exists 20
   imod (iOwn_alloc (E := memoryPagesElem)
@@ -912,27 +1059,32 @@ theorem memoryPages_init {α : Type} (pages : Nat) :
   let gs : WasmMemoryPagesGS α :=
     { memoryPagesElem
       memoryPagesName }
+  letI : WasmMemoryPagesGS α := gs
   imodintro
   iexists gs
   unfold memoryPagesAuth memoryPagesOwn
   iframe Hauth Hsnapshot
 
-def currentInstanceAuthN {α : Type} [gs : WasmInstanceGS α] (n : Nat) :
-    IProp (WasmHeapGF α) :=
-  iOwn (E := gs.instanceElem) gs.instanceName
-    (ExclAuth.auth (⟨n⟩ : DiscreteO Nat))
+def currentInstanceAuthN {GF : BundledGFunctors}
+    [E : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (n : Nat) : IProp GF :=
+  iOwn (E := E) ghostName (ExclAuth.auth (⟨n⟩ : DiscreteO Nat))
 
-def currentInstanceOwnN {α : Type} [gs : WasmInstanceGS α] (n : Nat) :
-    IProp (WasmHeapGF α) :=
-  iOwn (E := gs.instanceElem) gs.instanceName
-    (ExclAuth.frag (⟨n⟩ : DiscreteO Nat))
+def currentInstanceOwnN {GF : BundledGFunctors}
+    [E : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (n : Nat) : IProp GF :=
+  iOwn (E := E) ghostName (ExclAuth.frag (⟨n⟩ : DiscreteO Nat))
 
-instance {α : Type} [WasmInstanceGS α] (n : Nat) :
-    BI.Timeless (currentInstanceAuthN (α := α) n) := by
+instance {GF : BundledGFunctors}
+    [ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (n : Nat) :
+    BI.Timeless (currentInstanceAuthN (GF := GF) ghostName n) := by
   unfold currentInstanceAuthN; infer_instance
 
-instance {α : Type} [WasmInstanceGS α] (n : Nat) :
-    BI.Timeless (currentInstanceOwnN (α := α) n) := by
+instance {GF : BundledGFunctors}
+    [ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (n : Nat) :
+    BI.Timeless (currentInstanceOwnN (GF := GF) ghostName n) := by
   unfold currentInstanceOwnN; infer_instance
 
 section
@@ -941,18 +1093,25 @@ open Wasm.SmallStep
 /-- Module instance ownership: persistent module knowledge paired with exclusive
 current-instance token. The exclusive part lets call rules verify that the
 caller's instance id agrees with the machine's current instance. -/
-def runtimeModuleOwn {α : Type} [gs : WasmRuntimeModuleGS α] [WasmInstanceGS α]
-    (instanceId : ModuleInstanceId) (m : Module) : IProp (WasmHeapGF α) :=
-  iprop(runtimeModuleElem instanceId.id m ∗ currentInstanceOwnN instanceId.id)
+@[reducible] def runtimeModuleOwn {GF : BundledGFunctors}
+    [gn : WasmRuntimeModuleGhostNames GF]
+    [GhostMapG GF Nat Module WasmRuntimeModuleMap]
+    (instanceId : ModuleInstanceId) (m : Module) : IProp GF :=
+  iprop(runtimeModuleElem gn.runtimeName instanceId.id m ∗
+    currentInstanceOwnN gn.instanceName instanceId.id)
 
-instance {α : Type} [gs : WasmRuntimeModuleGS α] [WasmInstanceGS α]
+instance {GF : BundledGFunctors}
+    [WasmRuntimeModuleGhostNames GF]
+    [GhostMapG GF Nat Module WasmRuntimeModuleMap]
     (instanceId : ModuleInstanceId) (m : Module) :
-    BI.Timeless (runtimeModuleOwn (α := α) instanceId m) := by
-  unfold runtimeModuleOwn; infer_instance
+    BI.Timeless (runtimeModuleOwn (GF := GF) instanceId m) := by
+  infer_instance
 
-theorem runtimeModuleOwn_lookup {α : Type} [gs : WasmRuntimeModuleGS α] [WasmInstanceGS α]
+theorem runtimeModuleOwn_lookup {GF : BundledGFunctors}
+    [gn : WasmRuntimeModuleGhostNames GF]
+    [GhostMapG GF Nat Module WasmRuntimeModuleMap]
     (σ : WasmRuntimeModuleMap Module) (instanceId : ModuleInstanceId) (m : Module) :
-    ghost_map_auth gs.runtimeName (DFrac.own 1) σ -∗
+    ghost_map_auth (GF := GF) gn.runtimeName (DFrac.own 1) σ -∗
       runtimeModuleOwn instanceId m -∗
       ⌜get? σ instanceId.id = some m⌝ := by
   simp only [runtimeModuleOwn]
@@ -961,22 +1120,24 @@ theorem runtimeModuleOwn_lookup {α : Type} [gs : WasmRuntimeModuleGS α] [WasmI
 
 end
 
-theorem currentInstanceOwnN_agree {α : Type} [gs : WasmInstanceGS α]
-    (actual expected : Nat) :
-    currentInstanceAuthN (α := α) actual ∗ currentInstanceOwnN expected ⊢
+theorem currentInstanceOwnN_agree {GF : BundledGFunctors}
+    [ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (actual expected : Nat) :
+    currentInstanceAuthN (GF := GF) ghostName actual ∗ currentInstanceOwnN ghostName expected ⊢
       iprop(⌜actual = expected⌝) := by
   unfold currentInstanceAuthN currentInstanceOwnN
   iintro ⟨Hauth, Hfrag⟩
   icombine Hauth Hfrag gives %Hvalid
   ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
 
-theorem currentInstanceOwnN_update {α : Type} [gs : WasmInstanceGS α]
-    (old new' : Nat) :
-    currentInstanceAuthN (α := α) old ∗ currentInstanceOwnN old ==∗
-      currentInstanceAuthN new' ∗ currentInstanceOwnN new' := by
+theorem currentInstanceOwnN_update {GF : BundledGFunctors}
+    [E : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (old new' : Nat) :
+    currentInstanceAuthN (GF := GF) ghostName old ∗ currentInstanceOwnN ghostName old ==∗
+      currentInstanceAuthN ghostName new' ∗ currentInstanceOwnN ghostName new' := by
   unfold currentInstanceAuthN currentInstanceOwnN
   iintro ⟨Hauth, Hfrag⟩
-  imod iOwn_update_op (E := gs.instanceElem)
+  imod iOwn_update_op (E := E)
       (ExclAuth.update (A := DiscreteO Nat) (a := (⟨old⟩ : DiscreteO Nat))
         (b := ⟨old⟩) (a' := ⟨new'⟩))
       $$ [Hauth Hfrag] with Hboth
@@ -984,16 +1145,18 @@ theorem currentInstanceOwnN_update {α : Type} [gs : WasmInstanceGS α]
   imodintro
   icases iOwn_op $$ Hboth with ⟨H1, H2⟩; iframe
 
-theorem currentInstanceOwnN_update_of_any {α : Type} [gs : WasmInstanceGS α]
-    (actual expected new' : Nat) :
-    currentInstanceAuthN (α := α) actual ∗ currentInstanceOwnN expected ==∗
-      currentInstanceAuthN new' ∗ currentInstanceOwnN new' ∗ ⌜actual = expected⌝ := by
+theorem currentInstanceOwnN_update_of_any {GF : BundledGFunctors}
+    [E : ElemG GF (Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))))]
+    (ghostName : GName) (actual expected new' : Nat) :
+    currentInstanceAuthN (GF := GF) ghostName actual ∗ currentInstanceOwnN ghostName expected ==∗
+      currentInstanceAuthN ghostName new' ∗ currentInstanceOwnN ghostName new' ∗
+        ⌜actual = expected⌝ := by
   unfold currentInstanceAuthN currentInstanceOwnN
   iintro ⟨Hauth, Hfrag⟩
   ihave %heq : ⌜actual = expected⌝ $$ [Hauth Hfrag]
   · icombine Hauth Hfrag gives %Hvalid
     ipureexact congrArg DiscreteO.car (ExclAuth.agree (A := DiscreteO Nat) Hvalid)
-  imod iOwn_update_op (E := gs.instanceElem)
+  imod iOwn_update_op (E := E)
       (ExclAuth.update (A := DiscreteO Nat)
         (a := (⟨actual⟩ : DiscreteO Nat))
         (b := ⟨expected⟩)
@@ -1021,14 +1184,14 @@ no-overflow side condition — without it the ghost footprint at high
 addresses wraps to low addresses and the bridge would be unprovable (or
 unsound if forced). -/
 section PointsTo
-variable {α : Type} [inst : WasmHeapGS α]
+variable {GF : BundledGFunctors} [inst : genHeapGS MemoryKey (Option UInt8) GF WasmHeapMap]
 -- Notation for Wasm points-to (scoped: available inside this namespace
 -- and via `open Wasm.SepLogic`, without leaking through the CodeLib umbrella)
 scoped notation:50 addr:50 " ↦w " v:50 => pointsTo (L := MemoryKey) (V := Option UInt8)
     (H := WasmHeapMap) addr (DFrac.own 1) (some v)
 
 def memPointsTo (memId : Nat) (addr : UInt32) (dfrac : DFrac)
-    (value : Option UInt8) : IProp (WasmHeapGF α) :=
+    (value : Option UInt8) : IProp GF :=
   pointsTo (L := MemoryKey) (V := Option UInt8)
     (H := WasmHeapMap) ⟨memId, addr⟩ dfrac value
 
@@ -1061,7 +1224,7 @@ theorem u64Byte_reassemble (v : UInt64) :
   exact Nat.reassemble64_of_lt v.toNat (UInt64.toNat_lt v)
 
 -- Multi-byte: u64 as 8 consecutive owned bytes (little-endian)
-def pointsTo_u64 (memId : Nat) (addr : UInt32) (v : UInt64) : IProp (WasmHeapGF α) :=
+def pointsTo_u64 (memId : Nat) (addr : UInt32) (v : UInt64) : IProp GF :=
   iprop%
     (⟨memId, addr⟩ ↦w u64Byte v 0) ∗ (⟨memId, addr + 1⟩ ↦w u64Byte v 1) ∗
     (⟨memId, addr + 2⟩ ↦w u64Byte v 2) ∗ (⟨memId, addr + 3⟩ ↦w u64Byte v 3) ∗
@@ -1143,7 +1306,7 @@ theorem u32Byte_reassemble (v : UInt32) :
   exact Nat.reassemble32_of_lt v.toNat (UInt32.toNat_lt v)
 
 -- Multi-byte: u32 as 4 consecutive owned bytes (little-endian)
-def pointsTo_u32 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp (WasmHeapGF α) :=
+def pointsTo_u32 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp GF :=
   iprop%
     (⟨memId, addr⟩ ↦w u32Byte v 0) ∗ (⟨memId, addr + 1⟩ ↦w u32Byte v 1) ∗
     (⟨memId, addr + 2⟩ ↦w u32Byte v 2) ∗ (⟨memId, addr + 3⟩ ↦w u32Byte v 3)
@@ -1162,7 +1325,7 @@ instance instTimelessPointsToU32 (memId : Nat) (addr v : UInt32) :
   infer_instance
 
 -- Multi-byte: u16 as 2 consecutive owned bytes (little-endian)
-def pointsTo_u16 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp (WasmHeapGF α) :=
+def pointsTo_u16 (memId : Nat) (addr : UInt32) (v : UInt32) : IProp GF :=
   iprop%
     (⟨memId, addr⟩ ↦w u32Byte v 0) ∗ (⟨memId, addr + 1⟩ ↦w u32Byte v 1)
 
@@ -1205,14 +1368,14 @@ theorem u16Byte_reassemble (v : UInt32) :
 
 -- Byte-range ownership: n consecutive bytes at `addr` in memory `memId`.
 def pointsToBytes (memId : Nat) (addr : UInt32) (bytes : List UInt8) :
-    IProp (WasmHeapGF α) :=
+    IProp GF :=
   match bytes with
   | [] => iprop% emp
   | b :: rest => iprop% (⟨memId, addr⟩ ↦w b) ∗ (pointsToBytes memId (addr + 1) rest)
 
 instance instTimelessPointsToBytes (memId : Nat) (addr : UInt32)
     (bytes : List UInt8) :
-    BI.Timeless (pointsToBytes (α := α) memId addr bytes) := by
+    BI.Timeless (pointsToBytes (GF := GF) memId addr bytes) := by
   induction bytes generalizing addr with
   | nil =>
       simp only [pointsToBytes]
@@ -1223,11 +1386,11 @@ instance instTimelessPointsToBytes (memId : Nat) (addr : UInt32)
       infer_instance
 
 theorem pointsToBytes_nil (memId : Nat) (addr : UInt32) :
-    pointsToBytes (α := α) memId addr [] ⊣⊢ emp := .rfl
+    pointsToBytes (GF := GF) memId addr [] ⊣⊢ emp := .rfl
 
 theorem pointsToBytes_cons (memId : Nat) (addr : UInt32) (b : UInt8)
     (rest : List UInt8) :
-    pointsToBytes (α := α) memId addr (b :: rest) ⊣⊢
+    pointsToBytes (GF := GF) memId addr (b :: rest) ⊣⊢
       (⟨memId, addr⟩ ↦w b) ∗ pointsToBytes memId (addr + 1) rest := .rfl
 
 omit inst in
@@ -1238,7 +1401,7 @@ theorem byte_offset_succ (addr : UInt32) (k : Nat) :
   rw [UInt32.add_assoc addr 1, UInt32.add_comm 1]
 
 theorem pointsToBytes_append (memId : Nat) (addr : UInt32) (xs ys : List UInt8) :
-    pointsToBytes (α := α) memId addr (xs ++ ys) ⊣⊢
+    pointsToBytes (GF := GF) memId addr (xs ++ ys) ⊣⊢
     pointsToBytes memId addr xs ∗
       pointsToBytes memId (addr + UInt32.ofNat xs.length) ys := by
   induction xs generalizing addr with
@@ -1249,7 +1412,7 @@ theorem pointsToBytes_append (memId : Nat) (addr : UInt32) (xs ys : List UInt8) 
 
 /-- Owning a 32-bit word is the same as owning its four little-endian bytes. -/
 theorem pointsTo_u32_as_bytes (memId : Nat) (addr v : UInt32) :
-    pointsTo_u32 (α := α) memId addr v ⊣⊢
+    pointsTo_u32 (GF := GF) memId addr v ⊣⊢
       pointsToBytes memId addr
         [u32Byte v 0, u32Byte v 1, u32Byte v 2, u32Byte v 3] := by
   have e11 : (1 + 1 : UInt32) = 2 := by decide
@@ -1257,13 +1420,13 @@ theorem pointsTo_u32_as_bytes (memId : Nat) (addr v : UInt32) :
   have e2 : addr + 1 + 1 = addr + 2 := by rw [UInt32.add_assoc, e11]
   have e3 : addr + 2 + 1 = addr + 3 := by rw [UInt32.add_assoc, e21]
   simp only [pointsTo_u32, pointsToBytes, e2, e3,
-    (BI.sep_emp (PROP := IProp (WasmHeapGF α))).to_eq]
+    (BI.sep_emp (PROP := IProp GF)).to_eq]
   exact .rfl
 
 -- Array ownership: n consecutive u32 elements at ptr
 -- arrayAt memId ptr [x₀, x₁, ..., xₙ₋₁] =
 --   pointsTo_u32 memId ptr x₀ ∗ pointsTo_u32 memId (ptr+4) x₁ ∗ ...
-def arrayAt (memId : Nat) (ptr : UInt32) (xs : List UInt32) : IProp (WasmHeapGF α) :=
+def arrayAt (memId : Nat) (ptr : UInt32) (xs : List UInt32) : IProp GF :=
   match xs with
   | [] => iprop% emp
   | x :: rest => iprop% (pointsTo_u32 memId ptr x) ∗ (arrayAt memId (ptr + 4) rest)
@@ -1379,7 +1542,7 @@ region.
 -/
 
 /-- Ownership of consecutive little-endian u64 words beginning at `ptr`. -/
-def array64At (memId : Nat) (ptr : UInt32) (xs : List UInt64) : IProp (WasmHeapGF α) :=
+def array64At (memId : Nat) (ptr : UInt32) (xs : List UInt64) : IProp GF :=
   match xs with
   | [] => iprop% emp
   | x :: rest => iprop% (pointsTo_u64 memId ptr x) ∗ (array64At memId (ptr + 8) rest)

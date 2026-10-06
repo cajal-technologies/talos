@@ -44,7 +44,7 @@ section swapElementsPartial
 
 variable {α : Type}
 variable [WasmSmallStepGS hlc α]
-attribute [local instance] instWasmIrisGS
+attribute [local instance] instIrisGS
 variable {s : Stuckness} {E : CoPset}
 variable {Φ : List Value → IProp (WasmHeapGF α)}
 
@@ -1984,8 +1984,8 @@ theorem func4_distinct_store_partiallyMeets
       pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB)
     (hglobalOwn : ∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) :
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) :
     Wasm.SmallStep.PartiallyMeets
       (func4ConfigFromStore wasm ptr len i j)
       (fun values store =>
@@ -2064,8 +2064,8 @@ theorem func4_alias_store_partiallyMeets
       pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue)
     (hglobalOwn : ∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) :
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) :
     Wasm.SmallStep.PartiallyMeets
       (func4ConfigFromStore wasm ptr len i i)
       (fun values store =>
@@ -2137,8 +2137,8 @@ theorem func4_distinct_store_terminatesWith
       pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB)
     (hglobalOwn : ∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) :
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) :
     Wasm.SmallStep.TerminatesWith
       (func4ConfigFromStore wasm ptr len i j)
       (fun values store =>
@@ -2216,8 +2216,8 @@ theorem func4_alias_store_terminatesWith
       pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue)
     (hglobalOwn : ∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) :
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) :
     Wasm.SmallStep.TerminatesWith
       (func4ConfigFromStore wasm ptr len i i)
       (fun values store =>
@@ -2444,8 +2444,8 @@ theorem func4ExampleHeap_pointsTo [WasmHeapGS Unit] :
 
 theorem func4ExampleGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func4ExampleGlobals,
-      globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576) := by
+      globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576) := by
   unfold func4ExampleGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]
@@ -2774,8 +2774,8 @@ theorem func0AliasHeap_pointsTo [WasmHeapGS Unit] :
 
 theorem func0AliasGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0AliasGlobals,
-      globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048560) := by
+      globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048560) := by
   unfold func0AliasGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]

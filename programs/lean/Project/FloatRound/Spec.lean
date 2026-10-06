@@ -97,8 +97,8 @@ theorem roundHeap_pointsTo [WasmHeapGS Unit] :
 
 theorem roundGlobals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ roundGlobals,
-      globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576) := by
+      globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576) := by
   unfold roundGlobals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]

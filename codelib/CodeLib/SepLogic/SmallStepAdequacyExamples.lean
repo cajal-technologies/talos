@@ -1197,7 +1197,7 @@ private theorem memoryInitDropSegments_agree :
 
 private theorem memoryInitDropSegments_pointsTo [WasmDataSegmentGS α] :
     ([∗map] index ↦ value ∈ memoryInitDropSegments,
-      dataSegmentPointsTo index value) ⊢
+      dataSegmentPointsTo (GF := WasmHeapGF α) index value) ⊢
       dataSegmentPointsTo ⟨0, 0⟩ (some [1, 2, 3, 4]) := by
   unfold memoryInitDropSegments
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : DataSegmentKey))).to_eq,
@@ -1287,7 +1287,7 @@ private theorem tableSetGetMap_agrees :
 
 private theorem tableSetGetMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableSetGetMap,
-      tablePointsTo index table) ⊢
+      tablePointsTo (GF := WasmHeapGF α) index table) ⊢
       tablePointsTo ⟨0, 0⟩ [.funcref none] := by
   unfold tableSetGetMap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : TableKey))).to_eq,
@@ -1594,7 +1594,7 @@ private theorem tableCopyOverlapMap_agrees :
 
 private theorem tableCopyOverlapMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyOverlapMap,
-      tablePointsTo index table) ⊢
+      tablePointsTo (GF := WasmHeapGF α) index table) ⊢
       tablePointsTo ⟨0, 0⟩
         [.funcref none, .funcref (some 0), .funcref (some 1),
           .funcref (some 2)] := by
@@ -1708,7 +1708,7 @@ private theorem tableCopyDistinctMap_agrees :
 
 private theorem tableCopyDistinctMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableCopyDistinctMap,
-      tablePointsTo index table) ⊢
+      tablePointsTo (GF := WasmHeapGF α) index table) ⊢
       tablePointsTo ⟨0, 0⟩
           [.funcref none, .funcref none, .funcref none] ∗
       tablePointsTo ⟨0, 1⟩
@@ -1826,7 +1826,7 @@ theorem tableCopyDistinct_store_partiallyMeets :
         HsourcePhysical⟩
     have hframe : ∀ values : List Value,
         (iprop%
-          (tablePointsTo ⟨0, 0⟩
+          (tablePointsTo (GF := WasmHeapGF Unit) ⟨0, 0⟩
               (listWriteAt
                 [.funcref none, .funcref none, .funcref none]
                 (UInt32.toNat 0)
@@ -1892,7 +1892,7 @@ private theorem tableInitDropElementMap_agrees :
 
 private theorem tableInitDropTableMap_pointsTo [WasmTableGS α] :
     ([∗map] index ↦ table ∈ tableInitDropTableMap,
-      tablePointsTo index table) ⊢
+      tablePointsTo (GF := WasmHeapGF α) index table) ⊢
       tablePointsTo ⟨0, 0⟩
         [.funcref none, .funcref none, .funcref none,
           .funcref none] := by
@@ -1902,7 +1902,7 @@ private theorem tableInitDropTableMap_pointsTo [WasmTableGS α] :
 
 private theorem tableInitDropElementMap_pointsTo [WasmElementSegmentGS α] :
     ([∗map] index ↦ value ∈ tableInitDropElementMap,
-      elementSegmentPointsTo index value) ⊢
+      elementSegmentPointsTo (GF := WasmHeapGF α) index value) ⊢
       elementSegmentPointsTo ⟨0, 0⟩ (some [some 0, none, some 0]) := by
   unfold tableInitDropElementMap
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : ElementSegmentKey))).to_eq,
@@ -2131,7 +2131,7 @@ theorem typedSelect_partiallyMeets (first second : Option Nat) (condition : UInt
 writes `b` into four bytes at address 0, the byte range is the little-endian
 layout of the 32-bit word with all four bytes equal to `b`. -/
 private theorem splat_bytes_as_u32 [WasmHeapGS Unit] (b : UInt8) :
-    pointsToBytes (α := Unit) 0 0 (List.replicate 4 b) ⊢
+    pointsToBytes (GF := WasmHeapGF Unit) 0 0 (List.replicate 4 b) ⊢
       pointsTo_u32 0 0
         (b.toUInt32 ||| (b.toUInt32 <<< 8) ||| (b.toUInt32 <<< 16) ||| (b.toUInt32 <<< 24)) := by
   have hb0 : u32Byte (b.toUInt32 ||| (b.toUInt32 <<< 8) |||

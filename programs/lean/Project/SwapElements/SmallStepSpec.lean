@@ -49,8 +49,8 @@ def SwapElementsDistinctSpec : Prop :=
       pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) →
     (∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) →
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) →
     Wasm.SmallStep.PartiallyMeets
       (SwapSepLogic.func4ConfigFromStore wasm ptr len i j)
       (fun values store =>
@@ -90,8 +90,8 @@ def SwapElementsAliasSpec : Prop :=
       pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue) →
     (∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) →
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) →
     Wasm.SmallStep.PartiallyMeets
       (SwapSepLogic.func4ConfigFromStore wasm ptr len i i)
       (fun values store =>
@@ -134,8 +134,8 @@ def SwapElementsDistinctTerminatesSpec : Prop :=
       pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) →
     (∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) →
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) →
     Wasm.SmallStep.TerminatesWith
       (SwapSepLogic.func4ConfigFromStore wasm ptr len i j)
       (fun values store =>
@@ -177,8 +177,8 @@ def SwapElementsAliasTerminatesSpec : Prop :=
       pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue) →
     (∀ [WasmGlobalGS Unit],
       ([∗map] index ↦ value ∈ globalσ,
-        globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576)) →
+        globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576)) →
     Wasm.SmallStep.TerminatesWith
       (SwapSepLogic.func4ConfigFromStore wasm ptr len i i)
       (fun values store =>

@@ -62,7 +62,7 @@ private theorem packed_u64Byte_high (lo hi : UInt32) (i : Nat) (hi4 : i < 4) :
 theorem pointsTo_u64_pair_split {hlc : HasLC} {α : Type}
     [Wasm.SmallStep.WasmSmallStepGS hlc α]
     (memId : Nat) (addr lo hi : UInt32) :
-    pointsTo_u64 (α := α) memId addr
+    pointsTo_u64 (GF := WasmHeapGF α) memId addr
         (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) ⊢
       (iprop% pointsTo_u32 memId addr lo ∗
         pointsTo_u32 memId (addr + 4) hi) := by
@@ -100,7 +100,7 @@ theorem pointsTo_u64_pair_join {hlc : HasLC} {α : Type}
     (memId : Nat) (addr lo hi : UInt32) :
     (iprop% pointsTo_u32 memId addr lo ∗
       pointsTo_u32 memId (addr + 4) hi) ⊢
-    pointsTo_u64 (α := α) memId addr
+    pointsTo_u64 (GF := WasmHeapGF α) memId addr
       (lo.toUInt64 ||| (hi.toUInt64 <<< 32)) := by
   rw [(pointsTo_u64_eq memId addr
       (lo.toUInt64 ||| (hi.toUInt64 <<< 32))).to_eq,
@@ -164,7 +164,7 @@ theorem pointsToBytes_focus {hlc : HasLC} {α : Type}
     [Wasm.SmallStep.WasmSmallStepGS hlc α]
     (memId : Nat) (addr : UInt32) (bytes : List UInt8) (i : Nat)
     (hi : i < bytes.length) :
-    pointsToBytes (α := α) memId addr bytes ⊢
+    pointsToBytes (GF := WasmHeapGF α) memId addr bytes ⊢
       (iprop% ∃ byte : UInt8,
         (⟨memId, addr + UInt32.ofNat i⟩ ↦w byte) ∗
         (((⟨memId, addr + UInt32.ofNat i⟩ ↦w byte) -∗
@@ -215,7 +215,7 @@ theorem pointsToBytes_focus_update {hlc : HasLC} {α : Type}
     [Wasm.SmallStep.WasmSmallStepGS hlc α]
     (memId : Nat) (addr : UInt32) (bytes : List UInt8) (i : Nat)
     (hi : i < bytes.length) :
-    pointsToBytes (α := α) memId addr bytes ⊢
+    pointsToBytes (GF := WasmHeapGF α) memId addr bytes ⊢
       (iprop% ∃ byte : UInt8,
         (⟨memId, addr + UInt32.ofNat i⟩ ↦w byte) ∗
         ((∀ newByte : UInt8,
@@ -271,7 +271,7 @@ theorem pointsToBytes_take_drop {hlc : HasLC} {α : Type}
     [Wasm.SmallStep.WasmSmallStepGS hlc α]
     (memId : Nat) (addr : UInt32) (bytes : List UInt8) (n : Nat)
     (hn : n ≤ bytes.length) :
-    pointsToBytes (α := α) memId addr bytes ⊢
+    pointsToBytes (GF := WasmHeapGF α) memId addr bytes ⊢
       (iprop% pointsToBytes memId addr (bytes.take n) ∗
         pointsToBytes memId (addr + UInt32.ofNat n) (bytes.drop n)) := by
   have hlen : (bytes.take n).length = n := List.length_take_of_le hn
@@ -297,7 +297,7 @@ theorem pointsToBytes_take_drop_join {hlc : HasLC} {α : Type}
     (hn : n ≤ bytes.length) :
     (iprop% pointsToBytes memId addr (bytes.take n) ∗
       pointsToBytes memId (addr + UInt32.ofNat n) (bytes.drop n)) ⊢
-      pointsToBytes (α := α) memId addr bytes := by
+      pointsToBytes (GF := WasmHeapGF α) memId addr bytes := by
   have hlen : (bytes.take n).length = n := List.length_take_of_le hn
   have haddr : addr + UInt32.ofNat (bytes.take n).length =
       addr + UInt32.ofNat n := by rw [hlen]
@@ -309,7 +309,7 @@ theorem pointsToBytes_take_drop_join {hlc : HasLC} {α : Type}
     iexact Hsplit
   ihave Hbytes := (pointsToBytes_append memId addr
     (bytes.take n) (bytes.drop n)).mpr $$ Hsplit'
-  have heq : pointsToBytes (α := α) memId addr
+  have heq : pointsToBytes (GF := WasmHeapGF α) memId addr
       (bytes.take n ++ bytes.drop n) = pointsToBytes memId addr bytes := by
     rw [List.take_append_drop]
   ihave Hbytes' : pointsToBytes memId addr bytes $$ [Hbytes]

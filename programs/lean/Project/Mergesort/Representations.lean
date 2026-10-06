@@ -455,7 +455,7 @@ theorem WordSlice_facts {host : Type} [WasmHeapGS host]
 physical bytes. -/
 theorem arrayAt_eq_wordCells {host : Type} [WasmHeapGS host]
     (ptr : UInt32) (values : List UInt32) :
-    arrayAt (α := host) 0 ptr values ⊣⊢ WordCells ptr values := by
+    arrayAt (GF := WasmHeapGF host) 0 ptr values ⊣⊢ WordCells ptr values := by
   induction values generalizing ptr with
   | nil => exact .rfl
   | cons value rest ih =>

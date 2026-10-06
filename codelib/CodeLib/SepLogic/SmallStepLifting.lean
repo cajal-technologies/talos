@@ -15,12 +15,9 @@ open Wasm.SepLogic
 open Lean.Parser.Tactic
 
 variable {α : Type}
-variable [WasmSmallStepGS hlc α]
-local instance instWasmIrisGS :
-    IrisGS_gen hlc (Expr α) (WasmHeapGF α) :=
-  instIrisGS
+variable [g : WasmGS hlc GF α]
 variable {s : Stuckness} {E : CoPset}
-variable {Φ : List Value → IProp (WasmHeapGF α)}
+variable {Φ : List Value → IProp GF}
 /-- Generic lifting rule for a store-preserving deterministic Wasm step.
 Most operand, control-frame, and administrative rules are thin specializations
 of this theorem; stateful instructions use dedicated rules below. -/
@@ -583,14 +580,14 @@ def loopBodyExpr (locals : Locals)
       calls⟩
 
 theorem wp_loop_löb_family
-    {ι : Type} (locals : ι → Locals) (I : ι → IProp (WasmHeapGF α))
+    {ι : Type} (locals : ι → Locals) (I : ι → IProp GF)
     (initial : ι)
     {paramArity resultArity arity : Nat}
     {body code : Program} {remainder belowStack : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     (hbelow : belowStack = (locals initial).values.drop paramArity)
     (body_closes : ∀ i,
-      ⊢@{IProp (WasmHeapGF α)} (iprop%
+      ⊢@{IProp GF} (iprop%
         ▷ (∀ (j : ι), I j -∗
           WP (loopBodyExpr (α := α) (locals j)
             paramArity resultArity arity body code remainder belowStack
@@ -923,7 +920,7 @@ theorem wp_throwRef
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
     {tag : Nat} {arguments : List Value}
-    (Hwp : exceptionPointsTo exceptionIndex (DFrac.own 1) (tag, arguments) -∗
+    (Hwp : exceptionPointsTo g.exceptionName exceptionIndex (DFrac.own 1) (tag, arguments) -∗
         WP (.running
           ⟨⟨params, localValues, values⟩, [], arity, remainder,
             { kind := .throwing tag arguments
@@ -932,7 +929,7 @@ theorem wp_throwRef
               body := []
               continuation := []
               belowStack := [] } :: controls, calls⟩ : Expr α) @ s; E {{ Φ }}) :
-    ▷ exceptionPointsTo exceptionIndex (DFrac.own 1) (tag, arguments) -∗
+    ▷ exceptionPointsTo g.exceptionName exceptionIndex (DFrac.own 1) (tag, arguments) -∗
     WP (.running
       ⟨⟨params, localValues, .exnref (some exceptionIndex) :: values⟩,
         .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E {{ Φ }} := by
@@ -1117,10 +1114,10 @@ theorem wp_callHost
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
-    (P : IProp (WasmHeapGF α))
-    (QRet : List Value → IProp (WasmHeapGF α))
-    (QTrap : IProp (WasmHeapGF α))
-    (QThrow : IProp (WasmHeapGF α))
+    (P : IProp GF)
+    (QRet : List Value → IProp GF)
+    (QTrap : IProp GF)
+    (QThrow : IProp GF)
     (callerId : ModuleInstanceId)
     (hRetTransfer : ∀ (store : MachineStore α) (ns : Nat)
         (obs : List StepKind) (nt : Nat),
@@ -1128,27 +1125,27 @@ theorem wp_callHost
         ∀ results postWasm,
         hostFn.invoke store.wasm (values.take imp.params.length).reverse =
           .Return results postWasm →
-        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        P ∗ stateInterp (GF := GF) store ns obs nt ==∗
         QRet results ∗
-        stateInterp (GF := WasmHeapGF α) { store with wasm := postWasm } ns obs nt)
+        stateInterp (GF := GF) { store with wasm := postWasm } ns obs nt)
     (hTrapTransfer : ∀ (store : MachineStore α) (ns : Nat)
         (obs : List StepKind) (nt : Nat),
         store.runtime.currentModule = runtimeModule →
         ∀ postWasm msg,
         hostFn.invoke store.wasm (values.take imp.params.length).reverse =
           .Trap postWasm msg →
-        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        P ∗ stateInterp (GF := GF) store ns obs nt ==∗
         QTrap ∗
-        stateInterp (GF := WasmHeapGF α) { store with wasm := postWasm } ns obs nt)
+        stateInterp (GF := GF) { store with wasm := postWasm } ns obs nt)
     (hThrowTransfer : ∀ (store : MachineStore α) (ns : Nat)
         (obs : List StepKind) (nt : Nat),
         store.runtime.currentModule = runtimeModule →
         ∀ postWasm tag xs,
         hostFn.invoke store.wasm (values.take imp.params.length).reverse =
           .Throw postWasm tag xs →
-        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        P ∗ stateInterp (GF := GF) store ns obs nt ==∗
         QThrow ∗
-        stateInterp (GF := WasmHeapGF α) { store with wasm := postWasm } ns obs nt) :
+        stateInterp (GF := GF) { store with wasm := postWasm } ns obs nt) :
     let current : ThreadState α :=
       ⟨⟨params, localValues, values⟩, .call functionIndex :: code,
         arity, remainder, controls, calls⟩
@@ -1923,9 +1920,9 @@ theorem wp_load8U
     let next : ThreadState α :=
       ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -1957,9 +1954,9 @@ theorem wp_load8UI64
     let next : ThreadState α :=
       ⟨⟨params, localValues, .i64 byte.toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -1990,9 +1987,9 @@ theorem wp_load8S
       ⟨⟨params, localValues,
         .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -2104,9 +2101,9 @@ theorem wp_load8SI64
       ⟨⟨params, localValues,
         .i64 (Int64.ofInt (signExtend (byte.toUInt64.toNat % 256) 8)).toUInt64 :: values⟩,
         code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -2298,9 +2295,9 @@ theorem wp_store8
         .store8 offset :: code, arity, remainder, controls, calls⟩
     let next : ThreadState α :=
       ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -2342,9 +2339,9 @@ theorem wp_store8I64
         .store8I64 offset :: code, arity, remainder, controls, calls⟩
     let next : ThreadState α :=
       ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -4515,9 +4512,9 @@ theorem wp_load8UMemory64
     let next : ThreadState α :=
       ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -4548,9 +4545,9 @@ theorem wp_load8SMemory64
       ⟨⟨params, localValues,
         .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
         code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -4659,9 +4656,9 @@ theorem wp_store8Memory64
         .store8 offset :: code, arity, remainder, controls, calls⟩
     let next : ThreadState α :=
       ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ▷ (pointsTo (GF := GF) (H := WasmHeapMap)
         ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
       WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
@@ -4816,7 +4813,7 @@ theorem wp_store32Memory64
 has the same host as the caller so the `hostEnvOwn` resource stays valid.
 `runtimeInstancesOwn instances` links the ghost instances array to `store.runtime.instances`
 and lets us discharge the concrete step conditions.
-The continuation wand receives `currentInstanceOwn calleeId` so downstream
+The continuation wand receives `currentInstanceOwn g.instanceName calleeId` so downstream
 proofs (e.g. `wp_returnFromCallCrossInstance`) can use it. -/
 theorem wp_callCrossInstance
     (callerId : ModuleInstanceId)
@@ -4850,7 +4847,7 @@ theorem wp_callCrossInstance
           returningInstance := callerId } :: calls⟩
     ▷ runtimeModuleOwn callerId callerInst.module -∗
     ▷ runtimeInstancesOwn instances -∗
-    ▷ (currentInstanceOwn calleeId ∗ runtimeInstancesOwn instances -∗ WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+    ▷ (currentInstanceOwn g.instanceName calleeId ∗ runtimeInstancesOwn instances -∗ WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   wasm_wp_start_with iintro >Hruntime >HruntimeInstances Hwp
   simp only [runtimeModuleOwn]
@@ -4924,9 +4921,9 @@ theorem wp_returnFromCallCrossInstance
           values :=
             calleeLocals.values.take calleeArity ++ callerLocals.values },
         callerCode, callerArity, callerRemainder, callerControls, calls⟩
-    ▷ currentInstanceOwn calleeId -∗
+    ▷ currentInstanceOwn g.instanceName calleeId -∗
     ▷ runtimeInstancesOwn instances -∗
-    ▷ (currentInstanceOwn returningInstance -∗ WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+    ▷ (currentInstanceOwn g.instanceName returningInstance -∗ WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
       WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
   wasm_wp_start_with iintro >HinstanceOwn >HruntimeInstances Hwp
   wasm_current_instance_agree (obs ++ obs'), calleeId $$ [$Hσ $HinstanceOwn]

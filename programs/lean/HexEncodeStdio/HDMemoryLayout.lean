@@ -16,7 +16,7 @@ def ioWord (old : UInt64) (tag : UInt8) (count : UInt32) : UInt64 :=
 
 theorem pointsTo_ioWord [WasmSmallStepGS hlc α]
     (addr : UInt32) (old : UInt64) (tag : UInt8) (count : UInt32) :
-    pointsTo_u64 (α := α) 0 addr (ioWord old tag count) ⊣⊢
+    pointsTo_u64 (GF := WasmHeapGF α) 0 addr (ioWord old tag count) ⊣⊢
       (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, addr⟩ (DFrac.own 1) (some tag)) ∗
       (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
@@ -118,7 +118,7 @@ theorem pointsTo_ioWord [WasmSmallStepGS hlc α]
 
 theorem pointsTo_u64_as_ioWord [WasmSmallStepGS hlc α]
     (addr : UInt32) (old : UInt64) :
-    pointsTo_u64 (α := α) 0 addr old ⊣⊢
+    pointsTo_u64 (GF := WasmHeapGF α) 0 addr old ⊣⊢
       (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
         ⟨0, addr⟩ (DFrac.own 1) (some (u64Byte old 0))) ∗
       (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
@@ -167,9 +167,9 @@ theorem pointsTo_u64_as_ioWord [WasmSmallStepGS hlc α]
 halves. -/
 theorem pointsTo_u64_as_u32s [WasmSmallStepGS hlc α]
     (addr : UInt32) (word : UInt64) :
-    pointsTo_u64 (α := α) 0 addr word ⊣⊢
-      pointsTo_u32 (α := α) 0 addr word.toUInt32 ∗
-      pointsTo_u32 (α := α) 0 (addr + 4) (word >>> 32).toUInt32 := by
+    pointsTo_u64 (GF := WasmHeapGF α) 0 addr word ⊣⊢
+      pointsTo_u32 (GF := WasmHeapGF α) 0 addr word.toUInt32 ∗
+      pointsTo_u32 (GF := WasmHeapGF α) 0 (addr + 4) (word >>> 32).toUInt32 := by
   simp only [pointsTo_u64, pointsTo_u32, u64Byte, u32Byte]
   rw [show addr + 4 + 1 = addr + 5 by bv_normalize (config := { enums := false }),
     show addr + 4 + 2 = addr + 6 by bv_normalize (config := { enums := false }),
@@ -263,7 +263,7 @@ theorem pointsTo_u64_as_u32s [WasmSmallStepGS hlc α]
     isplitl [H6] <;> iassumption
 
 theorem pointsTo_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
-    pointsTo_u64 (α := α) 0 addr 0 ⊣⊢
+    pointsTo_u64 (GF := WasmHeapGF α) 0 addr 0 ⊣⊢
       pointsToBytes 0 addr (List.replicate 8 (0 : UInt8)) := by
   simp [pointsTo_u64, pointsToBytes, u64Byte]
   rw [show addr + 1 + 1 = addr + 2 by bv_normalize (config := { enums := false }),
@@ -277,7 +277,7 @@ theorem pointsTo_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
 
 set_option maxHeartbeats 2000000 in
 theorem four_u64_zero_as_bytes [WasmSmallStepGS hlc α] (addr : UInt32) :
-    pointsTo_u64 (α := α) 0 addr 0 ∗
+    pointsTo_u64 (GF := WasmHeapGF α) 0 addr 0 ∗
       pointsTo_u64 0 (addr + 8) 0 ∗
       pointsTo_u64 0 (addr + 16) 0 ∗
       pointsTo_u64 0 (addr + 24) 0 ⊣⊢

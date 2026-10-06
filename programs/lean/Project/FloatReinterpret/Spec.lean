@@ -89,7 +89,7 @@ call frames. -/
 theorem func9_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x : UInt32) :
-    runtimeModuleOwn ⟨0⟩ «module» ⊢
+    runtimeModuleOwn (GF := WasmHeapGF Unit) ⟨0⟩ «module» ⊢
     WP (.running
       ⟨⟨[.f32 x], [], []⟩, func9, 1, [], [], []⟩ :
         Expr Unit) @ s; E
@@ -137,7 +137,7 @@ def func4Config (x y : UInt32) : Config Unit :=
 theorem func4_smallStep_wp
     [WasmSmallStepGS hlc Unit] {s : Stuckness} {E : CoPset}
     (x y : UInt32) :
-    runtimeModuleOwn ⟨0⟩ «module» ⊢
+    runtimeModuleOwn (GF := WasmHeapGF Unit) ⟨0⟩ «module» ⊢
     WP (.running
       ⟨⟨[.f32 x, .f32 y], [], []⟩, func4, 1, [], [], []⟩ :
         Expr Unit) @ s; E
@@ -226,8 +226,8 @@ theorem func1Heap_pointsTo [WasmHeapGS Unit] :
 
 theorem func1Globals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func1Globals,
-      globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576) := by
+      globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576) := by
   unfold func1Globals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]

@@ -53,20 +53,20 @@ theorem heap_pointsTo {hlc : HasLC} [WasmSmallStepGS hlc α]
 theorem bytesAt_split {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (m n : Nat)
     (hnowrap : addr.toNat + m + n < UInt32.size) :
-    pointsToBytes (α := α) 0 addr
+    pointsToBytes (GF := WasmHeapGF α) 0 addr
         (Project.HexEncodeStdio.Grow.bytesAt mem addr (m + n)) ⊣⊢
       (pointsToBytes 0 addr (Project.HexEncodeStdio.Grow.bytesAt mem addr m) ∗
         pointsToBytes 0 (addr + UInt32.ofNat m)
           (Project.HexEncodeStdio.Grow.bytesAt mem (addr + UInt32.ofNat m) n)) := by
   rw [Project.HexEncodeStdio.FullMemory.bytesAt_append mem addr m n hnowrap]
-  simpa using (pointsToBytes_append (α := α) 0 addr
+  simpa using (pointsToBytes_append (GF := WasmHeapGF α) 0 addr
     (Project.HexEncodeStdio.Grow.bytesAt mem addr m)
     (Project.HexEncodeStdio.Grow.bytesAt mem (addr + UInt32.ofNat m) n))
 
 theorem bytesAt_drop {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (m n : Nat)
     (hnowrap : addr.toNat + m + n < UInt32.size) :
-    pointsToBytes (α := α) 0 addr
+    pointsToBytes (GF := WasmHeapGF α) 0 addr
         (Project.HexEncodeStdio.Grow.bytesAt mem addr (m + n)) ⊢
       pointsToBytes 0 (addr + UInt32.ofNat m)
         (Project.HexEncodeStdio.Grow.bytesAt mem (addr + UInt32.ofNat m) n) := by
@@ -78,7 +78,7 @@ theorem bytesAt_drop {hlc : HasLC} [WasmSmallStepGS hlc α]
 theorem bytesAt_word_split {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (n : Nat)
     (hnowrap : addr.toNat + 4 + n < UInt32.size) :
-    pointsToBytes (α := α) 0 addr
+    pointsToBytes (GF := WasmHeapGF α) 0 addr
         (Project.HexEncodeStdio.Grow.bytesAt mem addr (4 + n)) ⊢
       pointsTo_u32 0 addr (mem.read32 addr) ∗
         pointsToBytes 0 (addr + 4)
@@ -99,7 +99,7 @@ def wordsAt (mem : Mem) (addr : UInt32) : Nat → List UInt32
 theorem bytesAt_words {hlc : HasLC} [WasmSmallStepGS hlc α]
     (mem : Mem) (addr : UInt32) (n : Nat)
     (hnowrap : addr.toNat + 4 * n < UInt32.size) :
-    pointsToBytes (α := α) 0 addr
+    pointsToBytes (GF := WasmHeapGF α) 0 addr
         (Project.HexEncodeStdio.Grow.bytesAt mem addr (4 * n)) ⊢
       arrayAt 0 addr (wordsAt mem addr n) := by
   induction n generalizing addr with

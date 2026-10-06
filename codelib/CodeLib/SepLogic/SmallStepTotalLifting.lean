@@ -78,7 +78,7 @@ macro "wasm_twp_start_with " intro:tactic : tactic =>
 
 section terminalGeneric
 
-variable [WasmSmallStepGS hlc α]
+variable [g : WasmGS hlc GF α]
 variable {Terminal : Type}
 variable [view : TerminalView α Terminal]
 local instance (priority := high) activeTerminalLanguage :
@@ -86,12 +86,12 @@ local instance (priority := high) activeTerminalLanguage :
   TerminalView.canonicalLanguage
 local instance (priority := high) activeTerminalIrisGS :
     @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
-      activeTerminalLanguage (WasmHeapGF α) :=
+      activeTerminalLanguage GF :=
   { numLatersPerStep _ := 0
     forkPost _ := iprop(True)
     stateInterp_mono _ _ _ _ := by iintro $ }
 variable {s : Stuckness} {E : CoPset}
-variable {Φ : Terminal → IProp (WasmHeapGF α)}
+variable {Φ : Terminal → IProp GF}
 
 /-- Generic total lifting rule for a store-preserving deterministic Wasm
 step. Unlike `wp_pureStep`, its continuation is not guarded by a later. -/
@@ -480,10 +480,10 @@ theorem twp_callHost
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
-    (P : IProp (WasmHeapGF α))
-    (QRet : List Value → IProp (WasmHeapGF α))
-    (QTrap : IProp (WasmHeapGF α))
-    (QThrow : IProp (WasmHeapGF α))
+    (P : IProp GF)
+    (QRet : List Value → IProp GF)
+    (QTrap : IProp GF)
+    (QThrow : IProp GF)
     (callerId : ModuleInstanceId)
     (hRetTransfer : ∀ (store : MachineStore α) (ns : Nat)
         (obs : List StepKind) (nt : Nat),
@@ -491,9 +491,9 @@ theorem twp_callHost
         ∀ results postWasm,
         hostFn.invoke store.wasm (values.take imp.params.length).reverse =
           .Return results postWasm →
-        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        P ∗ stateInterp (GF := GF) store ns obs nt ==∗
         QRet results ∗
-        stateInterp (GF := WasmHeapGF α)
+        stateInterp (GF := GF)
           { store with wasm := postWasm } ns obs nt)
     (hTrapTransfer : ∀ (store : MachineStore α) (ns : Nat)
         (obs : List StepKind) (nt : Nat),
@@ -501,9 +501,9 @@ theorem twp_callHost
         ∀ postWasm msg,
         hostFn.invoke store.wasm (values.take imp.params.length).reverse =
           .Trap postWasm msg →
-        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        P ∗ stateInterp (GF := GF) store ns obs nt ==∗
         QTrap ∗
-        stateInterp (GF := WasmHeapGF α)
+        stateInterp (GF := GF)
           { store with wasm := postWasm } ns obs nt)
     (hThrowTransfer : ∀ (store : MachineStore α) (ns : Nat)
         (obs : List StepKind) (nt : Nat),
@@ -511,9 +511,9 @@ theorem twp_callHost
         ∀ postWasm tag xs,
         hostFn.invoke store.wasm (values.take imp.params.length).reverse =
           .Throw postWasm tag xs →
-        P ∗ stateInterp (GF := WasmHeapGF α) store ns obs nt ==∗
+        P ∗ stateInterp (GF := GF) store ns obs nt ==∗
         QThrow ∗
-        stateInterp (GF := WasmHeapGF α)
+        stateInterp (GF := GF)
           { store with wasm := postWasm } ns obs nt) :
     let current : ThreadState α :=
       ⟨⟨params, localValues, values⟩, .call functionIndex :: code,
@@ -947,7 +947,7 @@ theorem twp_memorySize_tracked
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
-    {P : IProp (WasmHeapGF α)}
+    {P : IProp GF}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
     (Hwp : ∀ pages : Nat,
         P -∗
@@ -1022,7 +1022,7 @@ theorem twp_memoryGrow_tracked
     {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
     {controls : List ControlFrame} {calls : List CallFrame}
-    {P : IProp (WasmHeapGF α)}
+    {P : IProp GF}
     (runtimeModule : Module) (instanceId : ModuleInstanceId)
     (measuredPages : Nat)
     (Hfailure : ∀ pages : Nat, measuredPages ≤ pages →
@@ -1820,7 +1820,7 @@ end terminalGeneric
 
 section terminalGenericHelpers
 
-variable [WasmSmallStepGS hlc α]
+variable [g : WasmGS hlc GF α]
 variable {Terminal : Type}
 variable [view : TerminalView α Terminal]
 local instance (priority := high) activeTerminalLanguageHelpers :
@@ -1828,12 +1828,12 @@ local instance (priority := high) activeTerminalLanguageHelpers :
   TerminalView.canonicalLanguage
 local instance (priority := high) activeTerminalIrisGSHelpers :
     @IrisGS_gen hlc (Expr α) Terminal (MachineStore α) StepKind
-      activeTerminalLanguageHelpers (WasmHeapGF α) :=
+      activeTerminalLanguageHelpers GF :=
   { numLatersPerStep _ := 0
     forkPost _ := iprop(True)
     stateInterp_mono _ _ _ _ := by iintro $ }
 variable {s : Stuckness} {E : CoPset}
-variable {Φ : Terminal → IProp (WasmHeapGF α)}
+variable {Φ : Terminal → IProp GF}
 
 wasm_twp_pure_rule twp_subI64 {lhs rhs : UInt64} :
   .subI64, .i64 rhs :: .i64 lhs :: values =>

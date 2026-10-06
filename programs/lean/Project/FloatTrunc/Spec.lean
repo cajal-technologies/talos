@@ -159,8 +159,8 @@ theorem func0Heap_pointsTo [WasmHeapGS Unit] :
 
 theorem func0Globals_pointsTo [WasmGlobalGS Unit] :
     ([∗map] index ↦ value ∈ func0Globals,
-      globalPointsTo index value) ⊢
-      globalPointsToAt 0 0 (.i32 1048576) := by
+      globalPointsTo (GF := WasmHeapGF Unit) index value) ⊢
+      globalPointsToAt (GF := WasmHeapGF Unit) 0 0 (.i32 1048576) := by
   unfold func0Globals
   rw [(BI.BigSepM.bigSepM_insert (get?_empty (⟨0, 0⟩ : GlobalKey))).to_eq,
     BI.BigSepM.bigSepM_empty.to_eq, BI.sep_emp.to_eq]

@@ -38,33 +38,22 @@ private theorem oomTrapTransfer
       hostStateOwn {host with oom := { raised := true }} ∗
         stateInterp (GF := WasmHeapGF Universal.State)
           { store with wasm := postWasm } ns obs nt := by
+  letI : WasmGS hlc (WasmHeapGF Universal.State) Universal.State := inferInstance
   simp [OOM.oomHost, OOM.oomResult, HostFn.lift, universalOOMLens,
     Store.focus, Store.mapHost, Store.unfocus] at h
   obtain ⟨rfl, rfl⟩ := h
   iintro ⟨Hhost, Hstate⟩
-  icases (stateInterp_eq store ns obs nt).mp $$ Hstate with
-    ⟨%heap, %globals, %segments, %tables, %elements,
-      %runtimeModules, %hostEnvs, Hheap, Hglobals, Hsegments, Htables,
-      Helements, HruntimeModules, HruntimeModulePoints,
-      HruntimeInstances, Hinstance, HhostEnvs, HhostAuth, %Hfacts, Hexc⟩
-  ihave %heq : ⌜store.wasm.host = host⌝ $$ [HhostAuth Hhost]
-  · iapply hostStateOwn_agree store.wasm.host host
+  ihave %heq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
+  · iapply stateInterp_host_agree store ns obs nt host
     iframe
-  rw [heq]
-  let newHost : Universal.State := {host with oom := { raised := true }}
-  imod hostStateOwn_update host newHost $$ [$HhostAuth $Hhost] with
-    ⟨HhostAuth, Hhost⟩
+  subst host
+  imod stateInterp_host_set store ns obs nt
+      {store.wasm.host with oom := { raised := true }} $$
+      [$Hstate $Hhost] with ⟨Hstate', Hhost'⟩
   imodintro
-  isplitl [Hhost]
-  · iexact Hhost
-  iapply (stateInterp_eq
-    { store with wasm :=
-        { store.wasm with host := newHost } } ns obs nt).mpr
-  iexists heap, globals, segments, tables, elements, runtimeModules, hostEnvs
-  iframe Hheap Hglobals Hsegments Htables Helements HruntimeModules
-    HruntimeModulePoints HruntimeInstances Hinstance HhostEnvs HhostAuth Hexc
-  ipureintro
-  exact Hfacts
+  isplitl [Hhost']
+  · iexact Hhost'
+  · iexact Hstate'
 
 /-- A trapped expression is a valid terminal total-WP state when trapping is
 allowed.  This is deliberately unavailable at `NotStuck`. -/
@@ -101,12 +90,13 @@ theorem twp_oom_wrapper
       ⟨{ callerLocals with values := stack },
         [.call 16] ++ code, arity, remainder, controls, calls⟩ :
         Expr Universal.State) @ Stuckness.MaybeStuck; E [{ Φ }] := by
+  letI : WasmGS hlc (WasmHeapGF Universal.State) Universal.State := inferInstance
   iintro ⟨Hruntime, Henv, Hhost⟩
   simp only [List.singleton_append]
   iapply twp_call «module» 16 func13Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
   simp [func13Def, Function.toLocals, Function.numParams,  func13]
-  iapply twp_callHost «module» 2
+  iapply (twp_callHost (GF := WasmHeapGF Universal.State) «module» 2)
       { module := "talos", name := "oom", params := [], results := [] }
       (OOM.oomHost.lift universalOOMLens)
       (by decide) rfl (Universal.envFor «module»)
@@ -118,7 +108,22 @@ theorem twp_oom_wrapper
       (fun _ _ _ _ _ results postWasm h => by
         simp [OOM.oomHost, OOM.oomResult, HostFn.lift,
           universalOOMLens, Store.focus, Store.mapHost, Store.unfocus] at h)
-      (oomTrapTransfer host)
+      (fun store ns obs nt _ postWasm msg h => by
+        simp [OOM.oomHost, OOM.oomResult, HostFn.lift, universalOOMLens,
+          Store.focus, Store.mapHost, Store.unfocus] at h
+        obtain ⟨rfl, rfl⟩ := h
+        iintro ⟨Hhost, Hstate⟩
+        ihave %heq : ⌜store.wasm.host = host⌝ $$ [Hstate Hhost]
+        · iapply stateInterp_host_agree store ns obs nt host
+          iframe
+        subst host
+        imod stateInterp_host_set store ns obs nt
+            {store.wasm.host with oom := { raised := true }} $$
+            [$Hstate $Hhost] with ⟨Hstate', Hhost'⟩
+        imodintro
+        isplitl [Hhost']
+        · iexact Hhost'
+        · iexact Hstate')
       (fun _ _ _ _ _ postWasm tag xs h => by
         simp [OOM.oomHost, OOM.oomResult, HostFn.lift,
           universalOOMLens, Store.focus, Store.mapHost, Store.unfocus] at h)

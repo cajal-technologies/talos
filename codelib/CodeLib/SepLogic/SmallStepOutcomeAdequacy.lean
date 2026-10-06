@@ -140,7 +140,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
       (GF := WasmHeapGF α) (H := WasmHeapMap) σ with
     ⟨%heapGS, Hheap, Hpoints, Hmeta⟩
   imod heapDomain_init_at (α := α) σ frontier hbelow with
-    ⟨%heapDomainGS, HheapDomain, HheapFrontier⟩
+    ⟨%heapDomainGS, HheapFrontierAuth, HheapFrontierFrag⟩
   letI _ : WasmHeapDomainGS α := heapDomainGS
   imod memoryPages_init (α := α) config.store.wasm.mem.pages with
     ⟨%memoryPagesGS, HmemoryPagesAuth, HmemoryPagesOwn⟩
@@ -154,12 +154,40 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
   wasm_alloc_fixed_runtime_resources config
   letI gs : WasmSmallStepGS .hasLC α := smallStepGS .hasLC inv
   iclear Hmeta
+  ihave HheapDomain : heapDomainInterp σ $$ [HheapFrontierAuth]
+  next =>
+    unfold heapDomainInterp
+    iexists frontier
+    iframe_pureexact using [HheapFrontierAuth] => hbelow
   imodintro
   iexists (fun store _observations =>
     stateInterp (GF := WasmHeapGF α) store 0 [] 0)
   iexists (fun _ => iprop(True))
   dsimp only
-  wasm_build_machine_aux config
+  ihave HexceptionInterp :
+      exceptionInterp config.store.wasm.exns config.store.wasm.tagIds $$
+      [Hexceptions HtagTable]
+  next =>
+    unfold exceptionInterp
+    isplitl [Hexceptions]
+    next =>
+      iexists (∅ : WasmExceptionMap (Nat × List Value))
+      isplitl [Hexceptions]
+      next => iexact Hexceptions
+      next =>
+        ipureexact exceptionHeapAgrees_empty _
+    next =>
+      iexists config.store.wasm.tagIds
+      isplitl [HtagTable]
+      next => iexact HtagTable
+      next =>
+        ipureexact List.prefix_rfl
+  ihave Hexc : machineAuxInterp σ config.store.wasm.mem.pages
+      config.store.wasm.exns config.store.wasm.tagIds $$
+      [HmemoryPagesAuth HheapDomain HexceptionInterp]
+  next =>
+    unfold machineAuxInterp
+    iframe HmemoryPagesAuth HheapDomain HexceptionInterp
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
@@ -196,7 +224,8 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
           · isplitl [HhostStateFrag]
             · unfold hostStateOwn
               iexact HhostStateFrag
-            · isplitl_exact HheapFrontier
+            · isplitl [HheapFrontierFrag]
+              · unfold heapFrontierOwn; iexact HheapFrontierFrag
               · iexact HmemoryPagesOwn
 
 /-- Backwards-compatible outcome adequacy with the maximally permissive heap
@@ -289,7 +318,7 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
       iintro Hstate
       imodintro; iexact Hstate)
   dsimp only
-  wasm_build_machine_aux config
+  wasm_build_machine_aux config withHeap σ
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
     iexists σ
