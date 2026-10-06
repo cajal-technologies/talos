@@ -1,7 +1,6 @@
 import CodeLib
 import Project.HexStdio.Spec
 import HexEncodeStdio.Host
-import HexEncodeStdio.TotalHost
 import HexEncodeStdio.TotalHelpers
 import HexEncodeStdio.TotalIterator
 
@@ -10,36 +9,6 @@ namespace Project.HexEncodeStdio.TotalWrite
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
 open Wasm.SepLogic Wasm.SmallStep
-
-def afterWrite (host : Universal.State) (bytes : List UInt8) : Universal.State :=
-  { host with stdio :=
-      { input := host.stdio.input
-        output := host.stdio.output ++ bytes } }
-
-private theorem readBytes_eq_of_facts (mem : Mem) (addr : UInt32)
-    (bytes : List UInt8)
-    (hfacts : ∀ i b, bytes[i]? = some b →
-      mem.read8 (addr + UInt32.ofNat i) = b ∧
-      (addr + UInt32.ofNat i).toNat < mem.pages * 65536)
-    (hnowrap : addr.toNat + bytes.length < UInt32.size) :
-    mem.readBytes addr.toNat bytes.length = bytes := by
-  apply List.ext_getElem
-  · simp [Mem.readBytes]
-  · intro i hleft hright
-    have hi : i < bytes.length := by
-      simpa [Mem.readBytes] using hleft
-    have hget : bytes[i]? = some bytes[i] := List.getElem?_eq_getElem hright
-    have hbyte := (hfacts i bytes[i] hget).1
-    have hisize : i < UInt32.size := by
-      calc
-        i < bytes.length := hi
-        _ ≤ addr.toNat + bytes.length := Nat.le_add_left _ _
-        _ < UInt32.size := hnowrap
-    have hadd : addr.toNat + i < UInt32.size := by omega
-    simp only [Mem.readBytes, List.getElem_map, List.getElem_range,
-      Mem.read8] at hbyte ⊢
-    rw [UInt32.add_ofNat_toNat_noWrap addr i hisize hadd] at hbyte
-    exact hbyte
 
 /-- A universal-host write call returns, preserves its owned byte range, and
 appends exactly that range to the observable output. -/
@@ -72,101 +41,10 @@ theorem twp_universal_write {hlc : HasLC}
     WP (.running
       ⟨⟨params, localValues, .i32 ptr :: .i32 length :: values⟩,
         .call 1 :: code, arity, remainder, controls, calls⟩ :
-          Expr Universal.State) @ s; E [{ Φ }] := by
-  obtain ⟨hostFn, hhostFn, hresolve⟩ := Project.HexEncodeStdio.Host.universal_write_resolver
-  have htransfer : ∀ (store : MachineStore Universal.State) ns obs nt,
-      store.runtime.currentModule = Project.HexStdio.«module» →
-      store.runtime.currentHost =
-        Universal.envFor Project.HexStdio.«module» →
-      iprop(pointsToBytes 0 ptr bytes ∗ hostStateOwn host) ∗
-          stateInterp (GF := WasmHeapGF Universal.State) store ns obs nt ==∗
-        ∃ results postWasm,
-          ⌜hostFn.invoke store.wasm
-              ((.i32 ptr :: .i32 length :: values).take
-                Project.HexStdio.«module».imports[1].params.length).reverse =
-            .Return results postWasm⌝ ∗
-          iprop(pointsToBytes 0 ptr bytes ∗
-            hostStateOwn (afterWrite host bytes)) ∗
-          stateInterp (GF := WasmHeapGF Universal.State)
-            { store with wasm := postWasm } ns obs nt := by
-    intro store ns obs nt hmodule henv
-    iintro ⟨⟨Hbytes, Hhost⟩, Hσ⟩
-    ihave %Hfacts : ⌜∀ i b, bytes[i]? = some b →
-        store.wasm.mem.read8 (ptr + UInt32.ofNat i) = b ∧
-        (ptr + UInt32.ofNat i).toNat <
-          store.wasm.mem.pages * 65536⌝ $$ [Hσ Hbytes]
-    · imod stateInterp_pointsToBytes_agree store ns obs nt ptr bytes
-          $$ [$Hσ $Hbytes] with %Hfacts
-      ipureintro
-      exact Hfacts
-    have hbound : ptr.toNat + bytes.length ≤
-        store.wasm.mem.pages * 65536 :=
-      pointsToBytes_facts_bound Hfacts hpos hnowrap
-    have hread : store.wasm.mem.readBytes ptr.toNat bytes.length = bytes :=
-      readBytes_eq_of_facts store.wasm.mem ptr bytes Hfacts hnowrap
-    let newHost := afterWrite host bytes
-    let newWasm : Store Universal.State := { store.wasm with host := newHost }
-    imod Project.HexEncodeStdio.TotalHost.stateInterp_host_set_expected
-        store ns obs nt host newHost $$ [$Hσ $Hhost] with
-      ⟨%HhostPhysical, Hσ, Hhost⟩
-    have hinvoke : hostFn.invoke store.wasm [.i32 length, .i32 ptr] =
-        .Return [] newWasm := by
-      rw [hresolve]
-      simp only [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift]
-      simp only [StdIO.writeHost, StdIO.writeResult]
-      rw [ite_eq_left]
-      · simp [Store.focus, Store.mapHost, Store.unfocus, newWasm, newHost,
-          afterWrite, hread, hlen, HhostPhysical]
-      · simp only [StdIO.rangeInBounds, StdIO.byteCapacity]
-        apply decide_eq_true
-        change ptr.toNat + length.toNat ≤ store.wasm.mem.pages * 65536
-        simpa only [hlen] using hbound
-    imodintro
-    iexists [], newWasm
-    isplit
-    · ipureintro
-      convert hinvoke using 1; rfl
-    isplitl [Hbytes Hhost]
-    · isplitl [Hbytes]
-      · iexact Hbytes
-      · iexact Hhost
-    · iexact Hσ
-  iintro Hbytes Hhost Hruntime Henv Hnext
-  iapply Project.HexEncodeStdio.TotalHost.twp_callHost_return_fupd
-    Project.HexStdio.«module» 1 Project.HexStdio.«module».imports[1]
-    hostFn (by decide) rfl
-    (Universal.envFor Project.HexStdio.«module») hhostFn
-    (iprop(pointsToBytes 0 ptr bytes ∗ hostStateOwn host))
-    (fun _ => iprop(pointsToBytes 0 ptr bytes ∗
-      hostStateOwn (afterWrite host bytes))) callerId htransfer
-      $$ [$Hbytes $Hhost] Hruntime Henv
-  iintro %preWasm %results %postWasm %hinvoke ⟨HQ, Hruntime, Henv⟩
-  have hresults : results = [] := by
-    have hargs :
-        ((.i32 ptr :: .i32 length :: values).take
-          Project.HexStdio.«module».imports[1].params.length).reverse =
-          [.i32 length, .i32 ptr] := by rfl
-    rw [hargs] at hinvoke
-    rw [hresolve] at hinvoke
-    by_cases hb : StdIO.rangeInBounds
-        (preWasm.focus
-          { get := Universal.State.stdio
-            set := fun whole part => { whole with stdio := part } })
-        ptr.toNat length.toNat
-    · simp [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift,
-        StdIO.writeHost, StdIO.writeResult, hb] at hinvoke
-      exact hinvoke.1
-    · simp [Project.HexEncodeStdio.Host.universalWriteHost, HostFn.lift,
-        StdIO.writeHost, StdIO.writeResult, hb] at hinvoke
-  subst results
-  icases HQ with ⟨Hbytes, Hhost⟩
-  have hresultLen :
-      Project.HexStdio.«module».imports[1].results.length = 0 := by rfl
-  have hparamLen :
-      Project.HexStdio.«module».imports[1].params.length = 2 := by rfl
-  simp only [hresultLen, hparamLen, List.take_zero, List.nil_append,
-    List.drop_succ_cons, List.drop_zero]
-  iapply Hnext $$ Hbytes Hhost Hruntime Henv
+          Expr Universal.State) @ s; E [{ Φ }] :=
+  Wasm.SmallStep.twp_universal_write Project.HexStdio.«module»
+    Project.HexStdio.Spec.module_imports ptr length bytes host
+    hlen hpos hnowrap callerId
 
 private abbrev func17Locals (result ignored ptr length : UInt32)
     (values : List Value := []) : Locals :=

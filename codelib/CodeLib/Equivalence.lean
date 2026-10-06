@@ -210,12 +210,6 @@ def ObservationallyEquivOn
     (∃ store, Reaches config₁ outcome store ∧ obs store = o) ↔
     (∃ store, Reaches config₂ outcome store ∧ obs store = o)
 
-private theorem ObservableOutcome.toExpr_injective :
-    Function.Injective (ObservableOutcome.toExpr : ObservableOutcome → Expr α) := by
-  intro first second heq
-  cases first <;> cases second <;>
-    simp_all [ObservableOutcome.toExpr]
-
 /-- Determinism and terminal irreducibility make a reached outcome unique. -/
 theorem Reaches.outcome_unique_on
     {config : Config α} {obs : MachineStore α → β}
@@ -226,25 +220,10 @@ theorem Reaches.outcome_unique_on
     outcome = outcome' ∧ o = o' := by
   obtain ⟨trace, execution⟩ := first
   obtain ⟨trace', execution'⟩ := second
-  have terminal (terminalOutcome : ObservableOutcome)
-      (kind : StepKind) (next : Config α) :
-      ¬Step ⟨terminalOutcome.toExpr, store⟩ kind next := by
-    cases terminalOutcome with
-    | done => exact done_terminal
-    | trapped => exact trapped_terminal
-  have terminal' (terminalOutcome : ObservableOutcome)
-      (kind : StepKind) (next : Config α) :
-      ¬Step ⟨terminalOutcome.toExpr, store'⟩ kind next := by
-    cases terminalOutcome with
-    | done => exact done_terminal
-    | trapped => exact trapped_terminal
-  have hconfig := steps_irreducible_deterministic execution execution'
-    (terminal outcome) (terminal' outcome')
-  have hparts := Config.mk.inj hconfig
-  have houtcome := ObservableOutcome.toExpr_injective hparts.1
+  obtain ⟨houtcome, hstore⟩ := steps_outcome_deterministic execution execution'
   exact
     ⟨houtcome,
-      hfirst.symm.trans ((congrArg obs hparts.2).trans hsecond)⟩
+      hfirst.symm.trans ((congrArg obs hstore).trans hsecond)⟩
 
 /-- A common reached terminal outcome discharges equivalence. -/
 theorem ObservationallyEquivOn.of_common_reached

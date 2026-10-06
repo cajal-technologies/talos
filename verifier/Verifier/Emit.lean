@@ -326,7 +326,8 @@ private def emitInstrShort : Wasm.Instruction → String
   | .dataDrop i     => s!".dataDrop {emitNat i}"
   -- Parametric / nullary
   | .drop           => ".drop"
-  | .select         => ".select"
+  | .select none    => ".select"
+  | .select (some resultTypes) => s!".select (some {emitValueTypes resultTypes})"
   | .nop            => ".nop"
   | .unreachable    => ".unreachable"
   -- Structured control: should be handled by emitInstr; fall back to a flat
