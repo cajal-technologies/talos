@@ -244,6 +244,180 @@ def validMemoryCopy64ValidationModule : Module :=
           [.constI64 0, .constI64 0, .constI64 1, .memoryCopy] }]
     memory := some { pagesMin := 1, is64 := true } }
 
+/-! ### Reference casts (`br_on_cast.wast:226-261`, `br_on_cast_fail.wast:241-276`)
+
+`br_on_cast l rt1 rt2` needs `rt2 <: rt1`, a label accepting `rt2`, and types the
+fall-through as `rt1 \ rt2`; `ref.test`/`ref.cast` need an operand in the
+target's hierarchy. -/
+
+def invalidBrOnCastNullableToNonNullLabelValidationModule : Module :=
+  { gcTypes := [{ comp := .struct [] }]
+    funcs :=
+      [{ params := [.ref false .any], results := [.ref false (.concrete 0)],
+         body :=
+          [.block 0 1
+            [.localGet 0, .gc (.brOnCast 1 true (.concrete 0) (some (.ref true .any)))]
+            [] [.ref false .any],
+           .unreachable] }] }
+
+def invalidBrOnCastTargetNotSubtypeValidationModule : Module :=
+  { funcs :=
+      [{ results := [.anyref],
+         body := [.unreachable, .gc (.brOnCast 0 true .any (some (.ref true .eq)))] }] }
+
+def invalidBrOnCastStructToArrayValidationModule : Module :=
+  { funcs :=
+      [{ results := [.anyref],
+         body :=
+          [.unreachable, .gc (.brOnCast 0 true .arrayT (some (.ref true .structT)))] }] }
+
+def invalidBrOnCastFailNullableFallthroughValidationModule : Module :=
+  { gcTypes := [{ comp := .struct [] }]
+    funcs :=
+      [{ params := [.ref false .any], results := [.ref false .any],
+         body :=
+          [.block 0 1
+            [.localGet 0,
+             .gc (.brOnCastFail 1 true (.concrete 0) (some (.ref true .any)))]
+            [] [.ref false (.concrete 0)]] }] }
+
+def validBrOnCastI31ValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref], results := [.ref false .i31],
+         body :=
+          [.block 0 1
+            [.localGet 0, .gc (.brOnCast 0 false .i31 (some .anyref)), .drop, .unreachable]
+            [] [.ref false .i31]] }] }
+
+/-- The fail form branches with the values that did *not* match, so the label
+must accept the source type; the fall-through carries the target type. -/
+def validBrOnCastFailStructValidationModule : Module :=
+  { gcTypes := [{ comp := .struct [] }]
+    funcs :=
+      [{ params := [.anyref], results := [.anyref],
+         body :=
+          [.block 0 1
+            [.localGet 0, .gc (.brOnCastFail 0 true (.concrete 0) (some .anyref))]
+            [] [.anyref]] }] }
+
+/-- `nofunc` is the bottom of the func hierarchy, so
+`br_on_cast l (ref null $f) nullfuncref` is valid for a function type `$f`. -/
+def validBrOnCastFuncToNullFuncValidationModule : Module :=
+  { gcTypes := [{ comp := .func {} }]
+    funcs :=
+      [{ params := [.ref true (.concrete 0)], results := [.ref true (.concrete 0)],
+         body :=
+          [.block 0 1
+            [.localGet 0, .gc (.brOnCast 0 true .noFunc (some (.ref true (.concrete 0))))]
+            [] [.ref true (.concrete 0)]] }] }
+
+/-- `none` is the bottom of the any hierarchy only, so it is not a subtype of a
+function type: `br_on_cast l (ref null $f) nullref` is invalid. -/
+def invalidBrOnCastFuncToNullRefValidationModule : Module :=
+  { gcTypes := [{ comp := .func {} }]
+    funcs :=
+      [{ params := [.ref true (.concrete 0)], results := [.ref true (.concrete 0)],
+         body :=
+          [.block 0 1
+            [.localGet 0, .gc (.brOnCast 0 true .noneT (some (.ref true (.concrete 0))))]
+            [] [.ref true (.concrete 0)]] }] }
+
+/-- WebAssembly/gc#516: after the fall-through, the operand below the reference
+has the label's type `funcref`, so `call 0` (expecting `(ref null 0)`) mistypes. -/
+def invalidBrOnCastUpcastsOperandsBelowValidationModule : Module :=
+  { gcTypes := [{ comp := .func {} }]
+    funcs :=
+      [{ params := [.ref true (.concrete 0)], results := [.funcref], body := [.localGet 0] },
+       { params := [.funcref], results := [.funcref, .funcref],
+         body :=
+          [.refNull (.ref true (.concrete 0)), .localGet 0,
+           .gc (.brOnCast 0 false (.concrete 0) (some .funcref)),
+           .drop, .call 0, .localGet 0] }] }
+
+def invalidRefTestAcrossHierarchiesValidationModule : Module :=
+  { funcs :=
+      [{ body := [.refNull, .gc (.refTest true .any), .drop] }] }
+
+def validRefTestAndCastValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref], results := [.i32],
+         body :=
+          [.localGet 0, .gc (.refCast true .structT), .drop,
+           .localGet 0, .gc (.refTest false .i31)] }] }
+
+/-- Both cast branches keep the reference, so the target label must accept one:
+a label with no results is invalid. The second `drop` would consume the
+reference an empty label fails to take. -/
+def invalidBrOnCastZeroResultLabelValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref],
+         body :=
+          [.block 0 0
+            [.localGet 0, .gc (.brOnCast 0 false .i31 (some .anyref)), .drop, .drop]
+            [] []] }] }
+
+def invalidBrOnCastFailZeroResultLabelValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref],
+         body :=
+          [.block 0 0
+            [.localGet 0, .gc (.brOnCastFail 0 false .i31 (some .anyref)), .drop, .drop]
+            [] []] }] }
+
+/-- Label `[i32 (ref i31)]`: the fall-through is `[i32 anyref]`, rebuilt into
+exactly the block's two results, so a leftover operand would mistype. -/
+def validBrOnCastMultiValueLabelValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref], results := [.i32, .ref false .i31],
+         body :=
+          [.block 0 2
+            [.const 7, .localGet 0, .gc (.brOnCast 0 false .i31 (some .anyref)),
+             .drop, .const 0, .gc .refI31]
+            [] [.i32, .ref false .i31]] }] }
+
+/-- Label `[i32 anyref]`: the fall-through `[i32 (ref i31)]` is the block's
+result exactly. -/
+def validBrOnCastFailMultiValueLabelValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref], results := [.i32, .anyref],
+         body :=
+          [.block 0 2
+            [.const 7, .localGet 0, .gc (.brOnCastFail 0 false .i31 (some .anyref))]
+            [] [.i32, .anyref]] }] }
+
+/-- Hand-built blocks that give only a result arity take the arity-only path. -/
+def validBrOnCastArityOnlyLabelValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref],
+         body :=
+          [.block 0 1 [.localGet 0, .gc (.brOnCast 0 false .i31 (some .anyref))] [] [],
+           .drop] }] }
+
+def validBrOnCastFailArityOnlyLabelValidationModule : Module :=
+  { funcs :=
+      [{ params := [.anyref],
+         body :=
+          [.block 0 1 [.localGet 0, .gc (.brOnCastFail 0 false .i31 (some .anyref))] [] [],
+           .drop] }] }
+
+/-- Check `br_on_cast 0 anyref (ref i31)` (or its `_fail` form) directly, with an
+`anyref` operand above `below`. -/
+def brOnCastCheck (labels : List LabelType) (below : List CheckedType) (fail : Bool) :
+    Except String CheckState :=
+  ({ funcs := [] } : Module).checkBrOnCast
+    { stack := some .anyref :: below, initialized := [] } labels 0
+    false .i31 (some .anyref) fail
+
+/-- The operand stack (top first) the cast leaves, if it type-checks. -/
+def brOnCastStack (labels : List LabelType) (below : List CheckedType) (fail : Bool) :
+    Option (List CheckedType) :=
+  (brOnCastCheck labels below fail).toOption.map (·.stack)
+
+def brOnCastErrorIs (labels : List LabelType) (fail : Bool) (expected : String) : Bool :=
+  match brOnCastCheck labels [] fail with
+  | .error actual => actual == expected
+  | .ok _ => false
+
 def invalidLoadWithoutMemoryModule : Module :=
   { funcs := [{ body := [.const 0, .load32 0], results := [.i32] }] }
 
@@ -930,6 +1104,109 @@ theorem validator_rejects_mistyped_memory64_copy_length :
 
 theorem validator_accepts_typed_memory64_copy :
     validationSucceeds validMemoryCopy64ValidationModule = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_nullable_to_non_null_label :
+    validationErrorIs invalidBrOnCastNullableToNonNullLabelValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_target_not_subtype :
+    validationErrorIs invalidBrOnCastTargetNotSubtypeValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_struct_to_array :
+    validationErrorIs invalidBrOnCastStructToArrayValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_fail_nullable_fallthrough :
+    validationErrorIs invalidBrOnCastFailNullableFallthroughValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_accepts_br_on_cast_i31 :
+    validationSucceeds validBrOnCastI31ValidationModule = true := by decide +kernel
+
+theorem validator_accepts_br_on_cast_fail_struct :
+    validationSucceeds validBrOnCastFailStructValidationModule = true := by decide +kernel
+
+theorem validator_accepts_br_on_cast_func_to_nullfunc :
+    validationSucceeds validBrOnCastFuncToNullFuncValidationModule = true := by
+  decide +kernel
+
+theorem validator_rejects_br_on_cast_func_to_nullref :
+    validationErrorIs invalidBrOnCastFuncToNullRefValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_upcasts_operands_below :
+    validationErrorIs invalidBrOnCastUpcastsOperandsBelowValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_ref_test_across_hierarchies :
+    validationErrorIs invalidRefTestAcrossHierarchiesValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_accepts_ref_test_and_cast :
+    validationSucceeds validRefTestAndCastValidationModule = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_to_zero_result_label :
+    validationErrorIs invalidBrOnCastZeroResultLabelValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_br_on_cast_fail_to_zero_result_label :
+    validationErrorIs invalidBrOnCastFailZeroResultLabelValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_accepts_br_on_cast_multi_value_label :
+    validationSucceeds validBrOnCastMultiValueLabelValidationModule = true := by decide +kernel
+
+theorem validator_accepts_br_on_cast_fail_multi_value_label :
+    validationSucceeds validBrOnCastFailMultiValueLabelValidationModule = true := by
+  decide +kernel
+
+theorem validator_accepts_br_on_cast_arity_only_label :
+    validationSucceeds validBrOnCastArityOnlyLabelValidationModule = true := by decide +kernel
+
+theorem validator_accepts_br_on_cast_fail_arity_only_label :
+    validationSucceeds validBrOnCastFailArityOnlyLabelValidationModule = true := by
+  decide +kernel
+
+/-! Stack shapes (top first) left by `br_on_cast 0 anyref (ref i31)`: the
+fall-through keeps `(ref null any)` (the source minus the non-null target) for
+`br_on_cast` and `(ref i31)` for `br_on_cast_fail`, above the label's `t*`. -/
+
+theorem br_on_cast_rejects_zero_result_label :
+    brOnCastErrorIs [(0, some [])] false "type mismatch" = true := by decide +kernel
+
+theorem br_on_cast_fail_rejects_zero_result_label :
+    brOnCastErrorIs [(0, some [])] true "type mismatch" = true := by decide +kernel
+
+theorem br_on_cast_rejects_zero_arity_only_label :
+    brOnCastErrorIs [(0, none)] false "type mismatch" = true := by decide +kernel
+
+theorem br_on_cast_fail_rejects_zero_arity_only_label :
+    brOnCastErrorIs [(0, none)] true "type mismatch" = true := by decide +kernel
+
+theorem br_on_cast_one_reference_label_stack :
+    brOnCastStack [(1, some [.ref false .i31])] [] false =
+      some [some (.ref true .any)] := by decide +kernel
+
+theorem br_on_cast_fail_one_reference_label_stack :
+    brOnCastStack [(1, some [.anyref])] [] true = some [some (.ref false .i31)] := by
+  decide +kernel
+
+theorem br_on_cast_multi_value_label_stack :
+    brOnCastStack [(2, some [.i32, .ref false .i31])] [some .i32] false =
+      some [some (.ref true .any), some .i32] := by decide +kernel
+
+theorem br_on_cast_fail_multi_value_label_stack :
+    brOnCastStack [(2, some [.i32, .anyref])] [some .i32] true =
+      some [some (.ref false .i31), some .i32] := by decide +kernel
+
+theorem br_on_cast_arity_only_label_stack :
+    brOnCastStack [(2, none)] [some .i32] false =
+      some [some (.ref true .any), some .i32] := by decide +kernel
+
+theorem br_on_cast_fail_arity_only_label_stack :
+    brOnCastStack [(2, none)] [some .i32] true =
+      some [some (.ref false .i31), some .i32] := by decide +kernel
 
 theorem validator_rejects_load_without_memory :
     validationErrorIs invalidLoadWithoutMemoryModule

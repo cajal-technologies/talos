@@ -231,9 +231,14 @@ inductive GcOp where
   | refCast (nullable : Bool) (ht : GcHeapType)  -- ref.cast (ref null? ht)
   -- `br_on_cast l rt1 rt2`: branch to `l` (keeping the ref) when it matches
   -- the target type `rt2`, else fall through. `_fail` is the negation. Only
-  -- the target type's nullability/heap type is needed at runtime.
+  -- the target type's nullability/heap type is needed at runtime; the source
+  -- type `rt1` is retained for validation, which requires `rt2 <: rt1` and
+  -- types the fall-through operand as `rt1 \ rt2`. `none` (hand-built
+  -- modules) makes validation take the source from the operand stack.
   | brOnCast     (label : Nat) (nullable : Bool) (ht : GcHeapType)
+      (source : Option ValueType := none)
   | brOnCastFail (label : Nat) (nullable : Bool) (ht : GcHeapType)
+      (source : Option ValueType := none)
   -- Structs. `*.get_s`/`get_u` read packed `i8`/`i16` fields with sign /
   -- zero extension.
   | structNew        (typeIdx : Nat)

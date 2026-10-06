@@ -245,11 +245,11 @@ def execGcOp (m : Module) (st : Store α) (s : Locals) : GcOp → Continuation �
     | _ => .Invalid "refCast: ill-shaped operand stack"
   -- `br_on_cast`/`br_on_cast_fail`: the ref stays on the operand stack in
   -- both the taken and the fall-through case.
-  | .brOnCast label nullable ht => match s.values with
+  | .brOnCast label nullable ht _ => match s.values with
     | v :: _ =>
       if gcRefMatches m st nullable ht v then .Break label st s else .Fallthrough st s
     | _ => .Invalid "brOnCast: ill-shaped operand stack"
-  | .brOnCastFail label nullable ht => match s.values with
+  | .brOnCastFail label nullable ht _ => match s.values with
     | v :: _ =>
       if gcRefMatches m st nullable ht v then .Fallthrough st s else .Break label st s
     | _ => .Invalid "brOnCastFail: ill-shaped operand stack"
