@@ -134,14 +134,15 @@ The baseline was first measured with a freshly built runner at Talos
 `78f9d08d46bcda1e4ddf794a697a18cccc59ba0f` (Lean v4.32.2), and re-recorded after
 merging main at `64690614` (Lean v4.34.1, #262), using the versions and V8 flag
 above. The re-recording observed the same 64 exceptions with identical outcomes.
+After #259 (the runner evaluates GC element-segment items at instantiation),
+the 10 `completeness` exceptions agreed with V8 and were deleted, leaving 54.
 It covers **620 cases**: 194 generated `all` cases, 300 `recgroup` cases, 38
 invalid modules, one Talos seed and its 70 mutations, and 17 upstream seeds.
 
 | Outcome | Cases | Observed behavior |
 | --- | ---: | --- |
-| Agreement | 556 | Matching values, traps, or validation rejection |
+| Agreement | 566 | Matching values, traps, or validation rejection |
 | `SOUNDNESS` | 27 | 26 invalid-module acceptances and one subtype-depth implementation-limit disagreement |
-| `completeness` | 10 | Element-segment probes trap with out-of-bounds table access in Talos (the runner does not evaluate GC element-segment items; #259 fixes this and must delete these 10 entries) |
 | `sut-reject` | 22 | Decoder rejects named data segments or a table declaration accepted by V8 |
 | `sut-unsup` | 5 | Invalid modules exit with diagnostics the validation classifier cannot recognize |
 

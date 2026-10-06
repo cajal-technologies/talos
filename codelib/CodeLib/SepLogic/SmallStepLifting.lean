@@ -74,12 +74,17 @@ Rules whose proof is more than that one line, and rules whose thread state
 this shape does not cover — the branch, control-frame and unwinding rules —
 stay hand-written below.
 -/
-set_option hygiene false in
-macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
-    instruction:term ", " before:term " => " after:term " := "
-    step:term : command => do
-  -- Keep these as `TSyntax`, not raw `Syntax`: the `$xs:bracketedBinder*`
-  -- antiquotations below only accept a typed array.
+/-- Split a `wasm_wp_pure_rule`/`wasm_wp_resource_rule` binder list into
+implicit value binders and explicit side conditions, rejecting anything else
+(`macroName` names the caller for the error). Both macros generate the same
+binder block from this split; keep it as `TSyntax`, not raw `Syntax` — the
+`$xs:bracketedBinder*` antiquotations at each call site only accept a typed
+array. -/
+def splitPureRuleBinders (macroName : String)
+    (binders : Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder)) :
+    Lean.MacroM
+      (Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) ×
+        Array (Lean.TSyntax ``Lean.Parser.Term.bracketedBinder)) := do
   let isValueBinder (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
     b.raw.getKind == ``Lean.Parser.Term.implicitBinder
   let isSideCondition (b : Lean.TSyntax ``Lean.Parser.Term.bracketedBinder) : Bool :=
@@ -87,9 +92,15 @@ macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
   for b in binders do
     unless isValueBinder b || isSideCondition b do
       Lean.Macro.throwErrorAt b
-        "wasm_wp_pure_rule takes implicit value binders and explicit side conditions"
-  let valueBinders := binders.filter isValueBinder
-  let sideConditions := binders.filter isSideCondition
+        s!"{macroName} takes implicit value binders and explicit side conditions"
+  return (binders.filter isValueBinder, binders.filter isSideCondition)
+
+set_option hygiene false in
+macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
+    instruction:term ", " before:term " => " after:term " := "
+    step:term : command => do
+  let (valueBinders, sideConditions) ←
+    splitPureRuleBinders "wasm_wp_pure_rule" binders
   `(command|
     theorem $name:ident
         {params localValues values : List Value}
@@ -106,6 +117,121 @@ macro "wasm_wp_pure_rule " name:ident binders:bracketedBinder* " : "
             $instruction :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
           {{ Φ }} :=
       wp_pureStep _ _ _ (fun _ => $step))
+
+/-! ### Generating the trap rules
+
+The unconditional traps below (division/remainder by a zero or overflowing
+operand, `unreachable`, a null `ref.as_non_null`, a null `throw_ref`, …) say
+the same thing as the pure rules, minus an "after" stack: one instruction is
+retired from a syntactically-known operand-stack shape and the step traps.
+`wasm_wp_trap_rule` writes the theorem out the same way `wasm_wp_pure_rule`
+does, closed by `wp_trapStep _ _ _ (fun _ => step)`. Rules whose thread state
+this shape does not cover — `wp_uncaughtException`'s `Locals`-bundled frame —
+stay hand-written below. -/
+set_option hygiene false in
+syntax (docComment)? "wasm_wp_trap_rule " ident (ppSpace bracketedBinder)* " : "
+    term ", " term " := " term : command
+
+set_option hygiene false in
+macro_rules
+  | `(command|
+      $[$doc:docComment]? wasm_wp_trap_rule $name:ident
+        $binders:bracketedBinder* :
+        $instruction:term, $before:term := $step:term) => do
+    let (valueBinders, sideConditions) ←
+      splitPureRuleBinders "wasm_wp_trap_rule" binders
+    `(command|
+      $[$doc:docComment]?
+      theorem $name:ident
+          {params localValues values : List Value}
+          $valueBinders:bracketedBinder*
+          {code : Program} {arity : Nat}
+          {remainder : List Value} {controls : List ControlFrame}
+          {calls : List CallFrame}
+          $sideConditions:bracketedBinder* :
+          True ⊢ WP (.running
+            ⟨⟨params, localValues, $before⟩,
+              $instruction :: code, arity, remainder, controls, calls⟩ :
+              Expr α) @ E ?{{ Φ }} :=
+        wp_trapStep _ _ _ (fun _ => $step))
+
+/-! ### Declaring a rule that owns a resource
+
+The stateful rules — every load, every store, the table and global rules, the
+segment rules — all state the same thing with different payloads: the
+instruction is retired, the operand stack is rewritten, and an Iris resource is
+borrowed across the step and handed back (possibly changed). Only the payload
+differs, so `wasm_wp_resource_rule` writes the surrounding statement and the
+call site supplies the payload and the proof:
+
+    wasm_wp_resource_rule wp_load8U
+        {address offset : UInt32} (byte : UInt8)
+        (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+      .load8U offset, .i32 address :: values => .i32 byte.toUInt32 :: values
+      owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) := by
+      <proof>
+
+`owning R` alone means the resource comes back unchanged, which is what every
+load says; a store adds `returning R'` for the updated resource. The binder
+block, the `let current`/`let next` abbreviations and the
+`▷ R -∗ ▷ (R' -∗ WP next) -∗ WP current` shape are exactly what the
+hand-written rules spelled out, so use sites and proof scripts cannot tell the
+difference.
+
+`set_option hygiene false` is load-bearing for the same reason as on
+`wasm_wp_pure_rule`, and for one more: the proof is written at the call site
+but the binders are introduced here, so `params`, `values`, `code`, `store` and
+friends have to be the same names on both sides.
+
+Rules whose thread state this shape does not cover — the call, return and
+local-variable rules, which rewrite the locals or the frame stack rather than
+just the operand stack — stay hand-written below.
+-/
+set_option hygiene false in
+syntax (docComment)? "wasm_wp_resource_rule " ident (ppSpace bracketedBinder)* " : "
+    term ", " term " => " term
+    ppLine "owning " term (ppLine "returning " term)?
+    " := " term : command
+
+set_option hygiene false in
+macro_rules
+  | `(command|
+      $[$doc:docComment]? wasm_wp_resource_rule $name:ident $binders:bracketedBinder* :
+        $instruction:term, $before:term => $after:term
+        owning $resource:term := $proof:term) =>
+    `(command|
+      $[$doc:docComment]? wasm_wp_resource_rule $name:ident $binders:bracketedBinder* :
+        $instruction:term, $before:term => $after:term
+        owning $resource:term
+        returning $resource:term := $proof:term)
+  | `(command|
+      $[$doc:docComment]? wasm_wp_resource_rule $name:ident $binders:bracketedBinder* :
+        $instruction:term, $before:term => $after:term
+        owning $resourceIn:term
+        returning $resourceOut:term := $proof:term) => do
+    let (valueBinders, sideConditions) ←
+      splitPureRuleBinders "wasm_wp_resource_rule" binders
+    `(command|
+      $[$doc:docComment]?
+      theorem $name:ident
+          {params localValues values : List Value}
+          $valueBinders:bracketedBinder*
+          {code : Program} {arity : Nat}
+          {remainder : List Value} {controls : List ControlFrame}
+          {calls : List CallFrame}
+          $sideConditions:bracketedBinder* :
+          let current : ThreadState α :=
+            ⟨⟨params, localValues, $before⟩,
+              $instruction :: code, arity, remainder, controls, calls⟩
+          let next : ThreadState α :=
+            ⟨⟨params, localValues, $after⟩,
+              code, arity, remainder, controls, calls⟩
+          ▷ $resourceIn -∗
+          ▷ ($resourceOut -∗
+            WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
+            WP (Expr.running current : Expr α) @ s; E {{ Φ }} :=
+        $proof)
 
 /-! ## Generic scalar numeric rules
 
@@ -779,60 +905,25 @@ The rule list keeps the Wasm trace visible while avoiding repetitive `iapply`
 lines. -/
 syntax "wasm_wp_pures" "[" ident* "]" : tactic
 
+/-- `wasm_wp_pures` lemma names whose lone side condition this combinator
+discharges with `rfl`; every other name in its vocabulary applies clean. -/
+private def wpPuresNeedsRfl (n : Lean.Name) : Bool :=
+  n == `wp_localGet || n == `wp_localSet || n == `wp_localTee ||
+  n == `wp_br || n == `wp_exitControl || n == `wp_scalarFloat0
+
 macro_rules
   | `(tactic| wasm_wp_pures []) => `(tactic| skip)
-  | `(tactic| wasm_wp_pures [wp_localGet $rest:ident*]) =>
-      `(tactic| iapply wp_localGet rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_localSet $rest:ident*]) =>
-      `(tactic| iapply wp_localSet rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_localTee $rest:ident*]) =>
-      `(tactic| iapply wp_localTee rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_const $rest:ident*]) =>
-      `(tactic| iapply wp_const; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_add $rest:ident*]) =>
-      `(tactic| iapply wp_add; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_sub $rest:ident*]) =>
-      `(tactic| iapply wp_sub; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_mul $rest:ident*]) =>
-      `(tactic| iapply wp_mul; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_and $rest:ident*]) =>
-      `(tactic| iapply wp_and; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_or $rest:ident*]) =>
-      `(tactic| iapply wp_or; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_shl $rest:ident*]) =>
-      `(tactic| iapply wp_shl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_constI64 $rest:ident*]) =>
-      `(tactic| iapply wp_constI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_addI64 $rest:ident*]) =>
-      `(tactic| iapply wp_addI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_subI64 $rest:ident*]) =>
-      `(tactic| iapply wp_subI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_mulI64 $rest:ident*]) =>
-      `(tactic| iapply wp_mulI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_andI64 $rest:ident*]) =>
-      `(tactic| iapply wp_andI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_orI64 $rest:ident*]) =>
-      `(tactic| iapply wp_orI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_shlI64 $rest:ident*]) =>
-      `(tactic| iapply wp_shlI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_shrUI64 $rest:ident*]) =>
-      `(tactic| iapply wp_shrUI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_ctzI64 $rest:ident*]) =>
-      `(tactic| iapply wp_ctzI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_wrapI64 $rest:ident*]) =>
-      `(tactic| iapply wp_wrapI64; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_extendUI32 $rest:ident*]) =>
-      `(tactic| iapply wp_extendUI32; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_block $rest:ident*]) =>
-      `(tactic| iapply wp_block; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_brIfZero $rest:ident*]) =>
-      `(tactic| iapply wp_brIfZero; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_br $rest:ident*]) =>
-      `(tactic| iapply wp_br rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_exitControl $rest:ident*]) =>
-      `(tactic| iapply wp_exitControl rfl; inext; wasm_wp_pures [$rest:ident*])
-  | `(tactic| wasm_wp_pures [wp_scalarFloat0 $rest:ident*]) =>
-      `(tactic| iapply wp_scalarFloat0 rfl; inext; wasm_wp_pures [$rest:ident*])
+  | `(tactic| wasm_wp_pures [$head:ident $rest:ident*]) => do
+    -- Resolve the name in `Wasm.SmallStep`, where the rules live, not at the
+    -- call site: downstream files invoke this from their own namespace and do
+    -- not have the unqualified names in scope. (The hand-written arms this
+    -- replaced baked the literal name in here, so they resolved here too.)
+    -- `eraseMacroScopes`: names reaching here through another macro (e.g.
+    -- `shift_chunk_of`) carry that macro's scope, which no declaration has.
+    let rule := Lean.mkIdent (`Wasm.SmallStep ++ head.getId.eraseMacroScopes)
+    let step ← if wpPuresNeedsRfl head.getId.eraseMacroScopes then `(tactic| iapply ($rule) rfl)
+      else `(tactic| iapply ($rule))
+    `(tactic| $step; inext; wasm_wp_pures [$rest:ident*])
 
 /-- Execute pure Wasm steps, then normalize with caller-selected rewrites. -/
 syntax "wasm_wp_pures" "[" ident* "]" "using"
@@ -896,14 +987,8 @@ theorem wp_unwindNestedException
   wp_pureStep _ _ _ (fun _ => Step.unwindNestedException hthrow hhandler)
 
 /-- Trap step: `throw_ref` with a null exnref traps immediately. -/
-theorem wp_throwRefNull
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .exnref none :: values⟩,
-        .throwRef :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.throwRefNull)
+wasm_wp_trap_rule wp_throwRefNull :
+  .throwRef, .exnref none :: values := Step.throwRefNull
 
 /-- Trap step: an exception propagated through all control frames with no
 matching handler and no enclosing call frame traps. -/
@@ -1318,23 +1403,12 @@ theorem wp_returnFromCallExplicit
 /-- Primitive rule for `global.get`. Authoritative global ownership connects
 the logical value to the instantiated global read by the machine, and the
 read-only instruction returns that ownership unchanged. -/
-theorem wp_globalGet_of_canonical
-    {params localValues values : List Value}
-    {index : Nat} {value : Value} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hcanonical : ∀ store : MachineStore α,
-      canonicalGlobalIndex store index = index) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, .globalGet index :: code,
-        arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, value :: values⟩, code,
-        arity, remainder, controls, calls⟩
-    ▷ globalPointsToAt 0 index value -∗
-    ▷ (globalPointsToAt 0 index value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_globalGet_of_canonical
+    {index : Nat}
+    {value : Value}
+    (hcanonical : ∀ store : MachineStore α, canonicalGlobalIndex store index = index) :
+  .globalGet index, values => value :: values
+  owning globalPointsToAt 0 index value := by
   dsimp only
   simp only [globalPointsToAt]
   wasm_wp_begin_with iintro >Hglobal Hwp
@@ -1349,24 +1423,13 @@ theorem wp_globalGet_of_canonical
 
 /-- Primitive rule for `global.set`. Exclusive authoritative ownership is
 updated together with the physical instantiated global in `StateInterp`. -/
-theorem wp_globalSet_of_canonical
-    {params localValues values : List Value}
-    {index : Nat} {oldValue newValue : Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hcanonical : ∀ store : MachineStore α,
-      canonicalGlobalIndex store index = index) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, newValue :: values⟩,
-        .globalSet index :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ globalPointsToAt 0 index oldValue -∗
-    ▷ (globalPointsToAt 0 index newValue -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_globalSet_of_canonical
+    {index : Nat}
+    {oldValue newValue : Value}
+    (hcanonical : ∀ store : MachineStore α, canonicalGlobalIndex store index = index) :
+  .globalSet index, newValue :: values => values
+  owning globalPointsToAt 0 index oldValue
+  returning globalPointsToAt 0 index newValue := by
   dsimp only
   simp only [globalPointsToAt]
   wasm_wp_begin_with iintro >Hglobal Hwp
@@ -1406,61 +1469,29 @@ theorem wp_globalSet_of_canonical
 /-- Common non-aliased rule for the distinguished global at index zero.
 Index zero is definitionally canonical even when other local indices alias
 the same instantiated global. -/
-theorem wp_globalGet
-    {params localValues values : List Value}
-    {value : Value} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, .globalGet 0 :: code,
-        arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, value :: values⟩, code,
-        arity, remainder, controls, calls⟩
-    ▷ globalPointsToAt 0 0 value -∗
-    ▷ (globalPointsToAt 0 0 value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} :=
+wasm_wp_resource_rule wp_globalGet
+    {value : Value} :
+  .globalGet 0, values => value :: values
+  owning globalPointsToAt 0 0 value :=
   wp_globalGet_of_canonical (fun _ => rfl)
 
-theorem wp_globalSet
-    {params localValues values : List Value}
-    {oldValue newValue : Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, newValue :: values⟩,
-        .globalSet 0 :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ globalPointsToAt 0 0 oldValue -∗
-    ▷ (globalPointsToAt 0 0 newValue -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} :=
+wasm_wp_resource_rule wp_globalSet
+    {oldValue newValue : Value} :
+  .globalSet 0, newValue :: values => values
+  owning globalPointsToAt 0 0 oldValue
+  returning globalPointsToAt 0 0 newValue :=
   wp_globalSet_of_canonical (fun _ => rfl)
 
 /-- Primitive rule for an in-bounds `table.get`. The owned table fragment
 identifies the physical table and is returned unchanged after the read. -/
-theorem wp_tableGet
-    {params localValues values : List Value}
-    {tableIndex elementIndex : Nat} {index value : Value}
-    {table : TableInst} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
+wasm_wp_resource_rule wp_tableGet
+    {tableIndex elementIndex : Nat}
+    {index value : Value}
+    {table : TableInst}
     (hindex : index.addrNat? = some elementIndex)
     (helement : table[elementIndex]? = some value) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, index :: values⟩,
-        .tableGet tableIndex :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, value :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ tablePointsToAt 0 tableIndex table -∗
-    ▷ (tablePointsToAt 0 tableIndex table -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .tableGet tableIndex, index :: values => value :: values
+  owning tablePointsToAt 0 tableIndex table := by
   dsimp only
   simp only [tablePointsToAt]
   wasm_wp_begin_with iintro >Htable Hwp
@@ -1910,25 +1941,13 @@ theorem wp_tableCopyDistinct
 /-- Primitive rule for `i32.load8_u`. The arithmetic premise rules out
 32-bit effective-address wraparound; physical bounds follow from ownership
 through `StateInterp`, rather than being assumed about an external store. -/
-theorem wp_load8U
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (byte : UInt8)
-    (hnowrap :
-      (address + offset).toNat = address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_load8U
+    {address offset : UInt32}
+    (byte : UInt8)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+  .load8U offset, .i32 address :: values => .i32 byte.toUInt32 :: values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) ⟨0, address + offset⟩
+    (DFrac.own 1) (some byte) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -1944,25 +1963,13 @@ theorem wp_load8U
 
 /-- Primitive rule for `i64.load8_u` with an i32 memory address.  The loaded
 byte is zero-extended to i64; ownership remains at the physical UInt32 key. -/
-theorem wp_load8UI64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (byte : UInt8)
-    (hnowrap :
-      (address + offset).toNat = address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8UI64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i64 byte.toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_load8UI64
+    {address offset : UInt32}
+    (byte : UInt8)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+  .load8UI64 offset, .i32 address :: values => .i64 byte.toUInt64 :: values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) ⟨0, address + offset⟩
+    (DFrac.own 1) (some byte) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -1976,26 +1983,14 @@ theorem wp_load8UI64
       (Step.load8UI64 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
-theorem wp_load8S
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (byte : UInt8)
-    (hnowrap :
-      (address + offset).toNat = address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8S offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_load8S
+    {address offset : UInt32}
+    (byte : UInt8)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+  .load8S offset, .i32 address :: values => .i32
+    (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) ⟨0, address + offset⟩
+    (DFrac.own 1) (some byte) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -2015,23 +2010,13 @@ theorem wp_load8S
     exact Step.load8S (α := α) (address := Value.i32 address) rfl hbound
   wasm_wp_step_frame expectedStep
 
-theorem wp_load16U
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load16U
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16U offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address + offset) word -∗
-    ▷ (pointsTo_u16 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load16U offset, .i32 address :: values => .i32 (word &&& 0xFFFF) :: values
+  owning pointsTo_u16 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
@@ -2048,25 +2033,15 @@ theorem wp_load16U
 
 /-- Primitive rule for `i32.load16_s`. Like `wp_load16U` but the 16-bit value
 is sign-extended to i32; `extend16To32` is private so its body is inlined. -/
-theorem wp_load16S
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load16S
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16S offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i32
-          (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address + offset) word -∗
-    ▷ (pointsTo_u16 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load16S offset, .i32 address :: values => .i32
+    (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 ::
+    values
+  owning pointsTo_u16 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
@@ -2090,26 +2065,14 @@ theorem wp_load16S
 
 /-- Primitive rule for `i64.load8_s`. Like `wp_load8UI64` but sign-extended;
 `extend8To64` is private so its body is inlined. -/
-theorem wp_load8SI64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (byte : UInt8)
-    (hnowrap :
-      (address + offset).toNat = address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load8SI64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (byte.toUInt64.toNat % 256) 8)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some byte) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_load8SI64
+    {address offset : UInt32}
+    (byte : UInt8)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+  .load8SI64 offset, .i32 address :: values => .i64
+    (Int64.ofInt (signExtend (byte.toUInt64.toNat % 256) 8)).toUInt64 :: values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) ⟨0, address + offset⟩
+    (DFrac.own 1) (some byte) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address + offset) = byte ∧
       (address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -2129,23 +2092,14 @@ theorem wp_load8SI64
     exact Step.load8SI64 (address := Value.i32 address) rfl hbound
   wasm_wp_step_frame expectedStep
 
-theorem wp_load16UI64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load16UI64
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16UI64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i64 (word &&& 0xFFFF).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address + offset) word -∗
-    ▷ (pointsTo_u16 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load16UI64 offset, .i32 address :: values => .i64 (word &&& 0xFFFF).toUInt64
+    :: values
+  owning pointsTo_u16 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
@@ -2167,26 +2121,15 @@ theorem wp_load16UI64
 
 /-- Primitive rule for `i64.load16_s`. Like `wp_load16UI64` but sign-extended;
 `extend16To64` is private so its body is inlined. -/
-theorem wp_load16SI64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load16SI64
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load16SI64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i64
-          (Int64.ofInt
-            (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address + offset) word -∗
-    ▷ (pointsTo_u16 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load16SI64 offset, .i32 address :: values => .i64
+    (Int64.ofInt (signExtend ((word &&& 0xFFFF).toUInt64.toNat % 65536) 16)).toUInt64
+    :: values
+  owning pointsTo_u16 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = word &&& 0xFFFF ∧
@@ -2209,25 +2152,15 @@ theorem wp_load16SI64
     exact Step.load16SI64 (address := Value.i32 address) rfl hbound
   wasm_wp_step_frame expectedStep
 
-theorem wp_load32UI64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load32UI64
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32UI64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i64 word.toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) word -∗
-    ▷ (pointsTo_u32 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load32UI64 offset, .i32 address :: values => .i64 word.toUInt64 :: values
+  owning pointsTo_u32 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -2244,26 +2177,17 @@ theorem wp_load32UI64
 
 /-- Primitive rule for `i64.load32_s`. Like `wp_load32UI64` but sign-extended;
 `extend32To64` is private so its body is inlined. -/
-theorem wp_load32SI64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load32SI64
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32SI64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i64 (Int64.ofInt (signExtend (word.toUInt64.toNat % 2 ^ 32) 32)).toUInt64 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) word -∗
-    ▷ (pointsTo_u32 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load32SI64 offset, .i32 address :: values => .i64
+    (Int64.ofInt (signExtend (word.toUInt64.toNat % 2 ^ 32) 32)).toUInt64 ::
+    values
+  owning pointsTo_u32 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -2286,24 +2210,15 @@ theorem wp_load32SI64
 
 /-- Primitive rule for `i32.store8`. The physical `Mem.write8` transition and
 the authoritative GenHeap update happen in the same Iris step. -/
-theorem wp_store8
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldByte : UInt8)
-    (hnowrap :
-      (address + offset).toNat = address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-        .store8 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_store8
+    {address offset value : UInt32}
+    (oldByte : UInt8)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+  .store8 offset, .i32 value :: .i32 address :: values => values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) ⟨0, address + offset⟩
+    (DFrac.own 1) (some oldByte)
+  returning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure HinBounds :
       ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -2330,24 +2245,16 @@ theorem wp_store8
     wasm_wp_frame
 
 /-- Primitive rule for `i64.store8` with an i32 memory address. -/
-theorem wp_store8I64
-    {params localValues values : List Value}
-    {address offset : UInt32} {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldByte : UInt8)
-    (hnowrap :
-      (address + offset).toNat = address.toNat + offset.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-        .store8I64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_store8I64
+    {address offset : UInt32}
+    {value : UInt64}
+    (oldByte : UInt8)
+    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
+  .store8I64 offset, .i64 value :: .i32 address :: values => values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap) ⟨0, address + offset⟩
+    (DFrac.own 1) (some oldByte)
+  returning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ⟨0, address + offset⟩ (DFrac.own 1) (some value.toUInt8) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure HinBounds :
       ⌜(address + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -2372,23 +2279,14 @@ theorem wp_store8I64
         (by simpa [hnowrap] using HinBounds) $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
     wasm_wp_frame
 
-theorem wp_store16
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_store16
+    {address offset value : UInt32}
+    (oldWord : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-        .store16 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u16 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store16 offset, .i32 value :: .i32 address :: values => values
+  owning pointsTo_u16 0 (address + offset) oldWord
+  returning pointsTo_u16 0 (address + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = oldWord &&& 0xFFFF ∧
@@ -2415,23 +2313,15 @@ theorem wp_store16
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_store16I64
-    {params localValues values : List Value}
-    {address offset : UInt32} {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_store16I64
+    {address offset : UInt32}
+    {value : UInt64}
+    (oldWord : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-        .store16I64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u16 0 (address + offset) value.toUInt32 -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store16I64 offset, .i64 value :: .i32 address :: values => values
+  owning pointsTo_u16 0 (address + offset) oldWord
+  returning pointsTo_u16 0 (address + offset) value.toUInt32 := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address + offset) = oldWord &&& 0xFFFF ∧
@@ -2458,25 +2348,17 @@ theorem wp_store16I64
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_store32I64
-    {params localValues values : List Value}
-    {address offset : UInt32} {value : UInt64} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_store32I64
+    {address offset : UInt32}
+    {value : UInt64}
+    (oldWord : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-        .store32I64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u32 0 (address + offset) value.toUInt32 -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store32I64 offset, .i64 value :: .i32 address :: values => values
+  owning pointsTo_u32 0 (address + offset) oldWord
+  returning pointsTo_u32 0 (address + offset) value.toUInt32 := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -2503,25 +2385,15 @@ theorem wp_store32I64
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_load32
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load32
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load32 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) word -∗
-    ▷ (pointsTo_u32 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load32 offset, .i32 address :: values => .i32 word :: values
+  owning pointsTo_u32 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -2536,25 +2408,16 @@ theorem wp_load32
       (Step.load32 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
-theorem wp_store32
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_store32
+    {address offset value : UInt32}
+    (oldWord : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i32 address :: values⟩,
-        .store32 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u32 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store32 offset, .i32 value :: .i32 address :: values => values
+  owning pointsTo_u32 0 (address + offset) oldWord
+  returning pointsTo_u32 0 (address + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -2581,25 +2444,15 @@ theorem wp_store32
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_f32Load
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_f32Load
+    {address offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .f32Load offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .f32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) word -∗
-    ▷ (pointsTo_u32 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .f32Load offset, .i32 address :: values => .f32 word :: values
+  owning pointsTo_u32 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = word ∧
@@ -2614,25 +2467,16 @@ theorem wp_f32Load
       (Step.f32Load (α := α) (address := .i32 address) rfl hbound)) =>
     wasm_wp_frame
 
-theorem wp_f32Store
-    {params localValues values : List Value}
-    {address offset value : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_f32Store
+    {address offset value : UInt32}
+    (oldWord : UInt32)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
     (h3 : ((address + offset) + 3).toNat = (address + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .f32 value :: .i32 address :: values⟩,
-        .f32Store offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u32 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .f32Store offset, .f32 value :: .i32 address :: values => values
+  owning pointsTo_u32 0 (address + offset) oldWord
+  returning pointsTo_u32 0 (address + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address + offset) = oldWord ∧
@@ -2660,11 +2504,9 @@ theorem wp_f32Store
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_load64
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt64)
+wasm_wp_resource_rule wp_load64
+    {address offset : UInt32}
+    (word : UInt64)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
@@ -2673,16 +2515,8 @@ theorem wp_load64
     (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
     (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
     (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .load64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u64 0 (address + offset) word -∗
-    ▷ (pointsTo_u64 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load64 offset, .i32 address :: values => .i64 word :: values
+  owning pointsTo_u64 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
@@ -2697,12 +2531,10 @@ theorem wp_load64
       (Step.load64 (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
-theorem wp_store64
-    {params localValues values : List Value}
-    {address offset : UInt32} {value : UInt64}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt64)
+wasm_wp_resource_rule wp_store64
+    {address offset : UInt32}
+    {value : UInt64}
+    (oldWord : UInt64)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
@@ -2711,16 +2543,9 @@ theorem wp_store64
     (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
     (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
     (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 value :: .i32 address :: values⟩,
-        .store64 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u64 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u64 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store64 offset, .i64 value :: .i32 address :: values => values
+  owning pointsTo_u64 0 (address + offset) oldWord
+  returning pointsTo_u64 0 (address + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
@@ -2747,11 +2572,9 @@ theorem wp_store64
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_f64Load
-    {params localValues values : List Value}
-    {address offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt64)
+wasm_wp_resource_rule wp_f64Load
+    {address offset : UInt32}
+    (word : UInt64)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
@@ -2760,16 +2583,8 @@ theorem wp_f64Load
     (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
     (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
     (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 address :: values⟩,
-        .f64Load offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .f64 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u64 0 (address + offset) word -∗
-    ▷ (pointsTo_u64 0 (address + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .f64Load offset, .i32 address :: values => .f64 word :: values
+  owning pointsTo_u64 0 (address + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = word ∧
@@ -2784,12 +2599,10 @@ theorem wp_f64Load
       (Step.f64Load (α := α) (address := Value.i32 address) rfl hbound)) =>
     wasm_wp_frame
 
-theorem wp_f64Store
-    {params localValues values : List Value}
-    {address offset : UInt32} {value : UInt64}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt64)
+wasm_wp_resource_rule wp_f64Store
+    {address offset : UInt32}
+    {value : UInt64}
+    (oldWord : UInt64)
     (hnowrap : (address + offset).toNat = address.toNat + offset.toNat)
     (h1 : ((address + offset) + 1).toNat = (address + offset).toNat + 1)
     (h2 : ((address + offset) + 2).toNat = (address + offset).toNat + 2)
@@ -2798,16 +2611,9 @@ theorem wp_f64Store
     (h5 : ((address + offset) + 5).toNat = (address + offset).toNat + 5)
     (h6 : ((address + offset) + 6).toNat = (address + offset).toNat + 6)
     (h7 : ((address + offset) + 7).toNat = (address + offset).toNat + 7) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .f64 value :: .i32 address :: values⟩,
-        .f64Store offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u64 0 (address + offset) oldWord -∗
-    ▷ (pointsTo_u64 0 (address + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .f64Store offset, .f64 value :: .i32 address :: values => values
+  owning pointsTo_u64 0 (address + offset) oldWord
+  returning pointsTo_u64 0 (address + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 (address + offset) = oldWord ∧
@@ -3282,22 +3088,12 @@ theorem wp_memoryInit64
         $$ [$Hσ $Hsegment $Hdst] with ⟨Hσ, Hsegment, Hdst⟩
     wasm_wp_frame
 
-theorem wp_dataDrop
-    {params localValues values : List Value}
+wasm_wp_resource_rule wp_dataDrop
     {segmentIndex : Nat}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (bytes : List UInt8) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        .dataDrop segmentIndex :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ dataSegmentPointsToAt 0 segmentIndex (some bytes) -∗
-    ▷ (dataSegmentPointsToAt 0 segmentIndex none -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+    (bytes : List UInt8) :
+  .dataDrop segmentIndex, values => values
+  owning dataSegmentPointsToAt 0 segmentIndex (some bytes)
+  returning dataSegmentPointsToAt 0 segmentIndex none := by
   wasm_wp_start_with iintro >Hsegment Hwp
   wasm_data_segment_agree hsegment, segmentIndex, (some bytes),
     (obs ++ obs') $$ [Hσ Hsegment]
@@ -3360,25 +3156,14 @@ theorem wp_memoryInit64DroppedTrap
   wasm_wp_step Step.memoryInit64DroppedTrap hsegment (Or.inl hpos) =>
     wasm_wp_trap_frame
 
-theorem wp_memoryInit32Dropped
-    {params localValues values : List Value}
+wasm_wp_resource_rule wp_memoryInit32Dropped
     {segmentIndex : Nat}
     {destination source len : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hlen : len.toNat = 0) (hdest : destination.toNat = 0) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i32 destination :: values⟩,
-        .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ dataSegmentPointsToAt 0 segmentIndex none -∗
-    ▷ (dataSegmentPointsToAt 0 segmentIndex none -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+    (hlen : len.toNat = 0)
+    (hdest : destination.toNat = 0) :
+  .memoryInit segmentIndex, .i32 len :: .i32 source :: .i32 destination ::
+    values => values
+  owning dataSegmentPointsToAt 0 segmentIndex none := by
   wasm_wp_start_with iintro >Hsegment Hwp
   wasm_data_segment_agree hsegment, segmentIndex, none, (obs ++ obs') $$
     [Hσ Hsegment]
@@ -3393,25 +3178,15 @@ theorem wp_memoryInit32Dropped
     Step.memoryInit32Dropped hsegment (by omega)
   wasm_wp_step_frame expectedStep
 
-theorem wp_memoryInit64Dropped
-    {params localValues values : List Value}
+wasm_wp_resource_rule wp_memoryInit64Dropped
     {segmentIndex : Nat}
-    {destination : UInt64} {source len : UInt32}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hlen : len.toNat = 0) (hdest : destination.toNat = 0) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i32 len :: .i32 source :: .i64 destination :: values⟩,
-        .memoryInit segmentIndex :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ dataSegmentPointsToAt 0 segmentIndex none -∗
-    ▷ (dataSegmentPointsToAt 0 segmentIndex none -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+    {destination : UInt64}
+    {source len : UInt32}
+    (hlen : len.toNat = 0)
+    (hdest : destination.toNat = 0) :
+  .memoryInit segmentIndex, .i32 len :: .i32 source :: .i64 destination ::
+    values => values
+  owning dataSegmentPointsToAt 0 segmentIndex none := by
   wasm_wp_start_with iintro >Hsegment Hwp
   wasm_data_segment_agree hsegment, segmentIndex, none, (obs ++ obs') $$
     [Hσ Hsegment]
@@ -3507,115 +3282,45 @@ wasm_wp_pure_rule wp_vDotAdd {lhs rhs addend : BitVec 128} :
   .vDotAdd, .v128 addend :: .v128 rhs :: .v128 lhs :: values =>
     .v128 (Simd.dotAdd lhs rhs addend) :: values := Step.vDotAdd
 
-theorem wp_unreachable
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, values⟩,
-        .unreachable :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.unreachable)
+wasm_wp_trap_rule wp_unreachable :
+  .unreachable, values := Step.unreachable
 
-theorem wp_refAsNonNullTrap
-    {params localValues values : List Value} {value : Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
+wasm_wp_trap_rule wp_refAsNonNullTrap
+    {value : Value}
     (h : value.isNullRef? = some true) :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, value :: values⟩,
-        .refAsNonNull :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.refAsNonNullTrap h)
+  .refAsNonNull, value :: values := Step.refAsNonNullTrap h
 
-theorem wp_divUZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divUZero)
+wasm_wp_trap_rule wp_divUZero {dividend : UInt32} :
+  .divU, .i32 0 :: .i32 dividend :: values := Step.divUZero
 
-theorem wp_divSZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSZero)
+wasm_wp_trap_rule wp_divSZero {dividend : UInt32} :
+  .divS, .i32 0 :: .i32 dividend :: values := Step.divSZero
 
-theorem wp_divSOverflow
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0xFFFFFFFF :: .i32 0x80000000 :: values⟩,
-        .divS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSOverflow)
+wasm_wp_trap_rule wp_divSOverflow :
+  .divS, .i32 0xFFFFFFFF :: .i32 0x80000000 :: values := Step.divSOverflow
 
-theorem wp_remUZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remU :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remUZero)
+wasm_wp_trap_rule wp_remUZero {dividend : UInt32} :
+  .remU, .i32 0 :: .i32 dividend :: values := Step.remUZero
 
-theorem wp_remSZero
-    {params localValues values : List Value} {dividend : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
-        .remS :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remSZero)
+wasm_wp_trap_rule wp_remSZero {dividend : UInt32} :
+  .remS, .i32 0 :: .i32 dividend :: values := Step.remSZero
 
-theorem wp_divUI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divUI64Zero)
+wasm_wp_trap_rule wp_divUI64Zero {dividend : UInt64} :
+  .divUI64, .i64 0 :: .i64 dividend :: values := Step.divUI64Zero
 
-theorem wp_divSI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSI64Zero)
+wasm_wp_trap_rule wp_divSI64Zero {dividend : UInt64} :
+  .divSI64, .i64 0 :: .i64 dividend :: values := Step.divSI64Zero
 
-theorem wp_divSI64Overflow
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues,
-          .i64 0xFFFFFFFFFFFFFFFF :: .i64 0x8000000000000000 :: values⟩,
-        .divSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.divSI64Overflow)
+wasm_wp_trap_rule wp_divSI64Overflow :
+  .divSI64,
+    .i64 0xFFFFFFFFFFFFFFFF :: .i64 0x8000000000000000 :: values :=
+  Step.divSI64Overflow
 
-theorem wp_remUI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remUI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remUI64Zero)
+wasm_wp_trap_rule wp_remUI64Zero {dividend : UInt64} :
+  .remUI64, .i64 0 :: .i64 dividend :: values := Step.remUI64Zero
 
-theorem wp_remSI64Zero
-    {params localValues values : List Value} {dividend : UInt64}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} :
-    True ⊢ WP (.running
-      ⟨⟨params, localValues, .i64 0 :: .i64 dividend :: values⟩,
-        .remSI64 :: code, arity, remainder, controls, calls⟩ : Expr α) @ E ?{{ Φ }} :=
-  wp_trapStep _ _ _ (fun _ => Step.remSI64Zero)
+wasm_wp_trap_rule wp_remSI64Zero {dividend : UInt64} :
+  .remSI64, .i64 0 :: .i64 dividend :: values := Step.remSI64Zero
 
 theorem wp_brTable
     {params localValues values targetValues : List Value}
@@ -3687,22 +3392,11 @@ wasm_wp_pure_rule wp_vExtractLane
 /-- Primitive Iris rule for the concrete four-byte fill used by the manual
 example. The caller owns the complete affected range; disjoint ownership is
 framed by ordinary separation logic. -/
-theorem wp_fill16_four_AB
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues,
-          .i32 4 :: .i32 0xAB :: .i32 16 :: values⟩,
-        .memoryFill :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 16 oldWord -∗
-    ▷ (pointsTo_u32 0 16 0xABABABAB -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_fill16_four_AB
+    (oldWord : UInt32) :
+  .memoryFill, .i32 4 :: .i32 0xAB :: .i32 16 :: values => values
+  owning pointsTo_u32 0 16 oldWord
+  returning pointsTo_u32 0 16 0xABABABAB := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 16 = oldWord ∧
@@ -3729,24 +3423,12 @@ theorem wp_fill16_four_AB
 /-- Primitive Iris rule for initializing four bytes from passive data segment
 zero. Segment ownership proves that the bytes used by the relational
 transition are the bytes in the physical instantiated store. -/
-theorem wp_memoryInit16_four
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues,
-          .i32 4 :: .i32 0 :: .i32 16 :: values⟩,
-        .memoryInit 0 :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ (pointsTo_u32 0 16 oldWord ∗
-      dataSegmentPointsTo ⟨0, 0⟩ (some [1, 2, 3, 4])) -∗
-    ▷ (pointsTo_u32 0 16 0x04030201 ∗
-      dataSegmentPointsTo ⟨0, 0⟩ (some [1, 2, 3, 4]) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_memoryInit16_four
+    (oldWord : UInt32) :
+  .memoryInit 0, .i32 4 :: .i32 0 :: .i32 16 :: values => values
+  owning (pointsTo_u32 0 16 oldWord ∗ dataSegmentPointsTo ⟨0, 0⟩ (some [1, 2, 3, 4]))
+  returning pointsTo_u32 0 16 0x04030201 ∗ dataSegmentPointsTo ⟨0, 0⟩
+    (some [1, 2, 3, 4]) := by
   wasm_wp_start_with iintro >⟨Hword, Hsegment⟩ Hwp
   simp only [← dataSegmentPointsToAt_eq]
   wasm_data_segment_agree hsegment, 0, (some [1, 2, 3, 4]),
@@ -3777,21 +3459,11 @@ theorem wp_memoryInit16_four
 
 /-- Primitive Iris rule for consuming passive data segment zero. The post owns
 the dropped status, preventing the old bytes from being reused. -/
-theorem wp_dataDrop0
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (bytes : List UInt8) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        .dataDrop 0 :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ dataSegmentPointsTo ⟨0, 0⟩ (some bytes) -∗
-    ▷ (dataSegmentPointsTo ⟨0, 0⟩ none -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_dataDrop0
+    (bytes : List UInt8) :
+  .dataDrop 0, values => values
+  owning dataSegmentPointsTo ⟨0, 0⟩ (some bytes)
+  returning dataSegmentPointsTo ⟨0, 0⟩ none := by
   wasm_wp_start_with iintro >Hsegment Hwp
   simp only [← dataSegmentPointsToAt_eq]
   wasm_data_segment_agree hsegment, 0, (some bytes), (obs ++ obs') $$
@@ -3819,23 +3491,12 @@ theorem wp_dataDrop0
 
 /-- Primitive Iris rule for `elem.drop`. A live element-segment fragment is
 consumed and replaced by ownership of its dropped physical state. -/
-theorem wp_elemDrop
-    {params localValues values : List Value}
-    {elementIndex : Nat} {entries : List (Option Nat)}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        .elemDrop elementIndex :: code,
-        arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ elementSegmentPointsToAt 0 elementIndex (some entries) -∗
-    ▷ (elementSegmentPointsToAt 0 elementIndex none -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_elemDrop
+    {elementIndex : Nat}
+    {entries : List (Option Nat)} :
+  .elemDrop elementIndex, values => values
+  owning elementSegmentPointsToAt 0 elementIndex (some entries)
+  returning elementSegmentPointsToAt 0 elementIndex none := by
   dsimp only
   simp only [elementSegmentPointsToAt]
   wasm_wp_begin_with iintro >Hsegment Hwp
@@ -3953,22 +3614,10 @@ theorem wp_tableInitLive
 /-- Primitive Iris rule for the overlapping four-byte copy from address 0 to
 address 2. One eight-byte owner represents the aliased source/destination
 footprint, and the postcondition exposes the memmove result. -/
-theorem wp_copy2_zero_four
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues,
-          .i32 4 :: .i32 0 :: .i32 2 :: values⟩,
-        .memoryCopy :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u64 0 0 0x8877665544332211 -∗
-    ▷ (pointsTo_u64 0 0 0x8877443322112211 -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_copy2_zero_four :
+  .memoryCopy, .i32 4 :: .i32 0 :: .i32 2 :: values => values
+  owning pointsTo_u64 0 0 0x8877665544332211
+  returning pointsTo_u64 0 0 0x8877443322112211 := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read64 0 = 0x8877665544332211 ∧
@@ -3997,24 +3646,11 @@ theorem wp_copy2_zero_four
 /-- Primitive Iris rule for an aligned four-byte copy from address 0 to 8.
 Both source and destination ranges are owned; source ownership is preserved
 and destination ownership receives the copied word. -/
-theorem wp_copy8_zero_four
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldDestination : UInt32) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues,
-          .i32 4 :: .i32 0 :: .i32 8 :: values⟩,
-        .memoryCopy :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ (pointsTo_u32 0 0 0x04030201 ∗
-      pointsTo_u32 0 8 oldDestination) -∗
-    ▷ (pointsTo_u32 0 0 0x04030201 ∗
-      pointsTo_u32 0 8 0x04030201 -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+wasm_wp_resource_rule wp_copy8_zero_four
+    (oldDestination : UInt32) :
+  .memoryCopy, .i32 4 :: .i32 0 :: .i32 8 :: values => values
+  owning (pointsTo_u32 0 0 0x04030201 ∗ pointsTo_u32 0 8 oldDestination)
+  returning pointsTo_u32 0 0 0x04030201 ∗ pointsTo_u32 0 8 0x04030201 := by
   wasm_wp_start_with iintro >⟨Hsource, Hdestination⟩ Hwp
   ihave_pure HsourceFacts :
       ⌜store.wasm.mem.read32 0 = 0x04030201 ∧
@@ -4502,25 +4138,15 @@ theorem wp_v128Store
     wasm_wp_frame
       iapply_exact Hwp $$ [$Hlo] with Hhi
 
-theorem wp_load8UMemory64
-    {params localValues values : List Value}
-    {address : UInt64} {offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (byte : UInt8)
+wasm_wp_resource_rule wp_load8UMemory64
+    {address : UInt64}
+    {offset : UInt32}
+    (byte : UInt8)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load8U offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load8U offset, .i64 address :: values => .i32 byte.toUInt32 :: values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address.toUInt32 + offset) = byte ∧
       (address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -4534,26 +4160,16 @@ theorem wp_load8UMemory64
       (Step.load8U (α := α) (address := Value.i64 address) rfl hbound)) =>
     wasm_wp_frame
 
-theorem wp_load8SMemory64
-    {params localValues values : List Value}
-    {address : UInt64} {offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (byte : UInt8)
+wasm_wp_resource_rule wp_load8SMemory64
+    {address : UInt64}
+    {offset : UInt32}
+    (byte : UInt8)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load8S offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i32 (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load8S offset, .i64 address :: values => .i32
+    (Int32.ofInt (signExtend (byte.toUInt32.toNat % 256) 8)).toUInt32 :: values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some byte) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure Hfacts : ⌜store.wasm.mem.read8 (address.toUInt32 + offset) = byte ∧
       (address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -4573,24 +4189,15 @@ theorem wp_load8SMemory64
     exact Step.load8S (address := Value.i64 address) rfl hbound
   wasm_wp_step_frame expectedStep
 
-theorem wp_load16UMemory64
-    {params localValues values : List Value}
-    {address : UInt64} {offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load16UMemory64
+    {address : UInt64}
+    {offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat)
     (h1 : ((address.toUInt32 + offset) + 1).toNat = (address.toUInt32 + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load16U offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 (word &&& 0xFFFF) :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address.toUInt32 + offset) word -∗
-    ▷ (pointsTo_u16 0 (address.toUInt32 + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load16U offset, .i64 address :: values => .i32 (word &&& 0xFFFF) :: values
+  owning pointsTo_u16 0 (address.toUInt32 + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address.toUInt32 + offset) = word &&& 0xFFFF ∧
@@ -4605,26 +4212,17 @@ theorem wp_load16UMemory64
       Step.load16U (α := α) (address := Value.i64 address) rfl hbound) =>
     wasm_wp_frame
 
-theorem wp_load16SMemory64
-    {params localValues values : List Value}
-    {address : UInt64} {offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load16SMemory64
+    {address : UInt64}
+    {offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat)
     (h1 : ((address.toUInt32 + offset) + 1).toNat = (address.toUInt32 + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load16S offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues,
-        .i32
-          (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address.toUInt32 + offset) word -∗
-    ▷ (pointsTo_u16 0 (address.toUInt32 + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load16S offset, .i64 address :: values => .i32
+    (Int32.ofInt (signExtend ((word &&& 0xFFFF).toNat % 65536) 16)).toUInt32 ::
+    values
+  owning pointsTo_u16 0 (address.toUInt32 + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address.toUInt32 + offset) = word &&& 0xFFFF ∧
@@ -4647,24 +4245,17 @@ theorem wp_load16SMemory64
     exact Step.load16S (address := Value.i64 address) rfl hbound
   wasm_wp_step_frame expectedStep
 
-theorem wp_store8Memory64
-    {params localValues values : List Value}
-    {address : UInt64} {value offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldByte : UInt8)
+wasm_wp_resource_rule wp_store8Memory64
+    {address : UInt64}
+    {value offset : UInt32}
+    (oldByte : UInt8)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
-        .store8 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some oldByte) -∗
-    ▷ (pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
-        ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some value.toUInt8) -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store8 offset, .i32 value :: .i64 address :: values => values
+  owning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some oldByte)
+  returning pointsTo (GF := WasmHeapGF α) (H := WasmHeapMap)
+    ⟨0, address.toUInt32 + offset⟩ (DFrac.own 1) (some value.toUInt8) := by
   wasm_wp_start_with iintro >Hpt Hwp
   ihave_pure HinBounds :
       ⌜(address.toUInt32 + offset).toNat < store.wasm.mem.pages * 65536⌝ using
@@ -4689,23 +4280,16 @@ theorem wp_store8Memory64
         HinBounds $$ [$Hσ $Hpt] with ⟨Hσ, Hpt⟩
     wasm_wp_frame
 
-theorem wp_store16Memory64
-    {params localValues values : List Value}
-    {address : UInt64} {value offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_store16Memory64
+    {address : UInt64}
+    {value offset : UInt32}
+    (oldWord : UInt32)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat)
     (h1 : ((address.toUInt32 + offset) + 1).toNat = (address.toUInt32 + offset).toNat + 1) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
-        .store16 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u16 0 (address.toUInt32 + offset) oldWord -∗
-    ▷ (pointsTo_u16 0 (address.toUInt32 + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store16 offset, .i32 value :: .i64 address :: values => values
+  owning pointsTo_u16 0 (address.toUInt32 + offset) oldWord
+  returning pointsTo_u16 0 (address.toUInt32 + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read16 (address.toUInt32 + offset) = oldWord &&& 0xFFFF ∧
@@ -4732,26 +4316,17 @@ theorem wp_store16Memory64
         [$Hσ $Hword] with ⟨Hσ, Hword⟩
     wasm_wp_frame
 
-theorem wp_load32Memory64
-    {params localValues values : List Value}
-    {address : UInt64} {offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (word : UInt32)
+wasm_wp_resource_rule wp_load32Memory64
+    {address : UInt64}
+    {offset : UInt32}
+    (word : UInt32)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat)
     (h1 : ((address.toUInt32 + offset) + 1).toNat = (address.toUInt32 + offset).toNat + 1)
     (h2 : ((address.toUInt32 + offset) + 2).toNat = (address.toUInt32 + offset).toNat + 2)
     (h3 : ((address.toUInt32 + offset) + 3).toNat = (address.toUInt32 + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i64 address :: values⟩,
-        .load32 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, .i32 word :: values⟩,
-        code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address.toUInt32 + offset) word -∗
-    ▷ (pointsTo_u32 0 (address.toUInt32 + offset) word -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .load32 offset, .i64 address :: values => .i32 word :: values
+  owning pointsTo_u32 0 (address.toUInt32 + offset) word := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address.toUInt32 + offset) = word ∧
@@ -4766,25 +4341,18 @@ theorem wp_load32Memory64
       Step.load32 (α := α) (address := Value.i64 address) rfl hbound) =>
     wasm_wp_frame
 
-theorem wp_store32Memory64
-    {params localValues values : List Value}
-    {address : UInt64} {value offset : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} (oldWord : UInt32)
+wasm_wp_resource_rule wp_store32Memory64
+    {address : UInt64}
+    {value offset : UInt32}
+    (oldWord : UInt32)
     (hnowrap : (address.toUInt32 + offset).toNat = address.toUInt32.toNat + offset.toNat)
     (hsmall : address.toUInt32.toNat = address.toNat)
     (h1 : ((address.toUInt32 + offset) + 1).toNat = (address.toUInt32 + offset).toNat + 1)
     (h2 : ((address.toUInt32 + offset) + 2).toNat = (address.toUInt32 + offset).toNat + 2)
     (h3 : ((address.toUInt32 + offset) + 3).toNat = (address.toUInt32 + offset).toNat + 3) :
-    let current : ThreadState α :=
-      ⟨⟨params, localValues, .i32 value :: .i64 address :: values⟩,
-        .store32 offset :: code, arity, remainder, controls, calls⟩
-    let next : ThreadState α :=
-      ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩
-    ▷ pointsTo_u32 0 (address.toUInt32 + offset) oldWord -∗
-    ▷ (pointsTo_u32 0 (address.toUInt32 + offset) value -∗
-      WP (Expr.running next : Expr α) @ s; E {{ Φ }}) -∗
-      WP (Expr.running current : Expr α) @ s; E {{ Φ }} := by
+  .store32 offset, .i32 value :: .i64 address :: values => values
+  owning pointsTo_u32 0 (address.toUInt32 + offset) oldWord
+  returning pointsTo_u32 0 (address.toUInt32 + offset) value := by
   wasm_wp_start_with iintro >Hword Hwp
   ihave_pure Hfacts :
       ⌜store.wasm.mem.read32 (address.toUInt32 + offset) = oldWord ∧

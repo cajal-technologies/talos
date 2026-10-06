@@ -162,17 +162,14 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_adequacy_outcome_at
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
-    simp only [BI.BigSepM.bigSepM_singleton.to_eq]
+    iexists σ, globalσ, (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentHost)
+    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,
@@ -292,17 +289,14 @@ theorem wasm_smallStep_heap_globals_runtime_host_stronglyNormalizing_outcome
   wasm_build_machine_aux config
   isplitl [Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc]
   · iapply (stateInterp_eq config.store 0 [] 0).mpr
-    iexists σ
-    iexists globalσ
-    iexists (∅ : WasmDataSegmentMap (Option (List UInt8)))
-    iexists (∅ : WasmTableMap TableInst)
-    iexists (∅ : WasmElementSegmentMap (Option (List (Option Nat))))
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-      config.store.runtime.currentModule)
-    iexists (PartialMap.singleton config.store.runtime.entry.id
-    config.store.runtime.currentHost)
-    unfold runtimeModuleElem runtimeInstancesOwn hostStateAuth currentInstanceAuth currentInstanceAuthN
-    simp only [BI.BigSepM.bigSepM_singleton.to_eq]
+    iexists σ, globalσ, (∅ : WasmDataSegmentMap (Option (List UInt8))),
+      (∅ : WasmTableMap TableInst),
+      (∅ : WasmElementSegmentMap (Option (List (Option Nat)))),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentModule),
+      (PartialMap.singleton config.store.runtime.entry.id
+        config.store.runtime.currentHost)
+    wasm_unfold_stateInterp [BI.BigSepM.bigSepM_singleton.to_eq]
     iframe Hheap Hglobals Hsegments Htables HelementSegments HruntimeModuleAuth' # HruntimeInstances HinstanceState HhostEnvAuth' HhostState Hexc
     ipureexact ⟨hagree, hinBounds, hglobals,
       dataSegmentHeapAgrees_empty _,

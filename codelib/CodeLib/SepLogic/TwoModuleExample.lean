@@ -25,10 +25,6 @@ def xInst : ModuleInstance Unit where
   host            := { funcs := [] }
   resolvedImports := #[.wasm ⟨1⟩ 0]
 
-@[simp] private theorem xInst_currentModule :
-    ({ instances := #[xInst, xInst], entry := ⟨0⟩ } : RuntimeEnv Unit).currentModule = xInst.module := by
-  simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-
 def twoModuleConfig : Config Unit :=
   { expr := .running
       { locals          := { params := [], locals := [], values := [] }
@@ -53,7 +49,7 @@ theorem twoModule_partiallyMeets :
     PartiallyMeets twoModuleConfig (fun values _store => values = []) := by
   apply wasm_smallStep_runtime_instance_partiallyMeets (α := Unit)
   wasm_adequacy_intro gs =>
-    simp only [twoModuleConfig, xInst_currentModule]
+    simp only [twoModuleConfig, RuntimeEnv.currentModule_mk2_fst]
     iintro ⟨Hruntime, HruntimeInstances⟩
     iapply wp_callCrossInstance ⟨0⟩ xInst ⟨1⟩ xInst #[xInst, xInst] 0 xImp 0 xFn
         rfl rfl (by decide) rfl (Nat.le.refl) rfl rfl

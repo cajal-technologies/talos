@@ -57,6 +57,23 @@ structure HostEnv (α : Type) where
 
 instance : Inhabited (HostEnv α) := ⟨{}⟩
 
+/-! ## Memory bounds shared by hosts
+
+Every byte-buffer host (`StdIO`, `Random`, …) needs the same half-open-range
+check before touching linear memory. Neither helper inspects the
+host-specific `.host` field — only `.mem` — so they live here once, generic
+in the host state, instead of being re-derived per host. Each host
+re-exports these two names under its own namespace to keep its public API
+unchanged. -/
+
+/-- The number of addressable bytes in `st`'s primary linear memory. -/
+def Store.byteCapacity (st : Store α) : Nat := st.mem.pages * 65536
+
+/-- Whether the half-open range `[pointer, pointer + length)` lies inside
+`st`'s primary linear memory. -/
+def Store.rangeInBounds (st : Store α) (pointer length : Nat) : Bool :=
+  pointer + length ≤ st.byteCapacity
+
 /-! ## Contracts and specifications
 
 `HostContract` is the proof-side counterpart to `HostFn`: instead of
@@ -117,5 +134,20 @@ theorem HostEnv.Satisfies.lookup_contract
   injection hC' with hc
   subst hc
   exact ⟨hf, hEnv, hCall⟩
+
+/-- The single-import case of `Satisfies`: a host offering exactly one
+resolver, checked against a spec offering exactly one contract for it,
+satisfies that spec for any module declaring exactly one import — provided
+the resolver meets the contract pointwise. Hosts with more than one import
+(e.g. `StdIO`) prove `Satisfies` directly instead. -/
+theorem HostEnv.singleton_satisfies {α : Type} {m : Module}
+    (hostFn : HostFn α) (contract : HostContract α)
+    (himports : m.imports.length = 1)
+    (hcontract : ∀ st args, contract st args (hostFn.invoke st args)) :
+    ({ funcs := [hostFn] } : HostEnv α).Satisfies m { contracts := [contract] } := by
+  intro i hi
+  have hzero : i = 0 := by omega
+  subst hzero
+  exact ⟨hostFn, contract, rfl, rfl, hcontract⟩
 
 end Wasm

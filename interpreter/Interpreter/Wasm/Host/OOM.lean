@@ -60,13 +60,8 @@ def spec : HostSpec State := { contracts := [oomContract] }
 /-- The concrete environment satisfies the OOM specification for a module
 whose import list consists exactly of the terminal OOM function. -/
 theorem env_satisfies (module : Module) (himports : module.imports = imports) :
-    env.Satisfies module spec := by
-  intro index hindex
-  rw [himports] at hindex
-  have hzero : index = 0 := by simpa [imports] using hindex
-  subst index
-  refine ⟨oomHost, oomContract, rfl, rfl, ?_⟩
-  intro store args
-  rfl
+    env.Satisfies module spec :=
+  HostEnv.singleton_satisfies oomHost oomContract (by rw [himports]; rfl)
+    (fun _ _ => rfl)
 
 end Wasm.OOM

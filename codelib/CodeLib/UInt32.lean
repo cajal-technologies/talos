@@ -54,15 +54,15 @@ theorem Nat.reassemble32_of_lt (n : Nat) (h : n < 2 ^ 32) :
 
 namespace Wasm
 
-/-- The reverse `UInt32` inequality follows when strict comparison fails. -/
-theorem UInt32.le_of_not_lt {a b : UInt32} (h : ¬a < b) : b ≤ a := by
-  change ¬a.toNat < b.toNat at h
-  exact Nat.le_of_not_lt h
+/-- The reverse `UInt32` inequality follows when strict comparison fails.
+Exactly core's `UInt32.not_lt : ¬a < b ↔ b ≤ a`. -/
+theorem UInt32.le_of_not_lt {a b : UInt32} (h : ¬a < b) : b ≤ a := UInt32.not_lt.mp h
 
-/-- The reverse `UInt32` inequality follows when non-strict comparison fails. -/
-theorem UInt32.le_of_not_le {a b : UInt32} (h : ¬a ≤ b) : b ≤ a := by
-  change ¬a.toNat ≤ b.toNat at h
-  exact Nat.le_of_lt (Nat.lt_of_not_le h)
+/-- The reverse `UInt32` inequality follows when non-strict comparison fails.
+Core's `UInt32.not_le : ¬a ≤ b ↔ b < a` gives the strict fact; `UInt32.le_of_lt`
+weakens it. -/
+theorem UInt32.le_of_not_le {a b : UInt32} (h : ¬a ≤ b) : b ≤ a :=
+  UInt32.le_of_lt (UInt32.not_le.mp h)
 
 /-- `n &&& 1 = 0` (bitwise low-bit zero) is equivalent to
 `n.toNat % 2 = 0` (semantic evenness). The forward proof factors

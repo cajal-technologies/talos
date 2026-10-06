@@ -70,21 +70,21 @@ macro "wp_atomic" : tactic => `(tactic|
 @[simp, wp_simp] theorem wp_add_cons :
     wp m (.add :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a + b) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (b + a) :: vs } env
      | _ => Q (.Invalid "add: ill-shaped operand stack")) := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_sub_cons :
     wp m (.sub :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (b - a) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (a - b) :: vs } env
      | _ => Q (.Invalid "sub: ill-shaped operand stack")) := by
   wp_atomic
 
 @[simp, wp_simp] theorem wp_mul_cons :
     wp m (.mul :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a * b) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (b * a) :: vs } env
      | _ => Q (.Invalid "mul: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -215,7 +215,7 @@ macro "wp_atomic" : tactic => `(tactic|
 @[simp, wp_simp] theorem wp_and_cons :
     wp m (.and :: rest) Q st s env ↔
     (match s.values with
-     | .i32 a :: .i32 b :: vs => wp m rest Q st { s with values := .i32 (a &&& b) :: vs } env
+     | .i32 b :: .i32 a :: vs => wp m rest Q st { s with values := .i32 (b &&& a) :: vs } env
      | _ => Q (.Invalid "and: ill-shaped operand stack")) := by
   wp_atomic
 
@@ -729,271 +729,214 @@ macro "wp_atomic" : tactic => `(tactic|
 
 /-! ## Memory load / store -/
 
-@[simp, wp_simp] theorem wp_load32_cons :
-    wp m (.load32 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (st.mem.read32 (a + off)) :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (st.mem.read32 (a.toUInt32 + off)) :: vs } env
-     | _ => Q (.Invalid "load32: ill-shaped operand stack")) := by
-  wp_atomic
+/-- One memory load/store rule: `wp m (INSTR :: rest) Q st s env ↔ match
+s.values with | pat32 => .. | pat64 => .. | _ => Q (.Invalid LABEL)`, with an
+`N`-byte bounds check guarding each arm's body, `:= by wp_atomic`. Every rule
+below fits this shape — only the instruction, the byte count, and the two
+address-typed patterns and bodies vary between them.
 
-@[simp, wp_simp] theorem wp_store32_cons :
-    wp m (.store32 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write32 (a + off) v } { s with values := vs } env
-     | .i32 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v } { s with values := vs } env
-     | _ => Q (.Invalid "store32: ill-shaped operand stack")) := by
-  wp_atomic
+`m`/`Q`/`st`/`s`/`env`/`rest`/`off`/`a` are built with `mkIdent`, not written
+as literal tokens of this macro's own quotation: a name written literally
+here would be hygienically distinct from the same name in a caller-supplied
+`body`, which needs `st`/`Q`/… below to be *the* `st`/`Q` the caller's `wp …`
+arm talks about, not a fresh, unrelated one. -/
+syntax "wp_mem_rule " ident num str " : " term
+  " | " term " => " term
+  " | " term " => " term : command
 
-@[simp, wp_simp] theorem wp_load8U_cons :
-    wp m (.load8U off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (st.mem.read8 (a + off)).toUInt32 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (st.mem.read8 (a.toUInt32 + off)).toUInt32 :: vs } env
-     | _ => Q (.Invalid "load8U: ill-shaped operand stack")) := by
-  wp_atomic
+macro_rules
+  | `(wp_mem_rule $name $n $label : $instr
+        | $pat32 => $body32
+        | $pat64 => $body64) => do
+    let m := Lean.mkIdent `m
+    let Q := Lean.mkIdent `Q
+    let st := Lean.mkIdent `st
+    let s := Lean.mkIdent `s
+    let env := Lean.mkIdent `env
+    let rest := Lean.mkIdent `rest
+    let off := Lean.mkIdent `off
+    let a := Lean.mkIdent `a
+    `(@[simp, wp_simp] theorem $name :
+        wp $m ($instr :: $rest) $Q $st $s $env ↔
+        (match ($s).values with
+         | $pat32 =>
+           if ($a).toNat + ($off).toNat + $n > ($st).mem.pages * 65536 then
+             $Q (.Trap $st "out of bounds memory access")
+           else $body32
+         | $pat64 =>
+           if ($a).toNat + ($off).toNat + $n > ($st).mem.pages * 65536 then
+             $Q (.Trap $st "out of bounds memory access")
+           else $body64
+         | _ => $Q (.Invalid $label)) := by
+      wp_atomic)
 
-@[simp, wp_simp] theorem wp_load8S_cons :
-    wp m (.load8S off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read8 (a + off)).toNat 8)).toUInt32 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read8 (a.toUInt32 + off)).toNat 8)).toUInt32 :: vs } env
-     | _ => Q (.Invalid "load8S: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load32_cons 4 "load32: ill-shaped operand stack" :
+    .load32 off
+  | .i32 a :: vs =>
+    wp m rest Q st { s with values := .i32 (st.mem.read32 (a + off)) :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (st.mem.read32 (a.toUInt32 + off)) :: vs } env
 
-@[simp, wp_simp] theorem wp_load16U_cons :
-    wp m (.load16U off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (st.mem.read16 (a + off)) :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (st.mem.read16 (a.toUInt32 + off)) :: vs } env
-     | _ => Q (.Invalid "load16U: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_store32_cons 4 "store32: ill-shaped operand stack" :
+    .store32 off
+  | .i32 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write32 (a + off) v }
+      { s with values := vs } env
+  | .i32 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v }
+      { s with values := vs } env
 
-@[simp, wp_simp] theorem wp_load16S_cons :
-    wp m (.load16S off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read16 (a + off)).toNat 16)).toUInt32 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read16 (a.toUInt32 + off)).toNat 16)).toUInt32 :: vs } env
-     | _ => Q (.Invalid "load16S: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load8U_cons 1 "load8U: ill-shaped operand stack" :
+    .load8U off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (st.mem.read8 (a + off)).toUInt32 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (st.mem.read8 (a.toUInt32 + off)).toUInt32 :: vs } env
 
-@[simp, wp_simp] theorem wp_store8_cons :
-    wp m (.store8 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write8 (a + off) v.toUInt8 } { s with values := vs } env
-     | .i32 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write8 (a.toUInt32 + off) v.toUInt8 } { s with values := vs } env
-     | _ => Q (.Invalid "store8: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load8S_cons 1 "load8S: ill-shaped operand stack" :
+    .load8S off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read8 (a + off)).toNat 8)).toUInt32 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read8 (a.toUInt32 + off)).toNat 8)).toUInt32 :: vs } env
 
-@[simp, wp_simp] theorem wp_store16_cons :
-    wp m (.store16 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write16 (a + off) v } { s with values := vs } env
-     | .i32 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write16 (a.toUInt32 + off) v } { s with values := vs } env
-     | _ => Q (.Invalid "store16: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load16U_cons 2 "load16U: ill-shaped operand stack" :
+    .load16U off
+  | .i32 a :: vs =>
+    wp m rest Q st { s with values := .i32 (st.mem.read16 (a + off)) :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (st.mem.read16 (a.toUInt32 + off)) :: vs } env
 
-@[simp, wp_simp] theorem wp_load64_cons :
-    wp m (.load64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read64 (a + off)) :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read64 (a.toUInt32 + off)) :: vs } env
-     | _ => Q (.Invalid "load64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load16S_cons 2 "load16S: ill-shaped operand stack" :
+    .load16S off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read16 (a + off)).toNat 16)).toUInt32 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i32 (Int32.ofInt (signExtend (st.mem.read16 (a.toUInt32 + off)).toNat 16)).toUInt32 :: vs } env
 
-@[simp, wp_simp] theorem wp_store64_cons :
-    wp m (.store64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i64 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write64 (a + off) v } { s with values := vs } env
-     | .i64 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 8 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write64 (a.toUInt32 + off) v } { s with values := vs } env
-     | _ => Q (.Invalid "store64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_store8_cons 1 "store8: ill-shaped operand stack" :
+    .store8 off
+  | .i32 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write8 (a + off) v.toUInt8 }
+      { s with values := vs } env
+  | .i32 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write8 (a.toUInt32 + off) v.toUInt8 }
+      { s with values := vs } env
 
-@[simp, wp_simp] theorem wp_load8UI64_cons :
-    wp m (.load8UI64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read8 (a + off)).toUInt64 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read8 (a.toUInt32 + off)).toUInt64 :: vs } env
-     | _ => Q (.Invalid "load8UI64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_store16_cons 2 "store16: ill-shaped operand stack" :
+    .store16 off
+  | .i32 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write16 (a + off) v }
+      { s with values := vs } env
+  | .i32 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write16 (a.toUInt32 + off) v }
+      { s with values := vs } env
 
-@[simp, wp_simp] theorem wp_load8SI64_cons :
-    wp m (.load8SI64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read8 (a + off)).toNat 8)).toUInt64 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read8 (a.toUInt32 + off)).toNat 8)).toUInt64 :: vs } env
-     | _ => Q (.Invalid "load8SI64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load64_cons 8 "load64: ill-shaped operand stack" :
+    .load64 off
+  | .i32 a :: vs =>
+    wp m rest Q st { s with values := .i64 (st.mem.read64 (a + off)) :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read64 (a.toUInt32 + off)) :: vs } env
 
-@[simp, wp_simp] theorem wp_load16UI64_cons :
-    wp m (.load16UI64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read16 (a + off)).toUInt64 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read16 (a.toUInt32 + off)).toUInt64 :: vs } env
-     | _ => Q (.Invalid "load16UI64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_store64_cons 8 "store64: ill-shaped operand stack" :
+    .store64 off
+  | .i64 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write64 (a + off) v }
+      { s with values := vs } env
+  | .i64 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write64 (a.toUInt32 + off) v }
+      { s with values := vs } env
 
-@[simp, wp_simp] theorem wp_load16SI64_cons :
-    wp m (.load16SI64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read16 (a + off)).toNat 16)).toUInt64 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read16 (a.toUInt32 + off)).toNat 16)).toUInt64 :: vs } env
-     | _ => Q (.Invalid "load16SI64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load8UI64_cons 1 "load8UI64: ill-shaped operand stack" :
+    .load8UI64 off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read8 (a + off)).toUInt64 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read8 (a.toUInt32 + off)).toUInt64 :: vs } env
 
-@[simp, wp_simp] theorem wp_load32UI64_cons :
-    wp m (.load32UI64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read32 (a + off)).toUInt64 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (st.mem.read32 (a.toUInt32 + off)).toUInt64 :: vs } env
-     | _ => Q (.Invalid "load32UI64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load8SI64_cons 1 "load8SI64: ill-shaped operand stack" :
+    .load8SI64 off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read8 (a + off)).toNat 8)).toUInt64 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read8 (a.toUInt32 + off)).toNat 8)).toUInt64 :: vs } env
 
-@[simp, wp_simp] theorem wp_load32SI64_cons :
-    wp m (.load32SI64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i32 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read32 (a + off)).toNat 32)).toUInt64 :: vs } env
-     | .i64 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q st { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read32 (a.toUInt32 + off)).toNat 32)).toUInt64 :: vs } env
-     | _ => Q (.Invalid "load32SI64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load16UI64_cons 2 "load16UI64: ill-shaped operand stack" :
+    .load16UI64 off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read16 (a + off)).toUInt64 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read16 (a.toUInt32 + off)).toUInt64 :: vs } env
 
-@[simp, wp_simp] theorem wp_store8I64_cons :
-    wp m (.store8I64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i64 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write8 (a + off) v.toUInt8 } { s with values := vs } env
-     | .i64 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 1 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write8 (a.toUInt32 + off) v.toUInt8 } { s with values := vs } env
-     | _ => Q (.Invalid "store8I64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load16SI64_cons 2 "load16SI64: ill-shaped operand stack" :
+    .load16SI64 off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read16 (a + off)).toNat 16)).toUInt64 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read16 (a.toUInt32 + off)).toNat 16)).toUInt64 :: vs } env
 
-@[simp, wp_simp] theorem wp_store16I64_cons :
-    wp m (.store16I64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i64 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write16 (a + off) v.toUInt32 } { s with values := vs } env
-     | .i64 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 2 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write16 (a.toUInt32 + off) v.toUInt32 } { s with values := vs } env
-     | _ => Q (.Invalid "store16I64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load32UI64_cons 4 "load32UI64: ill-shaped operand stack" :
+    .load32UI64 off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read32 (a + off)).toUInt64 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (st.mem.read32 (a.toUInt32 + off)).toUInt64 :: vs } env
 
-@[simp, wp_simp] theorem wp_store32I64_cons :
-    wp m (.store32I64 off :: rest) Q st s env ↔
-    (match s.values with
-     | .i64 v :: .i32 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write32 (a + off) v.toUInt32 } { s with values := vs } env
-     | .i64 v :: .i64 a :: vs =>
-       if a.toNat + off.toNat + 4 > st.mem.pages * 65536 then
-         Q (.Trap st "out of bounds memory access")
-       else wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v.toUInt32 } { s with values := vs } env
-     | _ => Q (.Invalid "store32I64: ill-shaped operand stack")) := by
-  wp_atomic
+wp_mem_rule wp_load32SI64_cons 4 "load32SI64: ill-shaped operand stack" :
+    .load32SI64 off
+  | .i32 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read32 (a + off)).toNat 32)).toUInt64 :: vs } env
+  | .i64 a :: vs =>
+    wp m rest Q st
+      { s with values := .i64 (Int64.ofInt (signExtend (st.mem.read32 (a.toUInt32 + off)).toNat 32)).toUInt64 :: vs } env
+
+wp_mem_rule wp_store8I64_cons 1 "store8I64: ill-shaped operand stack" :
+    .store8I64 off
+  | .i64 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write8 (a + off) v.toUInt8 }
+      { s with values := vs } env
+  | .i64 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write8 (a.toUInt32 + off) v.toUInt8 }
+      { s with values := vs } env
+
+wp_mem_rule wp_store16I64_cons 2 "store16I64: ill-shaped operand stack" :
+    .store16I64 off
+  | .i64 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write16 (a + off) v.toUInt32 }
+      { s with values := vs } env
+  | .i64 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write16 (a.toUInt32 + off) v.toUInt32 }
+      { s with values := vs } env
+
+wp_mem_rule wp_store32I64_cons 4 "store32I64: ill-shaped operand stack" :
+    .store32I64 off
+  | .i64 v :: .i32 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write32 (a + off) v.toUInt32 }
+      { s with values := vs } env
+  | .i64 v :: .i64 a :: vs =>
+    wp m rest Q { st with mem := st.mem.write32 (a.toUInt32 + off) v.toUInt32 }
+      { s with values := vs } env
 
 @[simp, wp_simp] theorem wp_memorySize_cons :
     wp m (.memorySize :: rest) Q st s env ↔

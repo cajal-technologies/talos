@@ -14,13 +14,31 @@ namespace Wasm.Examples.SmallStep
 
 open Wasm.SmallStep
 
+/-! ## Single-module scaffolding
+
+Almost every example here is one module running alone, so its runtime and its
+store are always the same two literals. Naming them keeps each example's own
+definitions to the part that differs. They are `abbrev`s so the `decide
++kernel` and `rfl` checks below reduce through them exactly as they did
+through the literals. -/
+
+/-- The runtime environment of a module running on its own, entry instance 0. -/
+abbrev singleModuleRuntime (m : Module) (host : HostEnv Unit := {}) :
+    RuntimeEnv Unit :=
+  { instances := #[{ module := m, host }], entry := ⟨0⟩ }
+
+/-- That runtime paired with the module's own initial wasm store. -/
+abbrev singleModuleStore (m : Module) (host : HostEnv Unit := {}) :
+    MachineStore Unit :=
+  { runtime := singleModuleRuntime m host, wasm := m.initialStore }
+
 def arithmeticModule : Module :=
   { funcs :=
       [ { body := [.const 40, .const 2, .add], results := [.i32] }
       , { body := [.const 1, .const 0, .divU], results := [.i32] } ] }
 
 def arithmeticRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := arithmeticModule, host := {} }], entry := ⟨0⟩ }
+  singleModuleRuntime arithmeticModule
 
 def arithmeticConfig : Config Unit :=
   { expr := .running
@@ -58,8 +76,7 @@ def comparisonConfig : Config Unit :=
       { locals := {}, code := comparisonModule.funcs[0]!.body,
         resultArity := 3, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := comparisonModule, host := {} }], entry := ⟨0⟩ },
-        wasm := comparisonModule.initialStore } }
+      singleModuleStore comparisonModule }
 
 theorem comparisons_small_step :
     (runSteps 11 comparisonConfig).result.values? =
@@ -87,7 +104,7 @@ def memoryModule : Module :=
     memory := some { pagesMin := 1 } }
 
 def memoryRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := memoryModule, host := {} }], entry := ⟨0⟩ }
+  singleModuleRuntime memoryModule
 
 def memoryRoundtripConfig : Config Unit :=
   { expr := .running
@@ -172,8 +189,7 @@ def memoryGrowthConfig : Config Unit :=
       { locals := {}, code := memoryGrowthModule.funcs[0]!.body,
         resultArity := 5, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memoryGrowthModule, host := {} }], entry := ⟨0⟩ },
-        wasm := memoryGrowthModule.initialStore } }
+      singleModuleStore memoryGrowthModule }
 
 def memoryGrowthFinalStore : MachineStore Unit :=
   match (runSteps 8 memoryGrowthConfig).result with
@@ -213,8 +229,7 @@ def memory64GrowthConfig : Config Unit :=
       { locals := {}, code := memory64GrowthModule.funcs[0]!.body,
         resultArity := 7, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memory64GrowthModule, host := {} }], entry := ⟨0⟩ },
-        wasm := memory64GrowthModule.initialStore } }
+      singleModuleStore memory64GrowthModule }
 
 def memory64GrowthFinalStore : MachineStore Unit :=
   match (runSteps 11 memory64GrowthConfig).result with
@@ -261,7 +276,7 @@ def memoryFillConfig : Config Unit :=
       { locals := {}, code := memoryFillProgram,
         resultArity := 2, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memoryFillModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime memoryFillModule,
         wasm := memoryFillInitialStore } }
 
 def memoryFillFinalStore : MachineStore Unit :=
@@ -314,8 +329,7 @@ def memory64FillConfig : Config Unit :=
       { locals := {}, code := memory64FillModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memory64FillModule, host := {} }], entry := ⟨0⟩ },
-        wasm := memory64FillModule.initialStore } }
+      singleModuleStore memory64FillModule }
 
 def memory64FillFinalStore : MachineStore Unit :=
   { memory64FillConfig.store with
@@ -361,7 +375,7 @@ def overlappingCopyConfig : Config Unit :=
       { locals := {}, code := overlappingCopyProgram,
         resultArity := 2, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := overlappingCopyModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime overlappingCopyModule,
         wasm := overlappingCopyInitialStore } }
 
 def overlappingCopyFinalStore : MachineStore Unit :=
@@ -421,7 +435,7 @@ def memory64CopyConfig : Config Unit :=
       { locals := {}, code := memory64CopyModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memory64CopyModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime memory64CopyModule,
         wasm := memory64CopyInitialStore } }
 
 def memory64CopyFinalStore : MachineStore Unit :=
@@ -463,8 +477,7 @@ def memoryInitConfig : Config Unit :=
       { locals := {}, code := memoryInitProgram,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memoryInitModule, host := {} }], entry := ⟨0⟩ },
-        wasm := memoryInitModule.initialStore } }
+      singleModuleStore memoryInitModule }
 
 def memoryInitFinalStore : MachineStore Unit :=
   { memoryInitConfig.store with
@@ -526,8 +539,7 @@ def memory64InitConfig : Config Unit :=
       { locals := {}, code := memory64InitModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := memory64InitModule, host := {} }], entry := ⟨0⟩ },
-        wasm := memory64InitModule.initialStore } }
+      singleModuleStore memory64InitModule }
 
 def memory64InitFinalStore : MachineStore Unit :=
   { memory64InitConfig.store with
@@ -598,8 +610,7 @@ def narrowMemoryConfig : Config Unit :=
       { locals := {}, code := narrowMemoryProgram,
         resultArity := 3, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := narrowMemoryModule, host := {} }], entry := ⟨0⟩ },
-        wasm := narrowMemoryModule.initialStore } }
+      singleModuleStore narrowMemoryModule }
 
 def narrowMemoryFinalStore : MachineStore Unit :=
   { narrowMemoryConfig.store with
@@ -692,8 +703,7 @@ def i32Memory64Config : Config Unit :=
       { locals := {}, code := i32Memory64Module.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := i32Memory64Module, host := {} }], entry := ⟨0⟩ },
-        wasm := i32Memory64Module.initialStore } }
+      singleModuleStore i32Memory64Module }
 
 def i32Memory64FinalStore : MachineStore Unit :=
   { i32Memory64Config.store with
@@ -856,7 +866,7 @@ def swapInitialStore : Store Unit :=
     mem := ((swapModule.initialStore (α := Unit)).mem.write32 0 11).write32 4 22 }
 
 def swapRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := swapModule, host := {} }], entry := ⟨0⟩ }
+  singleModuleRuntime swapModule
 
 def swapConfig : Config Unit :=
   { expr := .running
@@ -925,7 +935,7 @@ def reverseThreeConfig : Config Unit :=
       { locals := { locals := [.i32 0, .i32 0] },
         code := reverseThreeProgram, resultArity := 2, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := reverseThreeModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime reverseThreeModule,
         wasm := reverseThreeInitialStore } }
 
 def reverseThreeFinalStore : MachineStore Unit :=
@@ -996,7 +1006,7 @@ def partitionThreeConfig : Config Unit :=
         code := partitionThreeProgram, resultArity := 0,
         callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := partitionThreeModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime partitionThreeModule,
         wasm := partitionThreeInitialStore } }
 
 def partitionThreeFinalStore : MachineStore Unit :=
@@ -1075,7 +1085,7 @@ def mergeTwoConfig : Config Unit :=
         code := mergeTwoProgram, resultArity := 0,
         callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := mergeTwoModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime mergeTwoModule,
         wasm := mergeTwoInitialStore } }
 
 def mergeTwoFinalStore : MachineStore Unit :=
@@ -1122,7 +1132,7 @@ def mergeTwoKeepConfig : Config Unit :=
         code := mergeTwoProgram, resultArity := 0,
         callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := mergeTwoModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime mergeTwoModule,
         wasm := mergeTwoKeepInitialStore } }
 
 def mergeTwoKeepFinalStore : MachineStore Unit :=
@@ -1163,7 +1173,7 @@ def controlModule : Module :=
           results := [.i32] } ] }
 
 def controlRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := controlModule, host := {} }], entry := ⟨0⟩ }
+  singleModuleRuntime controlModule
 
 def blockBranchConfig : Config Unit :=
   { expr := .running
@@ -1215,8 +1225,7 @@ def functionLabelBranchConfig (index : Nat) : Config Unit :=
       { locals := {}, code := functionLabelBranchModule.funcs[index]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := functionLabelBranchModule, host := {} }], entry := ⟨0⟩ },
-        wasm := functionLabelBranchModule.initialStore } }
+      singleModuleStore functionLabelBranchModule }
 
 theorem branch_to_function_label :
     (runSteps 3 (functionLabelBranchConfig 0)).result.values? =
@@ -1247,7 +1256,7 @@ def callModule : Module :=
           results := [.i32] } ] }
 
 def callRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := callModule, host := {} }], entry := ⟨0⟩ }
+  singleModuleRuntime callModule
 
 def callConfig : Config Unit :=
   { expr := .running
@@ -1274,7 +1283,7 @@ def factorialModule : Module :=
           results := [.i32] } ] }
 
 def factorialRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := factorialModule, host := {} }], entry := ⟨0⟩ }
+  singleModuleRuntime factorialModule
 
 def factorialConfig : Config Unit :=
   { expr := .running
@@ -1312,8 +1321,7 @@ def parametricConfig (index : Nat) : Config Unit :=
       { locals := {}, code := parametricModule.funcs[index]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := parametricModule, host := {} }], entry := ⟨0⟩ },
-        wasm := parametricModule.initialStore } }
+      singleModuleStore parametricModule }
 
 theorem select_and_drop_small_step :
     (runSteps 7 (parametricConfig 0)).result.values? = some [.i32 10] := by decide +kernel
@@ -1337,8 +1345,7 @@ def tailCallConfig : Config Unit :=
       { locals := {}, code := tailCallModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := tailCallModule, host := {} }], entry := ⟨0⟩ },
-        wasm := tailCallModule.initialStore } }
+      singleModuleStore tailCallModule }
 
 theorem tail_call_small_step :
     (runSteps 3 tailCallConfig).result.values? = some [.i32 42] := by decide +kernel
@@ -1359,8 +1366,7 @@ def i64ArithmeticConfig : Config Unit :=
       { locals := {}, code := i64ArithmeticModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := i64ArithmeticModule, host := {} }], entry := ⟨0⟩ },
-        wasm := i64ArithmeticModule.initialStore } }
+      singleModuleStore i64ArithmeticModule }
 
 theorem i64_arithmetic_small_step :
     (runSteps 8 i64ArithmeticConfig).result.values? = some [.i64 43] := by decide +kernel
@@ -1395,8 +1401,7 @@ def bitwiseConfig (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := bitwiseModule.funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := bitwiseModule, host := {} }], entry := ⟨0⟩ },
-        wasm := bitwiseModule.initialStore } }
+      singleModuleStore bitwiseModule }
 
 theorem i32_bitwise_small_step :
     (runSteps 25 (bitwiseConfig 0 8)).result.values? =
@@ -1443,8 +1448,7 @@ def divisionConfig (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := divisionModule.funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := divisionModule, host := {} }], entry := ⟨0⟩ },
-        wasm := divisionModule.initialStore } }
+      singleModuleStore divisionModule }
 
 theorem i32_division_small_step :
     (runSteps 13 (divisionConfig 0 4)).result.values? =
@@ -1514,8 +1518,7 @@ def integerComparisonConfig : Config Unit :=
       { locals := {}, code := integerComparisonModule.funcs[0]!.body,
         resultArity := 15, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := integerComparisonModule, host := {} }], entry := ⟨0⟩ },
-        wasm := integerComparisonModule.initialStore } }
+      singleModuleStore integerComparisonModule }
 
 theorem integer_comparisons_small_step :
     (runSteps 45 integerComparisonConfig).result.values? =
@@ -1545,8 +1548,7 @@ def integerConversionConfig : Config Unit :=
       { locals := {}, code := integerConversionModule.funcs[0]!.body,
         resultArity := 8, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := integerConversionModule, host := {} }], entry := ⟨0⟩ },
-        wasm := integerConversionModule.initialStore } }
+      singleModuleStore integerConversionModule }
 
 theorem integer_conversions_small_step :
     (runSteps 17 integerConversionConfig).result.values? =
@@ -1576,8 +1578,7 @@ def referenceConfig (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := referenceModule.funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := referenceModule, host := {} }], entry := ⟨0⟩ },
-        wasm := referenceModule.initialStore } }
+      singleModuleStore referenceModule }
 
 theorem reference_values_small_step :
     (runSteps 9 (referenceConfig 0 4)).result.values? =
@@ -1616,8 +1617,7 @@ def tableConfig (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := tableModule.funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := tableModule, host := {} }], entry := ⟨0⟩ },
-        wasm := tableModule.initialStore } }
+      singleModuleStore tableModule }
 
 def tableFinalStore : MachineStore Unit :=
   { (tableConfig 0 3).store with
@@ -1669,8 +1669,7 @@ def tableBulkConfig (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := tableBulkModule.funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := tableBulkModule, host := {} }], entry := ⟨0⟩ },
-        wasm := tableBulkModule.initialStore } }
+      singleModuleStore tableBulkModule }
 
 def tableBulkFinalStore : MachineStore Unit :=
   { (tableBulkConfig 0 2).store with
@@ -1729,8 +1728,7 @@ def elementInitConfig (is64 : Bool) (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := (elementInitModule is64).funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := elementInitModule is64, host := {} }], entry := ⟨0⟩ },
-        wasm := (elementInitModule is64).initialStore } }
+      singleModuleStore (elementInitModule is64) }
 
 def elementInitFinalStore (is64 : Bool) : MachineStore Unit :=
   { (elementInitConfig is64 0 2).store with
@@ -1803,8 +1801,7 @@ def indirectCallConfig (index : Nat) : Config Unit :=
       { locals := {}, code := indirectCallModule.funcs[index]!.body,
         resultArity := 1, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := indirectCallModule, host := {} }], entry := ⟨0⟩ },
-        wasm := indirectCallModule.initialStore } }
+      singleModuleStore indirectCallModule }
 
 theorem call_indirect_run :
     (runSteps 5 (indirectCallConfig 2)).result.values? =
@@ -1916,8 +1913,7 @@ def scalarFloatConfig (index resultArity : Nat) : Config Unit :=
       { locals := {}, code := scalarFloatModule.funcs[index]!.body,
         resultArity, callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := scalarFloatModule, host := {} }], entry := ⟨0⟩ },
-        wasm := scalarFloatModule.initialStore } }
+      singleModuleStore scalarFloatModule }
 
 theorem f32_scalar_float_run :
     (runSteps 11 (scalarFloatConfig 0 4)).result.values? =
@@ -1969,29 +1965,8 @@ theorem scalar_float_terminates :
         values =
           [ .i32 1, .f32 0x40000000,
             .f32 0x40600000,
-            .f32 0x40400000 ]) := by
-  have hvalues := f32_scalar_float_run
-  cases hresult : (runSteps 11 (scalarFloatConfig 0 4)).result with
-  | success values store =>
-      rw [hresult] at hvalues
-      have hpost :
-          values =
-            [ .i32 1, .f32 0x40000000,
-              .f32 0x40600000,
-              .f32 0x40400000 ] := by simpa [RunnerResult.values?] using hvalues
-      refine ⟨(runSteps 11 (scalarFloatConfig 0 4)).trace,
-        values, store, ?_, hpost⟩
-      apply runSteps_sound
-      simp [hresult, RunnerResult.finalConfig?]
-  | trapped reason store =>
-      rw [hresult] at hvalues
-      simp [RunnerResult.values?] at hvalues
-  | outOfFuel config =>
-      rw [hresult] at hvalues
-      simp [RunnerResult.values?] at hvalues
-  | internalError error config =>
-      rw [hresult] at hvalues
-      simp [RunnerResult.values?] at hvalues
+            .f32 0x40400000 ]) :=
+  runSteps_values_terminates f32_scalar_float_run
 
 theorem scalar_floats_match_big_step :
     (runSteps 11 (scalarFloatConfig 0 4)).result.values? =
@@ -2022,8 +1997,7 @@ def floatMemoryConfig : Config Unit :=
       { locals := {}, code := floatMemoryModule.funcs[0]!.body,
         resultArity := 2, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := floatMemoryModule, host := {} }], entry := ⟨0⟩ },
-        wasm := floatMemoryModule.initialStore } }
+      singleModuleStore floatMemoryModule }
 
 def floatMemoryResultMatches : RunnerResult Unit → Bool
   | .success _ store =>
@@ -2110,8 +2084,7 @@ def simdConfig (functionIndex : Nat) : Config Unit :=
       { locals := {}, code := simdModule.funcs[functionIndex]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := simdModule, host := {} }], entry := ⟨0⟩ },
-        wasm := simdModule.initialStore } }
+      singleModuleStore simdModule }
 
 theorem simd_add_and_extract :
     (runSteps 5 (simdConfig 0)).result.values? = some [.i32 3] := by decide +kernel
@@ -2141,8 +2114,7 @@ def simdMemoryConfig : Config Unit :=
       { locals := {}, code := simdMemoryModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := simdMemoryModule, host := {} }], entry := ⟨0⟩ },
-        wasm := simdMemoryModule.initialStore } }
+      singleModuleStore simdMemoryModule }
 
 theorem simd_memory_roundtrip :
     (runSteps 6 simdMemoryConfig).result.values? =
@@ -2190,8 +2162,7 @@ def simdMemoryVariantsConfig (functionIndex : Nat) : Config Unit :=
         code := simdMemoryVariantsModule.funcs[functionIndex]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := simdMemoryVariantsModule, host := {} }], entry := ⟨0⟩ },
-        wasm := simdMemoryVariantsModule.initialStore } }
+      singleModuleStore simdMemoryVariantsModule }
 
 theorem simd_load_ext_unsigned :
     (runSteps 6 (simdMemoryVariantsConfig 0)).result.values? =
@@ -2231,8 +2202,7 @@ def simdMemoryVariantTrapConfig : Config Unit :=
         code := [.const 65535, .v128LoadSplat 64 0],
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := simdMemoryVariantsModule, host := {} }], entry := ⟨0⟩ },
-        wasm := simdMemoryVariantsModule.initialStore } }
+      singleModuleStore simdMemoryVariantsModule }
 
 theorem simd_memory_variant_traps_structurally :
     (runSteps 2 simdMemoryVariantTrapConfig).result =
@@ -2262,7 +2232,7 @@ def crossMemoryConfig : Config Unit :=
       { locals := {}, code := crossMemoryModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := crossMemoryModule, host := {} }], entry := ⟨0⟩ },
+      { runtime := singleModuleRuntime crossMemoryModule,
         wasm := crossMemoryInitialStore } }
 
 theorem cross_memory_copy_result :
@@ -2296,8 +2266,7 @@ def indexedMemoryConfig : Config Unit :=
       { locals := {}, code := indexedMemoryModule.funcs[0]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := indexedMemoryModule, host := {} }], entry := ⟨0⟩ },
-        wasm := indexedMemoryModule.initialStore } }
+      singleModuleStore indexedMemoryModule }
 
 def indexedMemoryFinalStore : MachineStore Unit :=
   { indexedMemoryConfig.store with
@@ -2375,7 +2344,7 @@ def smallStepHostModule : Module :=
     memory := some { pagesMin := 1 } }
 
 def smallStepHostRuntime : RuntimeEnv Unit :=
-  { instances := #[{ module := smallStepHostModule, host := smallStepHostEnv }], entry := ⟨0⟩ }
+  singleModuleRuntime smallStepHostModule smallStepHostEnv
 
 def smallStepHostConfig : Config Unit :=
   { expr := .running
@@ -2449,10 +2418,7 @@ def smallStepTrapConfig : Config Unit :=
       { locals := {}, code := smallStepTrapModule.funcs[0]!.body,
         resultArity := 0, callerRemainder := [] },
     store :=
-      { runtime :=
-          { instances := #[{ module := smallStepTrapModule, host := { funcs := [smallStepTrapHost] } }],
-            entry := ⟨0⟩ },
-        wasm := smallStepTrapModule.initialStore } }
+      singleModuleStore smallStepTrapModule { funcs := [smallStepTrapHost] } }
 
 def smallStepTrapFinalStore : MachineStore Unit :=
   { smallStepTrapConfig.store with
@@ -2503,10 +2469,7 @@ def smallStepHostDispatchConfig (localFunctionIndex : Nat) : Config Unit :=
         code := smallStepHostDispatchModule.funcs[localFunctionIndex]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime :=
-          { instances := #[{ module := smallStepHostDispatchModule, host := smallStepHostEnv }],
-            entry := ⟨0⟩ },
-        wasm := smallStepHostDispatchModule.initialStore } }
+      singleModuleStore smallStepHostDispatchModule smallStepHostEnv }
 
 theorem indirect_host_call_returns_and_updates_memory :
     smallStepHostPhysicalResult
@@ -2543,8 +2506,7 @@ def smallStepGcConfig (functionIndex : Nat) : Config Unit :=
         code := smallStepGcModule.funcs[functionIndex]!.body,
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := smallStepGcModule, host := {} }], entry := ⟨0⟩ },
-        wasm := smallStepGcModule.initialStore } }
+      singleModuleStore smallStepGcModule }
 
 theorem gc_i31_round_trip :
     (runSteps 6 (smallStepGcConfig 0)).result.values? =
@@ -2579,8 +2541,7 @@ def smallStepGcNullI31Config : Config Unit :=
         code := [.gc .refNullAny, .gc .i31GetU],
         resultArity := 1, callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := smallStepGcModule, host := {} }], entry := ⟨0⟩ },
-        wasm := smallStepGcModule.initialStore } }
+      singleModuleStore smallStepGcModule }
 
 theorem gc_null_i31_structured_trap :
     ((runSteps 2 smallStepGcNullI31Config).result.trapReason? ==
@@ -2626,8 +2587,7 @@ def smallStepExceptionConfig (functionIndex : Nat) : Config Unit :=
         resultArity := smallStepExceptionModule.funcs[functionIndex]!.results.length,
         callerRemainder := [] },
     store :=
-      { runtime := { instances := #[{ module := smallStepExceptionModule, host := {} }], entry := ⟨0⟩ },
-        wasm := smallStepExceptionModule.initialStore } }
+      singleModuleStore smallStepExceptionModule }
 
 theorem exception_is_caught_with_arguments :
     (runSteps 8 (smallStepExceptionConfig 0)).result.values? =
@@ -2653,7 +2613,7 @@ def smallStepThrowRefConfig : Config Unit :=
         resultArity := 0
         callerRemainder := [] }
     store :=
-      { runtime := { instances := #[{ module := smallStepExceptionModule, host := {} }], entry := ⟨0⟩ }
+      { runtime := singleModuleRuntime smallStepExceptionModule
         wasm :=
           { smallStepExceptionModule.initialStore with
             exns := [(0, [.i32 23])] } } }
@@ -2693,7 +2653,7 @@ def nestedExceptionMarkerConfig : Config Unit :=
         callerRemainder := []
         control := [current, stale] }
     store :=
-      { runtime := { instances := #[{ module := smallStepExceptionModule, host := {} }], entry := ⟨0⟩ }
+      { runtime := singleModuleRuntime smallStepExceptionModule
         wasm := smallStepExceptionModule.initialStore } }
 
 theorem nested_exception_marker_unwinds :

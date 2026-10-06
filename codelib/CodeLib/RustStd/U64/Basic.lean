@@ -22,6 +22,37 @@ the stack to concrete `i64` and the atomic `wp_*` lemmas fire. -/
 
 namespace U64
 
+/-- Close a `BinChunk` goal for a `u64` operation that the compiler inlines to a
+single `i64` instruction, given the atomic lifting rule that justifies it:
+
+    theorem add_chunk : BinChunk [.addI64] ((· + ·) : UInt64 → UInt64 → UInt64) := by
+      bin_chunk_of Wasm.SmallStep.wp_addI64
+
+Every such chunk is proved the same way — introduce the contextual telescope,
+then reduce `toV` and the singleton-fragment append so the atomic rule's
+conclusion is syntactically the goal. Only the rule differs, so only the rule is
+written down.
+
+Chunks with a precondition name it with `with`, and may then feed it to the
+rule; the name is the caller's, so it is in scope in the rule term:
+
+    theorem div_chunk : BinChunk [.divUI64] (· / ·) (fun _ b => b ≠ 0) := by
+      bin_chunk_of Wasm.SmallStep.wp_divUI64 hne with hne
+
+Operations that are *not* one instruction (`shl`, `shr`, `not`) have their own
+proofs (`shl`/`shr` share `shift_chunk_of` below); this tactic is for the
+single-instruction family only. -/
+syntax "bin_chunk_of " term (" with " ident)? : tactic
+
+macro_rules
+  | `(tactic| bin_chunk_of $rule:term) =>
+      `(tactic| bin_chunk_of $rule with _hpre)
+  | `(tactic| bin_chunk_of $rule:term with $hpre:ident) =>
+      `(tactic|
+        (intro α hlc inst s E Φ params localValues rest arity remainder
+           controls calls a b vs $hpre
+         simpa only [toV_u64, List.cons_append, List.nil_append] using $rule))
+
 /-- Wasm masks `u64` shift amounts to the low 6 bits. -/
 abbrev shiftMask : UInt32 := 63
 
@@ -40,6 +71,28 @@ theorem shiftAmount_norm (b : UInt32) :
   change ((63 &&& b.toNat) % 2^64) % 64 = b.toNat % 64
   rw [Nat.and_comm, show (63 : Nat) = 2^6-1 from rfl, Nat.and_two_pow_sub_one_eq_mod]
   omega
+
+/-- Close a `BinChunk` goal for a `u64` shift (`shl`/`shr`, its only two
+members): the mask-extend-shift prefix normalises the count via
+`shiftAmount_norm`, then the given atomic rule closes the shift itself —
+`shift_chunk_of Wasm.SmallStep.wp_shlI64`. -/
+syntax "shift_chunk_of " pmTerm : tactic
+
+macro_rules
+  | `(tactic| shift_chunk_of $rule:pmTerm) =>
+      `(tactic|
+        (intro α hlc inst s E Φ params localValues rest arity remainder
+           controls calls a b vs _
+         have hnorm :
+             UInt64.ofNat (b &&& shiftMask).toNat % 64 = b.toUInt64 % 64 := by
+           rw [UInt32.and_comm]; exact shiftAmount_norm b
+         simp only [shiftAmountFrag, toV_u64, toV_u32, List.cons_append,
+           List.nil_append]
+         iintro Hwp
+         wasm_wp_pures [wp_const wp_and wp_extendUI32]
+         iapply $rule
+         simp only [hnorm]
+         ilater_exact Hwp))
 
 end U64
 

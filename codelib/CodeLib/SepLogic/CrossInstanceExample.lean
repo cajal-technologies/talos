@@ -34,10 +34,6 @@ def instanceA : ModuleInstance Unit where
   host            := { funcs := [] }
   resolvedImports := #[.wasm ⟨0⟩ 0]
 
-@[simp] private theorem crossInstance_currentModule :
-    ({ instances := #[instanceB, instanceA], entry := ⟨1⟩ } : RuntimeEnv Unit).currentModule =
-        instanceA.module := by simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-
 -- entry = instance 1 (moduleA); values [b, a] ready for cross-instance call to instance 0
 def crossInstanceConfig (a b : UInt32) : Config Unit :=
   { expr := .running
@@ -61,7 +57,7 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
   apply wasm_smallStep_runtime_instance_partiallyMeets (α := Unit)
   · simp only [crossInstanceConfig]; decide
   · intro gs
-    simp only [crossInstanceConfig, crossInstance_currentModule]
+    simp only [crossInstanceConfig, RuntimeEnv.currentModule_mk2_snd]
     iintro ⟨Hruntime, HruntimeInstances⟩
     iapply wp_callCrossInstance ⟨1⟩ instanceA ⟨0⟩ instanceB #[instanceB, instanceA]
         0 addFromB 0 addLibFn

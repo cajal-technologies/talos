@@ -45,10 +45,6 @@ def instanceR : ModuleInstance Unit where
   host            := { funcs := [] }
   resolvedImports := #[.wasm ⟨0⟩ 0]
 
-@[simp] private theorem sharedMem_currentModule :
-    ({ instances := #[instanceW, instanceR], entry := ⟨1⟩ } : RuntimeEnv Unit).currentModule =
-        instanceR.module := by simp [RuntimeEnv.currentModule, RuntimeEnv.currentInstance]
-
 -- entry = instance 1 (moduleR); v on top ready for cross-instance write
 def sharedMemConfig (v : UInt8) : Config Unit :=
   { expr := .running
@@ -113,7 +109,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
   · exact sharedMemHeap_inBounds v
   · simp only [sharedMemConfig]; decide
   · intro gs
-    simp only [sharedMemConfig, sharedMem_currentModule]
+    simp only [sharedMemConfig, RuntimeEnv.currentModule_mk2_snd]
     iintro ⟨Hpoints, Hruntime, HruntimeInstances⟩
     ihave Hpt := sharedMemHeap_pointsTo $$ Hpoints
     -- cross-instance call to writeFn in instanceW
