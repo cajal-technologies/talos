@@ -967,7 +967,7 @@ theorem checkRound_smallStep (x : UInt32) :
   · simpa [checkRoundConfig] using roundHeap_inBounds
   · simpa [checkRoundConfig] using roundGlobals_agree
   · simp only [checkRoundConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [checkRoundConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave ⟨Hdeep, Hword, Hresult⟩ := roundHeap_pointsTo $$ Hbytes
@@ -1708,7 +1708,7 @@ theorem check_round_terminatesWith (x : UInt32) :
   · simpa [checkRoundConfig] using roundHeap_inBounds
   · simpa [checkRoundConfig] using roundGlobals_agree
   · simp only [checkRoundConfig]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     simp only [checkRoundConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave ⟨Hdeep, Hword, Hresult⟩ := roundHeap_pointsTo $$ Hbytes

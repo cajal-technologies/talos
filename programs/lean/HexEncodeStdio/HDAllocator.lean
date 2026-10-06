@@ -215,7 +215,7 @@ private theorem twp_store_bump
 return it yields the aligned bump pointer and records the new end pointer;
 all arithmetic-overflow and failed-growth paths terminate through OOM. -/
 theorem twp_allocator
-    [WasmSmallStepGS hlc Universal.State]
+    [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State]
     {E : CoPset} {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (size align oldBump : UInt32) (host : Universal.State)
     (callerLocals : Locals) (stack : List Value) (code : Program)

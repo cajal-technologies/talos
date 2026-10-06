@@ -112,7 +112,7 @@ theorem sharedMem_partiallyMeets (v : UInt8) :
   · exact sharedMemHeap_agrees v
   · exact sharedMemHeap_inBounds v
   · simp only [sharedMemConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [sharedMemConfig, sharedMem_currentModule]
     iintro ⟨Hpoints, Hruntime, HruntimeInstances⟩
     ihave Hpt := sharedMemHeap_pointsTo $$ Hpoints

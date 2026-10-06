@@ -618,7 +618,7 @@ theorem recursive_sort_stronglyNormalizing
   · exact inputHeap_inBounds recursive input hfit
   · exact globalHeapAgrees_empty _
   · simp [concreteSortConfig, sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (concreteSortConfig recursive input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig recursive input).store.runtime.currentModule = recursive.module := by
       simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
@@ -642,7 +642,7 @@ theorem recursive_sort_terminatesWith
   · exact inputHeap_inBounds recursive input hfit
   · exact globalHeapAgrees_empty _
   · simp [concreteSortConfig, sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (concreteSortConfig recursive input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig recursive input).store.runtime.currentModule = recursive.module := by
       simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
@@ -667,7 +667,7 @@ theorem loop_sort_stronglyNormalizing
   · exact inputHeap_inBounds loop input hfit
   · exact globalHeapAgrees_empty _
   · simp [concreteSortConfig, sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (concreteSortConfig loop input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig loop input).store.runtime.currentModule = loop.module := by
       simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]
@@ -691,7 +691,7 @@ theorem loop_sort_terminatesWith
   · exact inputHeap_inBounds loop input hfit
   · exact globalHeapAgrees_empty _
   · simp [concreteSortConfig, sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (concreteSortConfig loop input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (concreteSortConfig loop input).store.runtime.currentModule = loop.module := by
       simp [concreteSortConfig, sortConfig, RuntimeEnv.currentModule_mk1]

@@ -78,11 +78,40 @@ def RunsOutOfMemory (input : List UInt8) : Prop :=
 /-- For every input, the exported `encode` has one of two finite terminal
 outcomes: it writes the lowercase hex encoding of the bytes it read, or its
 private allocator calls the distinguished OOM host function. Divergence and
-unrelated traps satisfy neither branch. -/
+unrelated traps satisfy neither branch.
+
+Informal spec:
+For every byte input, the named encode export terminates with the exact
+lowercase hexadecimal output or the allocator's distinguished OOM trap. -/
 @[spec_of "rust-exported" "hex_stdio::encode"]
 def EncodeSpec : Prop :=
   ∀ input,
     RunsEncode input (encode input) ∨
     RunsOutOfMemory input
+
+/-- A conservative physical-page bound for the reader and encoded output.
+Each Wasm page contains 65,536 bytes. -/
+def encodePageBound (input : List UInt8) : Nat :=
+  max 17 ((1054064 + 4 * input.length + max 8 (2 * input.length) + 65535) / 65536)
+
+/-- Successful encoding within the proved physical-memory budget.
+
+Informal spec:
+For every input of at most 357,738,263 bytes, the named encode export returns
+normally with the exact lowercase hexadecimal output. Every execution prefix
+uses between seventeen and `encodePageBound` physical Wasm pages. The Universal
+host and 65,536-page cap are unchanged. The input limit is sufficient, not
+claimed maximal. -/
+@[spec_of "rust-exported" "hex_stdio::encode"]
+def EncodeMemorySpec : Prop :=
+  ∀ input : List UInt8, input.length ≤ 357738263 →
+    RunsEncode input (encode input) ∧
+    ∀ initial : SmallStep.Config Universal.State,
+      startConfig? (Universal.envFor «module») «module» "encode"
+        (Universal.State.ofInput input) = some initial →
+      ∀ (trace : List SmallStep.StepKind) (reached : SmallStep.Config Universal.State),
+        SmallStep.Steps initial trace reached →
+          17 ≤ reached.store.wasm.mem.pages ∧
+            reached.store.wasm.mem.pages ≤ encodePageBound input
 
 end Project.HexStdio.Spec

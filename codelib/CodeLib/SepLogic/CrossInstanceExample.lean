@@ -60,7 +60,7 @@ theorem crossInstance_partiallyMeets (a b : UInt32) :
     PartiallyMeets (crossInstanceConfig a b) (fun values _ => values = [.i32 (a + b)]) := by
   apply wasm_smallStep_runtime_instance_partiallyMeets (α := Unit)
   · simp only [crossInstanceConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [crossInstanceConfig, crossInstance_currentModule]
     iintro ⟨Hruntime, HruntimeInstances⟩
     iapply wp_callCrossInstance ⟨1⟩ instanceA ⟨0⟩ instanceB #[instanceB, instanceA]

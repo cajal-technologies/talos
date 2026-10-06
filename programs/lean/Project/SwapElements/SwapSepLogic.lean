@@ -2005,7 +2005,7 @@ theorem func4_distinct_store_partiallyMeets
   · exact hinBounds
   · exact hglobals
   · simp only [func4ConfigFromStore]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func4ConfigFromStore, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
     ihave Hresources := hresources $$ Hheap
@@ -2081,7 +2081,7 @@ theorem func4_alias_store_partiallyMeets
   · exact hinBounds
   · exact hglobals
   · simp only [func4ConfigFromStore]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func4ConfigFromStore, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
     ihave Hresources := hresources $$ Hheap
@@ -2158,7 +2158,7 @@ theorem func4_distinct_store_terminatesWith
   · exact hinBounds
   · exact hglobals
   · simp only [func4ConfigFromStore]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     simp only [func4ConfigFromStore, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     ihave Hresources := hresources $$ Hheap
@@ -2233,7 +2233,7 @@ theorem func4_alias_store_terminatesWith
   · exact hinBounds
   · exact hglobals
   · simp only [func4ConfigFromStore]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     simp only [func4ConfigFromStore, Wasm.SmallStep.RuntimeEnv.currentModule_mk1]
     iintro ⟨Hheap, Hglobals, Hruntime⟩
     ihave Hresources := hresources $$ Hheap
@@ -2333,7 +2333,7 @@ theorem func3_smallStep (ptr len : UInt32) :
     (φ := fun values => values = [])
   · exact func3Heap_agrees ptr len
   · exact func3Heap_inBounds ptr len
-  · intro gs
+  · intro gs legacyPages
     iintro Hheap
     ihave ⟨Hptr, Hlen⟩ := func3Heap_pointsTo $$ Hheap
     have hpost : ∀ values : List Value,

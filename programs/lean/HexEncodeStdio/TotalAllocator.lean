@@ -29,7 +29,7 @@ def allocPtr (align oldBump : UInt32) : UInt32 :=
 The failure continuation receives the architectural `-1`; on success the
 continuation owns every byte in every newly exposed page. -/
 theorem memoryGrow_alloc_outcome {hlc : HasLC} {α : Type}
-    [WasmSmallStepGS hlc α]
+    [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
     {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp (WasmHeapGF α)}
     {params localValues values : List Value}
@@ -78,7 +78,7 @@ deterministic return address.  That ownership is framed through all allocator
 steps.  Every non-returning arithmetic-overflow or failed-`memory.grow` path is
 discharged by the Universal OOM host contract. -/
 theorem func12_alloc_outcome {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
+    [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State]
     {E : CoPset} {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (size align oldBump : UInt32) (host : Universal.State)
     (owned : List UInt8)
@@ -120,7 +120,7 @@ arena, while the untouched suffix remains available for the next allocation.
 The initial arena is supplied by the adequacy heap map; newly grown page ranges
 are supplied by `memoryGrow_alloc_outcome`. -/
 theorem func12_alloc_from_arena {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
+    [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State]
     {E : CoPset} {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (size align oldBump : UInt32) (host : Universal.State)
     (arena : List UInt8) (hsize : size.toNat ≤ arena.length)

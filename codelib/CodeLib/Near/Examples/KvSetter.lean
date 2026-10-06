@@ -464,7 +464,7 @@ theorem set_terminatesWith (nearSt : NearState) (key val : List UInt8)
   · exact (setHeap_facts nearSt key val hLen).2
   · exact globalHeapAgrees_empty _
   · simp [setConfig, nearRuntime]
-  · intro hlc inst
+  · intro hlc inst _
     set N := key.length + val.length + 8
     have hNnowrap : (0 : UInt32).toNat + (physicalBytes (Mem.empty 1) 0 N).length < UInt32.size := by
       simp [UInt32.size]; omega

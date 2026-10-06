@@ -86,6 +86,10 @@ jobs:
           use-mathlib-cache: true
       - name: Audit every program proof module
         run: python3 scripts/axiom-audit.py programs/lean --report programs-axioms.json
+      - name: Check mergesort and hex resource bounds and executable budgets
+        run: |
+          python3 scripts/check-resource-guarantees.py --self-test
+          python3 scripts/check-resource-guarantees.py
 
   test:
     name: Smoke test

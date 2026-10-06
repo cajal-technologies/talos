@@ -293,7 +293,7 @@ theorem mergesort_partiallyMeets
   · intro index value hget
     rw [LawfulPartialMap.get?_empty] at hget; contradiction
   · simp [mergeSortConfig]
-  · intro _gs
+  · intro _gs legacyPages
     simp only [BI.BigSepM.bigSepM_empty.to_eq]
     iintro ⟨Hbytes, _Hglobals, Hruntime, _HhostEnv⟩
     ihave ⟨Hsrc, Htmp⟩ :=
@@ -324,7 +324,7 @@ theorem mergesort_terminatesWith
   · exact mergeSortHeap_agrees source temporary input scratch hbound_s hbound_t
   · exact mergeSortHeap_inBounds source temporary input scratch hbound_s hbound_t
   · simp [mergeSortConfig]
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     iintro ⟨Hbytes, Hruntime⟩
     ihave ⟨Hsrc, Htmp⟩ :=
       mergeSortHeap_pointsTo source temporary input scratch hvalid hscr hbound_s hbound_t $$ Hbytes

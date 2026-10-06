@@ -123,7 +123,7 @@ theorem counter_partiallyMeets (initial : Nat) (_hbound : initial + 3 < 2 ^ 32) 
       (fun values _ => values = [.i32 (UInt32.ofNat (initial + 3))]) := by
   apply wasm_smallStep_instance_host_state_partiallyMeets (α := Nat)
   · simp only [counterConfig, counterRuntime]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [counterConfig, counterRuntime,
       RuntimeEnv.currentModule_mk1, RuntimeEnv.currentHost_mk1]
     iintro ⟨Hruntime, Henv, Hhost, _HruntimeInstances⟩

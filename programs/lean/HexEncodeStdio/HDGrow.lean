@@ -145,11 +145,12 @@ private theorem insertByteRange_inBounds
 /-- Successful growth exposes the new bytes when the caller owns the logical
 allocation frontier. The frontier advances together with the sparse heap. -/
 theorem stateInterp_memoryGrow_fresh_bytes
-    [WasmSmallStepGS hlc α]
+    [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
     (store : MachineStore α) (steps : Nat)
     (observations : List StepKind) (threads : Nat)
     (delta : UInt32) (cap : Nat) (memory : Mem) (previousPages frontier : Nat)
     (hgrow : store.wasm.mem.grow delta cap = some (memory, previousPages))
+    (hcap : cap = store.wasm.memoryCap store.runtime.currentModule 0)
     (hpages : memory.pages < 65536)
     (hfrontier : frontier ≤ previousPages * 65536) :
     let addr := UInt32.ofNat (previousPages * 65536)
@@ -178,7 +179,7 @@ theorem stateInterp_memoryGrow_fresh_bytes
       memory.pages * 65536 := by omega
   iintro ⟨Hstate, Hfrontier⟩
   imod stateInterp_memoryGrow store steps observations threads delta cap
-    memory previousPages hgrow $$ Hstate with Hstate
+    memory previousPages hgrow hcap $$ Hstate with Hstate
   iapply stateInterp_alloc_freshRange
     { store with wasm := { store.wasm with mem := memory } }
     steps observations threads frontier
@@ -193,7 +194,7 @@ available to the successful continuation.  The page bound is explicit because
 the byte-addressed ownership assertion cannot represent the endpoint just past
 the final 32-bit address. -/
 theorem twp_memoryGrow_fresh
-    [WasmSmallStepGS hlc α]
+    [WasmSmallStepGS hlc α] [WasmMemoryPagesLegacy α]
     {s : Stuckness} {E : CoPset}
     {Φ : List Value → IProp (WasmHeapGF α)}
     {params localValues values : List Value}
@@ -314,7 +315,7 @@ theorem twp_memoryGrow_fresh
     subst store₂
     imod stateInterp_memoryGrow_fresh_bytes store ns obs nt delta
       (store.wasm.memoryCap store.runtime.currentModule 0)
-      memory previousPages frontier hg
+      memory previousPages frontier hg rfl
       (hpages store memory previousPages Hmodule hg).1
       (hpages store memory previousPages Hmodule hg).2 $$
       [$Hσ $Hfrontier] with ⟨Hσ, Hfrontier, Hfresh⟩

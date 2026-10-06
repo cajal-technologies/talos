@@ -118,7 +118,7 @@ theorem func9_smallStep (x : UInt32) :
       (fun rs _store => rs = [.f32 (2147483647 &&& x)]) := by
   apply wasm_smallStep_runtime_partiallyMeets (α := Unit)
   · simp only [func9Config]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func9Config, RuntimeEnv.currentModule_mk1]
     iapply func9_smallStep_wp
 
@@ -174,7 +174,7 @@ theorem func4_smallStep (x y : UInt32) :
       (fun rs _store => rs = [.f32 (func4Result x y)]) := by
   apply wasm_smallStep_runtime_partiallyMeets (α := Unit)
   · simp only [func4Config]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func4Config, RuntimeEnv.currentModule_mk1]
     iapply func4_smallStep_wp
 
@@ -281,7 +281,7 @@ theorem func1_smallStep (x : UInt32) :
   · simpa [func1Config] using func1Heap_inBounds
   · simpa [func1Config] using func1Globals_agree
   · simp only [func1Config]; decide
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hbytes, Hglobals⟩
     ihave Hword := func1Heap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
@@ -337,7 +337,7 @@ theorem func0_smallStep (x : UInt32) :
   · simpa [func0Config, func1Config] using func1Heap_inBounds
   · simpa [func0Config, func1Config] using func1Globals_agree
   · simp only [func0Config]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func0Config, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func1Heap_pointsTo $$ Hbytes
@@ -426,7 +426,7 @@ theorem func3_smallStep (x : UInt64) :
   · simpa [func3Config] using func3Heap_inBounds
   · simpa [func3Config, func1Config] using func1Globals_agree
   · simp only [func3Config]; decide
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hbytes, Hglobals⟩
     ihave Hword := func3Heap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
@@ -486,7 +486,7 @@ theorem func2_smallStep (x : UInt32) :
   · simpa [func2Config, func3Config] using func3Heap_inBounds
   · simpa [func2Config, func1Config] using func1Globals_agree
   · simp only [func2Config]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func2Config, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func3Heap_pointsTo $$ Hbytes
@@ -551,7 +551,7 @@ theorem func8_smallStep (x y : UInt32) :
   · simpa [func8Config, func1Config] using func1Heap_inBounds
   · simpa [func8Config, func1Config] using func1Globals_agree
   · simp only [func8Config]; decide
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hbytes, Hglobals⟩
     ihave Hword := func1Heap_pointsTo $$ Hbytes
     ihave Hglobal := func1Globals_pointsTo $$ Hglobals
@@ -605,7 +605,7 @@ theorem func7_smallStep (x y : UInt32) :
   · simpa [func7Config, func1Config] using func1Heap_inBounds
   · simpa [func7Config, func1Config] using func1Globals_agree
   · simp only [func7Config]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [func7Config, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func1Heap_pointsTo $$ Hbytes
@@ -1466,7 +1466,7 @@ theorem checkAbs_smallStep (x : UInt32) :
   · simpa [checkAbsConfig, func1Config] using exportHeap_inBounds
   · simpa [checkAbsConfig, func1Config] using func1Globals_agree
   · simp only [checkAbsConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [checkAbsConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
@@ -1714,7 +1714,7 @@ theorem checkCopysign_smallStep (x y : UInt32) :
   · simpa [checkCopysignConfig, func1Config] using exportHeap_inBounds
   · simpa [checkCopysignConfig, func1Config] using func1Globals_agree
   · simp only [checkCopysignConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [checkCopysignConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
@@ -2632,7 +2632,7 @@ theorem check_abs_terminatesWith (x : UInt32) :
   · simpa [checkAbsConfig, func1Config] using exportHeap_inBounds
   · simpa [checkAbsConfig, func1Config] using func1Globals_agree
   · simp only [checkAbsConfig]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     simp only [checkAbsConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes
@@ -2650,7 +2650,7 @@ theorem check_copysign_terminatesWith (x y : UInt32) :
   · simpa [checkCopysignConfig, func1Config] using exportHeap_inBounds
   · simpa [checkCopysignConfig, func1Config] using func1Globals_agree
   · simp only [checkCopysignConfig]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     simp only [checkCopysignConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave ⟨Hscratch, Hresult⟩ := exportHeap_pointsTo $$ Hbytes

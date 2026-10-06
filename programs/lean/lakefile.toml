@@ -9,6 +9,8 @@ path = "../../codelib"
 
 [[lean_lib]]
 name = "Project"
+# Check diagnostics are built without importing them into downstream proofs.
+roots = ["Project", "Project.Mergesort.ResourceChecks"]
 
 # --- hex examples ---
 [[lean_lib]]

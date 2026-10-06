@@ -38,7 +38,7 @@ and grow rather than shrink.  Arithmetic overflow and failed memory growth
 terminate through the Universal OOM host; an ordinary return preserves the old
 bytes and copies them into the front of the supplied new arena. -/
 theorem func15_realloc_outcome {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
+    [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State]
     {E : CoPset} {Φ : List Value → IProp (WasmHeapGF Universal.State)}
     (oldPtr oldSize newSize oldBump : UInt32) (host : Universal.State)
     (oldBytes newArena : List UInt8)

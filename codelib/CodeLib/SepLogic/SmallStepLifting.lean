@@ -2907,11 +2907,11 @@ theorem wp_memoryGrow64Failure
     wasm_wp_frame
       iapply_exact Hwp with Hruntime
 
-/-- Rule for `memory.grow` with an i32 delta. Whether the grow succeeds
-depends on the physical store (the current page count and the module cap),
-which no resource pins down, so the continuation must handle every possible
-result: the previous page count on success or `0xFFFFFFFF` on failure. -/
+/-- Rule for `memory.grow` with an i32 delta. This rule requires no page or
+cap token, so its continuation handles every result: the previous page count
+on success or `0xFFFFFFFF` on failure. Growth uses the actual store cap. -/
 theorem wp_memoryGrow
+    [WasmMemoryPagesLegacy α]
     {params localValues values : List Value}
     {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -2937,7 +2937,7 @@ theorem wp_memoryGrow
         simpa only [Wasm.SmallStep.setMemory_eq] using Step.memoryGrowSuccess hg)
         =>
       imod (stateInterp_memoryGrow store ns obs' nt delta
-          (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+          (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg rfl) $$
           Hσ with Hσ
       wasm_wp_frame
         iapply_exact (Hwp previousPages.toUInt32) with Hruntime
@@ -2947,6 +2947,7 @@ case is `wp_memoryGrow64TooLarge`). As with `wp_memoryGrow`, the continuation
 must handle every possible result: the previous page count on success or
 `0xFFFFFFFFFFFFFFFF` on failure. -/
 theorem wp_memoryGrow64
+    [WasmMemoryPagesLegacy α]
     {params localValues values : List Value}
     {delta : UInt64}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -2974,7 +2975,7 @@ theorem wp_memoryGrow64
           Step.memoryGrow64Success hsmall hg)
         =>
       imod (stateInterp_memoryGrow store ns obs' nt delta.toUInt32
-          (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg) $$
+          (store.wasm.memoryCap store.runtime.currentModule 0) memory previousPages hg rfl) $$
           Hσ with Hσ
       wasm_wp_frame
         iapply_exact (Hwp previousPages.toUInt64) with Hruntime
