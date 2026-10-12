@@ -88,3 +88,5 @@ NumIntegerOpt3, RustU64, RustU64Tests, RustArray, RustArrayTests, TotalVariation
   `PartiallyMeets` / `TerminatesWith` posts are memory-observing: the terminal
   store's `source` array (`readWordArray store.wasm.mem source input.length`)
   is a sorted permutation of the input.
+
+- NumIntegerOpt3/Spec.lean: legacy `drive`/`pick` wp_run driver, `inner_wp`, `mod3_gcd` — deleted; superseded by `mod3_gcd_smallStep_total` / `gcd_u64_correct` and Equivalence.lean's `ObservationallyEquivOn` proof.
