@@ -1494,5 +1494,115 @@ theorem array64At_get (memId : Nat) (ptr : UInt32) (xs : List UInt64) (k : Nat)
         array64At memId ptr xs) := by
   have h := array64At_set memId ptr xs k xs[k] hk
   rwa [List.set_getElem_self] at h
+
+/-- Extract two u64 cells simultaneously and a continuation that restores the
+array after updating both. This is the spatial counterpart of a swap: the
+caller gets ownership of both slots and can write arbitrary new values to each,
+then reassemble the full array in one step. -/
+theorem array64At_swap_focus (memId : Nat) (ptr : UInt32) (xs : List UInt64)
+    (i j : Nat) (hi : i < xs.length) (hj : j < xs.length) (hij : i ≠ j) :
+    array64At memId ptr xs ⊢
+      pointsTo_u64 memId (ptr + 8 * UInt32.ofNat i) xs[i] ∗
+      pointsTo_u64 memId (ptr + 8 * UInt32.ofNat j) xs[j] ∗
+      (∀ vi vj,
+        pointsTo_u64 memId (ptr + 8 * UInt32.ofNat i) vi ∗
+        pointsTo_u64 memId (ptr + 8 * UInt32.ofNat j) vj -∗
+        array64At memId ptr (xs.set i vi |>.set j vj)) := by
+  induction xs generalizing ptr i j with
+  | nil => exact absurd hi (by simp)
+  | cons x xs' ih =>
+    cases i with
+    | zero =>
+      cases j with
+      | zero => exact absurd rfl hij
+      | succ j' =>
+        simp only [List.length_cons, Nat.succ_lt_succ_iff] at hj
+        simp only [List.getElem_cons_zero, List.getElem_cons_succ,
+          List.set_cons_zero, List.set_cons_succ,
+          show ptr + 8 * UInt32.ofNat 0 = ptr from by simp [UInt32.ofNat],
+          elem64_offset_succ ptr j', array64At]
+        have hj_le : j' ≤ xs'.length := Nat.le_of_lt hj
+        have h_len : (xs'.take j').length = j' := List.length_take_of_le hj_le
+        have h_split : xs' = xs'.take j' ++ xs'[j']'hj :: xs'.drop (j' + 1) := by
+          have key := List.set_eq_take_cons_drop (xs'[j']'hj) hj
+          simp only [List.set_getElem_self] at key; exact key
+        have haddr_j : (ptr + 8) + 8 * UInt32.ofNat (xs'.take j').length =
+            (ptr + 8) + 8 * UInt32.ofNat j' := by simp only [h_len]
+        iintro ⟨Hx, Hxs'⟩
+        ihave Hxs_split : array64At memId (ptr + 8)
+            (xs'.take j' ++ xs'[j']'hj :: xs'.drop (j' + 1)) $$ [Hxs']
+        · irw_exact [← h_split] with Hxs'
+        icases (array64At_append_cons memId (ptr + 8) (xs'.take j')
+            (xs'[j']'hj) (xs'.drop (j' + 1))).mp $$ Hxs_split
+          with ⟨Hpre, Hrest⟩
+        icases Hrest with ⟨Hj, Hsuf⟩
+        isplitl_exact Hx
+        ihave Hj_rw : pointsTo_u64 memId ((ptr + 8) + 8 * UInt32.ofNat j') xs'[j'] $$ [Hj]
+        · irw_exact [← haddr_j] with Hj
+        isplitl_exact Hj_rw
+        iintro %vi %vj ⟨Hx', Hj'⟩
+        isplitl_exact Hx'
+        rw [show xs'.set j' vj = xs'.take j' ++ vj :: xs'.drop (j' + 1) from
+            List.set_eq_take_cons_drop vj hj]
+        iapply (array64At_append_cons memId (ptr + 8) (xs'.take j')
+            vj (xs'.drop (j' + 1))).mpr
+        isplitl_exact Hpre
+        ihave Hj'_rw : pointsTo_u64 memId ((ptr + 8) + 8 * UInt32.ofNat (xs'.take j').length) vj $$ [Hj']
+        · irw_exact [haddr_j] with Hj'
+        isplitl_exact Hj'_rw
+        iexact Hsuf
+    | succ i' =>
+      cases j with
+      | zero =>
+        simp only [List.length_cons, Nat.succ_lt_succ_iff] at hi
+        simp only [List.getElem_cons_zero, List.getElem_cons_succ,
+          List.set_cons_zero, List.set_cons_succ,
+          show ptr + 8 * UInt32.ofNat 0 = ptr from by simp [UInt32.ofNat],
+          elem64_offset_succ ptr i', array64At]
+        have hi_le : i' ≤ xs'.length := Nat.le_of_lt hi
+        have h_len : (xs'.take i').length = i' := List.length_take_of_le hi_le
+        have h_split : xs' = xs'.take i' ++ xs'[i']'hi :: xs'.drop (i' + 1) := by
+          have key := List.set_eq_take_cons_drop (xs'[i']'hi) hi
+          simp only [List.set_getElem_self] at key; exact key
+        have haddr_i : (ptr + 8) + 8 * UInt32.ofNat (xs'.take i').length =
+            (ptr + 8) + 8 * UInt32.ofNat i' := by simp only [h_len]
+        iintro ⟨Hx, Hxs'⟩
+        ihave Hxs_split : array64At memId (ptr + 8)
+            (xs'.take i' ++ xs'[i']'hi :: xs'.drop (i' + 1)) $$ [Hxs']
+        · irw_exact [← h_split] with Hxs'
+        icases (array64At_append_cons memId (ptr + 8) (xs'.take i')
+            (xs'[i']'hi) (xs'.drop (i' + 1))).mp $$ Hxs_split
+          with ⟨Hpre, Hrest⟩
+        icases Hrest with ⟨Hi, Hsuf⟩
+        ihave Hi_rw : pointsTo_u64 memId ((ptr + 8) + 8 * UInt32.ofNat i') xs'[i'] $$ [Hi]
+        · irw_exact [← haddr_i] with Hi
+        isplitl_exact Hi_rw
+        isplitl_exact Hx
+        iintro %vi %vj ⟨Hi', Hx'⟩
+        isplitl_exact Hx'
+        rw [show xs'.set i' vi = xs'.take i' ++ vi :: xs'.drop (i' + 1) from
+            List.set_eq_take_cons_drop vi hi]
+        iapply (array64At_append_cons memId (ptr + 8) (xs'.take i')
+            vi (xs'.drop (i' + 1))).mpr
+        isplitl_exact Hpre
+        ihave Hi'_rw : pointsTo_u64 memId ((ptr + 8) + 8 * UInt32.ofNat (xs'.take i').length) vi $$ [Hi']
+        · irw_exact [haddr_i] with Hi'
+        isplitl_exact Hi'_rw
+        iexact Hsuf
+      | succ j' =>
+        simp only [List.length_cons, Nat.succ_lt_succ_iff] at hi hj
+        simp only [List.getElem_cons_succ, List.set_cons_succ,
+          elem64_offset_succ ptr i', elem64_offset_succ ptr j', array64At]
+        iintro ⟨Hx, Hxs'⟩
+        ihave ⟨Hi', Hj', Kont⟩ :=
+          ih (ptr + 8) i' j' hi hj (by omega) $$ Hxs'
+        isplitl_exact Hi'
+        isplitl_exact Hj'
+        iintro %vi %vj ⟨Hvi', Hvj'⟩
+        isplitl_exact Hx
+        ispecialize Kont $$ %vi %vj
+        iapply Kont
+        isplitl_exact Hvi'
+        iexact Hvj'
 end PointsTo
 end Wasm.SepLogic

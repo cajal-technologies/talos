@@ -277,6 +277,290 @@ theorem opt3_func0_distinct_store_terminatesWith
     wasm ptr len i j oldA oldB σ globalσ hi hj hroomI hroomJ
     hagree hinBounds hglobals hresources
 
+set_option maxHeartbeats 4000000 in
+/-- Universal Iris rule for the optimized inlined export when both indices
+name the same element. The one cell is lent to each access in turn; the
+exchange is the identity, so the cell keeps its original value. -/
+theorem opt3_func0_alias_smallStep_wp
+    [Wasm.SmallStep.WasmSmallStepGS hlc Unit]
+    {s : Stuckness} {E : CoPset}
+    (ptr len i : UInt32) (old : UInt64)
+    (hi : i < len)
+    (hroom : ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296) :
+    let address := (i <<< (3 % 32)) + ptr
+    pointsTo_u64 0 address old ⊢
+    WP (Wasm.SmallStep.Expr.running
+      ⟨⟨[.i32 ptr, .i32 len, .i32 i, .i32 i], [.i64 0], []⟩,
+        Project.SwapElementsOpt3.func0, 0, [], [], []⟩ :
+        Wasm.SmallStep.Expr Unit) @ s; E
+      {{ values, ⌜values = []⌝ ∗ pointsTo_u64 0 address old }} := by
+  dsimp only
+  let address := (i <<< (3 % 32)) + ptr
+  have hroom' : address.toNat + 8 ≤ 4294967296 := by simpa [address] using hroom
+  obtain ⟨hi1, hi2, hi3, hi4, hi5, hi6, hi7⟩ := UInt32.addSteps8 address hroom'
+  iintro HA
+  simp only [Project.SwapElementsOpt3.func0]
+  wasm_wp_pures [wp_block wp_block wp_localGet wp_localGet]
+  wasm_wp_next Wasm.SmallStep.wp_geU (result := 0)
+    (by simp [show ¬i ≥ len from not_le_of_gt hi])
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet]
+  wasm_wp_next Wasm.SmallStep.wp_geU (result := 0)
+    (by simp [show ¬i ≥ len from not_le_of_gt hi])
+  wasm_wp_pures [wp_brIfZero wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
+  simp only [List.set]
+  ihave HALater : ▷ pointsTo_u64 0 (address + 0) old $$ [HA]
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 old (by simp)
+    (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
+    (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
+    (by simpa using hi7) with HALater => HA
+  wasm_wp_localSet
+  wasm_wp_pures [wp_localGet wp_localGet wp_localGet wp_const wp_shl wp_add wp_localTee]
+  simp only [List.set]
+  ihave HBLater : ▷ pointsTo_u64 0 (address + 0) old $$ [HA]
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind Wasm.SmallStep.wp_load64 old (by simp)
+    (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
+    (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
+    (by simpa using hi7) with HBLater => HA
+  ihave HALater : ▷ pointsTo_u64 0 (address + 0) old $$ [HA]
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 old (by simp)
+    (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
+    (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
+    (by simpa using hi7) with HALater => HA
+  wasm_wp_pures [wp_localGet wp_localGet]
+  ihave HBLater : ▷ pointsTo_u64 0 (address + 0) old $$ [HA]
+  · ilater_rw_exact [UInt32.add_zero] with HA
+  wasm_wp_next_bind Wasm.SmallStep.wp_store64 old (by simp)
+    (by simpa using hi1) (by simpa using hi2) (by simpa using hi3)
+    (by simpa using hi4) (by simpa using hi5) (by simpa using hi6)
+    (by simpa using hi7) with HBLater => HA
+  wasm_wp_return_value
+  isplitr_pureexact rfl
+  · rw [show (i <<< (3 % 32)) + ptr = address by rfl]
+    simp only [UInt32.add_zero]
+    iframe
+
+set_option maxHeartbeats 4000000 in
+/-- Whole-array total correctness for the optimized export, the analogue of
+`func4_store_terminatesWith_array`. The caller's slice is a single
+`array64At` resource; both the distinct-index and the aliased-index cases are
+covered, and the observation is the whole `Mem.readWords64` of the slice. -/
+theorem opt3_func0_store_terminatesWith_array
+    (wasm : Store Unit) (ptr len i j : UInt32)
+    (xs : List UInt64)
+    (σ : WasmHeapMap (Option UInt8))
+    (globalσ : WasmGlobalMap Value)
+    (hlen : xs.length = len.toNat)
+    (hi : i < len) (hj : j < len)
+    (hroom : ptr.toNat + 8 * xs.length < UInt32.size)
+    (hbound : ptr.toNat + 8 * xs.length ≤ wasm.mem.pages * 65536)
+    (hagree : heapAgreesWithMem σ
+      (storeResolve (opt3ConfigFromStore wasm ptr len i j).store))
+    (hinBounds : heapAddressesInBounds σ
+      (storeResolve (opt3ConfigFromStore wasm ptr len i j).store))
+    (hglobals : globalHeapAgrees globalσ wasm.globals)
+    (hresources : ∀ [WasmHeapGS Unit],
+      ([∗map] address ↦ value ∈ σ,
+        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
+          address (DFrac.own 1) value) ⊢
+      array64At 0 ptr xs) :
+    Wasm.SmallStep.TerminatesWith
+      (opt3ConfigFromStore wasm ptr len i j)
+      (fun values store =>
+        values = [] ∧
+          Mem.readWords64 store.wasm.mem ptr xs.length =
+            (xs.set i.toNat (xs.getD j.toNat 0)).set j.toNat (xs.getD i.toNat 0)) := by
+  have hi' : i.toNat < xs.length := by rw [hlen]; exact_mod_cast hi
+  have hj' : j.toNat < xs.length := by rw [hlen]; exact_mod_cast hj
+  -- Bridge: `array64At` addresses are `ptr + 8 * k`; the WP rules use
+  -- `(k <<< 3) + ptr`.
+  have haddrI : ptr + 8 * i = (i <<< (3 % 32 : UInt32)) + ptr :=
+    (Project.SwapElements.Spec.elemAddr_of_shl ptr i).symm
+  have haddrJ : ptr + 8 * j = (j <<< (3 % 32 : UInt32)) + ptr :=
+    (Project.SwapElements.Spec.elemAddr_of_shl ptr j).symm
+  have haddr_toNat_I : ((i <<< (3 % 32 : UInt32)) + ptr).toNat = ptr.toNat + 8 * i.toNat := by
+    rw [Project.SwapElements.Spec.elemAddr_of_shl]
+    exact Project.SwapElements.Spec.elemAddr_toNat ptr i (by simp only [UInt32.size] at hroom; omega)
+  have haddr_toNat_J : ((j <<< (3 % 32 : UInt32)) + ptr).toNat = ptr.toNat + 8 * j.toNat := by
+    rw [Project.SwapElements.Spec.elemAddr_of_shl]
+    exact Project.SwapElements.Spec.elemAddr_toNat ptr j (by simp only [UInt32.size] at hroom; omega)
+  have hroomI : ((i <<< (3 % 32 : UInt32)) + ptr).toNat + 8 ≤ 4294967296 := by
+    rw [haddr_toNat_I]; simp only [UInt32.size] at hroom; omega
+  have hroomJ : ((j <<< (3 % 32 : UInt32)) + ptr).toNat + 8 ≤ 4294967296 := by
+    rw [haddr_toNat_J]; simp only [UInt32.size] at hroom; omega
+  have hboundI : ((i <<< (3 % 32 : UInt32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 := by
+    rw [haddr_toNat_I]; omega
+  have hboundJ : ((j <<< (3 % 32 : UInt32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 := by
+    rw [haddr_toNat_J]; omega
+  have hpartial : Wasm.SmallStep.PartiallyMeets (opt3ConfigFromStore wasm ptr len i j)
+      (fun values store =>
+        values = [] ∧
+          Mem.readWords64 store.wasm.mem ptr xs.length =
+            (xs.set i.toNat (xs.getD j.toNat 0)).set j.toNat (xs.getD i.toNat 0)) := by
+    apply wasm_smallStep_heap_globals_runtime_store_partiallyMeets
+      (α := Unit) (σ := σ) (globalσ := globalσ)
+    · exact hagree
+    · exact hinBounds
+    · exact hglobals
+    · simp only [opt3ConfigFromStore]; decide
+    · intro gs
+      iintro ⟨Hheap, Hglobals, Hruntime, _Henv⟩
+      ihave Harray := hresources $$ Hheap
+      iclear Hglobals Hruntime
+      by_cases hij : i = j
+      · -- aliased index: one cell, read and written through both accesses
+        subst hij
+        ihave ⟨Hcell, Hback⟩ := array64At_get 0 ptr xs i.toNat hi' $$ Harray
+        ihave Hcell' : pointsTo_u64 0 ((i <<< (3 % 32 : UInt32)) + ptr) xs[i.toNat] $$ [Hcell]
+        · irw_exact [show ptr + 8 * UInt32.ofNat i.toNat = (i <<< (3 % 32 : UInt32)) + ptr from
+            by rw [UInt32.ofNat_toNat]; exact haddrI] with Hcell
+        have hpost : ∀ values : List Value,
+            (iprop% (pointsTo_u64 0 (ptr + 8 * UInt32.ofNat i.toNat) xs[i.toNat] -∗
+                array64At 0 ptr xs) ∗
+              ⌜values = []⌝ ∗
+              pointsTo_u64 0 ((i <<< (3 % 32 : UInt32)) + ptr) xs[i.toNat]) ⊢
+            (iprop% ∀ (store : MachineStore Unit)
+                (_observations : List StepKind),
+              stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
+              ⌜values = [] ∧
+                Mem.readWords64 store.wasm.mem ptr xs.length =
+                  (xs.set i.toNat (xs.getD i.toNat 0)).set i.toNat (xs.getD i.toNat 0)⌝) := by
+          intro values
+          iintro ⟨Hback_after, %hvalues, Hcell_after⟩
+            %store %_observations Hstate
+          ihave Hcell_conv : pointsTo_u64 0 (ptr + 8 * UInt32.ofNat i.toNat) xs[i.toNat] $$ [Hcell_after]
+          · irw_exact [show ptr + 8 * UInt32.ofNat i.toNat = (i <<< (3 % 32 : UInt32)) + ptr from
+                by rw [UInt32.ofNat_toNat]; exact haddrI] with Hcell_after
+          ihave Harray_restored := Hback_after $$ Hcell_conv
+          imod array64At_words store 0 [] 0 ptr xs hroom $$
+            [$Hstate $Harray_restored] with ⟨_Hstate, _Harray, %hread⟩
+          have heq : (xs.set i.toNat (xs.getD i.toNat 0)).set i.toNat (xs.getD i.toNat 0) = xs :=
+            by simp [List.getD, hi', List.set_getElem_self]
+          ipureintro
+          exact ⟨hvalues, hread.trans heq.symm⟩
+        iapply wp_mono hpost
+        iapply wp_frame_l
+        isplitl [Hback]
+        · iexact Hback
+        · simp only [opt3ConfigFromStore]
+          iapply opt3_func0_alias_smallStep_wp ptr len i xs[i.toNat] hi hroomI
+          iframe
+      · -- distinct indices: the array's two cells are framed through the rule
+        have hij' : i.toNat ≠ j.toNat := fun h => hij (UInt32.toNat_inj.mp h)
+        ihave ⟨HA, HB, Hback⟩ :=
+          array64At_swap_focus 0 ptr xs i.toNat j.toNat hi' hj' hij' $$ Harray
+        ihave HA' : pointsTo_u64 0 ((i <<< (3 % 32 : UInt32)) + ptr) xs[i.toNat] $$ [HA]
+        · irw_exact [show ptr + 8 * UInt32.ofNat i.toNat = (i <<< (3 % 32 : UInt32)) + ptr from
+            by rw [UInt32.ofNat_toNat]; exact haddrI] with HA
+        ihave HB' : pointsTo_u64 0 ((j <<< (3 % 32 : UInt32)) + ptr) xs[j.toNat] $$ [HB]
+        · irw_exact [show ptr + 8 * UInt32.ofNat j.toNat = (j <<< (3 % 32 : UInt32)) + ptr from
+            by rw [UInt32.ofNat_toNat]; exact haddrJ] with HB
+        ispecialize Hback $$ %xs[j.toNat] %xs[i.toNat]
+        have hpost : ∀ values : List Value,
+            (iprop% (pointsTo_u64 0 ((i <<< (3 % 32 : UInt32)) + ptr) xs[j.toNat] ∗
+                pointsTo_u64 0 ((j <<< (3 % 32 : UInt32)) + ptr) xs[i.toNat] -∗
+                array64At 0 ptr (xs.set i.toNat xs[j.toNat] |>.set j.toNat xs[i.toNat])) ∗
+              ⌜values = []⌝ ∗
+              pointsTo_u64 0 ((i <<< (3 % 32 : UInt32)) + ptr) xs[j.toNat] ∗
+              pointsTo_u64 0 ((j <<< (3 % 32 : UInt32)) + ptr) xs[i.toNat]) ⊢
+            (iprop% ∀ (store : MachineStore Unit)
+                (_observations : List StepKind),
+              stateInterp (GF := WasmHeapGF Unit) store 0 [] 0 -∗
+              ⌜values = [] ∧
+                Mem.readWords64 store.wasm.mem ptr xs.length =
+                  (xs.set i.toNat (xs.getD j.toNat 0)).set j.toNat (xs.getD i.toNat 0)⌝) := by
+          intro values
+          iintro ⟨Hback_after, %hvalues, HA_after, HB_after⟩
+            %store %_observations Hstate
+          ihave Harray_restored := Hback_after $$ [HA_after HB_after]
+          · iframe
+          have hfit' : ptr.toNat + 8 *
+              (xs.set i.toNat xs[j.toNat] |>.set j.toNat xs[i.toNat]).length < UInt32.size :=
+            by simp only [List.length_set]; exact hroom
+          imod array64At_words store 0 [] 0 ptr
+              (xs.set i.toNat xs[j.toNat] |>.set j.toNat xs[i.toNat]) hfit' $$
+            [$Hstate $Harray_restored] with ⟨_Hstate, _Harray, %hread⟩
+          ipureintro
+          refine ⟨hvalues, ?_⟩
+          simp only [List.length_set] at hread
+          simp only [show xs[j.toNat] = xs.getD j.toNat 0 from by simp [List.getD, hj'],
+                     show xs[i.toNat] = xs.getD i.toNat 0 from by simp [List.getD, hi']] at hread
+          exact hread
+        iapply wp_mono hpost
+        iapply wp_frame_l
+        isplitl [Hback]
+        · irw_exact [show (i <<< (3 % 32 : UInt32)) + ptr = ptr + 8 * UInt32.ofNat i.toNat from
+              by rw [UInt32.ofNat_toNat]; exact haddrI.symm,
+            show (j <<< (3 % 32 : UInt32)) + ptr = ptr + 8 * UInt32.ofNat j.toNat from
+              by rw [UInt32.ofNat_toNat]; exact haddrJ.symm] with Hback
+        · simp only [opt3ConfigFromStore]
+          iapply opt3_func0_distinct_smallStep_wp
+            ptr len i j xs[i.toNat] xs[j.toNat] hi hj hroomI hroomJ
+          iframe
+  apply Wasm.SmallStep.TerminatesWith.of_termination_and_partial
+    ((opt3_func0_terminates wasm ptr len i j hi hj hboundI hboundJ).mono
+      (fun _ _ _ => trivial))
+  exact hpartial
+
+/-- The module's initial Wasm store with array `xs` written at byte offset
+`ptr`. The optimized build's initial store has no scratch cells to keep
+disjoint from the array. -/
+def opt3InitialStore (ptr : UInt32) (xs : List UInt64) : Store Unit :=
+  { (Project.SwapElementsOpt3.«module».initialStore : Store Unit) with
+    mem := Mem.writeWords64
+      (Project.SwapElementsOpt3.«module».initialStore : Store Unit).mem ptr xs }
+
+/-- Whole-array export bridge for the optimized build: the initial store with
+`xs` pre-written at `ptr` terminates with `Mem.readWords64` equal to the
+swapped list. No Iris witnesses are required from the caller. -/
+theorem opt3_initialStore_terminatesWith_array
+    (ptr len i j : UInt32) (xs : List UInt64)
+    (hlen : xs.length = len.toNat)
+    (hi : i < len) (hj : j < len)
+    (hroom : ptr.toNat + 8 * xs.length < UInt32.size)
+    (hpages : ptr.toNat + 8 * xs.length ≤
+        (Project.SwapElementsOpt3.«module».initialStore : Store Unit).mem.pages * 65536) :
+    Wasm.SmallStep.TerminatesWith
+      (opt3ConfigFromStore (opt3InitialStore ptr xs) ptr len i j)
+      (fun values store =>
+        values = [] ∧
+          Mem.readWords64 store.wasm.mem ptr xs.length =
+            (xs.set i.toNat (xs.getD j.toNat 0)).set j.toNat (xs.getD i.toNat 0)) := by
+  set initialMem := (Project.SwapElementsOpt3.«module».initialStore : Store Unit).mem with hinitialMem
+  set wasm : Store Unit := opt3InitialStore ptr xs
+  have hresolve_eq : (fun id : Nat =>
+          if id = 0 then some (Mem.writeWords64 initialMem ptr xs) else none) =
+      storeResolve (opt3ConfigFromStore wasm ptr len i j).store :=
+    singleMemoryResolve_eq_storeResolve _
+      (Mem.writeWords64 initialMem ptr xs)
+      (by simp [opt3ConfigFromStore, wasm, opt3InitialStore, hinitialMem])
+      (by change (Project.SwapElementsOpt3.«module».initialStore (α := Unit)).extraMems = []; decide +kernel)
+  apply opt3_func0_store_terminatesWith_array wasm ptr len i j xs
+    (heap64Aux ∅ ptr xs) Project.SwapElements.SwapSepLogic.func4ExampleGlobals hlen hi hj hroom
+  · change ptr.toNat + 8 * xs.length ≤ (Mem.writeWords64 initialMem ptr xs).pages * 65536
+    rw [Mem.writeWords64_pages]; exact hpages
+  · rw [← hresolve_eq]
+    exact heap64Aux_agrees ∅ initialMem ptr xs (heapAgreesWithMem_empty _) hroom
+  · rw [← hresolve_eq]
+    exact heap64Aux_inBounds ∅ initialMem ptr xs (heapAddressesInBounds_empty _) hroom hpages
+  · have hwasm : wasm.globals = (Project.SwapElementsOpt3.«module».initialStore : Store Unit).globals := by
+      simp [wasm, opt3InitialStore]
+    rw [hwasm]
+    exact globalHeapAgrees_singleton (by decide +kernel)
+  · intro _gs
+    have hdisjoint : ∀ (address : MemoryKey) (byte : Option UInt8),
+        get? (∅ : WasmHeapMap (Option UInt8)) address = some byte →
+        address.addr.toNat < ptr.toNat := by
+      intro address byte h
+      rw [get?_empty] at h
+      cases h
+    iintro Hbytes
+    ihave ⟨Harray, _Hempty⟩ :=
+      heap64Aux_pointsTo (∅ : WasmHeapMap (Option UInt8)) ptr xs hdisjoint hroom $$ Hbytes
+    iexact Harray
+
 abbrev opt0ExampleConfig : Wasm.SmallStep.Config Unit :=
   Project.SwapElements.SwapSepLogic.func4ExampleConfig
 

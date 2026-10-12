@@ -1,5 +1,4 @@
 import Project.SwapElementsOpt3.Program
-import Project.SwapElements.Address
 import Project.SwapElementsOpt3.SmallStepEquivalence
 
 /-!
@@ -39,87 +38,62 @@ array itself. Relating them is the subject of
 namespace Project.SwapElementsOpt3.Spec
 
 open Wasm
-open Iris Iris.BI Wasm.SepLogic
-
--- The element-address vocabulary (`elemAddr` and its arithmetic lemmas) is
--- shared with the opt0 build's spec, so the two postconditions match
--- syntactically and the equivalence proof needs no normalisation step.
-open Project.SwapElements.Spec (elemAddr elemAddr_of_shl elemAddr_toNat)
 
 set_option maxRecDepth 1048576
 
-/-- `func0` (index 0, the export): bounds checks fused with the exchange. -/
-theorem func0_swap (env : HostEnv Unit) (st : Store Unit) (ptr len i j : UInt32)
-    (hi : i < len) (hj : j < len)
-    (hbound : ptr.toNat + 8 * len.toNat ≤ st.mem.pages * 65536)
-    (hpages : st.mem.pages ≤ 65536) :
-    TerminatesWith env «module» 0 st [.i32 j, .i32 i, .i32 len, .i32 ptr]
-      (fun st' vs => vs = []
-        ∧ st'.mem =
-            (st.mem.write64 (elemAddr ptr i) (st.mem.read64 (elemAddr ptr j))).write64
-              (elemAddr ptr j) (st.mem.read64 (elemAddr ptr i))) := by
-  have hbnd : st.mem.pages * 65536 ≤ 4294967296 := by
-    have := Nat.mul_le_mul_right 65536 hpages; omega
-  have hli : i.toNat < len.toNat := hi
-  have hlj : j.toNat < len.toNat := hj
-  have hwi : ptr.toNat + 8 * i.toNat < 4294967296 := by omega
-  have hwj : ptr.toNat + 8 * j.toNat < 4294967296 := by omega
-  have gpi : ¬ (st.mem.pages * 65536 < (elemAddr ptr i).toNat + 8) := by
-    rw [elemAddr_toNat ptr i hwi]; omega
-  have gpj : ¬ (st.mem.pages * 65536 < (elemAddr ptr j).toNat + 8) := by
-    rw [elemAddr_toNat ptr j hwj]; omega
-  -- the two `panic` branches: `i, j < len` refutes each `geU` test
-  have hgi : ¬ (i ≥ len) := by intro h; have : len.toNat ≤ i.toNat := h; omega
-  have hgj : ¬ (j ≥ len) := by intro h; have : len.toNat ≤ j.toNat := h; omega
-  apply TerminatesWith.of_wp_entry_for (f := func0Def) rfl
-  unfold func0Def func0
-  apply wp_block_cons
-  apply wp_block_cons
-  wp_run [List.reverse_cons, List.reverse_nil, List.cons_append, List.nil_append, List.append_nil,
-    List.getElem?_cons_zero, List.getElem?_cons_succ,
-    List.set_cons_zero, List.set_cons_succ,
-    Nat.reduceLT, Nat.reduceAdd, Nat.reduceSub, reduceIte,
-    UInt32.reduceToNat, UInt32.add_zero, Mem.write64_pages,
-    hgi, hgj, elemAddr_of_shl, gpi, gpj]
-  exact ⟨trivial, trivial⟩
+structure Input where
+  ptr : UInt32
+  len : UInt32
+  i   : UInt32
+  j   : UInt32
+  xs  : List UInt64
 
-/-- Small-step total correctness for the distinct-index case of the optimized
-export.  Fewer preconditions than the opt0 spec: no global-0 pin and no
-shadow-stack alignment requirement. -/
+abbrev Output := List UInt64
+
+def args (input : Input) : ExportCall Unit :=
+  { initial   := SmallStepEquivalence.opt3InitialStore input.ptr input.xs
+    arguments := [.i32 input.j, .i32 input.i, .i32 input.len, .i32 input.ptr] }
+
+def result (input : Input) (output : Output) : ExportReturn Unit → Prop :=
+  fun returned =>
+    returned.values = [] ∧
+    returned.final.mem.words64 input.ptr input.xs.length = output
+
+abbrev Runs := RunsExportWith (HostEnv.empty : HostEnv Unit) «module»
+
+/-- The optimized exported `swap_elements` swaps two elements of a `[u64]`
+slice in place.
+
+Pre-written array `xs` at byte offset `ptr`; indices `i`, `j` both in bounds,
+with equal indices allowed. The result is the list with positions `i` and `j`
+exchanged, read back over the whole slice with `Mem.words64`. No shadow
+stack or global-0 pin is required, since this build never touches either. -/
 @[spec_of "rust-exported" "swap_elements_opt3::swap_elements"]
 def SwapElementsOpt3Spec : Prop :=
-  ∀ (wasm : Store Unit) (ptr len i j : UInt32)
-    (oldA oldB : UInt64)
-    (σ : WasmHeapMap (Option UInt8))
-    (globalσ : WasmGlobalMap Value),
-    i < len →
-    j < len →
-    ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 →
-    ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ wasm.mem.pages * 65536 →
-    ((i <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296 →
-    ((j <<< (3 % 32)) + ptr).toNat + 8 ≤ 4294967296 →
-    heapAgreesWithMem σ
-      (Wasm.SmallStep.storeResolve
-        (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j).store) →
-    heapAddressesInBounds σ
-      (Wasm.SmallStep.storeResolve
-        (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j).store) →
-    globalHeapAgrees globalσ wasm.globals →
-    (∀ [WasmHeapGS Unit],
-      ([∗map] address ↦ value ∈ σ,
-        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
-          address (DFrac.own 1) value) ⊢
-      pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldA ∗
-      pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldB) →
-    Wasm.SmallStep.TerminatesWith
-      (SmallStepEquivalence.opt3ConfigFromStore wasm ptr len i j)
-      (fun values store =>
-        values = [] ∧
-          store.wasm.mem.read64 ((i <<< (3 % 32)) + ptr) = oldB ∧
-          store.wasm.mem.read64 ((j <<< (3 % 32)) + ptr) = oldA)
+  ∀ input : Input,
+    input.xs.length = input.len.toNat →
+    input.i < input.len →
+    input.j < input.len →
+    input.ptr.toNat + 8 * input.xs.length < UInt32.size →
+    input.ptr.toNat + 8 * input.xs.length ≤
+        («module».initialStore : Store Unit).mem.pages * 65536 →
+    ∃ output : Output,
+      Runs "swap_elements" (args input) (result input output) ∧
+      output =
+        (input.xs.set input.i.toNat (input.xs.getD input.j.toNat 0)).set
+          input.j.toNat (input.xs.getD input.i.toNat 0)
 
 @[proves SwapElementsOpt3Spec]
-theorem swap_elements_opt3_correct : SwapElementsOpt3Spec :=
-  SmallStepEquivalence.opt3_func0_distinct_store_terminatesWith
+theorem swap_elements_opt3_correct : SwapElementsOpt3Spec := by
+  intro input hlen hi hj hroom hpages
+  refine ⟨_, ?_, rfl⟩
+  unfold Runs RunsExportWith
+  refine ⟨SmallStepEquivalence.opt3ConfigFromStore
+      (SmallStepEquivalence.opt3InitialStore input.ptr input.xs)
+      input.ptr input.len input.i input.j, rfl, ?_⟩
+  simpa [result, Mem.readWords64_eq_words64] using
+    SmallStepEquivalence.opt3_initialStore_terminatesWith_array
+      input.ptr input.len input.i input.j input.xs
+      hlen hi hj hroom hpages
 
 end Project.SwapElementsOpt3.Spec

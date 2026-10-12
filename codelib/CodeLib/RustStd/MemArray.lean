@@ -281,3 +281,47 @@ theorem Mem.words32_write32_snoc (m : Mem) (base : UInt32) (n : Nat) (w : UInt32
   rw [Mem.words32_succ,
       Mem.words32_write32_outside m base n _ w (by omega) (Or.inr (by rw [haddr])),
       Mem.read32_write32_same]
+
+/-- Write consecutive `u64` values starting at `base`. -/
+def Mem.writeWords64 : Mem → UInt32 → List UInt64 → Mem
+  | memory, _, [] => memory
+  | memory, address, value :: values =>
+      writeWords64 (memory.write64 address value) (address + 8) values
+
+/-- Read `count` consecutive `u64` values starting at `base`. -/
+def Mem.readWords64 : Mem → UInt32 → Nat → List UInt64
+  | _, _, 0 => []
+  | memory, address, count + 1 =>
+      memory.read64 address :: readWords64 memory (address + 8) count
+
+@[simp] theorem Mem.length_readWords64 (memory : Mem) (base : UInt32) (count : Nat) :
+    (memory.readWords64 base count).length = count := by
+  induction count generalizing base <;> simp_all [Mem.readWords64]
+
+@[simp] theorem Mem.writeWords64_pages (m : Mem) (base : UInt32) (xs : List UInt64) :
+    (m.writeWords64 base xs).pages = m.pages := by
+  induction xs generalizing m base with
+  | nil => rfl
+  | cons value values ih => exact ih _ _
+
+/-- The `u64` read-back agrees with the `words64` view. -/
+theorem Mem.readWords64_eq_words64 (m : Mem) (base : UInt32) (n : Nat) :
+    m.readWords64 base n = m.words64 base n := by
+  induction n generalizing base with
+  | zero => rfl
+  | succ n ih =>
+      have hslot : ∀ k : Nat, base + 8 * UInt32.ofNat (k + 1) = (base + 8) + 8 * UInt32.ofNat k := by
+        intro k
+        have hsucc : UInt32.ofNat (k + 1) = UInt32.ofNat k + 1 := by
+          rw [UInt32.ofNat_succ]
+        rw [hsucc, UInt32.mul_add, UInt32.mul_one,
+          UInt32.add_comm (8 * UInt32.ofNat k) 8, UInt32.add_assoc]
+      rw [Mem.readWords64, ih]
+      unfold Mem.words64
+      rw [List.range_succ_eq_map, List.map_cons, List.map_map]
+      congr 1
+      · simp
+      · apply List.map_congr_left
+        intro k _
+        simp only [Function.comp_apply]
+        rw [hslot]

@@ -1,4 +1,5 @@
 import CodeLib.Examples.SelectionSort.StdIO
+import CodeLib.RustStd.MemArray.SmallStep
 
 /-!
 # Correctness of the selection-sort StdIO wrappers
@@ -77,15 +78,6 @@ theorem encodedLength_words (input : List UInt64) (hfit : Fits input) :
 
 /-! ## The packed stream and the u64 separation-logic array agree -/
 
-def writeWordArray64 (mem : Mem) (base : UInt32) : List UInt64 → Mem
-  | [] => mem
-  | value :: values => writeWordArray64 (mem.write64 base value) (base + 8) values
-
-def heap64Aux (heap : WasmHeapMap (Option UInt8)) (base : UInt32) :
-    List UInt64 → WasmHeapMap (Option UInt8)
-  | [] => heap
-  | value :: values => heap64Aux (store64Heap heap 0 base value) (base + 8) values
-
 def inputHeap (input : List UInt64) : WasmHeapMap (Option UInt8) :=
   heap64Aux ∅ array input
 
@@ -120,12 +112,12 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
     (values : List UInt64)
     (hfit : base.toNat + 8 * values.length < UInt32.size) :
     mem.writeBytes base.toNat (serialize values) =
-      writeWordArray64 mem base values := by
+      Mem.writeWords64 mem base values := by
   induction values generalizing mem base with
   | nil =>
-      simp [writeWordArray64]
+      simp [Mem.writeWords64]
   | cons value values ih =>
-      simp only [serialize_cons, writeWordArray64]
+      simp only [serialize_cons, Mem.writeWords64]
       rw [Mem.writeBytes_append, writeBytes_encodeWord]
       simp only [List.length_cons, Nat.mul_add] at hfit
       have hbase : (base + 8).toNat = base.toNat + 8 :=
@@ -134,50 +126,6 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       rw [show base.toNat + (encodeWord value).length = (base + 8).toNat by
         simp [encodeWord, hbase]]
       exact ih _ _ (by omega)
-
-theorem heap64Aux_agrees
-    (heap : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32)
-    (values : List UInt64)
-    (hagree : heapAgreesWithMem heap (fun id => if id = 0 then some mem else none))
-    (hfit : base.toNat + 8 * values.length < UInt32.size) :
-    heapAgreesWithMem (heap64Aux heap base values)
-      (fun id => if id = 0 then some (writeWordArray64 mem base values) else none) := by
-  induction values generalizing heap mem base with
-  | nil => simpa [heap64Aux, writeWordArray64]
-  | cons value values ih =>
-      simp only [heap64Aux, writeWordArray64, List.length_cons] at *
-      simp only [UInt32.size] at hfit
-      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base (by omega)
-      apply ih
-      · exact store64_sound0 heap mem base value h1 h2 h3 h4 h5 h6 h7 hagree
-      · have h8 : (base + 8 : UInt32).toNat = base.toNat + 8 :=
-          UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by omega)
-        rw [h8]
-        simp only [UInt32.size]; omega
-
-theorem heap64Aux_inBounds
-    (heap : WasmHeapMap (Option UInt8)) (mem : Mem) (base : UInt32)
-    (values : List UInt64)
-    (hinBounds : heapAddressesInBounds heap (fun id => if id = 0 then some mem else none))
-    (hfit : base.toNat + 8 * values.length < UInt32.size)
-    (hmem : base.toNat + 8 * values.length ≤ mem.pages * 65536) :
-    heapAddressesInBounds (heap64Aux heap base values)
-      (fun id => if id = 0 then some (writeWordArray64 mem base values) else none) := by
-  induction values generalizing heap mem base with
-  | nil => simpa [heap64Aux, writeWordArray64]
-  | cons value values ih =>
-      simp only [heap64Aux, writeWordArray64, List.length_cons] at *
-      simp only [UInt32.size] at hfit
-      have h8 : (base + 8 : UInt32).toNat = base.toNat + 8 :=
-        UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by omega)
-      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base (by omega)
-      apply ih
-      · exact store64_inBounds0 heap mem base value h1 h2 h3 h4 h5 h6 h7
-          (by omega) hinBounds
-      · rw [h8]
-        simp only [UInt32.size]; omega
-      · have : (mem.write64 base value).pages = mem.pages := rfl
-        rw [h8, this]; omega
 
 private theorem empty_agrees (mem : Mem) :
     heapAgreesWithMem (∅ : WasmHeapMap (Option UInt8))
@@ -192,7 +140,7 @@ private theorem empty_inBounds (mem : Mem) :
 theorem afterRead_mem_eq (program : Executable) (input : List UInt64)
     (hfit : Fits input) :
     (afterRead program input).mem =
-      writeWordArray64 (initialStore program (serialize input)).mem array input := by
+      Mem.writeWords64 (initialStore program (serialize input)).mem array input := by
   unfold afterRead
   simp only
   apply writeBytes_serialize
@@ -244,160 +192,6 @@ theorem inputHeap_inBounds (program : Executable) (input : List UInt64)
       Fits, serialize_length, bufferBytes] at hfit ⊢
     exact hfit
 
-set_option maxHeartbeats 6000000 in
-theorem heap64Aux_pointsTo [WasmHeapGS Unit]
-    (heap : WasmHeapMap (Option UInt8)) (base : UInt32)
-    (values : List UInt64)
-    (hdisjoint : ∀ address byte, get? heap address = some byte →
-      address.addr.toNat < base.toNat)
-    (hfit : base.toNat + 8 * values.length < UInt32.size) :
-    ([∗map] address ↦ value ∈ heap64Aux heap base values,
-      pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
-        address (DFrac.own 1) value) ⊢
-      array64At 0 base values ∗
-      ([∗map] address ↦ value ∈ heap,
-        pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap)
-          address (DFrac.own 1) value) := by
-  induction values generalizing heap base with
-  | nil =>
-      simp only [heap64Aux, array64At, BI.emp_sep.to_eq]
-      iintro Hheap; iexact Hheap
-  | cons value values ih =>
-      simp only [heap64Aux, List.length_cons] at *
-      simp only [UInt32.size] at hfit
-      have hn (n : Nat) (hn : n ≤ 8) :
-          (base + UInt32.ofNat n).toNat = base.toNat + n := by
-        apply UInt32.add_ofNat_toNat_noWrap base n
-        · omega
-        · omega
-      have hn8 := hn 8 (by omega)
-      obtain ⟨hl1, hl2, hl3, hl4, hl5, hl6, hl7⟩ :=
-        UInt32.addSteps8 base (by omega)
-      have hget (n : Nat) (hnle : n < 8) :
-          get? heap ⟨0, base + UInt32.ofNat n⟩ = none := by
-        by_contra h
-        obtain ⟨byte, hbyte⟩ := Option.ne_none_iff_exists.mp h
-        have hlt := hdisjoint _ _ hbyte.symm
-        simp only [] at hlt
-        rw [hn n (by omega)] at hlt; omega
-      have hget0 : get? heap ⟨0, base⟩ = none := by simpa using hget 0 (by omega)
-      have hget1 := hget 1 (by omega)
-      have hget2 := hget 2 (by omega)
-      have hget3 := hget 3 (by omega)
-      have hget4 := hget 4 (by omega)
-      have hget5 := hget 5 (by omega)
-      have hget6 := hget 6 (by omega)
-      have hget7 := hget 7 (by omega)
-      have hgetL1 : get? heap ⟨0, base + 1⟩ = none := by simpa using hget1
-      have hgetL2 : get? heap ⟨0, base + 2⟩ = none := by simpa using hget2
-      have hgetL3 : get? heap ⟨0, base + 3⟩ = none := by simpa using hget3
-      have hgetL4 : get? heap ⟨0, base + 4⟩ = none := by simpa using hget4
-      have hgetL5 : get? heap ⟨0, base + 5⟩ = none := by simpa using hget5
-      have hgetL6 : get? heap ⟨0, base + 6⟩ = none := by simpa using hget6
-      have hgetL7 : get? heap ⟨0, base + 7⟩ = none := by simpa using hget7
-      have hne (i j : Nat) (hi : i ≤ 7) (hj : j ≤ 7) (hij : i ≠ j) :
-          (⟨0, base + UInt32.ofNat i⟩ : MemoryKey) ≠ ⟨0, base + UInt32.ofNat j⟩ := by
-        intro heq
-        have heq' := congrArg MemoryKey.addr heq
-        simp only [] at heq'
-        have heq'' := congrArg UInt32.toNat heq'
-        rw [hn i (by omega), hn j (by omega)] at heq''; omega
-      have hneU (i j : UInt32) (hi : i.toNat ≤ 7) (hj : j.toNat ≤ 7)
-          (hij : i ≠ j) : (⟨0, base + i⟩ : MemoryKey) ≠ ⟨0, base + j⟩ := by
-        simpa only [UInt32.ofNat_toNat] using
-          hne i.toNat j.toNat hi hj (fun h => hij (UInt32.toNat_inj.mp h))
-      have hbaseNe (n : UInt32) (hn : n.toNat ≤ 7) (hpos : 0 < n.toNat) :
-          (⟨0, base⟩ : MemoryKey) ≠ ⟨0, base + n⟩ := by
-        have h := hneU 0 n (by decide) hn (by
-          intro heq
-          have := congrArg UInt32.toNat heq
-          exact hpos.ne' this.symm)
-        simpa using h
-      have hdisjoint' : ∀ address byte,
-          get? (store64Heap heap 0 base value) address = some byte →
-          address.addr.toNat < (base + 8).toNat := by
-        intro address byte haddress
-        change address.addr.toNat < (base + UInt32.ofNat 8).toNat
-        rw [hn8]
-        by_cases h7 : address = ⟨0, base + 7⟩
-        · subst address; simp only []; rw [hl7]; omega
-        by_cases h6 : address = ⟨0, base + 6⟩
-        · subst address; simp only []; rw [hl6]; omega
-        by_cases h5 : address = ⟨0, base + 5⟩
-        · subst address; simp only []; rw [hl5]; omega
-        by_cases h4 : address = ⟨0, base + 4⟩
-        · subst address; simp only []; rw [hl4]; omega
-        by_cases h3 : address = ⟨0, base + 3⟩
-        · subst address; simp only []; rw [hl3]; omega
-        by_cases h2 : address = ⟨0, base + 2⟩
-        · subst address; simp only []; rw [hl2]; omega
-        by_cases h1 : address = ⟨0, base + 1⟩
-        · subst address; simp only []; rw [hl1]; omega
-        by_cases h0 : address = ⟨0, base⟩
-        · subst address; simp only []; omega
-        simp only [store64Heap, get?_insert_ne (Ne.symm h7),
-          get?_insert_ne (Ne.symm h6), get?_insert_ne (Ne.symm h5),
-          get?_insert_ne (Ne.symm h4), get?_insert_ne (Ne.symm h3),
-          get?_insert_ne (Ne.symm h2), get?_insert_ne (Ne.symm h1),
-          get?_insert_ne (Ne.symm h0)] at haddress
-        have hlt := hdisjoint address byte haddress
-        omega
-      have hfit' : (base + 8).toNat + 8 * values.length < UInt32.size := by
-        change (base + UInt32.ofNat 8).toNat + 8 * values.length < UInt32.size
-        rw [hn8]
-        simp only [UInt32.size]; omega
-      iintro Hheap
-      ihave ⟨Hvalues, Hstored⟩ := ih (store64Heap heap 0 base value) (base + 8)
-        hdisjoint' hfit' $$ Hheap
-      ihave ⟨Hword, Hheap⟩ := store64Heap_pointsTo heap 0 base value
-        hget0
-        (by simpa only [get?_insert_ne (hbaseNe 1 (by decide) (by decide))]
-          using hgetL1)
-        (by
-          simp only [get?_insert_ne (hneU 1 2 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hbaseNe 2 (by decide) (by decide))]
-          exact hgetL2)
-        (by
-          simp only [get?_insert_ne (hneU 2 3 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 1 3 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hbaseNe 3 (by decide) (by decide))]
-          exact hgetL3)
-        (by
-          simp only [get?_insert_ne (hneU 3 4 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 2 4 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 1 4 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hbaseNe 4 (by decide) (by decide))]
-          exact hgetL4)
-        (by
-          simp only [get?_insert_ne (hneU 4 5 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 3 5 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 2 5 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 1 5 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hbaseNe 5 (by decide) (by decide))]
-          exact hgetL5)
-        (by
-          simp only [get?_insert_ne (hneU 5 6 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 4 6 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 3 6 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 2 6 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 1 6 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hbaseNe 6 (by decide) (by decide))]
-          exact hgetL6)
-        (by
-          simp only [get?_insert_ne (hneU 6 7 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 5 7 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 4 7 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 3 7 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 2 7 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hneU 1 7 (by decide) (by decide) (by decide)),
-            get?_insert_ne (hbaseNe 7 (by decide) (by decide))]
-          exact hgetL7) $$ Hstored
-      simp only [array64At]
-      isplitl [Hword Hvalues]
-      · isplitl_exact Hword
-        · iexact Hvalues
-      · iexact Hheap
-
 theorem inputHeap_pointsTo [WasmHeapGS Unit] (input : List UInt64)
     (hfit : Fits input) :
     ([∗map] address ↦ value ∈ inputHeap input,
@@ -413,104 +207,13 @@ theorem inputHeap_pointsTo [WasmHeapGS Unit] (input : List UInt64)
       omega) $$ Hheap
   iexact Harray
 
-def readWordArray64 (mem : Mem) (base : UInt32) : Nat → List UInt64
-  | 0 => []
-  | n + 1 => mem.read64 base :: readWordArray64 mem (base + 8) n
-
-theorem array64At_words [WasmSmallStepGS hlc α]
-    (store : MachineStore α) (steps : Nat) (obs : List StepKind)
-    (threads : Nat) (base : UInt32) (output : List UInt64)
-    (hfit : base.toNat + 8 * output.length < UInt32.size) :
-    stateInterp (GF := WasmHeapGF α) store steps obs threads ∗
-      array64At 0 base output ==∗
-    stateInterp (GF := WasmHeapGF α) store steps obs threads ∗
-      array64At 0 base output ∗
-      ⌜readWordArray64 store.wasm.mem base output.length = output⌝ := by
-  induction output generalizing base with
-  | nil =>
-      simp only [array64At, List.length_nil, readWordArray64]
-      iintro ⟨Hstate, Hempty⟩
-      imodintro
-      isplitl_exacts [Hstate Hempty]
-      · ipureintro; trivial
-  | cons value output ih =>
-      simp only [array64At, List.length_cons] at *
-      have hroom : base.toNat + 8 ≤ 4294967296 := by
-        simp only [UInt32.size] at hfit; omega
-      obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 base hroom
-      have h8 : (base + 8).toNat = base.toNat + 8 :=
-        UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by
-          simp only [UInt32.size] at hfit ⊢; omega)
-      iintro ⟨Hstate, Hword, Houtput⟩
-      imod stateInterp_pointsTo_u64_facts_frame store steps obs threads
-        base value h1 h2 h3 h4 h5 h6 h7 $$
-        [$Hstate $Hword] with ⟨Hstate, Hword, %hword⟩
-      have hfit' : (base + 8).toNat + 8 * output.length < UInt32.size := by
-        rw [h8]
-        simp only [UInt32.size] at hfit ⊢; omega
-      imod ih (base + 8) hfit' $$ [$Hstate $Houtput] with
-        ⟨Hstate, Houtput, %hrest⟩
-      imodintro
-      isplitl_exact Hstate
-      isplitl [Hword Houtput]
-      · isplitl_exact Hword
-        · iexact Houtput
-      · ipureintro
-        simp only [readWordArray64]
-        rw [hword.1]; exact congrArg (value :: ·) hrest
-
-theorem array64At_capacity [WasmSmallStepGS hlc α]
-    (store : MachineStore α) (steps : Nat)
-    (observations : List StepKind) (threads : Nat)
-    (base : UInt32) (values : List UInt64)
-    (hfit : base.toNat + 8 * values.length < UInt32.size)
-    (hbaseBound : base.toNat ≤ store.wasm.mem.pages * 65536) :
-    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      array64At 0 base values ==∗
-    stateInterp (GF := WasmHeapGF α) store steps observations threads ∗
-      array64At 0 base values ∗
-      ⌜base.toNat + 8 * values.length ≤
-        store.wasm.mem.pages * 65536⌝ := by
-  by_cases hempty : values = []
-  · subst values
-    iintro ⟨Hstate, Harray⟩
-    imodintro
-    isplitl_exacts [Hstate Harray]
-    · ipureintro
-      simpa using hbaseBound
-  · have hlength : 0 < values.length := by
-      cases values with
-      | nil => contradiction
-      | cons value values => simp
-    let k := values.length - 1
-    have hk : k < values.length := by simp [k, hlength]
-    let address := base + 8 * UInt32.ofNat k
-    have haddress : address.toNat = base.toNat + 8 * k := Mem.words64_slotAddr_toNat base k (by
-        simp only [UInt32.size] at hfit; omega)
-    obtain ⟨h1, h2, h3, h4, h5, h6, h7⟩ := UInt32.addSteps8 address (by
-      simp only [UInt32.size] at hfit ⊢
-      rw [haddress]; omega)
-    iintro ⟨Hstate, Harray⟩
-    ihave ⟨Hword, Hrestore⟩ := array64At_get 0 base values k hk $$ Harray
-    imod stateInterp_pointsTo_u64_facts_frame
-      store steps observations threads address values[k]
-      h1 h2 h3 h4 h5 h6 h7 $$ [$Hstate $Hword] with
-      ⟨Hstate, Hword, %hfacts⟩
-    imodintro
-    isplitl_exact Hstate
-    isplitl [Hrestore Hword]
-    · iapply_exact Hrestore with Hword
-    · ipureintro
-      rw [haddress] at hfacts
-      dsimp only [k] at hfacts; omega
-
 /-! ## Adequacy of the two host-independent sort calls -/
 
 def SortPost (input : List UInt64)
     (_values : List Value) (store : MachineStore α) : Prop :=
   ∃ output,
     List.Perm input output ∧ Sorted output ∧
-    readWordArray64 store.wasm.mem array input.length = output ∧
+    Mem.readWords64 store.wasm.mem array input.length = output ∧
     8 * input.length ≤ store.wasm.mem.pages * 65536
 
 set_option maxHeartbeats 6000000 in
@@ -775,7 +478,7 @@ private theorem readBytes_eight_add (mem : Mem) (offset n : Nat) :
 theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
     (hfit : base.toNat + 8 * count < UInt32.size) :
     deserialize (mem.readBytes base.toNat (8 * count)) =
-      some (readWordArray64 mem base count) := by
+      some (Mem.readWords64 mem base count) := by
   induction count generalizing base with
   | zero => exact deserialize_nil
   | succ count ih =>
@@ -792,10 +495,10 @@ theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
           (mem.bytes (base.toNat + 6)) (mem.bytes (base.toNat + 7)) =
           mem.read64 base := by rfl
       rw [hdecode]
-      simp only [readWordArray64]
+      simp only [Mem.readWords64]
       change (deserialize (mem.readBytes (base.toNat + 8) (8 * count))).map
           (mem.read64 base :: ·) =
-        some (mem.read64 base :: readWordArray64 mem (base + 8) count)
+        some (mem.read64 base :: Mem.readWords64 mem (base + 8) count)
       rw [← hbase, ih]
       · rfl
       · rw [hbase]; omega
