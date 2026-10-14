@@ -15,6 +15,7 @@ import CodeLib.RustStd.MemFillLoop
 import CodeLib.RustStd.MemCopyLoop
 import CodeLib.RustStd.UInt
 import CodeLib.RustStd.Option
+import CodeLib.RustStd.Idioms
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
 import CodeLib.RustStd.U64.Add
@@ -50,6 +51,8 @@ import CodeLib.SepLogic.SmallStepAdequacy
 import CodeLib.SepLogic.SmallStepAdequacyExamples
 import CodeLib.Host.UniversalStdIO
 import CodeLib.SepLogic.SmallStepOutcomeAdequacy
+import CodeLib.WasmArithAttr
+import CodeLib.WasmArith
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort.TotalProof
 import CodeLib.Examples.SelectionSort.StdIOProof

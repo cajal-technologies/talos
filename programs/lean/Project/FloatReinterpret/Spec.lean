@@ -1,4 +1,5 @@
 import Project.FloatReinterpret.Program
+import CodeLib.RustStd.Idioms
 
 /-!
 # Specification for `float_reinterpret`
@@ -2049,9 +2050,9 @@ theorem twp_checkAbs_tail_smallStep_wp
   wasm_twp_rebind twp_load32 result
     (by decide) (by decide) (by decide) (by decide) with Hresult'
   wasm_twp_localSet
-  wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
-  wasm_twp_rebind twp_globalSet with Hglobal
+  have hrestore : (16 : UInt32) + 1048560 = 1048576 := by decide
+  iapply twp_rustc_epilogue rfl hrestore $$ Hglobal
+  iintro Hglobal
   wasm_twp_pures [twp_localGet]
   ihave HresultExact : pointsTo_u32 0 1048572 result $$ [Hresult']
   · irw_exact [← show (1048560 : UInt32) + 12 = 1048572 by decide] with Hresult'
@@ -2373,11 +2374,10 @@ theorem twp_func10_body_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨Hscratch, Hresult, Hruntime, Hglobal⟩
   simp only [func10]
-  wasm_twp_rebind twp_globalGet with Hglobal
-  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_twp_localSet
-  wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind twp_globalSet with Hglobal
+  iapply twp_rustc_prologue_set rfl $$ Hglobal
+  iintro Hglobal
+  rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
   rw [← show checkAbsInnerBody =
     [ .localGet 0, .call 0, .localGet 0, .call 9,
       .f32Eq, .const 1, .and, .eqz, .br_if 0,
@@ -2455,9 +2455,9 @@ theorem twp_checkCopysign_tail_result_smallStep_wp
   wasm_twp_rebind twp_load32 result
     (by decide) (by decide) (by decide) (by decide) with Hresult'
   wasm_twp_localSet
-  wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
-  wasm_twp_rebind twp_globalSet with Hglobal
+  have hrestore : (16 : UInt32) + 1048560 = 1048576 := by decide
+  iapply twp_rustc_epilogue rfl hrestore $$ Hglobal
+  iintro Hglobal
   wasm_twp_pures [twp_localGet]
   wasm_twp_terminal_value twp_returnFromFunction
   iintro %store %obs _Hstate
@@ -2565,11 +2565,10 @@ theorem twp_func11_body_smallStep_wp
           ⌜∃ b : UInt32, values = [.i32 b]⌝ }] := by
   iintro ⟨Hscratch, Hresult, Hruntime, Hglobal⟩
   simp only [func11]
-  wasm_twp_rebind twp_globalGet with Hglobal
-  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_twp_localSet
-  wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind twp_globalSet with Hglobal
+  iapply twp_rustc_prologue_set rfl $$ Hglobal
+  iintro Hglobal
+  rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
   rw [← show checkCopysignInnerBody =
     [ .localGet 0, .localGet 1, .call 7,
       .localGet 0, .localGet 1, .call 4,

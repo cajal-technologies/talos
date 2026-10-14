@@ -1,4 +1,5 @@
 import Project.NumInteger.Program
+import CodeLib.RustStd.Idioms
 
 /-!
 # Specification for `gcd_u64`
@@ -6015,11 +6016,10 @@ theorem twp_func0_callPrefix_smallStep_wp
         Wasm.SmallStep.Expr Unit) @ s; E [{ Φ }] := by
   iintro ⟨HR, Hglobal, HouterA, HouterB⟩
   simp only [func0, func0InitialLocals]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
-  wasm_twp_pures [twp_const twp_sub] rewriting [show (1048576 : UInt32) - 16 = 1048560 by decide]
-  wasm_twp_localSet
-  wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
+  iapply Wasm.SmallStep.twp_rustc_prologue_set rfl $$ Hglobal
+  iintro Hglobal
+  rw [show (1048576 : UInt32) - 16 = 1048560 by decide]
+  simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub, List.set]
   wasm_twp_pures [twp_localGet twp_localGet]
   ihave HouterALater :
       pointsTo_u64 0 ((1048560 : UInt32) + 0) oldOuterA $$ [HouterA]
@@ -6068,9 +6068,9 @@ theorem twp_func0_afterCall_smallStep_wp_to_return
   iintro ⟨HR, Hglobal⟩
   simp only [func0AfterCallProg, func0CallLocals]
   wasm_twp_localSet
-  wasm_twp_pures [twp_localGet twp_const twp_add]
-  rw [show (16 : UInt32) + 1048560 = 1048576 from rfl]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
+  have hrestore : (16 : UInt32) + 1048560 = 1048576 := rfl
+  iapply Wasm.SmallStep.twp_rustc_epilogue rfl hrestore $$ Hglobal
+  iintro Hglobal
   wasm_twp_pures [twp_localGet]
   iapply_frame hreturn
 

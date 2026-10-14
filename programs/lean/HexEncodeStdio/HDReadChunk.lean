@@ -1,5 +1,6 @@
 import HexEncodeStdio.HDMemoryLayout
 import HexEncodeStdio.HDHostIO
+import CodeLib.RustStd.Idioms
 
 namespace Project.HexEncodeStdio
 
@@ -73,12 +74,7 @@ theorem twp_read_chunk_eof
   iintro Hruntime
   simp [func1Def, Function.toLocals, Function.numParams,
     ValueType.zero, func1]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro HframeSp
   iapply twp_localGet rfl
   iapply twp_constI64
@@ -209,12 +205,8 @@ theorem twp_read_chunk_eof
   iintro Hlength
   iapply twp_exitControl rfl
   simp
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 48 + (sp - 48) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ HframeSp
+  iapply twp_rustc_epilogue rfl hrestore $$ HframeSp
   iintro Hsp
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime
@@ -334,12 +326,7 @@ theorem twp_read_chunk_nonempty_fits
   iintro Hruntime
   simp [func1Def, Function.toLocals, Function.numParams,
     ValueType.zero, func1]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro HframeSp
   iapply twp_localGet rfl
   iapply twp_constI64
@@ -511,12 +498,8 @@ theorem twp_read_chunk_nonempty_fits
   iintro Hlength
   iapply twp_exitControl rfl
   simp
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 48 + (sp - 48) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ HframeSp
+  iapply twp_rustc_epilogue rfl hrestore $$ HframeSp
   iintro Hsp
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime

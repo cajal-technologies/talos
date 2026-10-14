@@ -1,4 +1,5 @@
 import Project.GcdStdio.HostProof
+import CodeLib.RustStd.Idioms
 
 set_option maxRecDepth 8388608
 set_option maxHeartbeats 0
@@ -342,12 +343,9 @@ theorem twp_afterAlloc
       (targetCode := restoreBody) (targetControl := [outerFrame])
       (targetValues := []) (by rfl)
   simp only [restoreBody]
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  rw [show (16 : UInt32) + entryStackLow = entryStackTop by decide]
   isimp only [StackPointer] at Hsp
-  iapply twp_globalSet $$ Hsp
+  have hrestore : (16 : UInt32) + entryStackLow = entryStackTop := by decide
+  iapply twp_rustc_epilogue rfl hrestore $$ Hsp
   iintro _Hsp
   simp only [wrapperFrame]
   iapply twp_returnFromCallExplicit $$ Hmodule

@@ -2,6 +2,7 @@ import Project.SwapElements.Program
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.RustStd.Idioms
 
 /-! # Swap Elements — iris-lean small-step proof
 
@@ -1803,12 +1804,10 @@ theorem twp_func4_happy_smallStep_wp
         pointsTo_u64 0 ((j <<< (3 % 32)) + ptr) oldA }] := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, HA, HB⟩
   simp only [func4]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
-  wasm_twp_pures [twp_const twp_sub twp_localSet]
+  iapply Wasm.SmallStep.twp_rustc_prologue_set rfl $$ Hglobal
+  iintro Hglobal
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1848,9 +1847,9 @@ theorem twp_func4_happy_smallStep_wp
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, HA, HB⟩
       wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
-      wasm_twp_pures [twp_localGet twp_const twp_add]
-      wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
-      rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
+      have hrestore : (16 : UInt32) + 1048560 = 1048576 := by decide
+      iapply Wasm.SmallStep.twp_rustc_epilogue rfl hrestore $$ Hglobal
+      iintro Hglobal
       rw [show (3 % 32 : UInt32) = 3 by decide]
       iapply Wasm.SmallStep.twp_returnFromFunction
       simp only [List.take, List.nil_append]
@@ -1888,12 +1887,10 @@ theorem twp_func4_alias_smallStep_wp
         pointsTo_u64 0 ((i <<< (3 % 32)) + ptr) oldValue }] := by
   iintro ⟨Hruntime, Hglobal, Hscratch, HspillPtr, HspillLen, Hcell⟩
   simp only [func4]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalGet with Hglobal
-  wasm_twp_pures [twp_const twp_sub twp_localSet]
+  iapply Wasm.SmallStep.twp_rustc_prologue_set rfl $$ Hglobal
+  iintro Hglobal
   simp only [UInt32.reduceSub, List.length_cons, List.length_nil,
     Nat.reduceAdd, Nat.reduceSub, List.set]
-  wasm_twp_pures [twp_localGet]
-  wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
   wasm_twp_pures [twp_const twp_localSet]
   simp only [List.length_cons, List.length_nil, Nat.reduceAdd, Nat.reduceSub,
     List.set]
@@ -1932,9 +1929,9 @@ theorem twp_func4_alias_smallStep_wp
     · iintro ⟨⟨HspillPtr, HspillLen⟩,
         Hruntime, Hglobal, Hscratch, Hcell⟩
       wasm_twp_return_from_call Hruntime [List.take, List.nil_append]
-      wasm_twp_pures [twp_localGet twp_const twp_add]
-      wasm_twp_rebind Wasm.SmallStep.twp_globalSet with Hglobal
-      rw [show (16 : UInt32) + 1048560 = 1048576 by decide]
+      have hrestore : (16 : UInt32) + 1048560 = 1048576 := by decide
+      iapply Wasm.SmallStep.twp_rustc_epilogue rfl hrestore $$ Hglobal
+      iintro Hglobal
       rw [show (3 % 32 : UInt32) = 3 by decide]
       iapply Wasm.SmallStep.twp_returnFromFunction
       simp only [List.take, List.nil_append]

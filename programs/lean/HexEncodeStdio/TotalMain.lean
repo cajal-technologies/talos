@@ -238,15 +238,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply hdeallocInput $$ HruntimeAfterDealloc
   iintro HruntimeAfterInputDealloc
   iapply twp_exitControl rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  iapply twp_globalSet $$ Hglobal
+  have hrestore : (32 : UInt32) + sp = sp + 32 := UInt32.add_comm 32 sp
+  iapply twp_rustc_epilogue rfl hrestore $$ Hglobal
   iintro Hglobal
-  ihave Hglobal' : globalPointsToAt 0 0 (.i32 (sp + 32)) $$ [Hglobal]
-  · rw [UInt32.add_comm]
-    iexact Hglobal
   simp []
-  iapply Hnext $$ HruntimeAfterInputDealloc Henv Hhost Hglobal'
+  iapply Hnext $$ HruntimeAfterInputDealloc Henv Hhost Hglobal
 
 end Project.HexEncodeStdio.TotalMain

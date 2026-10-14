@@ -152,14 +152,10 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   iapply twp_store64 (address := result) oldResultPair r0 r1 r2 r3 r4 r5 r6 r7
     $$ HresultPair
   iintro HresultPair
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  iapply twp_globalSet $$ Hglobal
+  have hrestore : (32 : UInt32) + stackPtr = stackPtr + 32 :=
+    UInt32.add_comm 32 stackPtr
+  iapply twp_rustc_epilogue rfl hrestore $$ Hglobal
   iintro Hglobal
-  ihave Hglobal' : globalPointsToAt 0 0 (.i32 (stackPtr + 32)) $$ [Hglobal]
-  · rw [UInt32.add_comm]
-    iexact Hglobal
   ihave HresultPair' : pointsTo_u64 0 (result + 0)
       (capacity.toUInt64 ||| (output.toUInt64 <<< 32)) $$ [HresultPair]
   · iexact HresultPair
@@ -172,7 +168,7 @@ theorem func6_finish {hlc : HasLC} {α : Type}
   ihave HptrResult' : pointsTo_u32 0 (result + 4) output $$ [HptrResult]
   · rw [show (result + 0) + 4 = result + 4 by simp]
     iexact HptrResult
-  iapply Hfinish $$ Hglobal' HcapResult' HptrResult' HresultLen
+  iapply Hfinish $$ Hglobal HcapResult' HptrResult' HresultLen
 
 /-- Once the output allocation has succeeded, the generated encoder
 initializes its byte iterator, runs the alternating nibble loop, and publishes

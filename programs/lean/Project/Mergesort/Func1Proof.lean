@@ -1,4 +1,5 @@
 import Project.Mergesort.Func0Proof
+import CodeLib.RustStd.Idioms
 
 /-!
 # Proof of the generated RawVec reserve wrapper
@@ -250,10 +251,10 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
     unfold newCapacityNat selectedCapacity firstMaxNat
     omega
   isimp only [StackPointer] at Hsp
-  wasm_twp_rebind twp_globalGet with Hsp
-  wasm_twp_pures [twp_const twp_sub] rewriting [show driverBase - 16 = reserveBase by decide]
-  wasm_twp_localTee [List.length]
-  wasm_twp_rebind twp_globalSet with Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
+  iintro Hsp
+  rw [show driverBase - 16 = reserveBase by decide]
+  simp only [List.length]
   wasm_twp_pures [twp_block twp_localGet twp_localGet twp_add] rewriting [hsumWord]
   wasm_twp_localTee [List.set]
   wasm_twp_pures [twp_localGet]
@@ -438,10 +439,9 @@ theorem func1_correct_of [WasmSmallStepGS hlc Universal.State]
         wasm_twp_pures [twp_localGet twp_localGet]
         wasm_twp_rebind twp_store32 (address := driverBase) (offset := 4) ptr
             (by decide) (by decide) (by decide) (by decide) with Hpointer
-        wasm_twp_pures [twp_localGet twp_const twp_add]
-        rw [UInt32.add_comm 16 reserveBase,
-          show reserveBase + 16 = driverBase by decide]
-        wasm_twp_rebind twp_globalSet with Hsp
+        have hrestore : (16 : UInt32) + reserveBase = driverBase := by decide
+        iapply twp_rustc_epilogue rfl hrestore $$ Hsp
+        iintro Hsp
         wasm_twp_rebind twp_returnFromCallFallthrough with Hmodule
         simp only [List.take_zero, List.nil_append]
         ihave HnewStorage := LiveBlock_to_VecStorage heapId history.nextId

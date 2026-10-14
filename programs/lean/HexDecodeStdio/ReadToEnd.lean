@@ -109,12 +109,7 @@ theorem twp_read_to_end_empty
   simp only [func7Def, Function.toLocals, Function.numParams]
   rw [func7_first_read_split]
   simp
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro HframeSp
   iapply twp_localGet rfl
   iapply twp_const
@@ -246,11 +241,7 @@ theorem twp_read_to_end_empty
       (by simpa using hout.six) (by simpa using hout.seven) $$ HoutVec0
   iintro HoutVec
   isimp only [UInt32.add_zero] at HoutVec
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  rw [hrestore]
-  iapply twp_globalSet $$ HframeSp
+  iapply twp_rustc_epilogue rfl hrestore $$ HframeSp
   iintro Hsp
   iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime

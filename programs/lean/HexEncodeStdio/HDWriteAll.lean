@@ -1,4 +1,5 @@
 import HexEncodeStdio.HDHostIO
+import CodeLib.RustStd.Idioms
 
 namespace Project.HexEncodeStdio
 
@@ -51,12 +52,7 @@ theorem twp_write_all_nonempty
   iintro Hruntime
   simp [func8Def, Function.toLocals, Function.numParams,
     ValueType.zero, func8]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro HframeSp
   iapply twp_block
   iapply twp_localGet rfl
@@ -118,12 +114,8 @@ theorem twp_write_all_nonempty
   simp
   iapply twp_brIfZero
   iapply twp_br rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 16 + (sp - 16) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ HframeSp
+  iapply twp_rustc_epilogue rfl hrestore $$ HframeSp
   iintro Hsp
   iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime

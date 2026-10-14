@@ -332,15 +332,10 @@ private theorem twp_entry [WasmSmallStepGS hlc Universal.State]
   simp [Project.GcdStdio.func0Def, Project.GcdStdio.func0,
     Function.toLocals, Function.numParams]
   isimp only [StackPointer] at Hsp
-  iapply twp_globalGet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro Hsp
-  iapply twp_const
-  iapply twp_sub
   rw [show entryStackTop - 16 = entryStackLow by decide]
-  iapply twp_localTee rfl
   simp only [List.length_nil, Nat.reduceSub, List.set]
-  iapply twp_globalSet $$ Hsp
-  iintro Hsp
   iapply Wasm.SmallStep.twp_call Project.GcdStdio.module 6
       Project.GcdStdio.func3Def (by decide) func3_index $$ Hmodule
   iintro Hmodule

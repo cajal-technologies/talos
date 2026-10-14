@@ -86,12 +86,7 @@ theorem twp_decode_invalid_high_first
   iapply twp_call «module» 8 func5Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero, func5]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro Hframe
   iapply twp_const
   iapply twp_localSet rfl
@@ -235,12 +230,8 @@ theorem twp_decode_invalid_high_first
   iapply twp_localGet rfl
   iapply twp_eqz rfl
   iapply twp_brIf (by decide) rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ Hframe
+  iapply twp_rustc_epilogue rfl hrestore $$ Hframe
   iintro Hsp
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime
@@ -325,12 +316,7 @@ theorem twp_decode_invalid_low_first
   iapply twp_call «module» 8 func5Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero, func5]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro Hframe
   iapply twp_const
   iapply twp_localSet rfl
@@ -475,12 +461,8 @@ theorem twp_decode_invalid_low_first
   iapply twp_localGet rfl
   iapply twp_eqz rfl
   iapply twp_brIf (by decide) rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ Hframe
+  iapply twp_rustc_epilogue rfl hrestore $$ Hframe
   iintro Hsp
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime

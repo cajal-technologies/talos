@@ -1,5 +1,6 @@
 import HexDecodeStdio.DecodeSpec
 import CodeLib.SepLogic.SmallStepTotalLiftingBytes
+import CodeLib.RustStd.Idioms
 import HexDecodeStdio.DecodeIterator
 
 namespace Project.HexDecodeStdio
@@ -113,12 +114,7 @@ theorem twp_decode_odd
   iapply twp_call «module» 8 func5Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero, func5]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro Hframe
   iapply twp_const
   iapply twp_localSet rfl
@@ -140,12 +136,8 @@ theorem twp_decode_odd
       h1 h2 h3 h4 h5 h6 h7 $$ Hout
   iintro Hout
   iapply twp_exitControl rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ Hframe
+  iapply twp_rustc_epilogue rfl hrestore $$ Hframe
   iintro Hsp
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime
@@ -212,12 +204,7 @@ theorem twp_decode_empty
   iapply twp_call «module» 8 func5Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
   simp [func5Def, Function.toLocals, Function.numParams, ValueType.zero, func5]
-  iapply twp_globalGet $$ Hsp
-  iintro Hsp
-  iapply twp_const
-  iapply twp_sub
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hsp
+  iapply twp_rustc_prologue rfl $$ Hsp
   iintro Hframe
   iapply twp_const
   iapply twp_localSet rfl
@@ -316,12 +303,8 @@ theorem twp_decode_empty
       (by simpa using houtCap.three) $$ HoutCap
   iintro HoutCap
   iapply twp_br rfl
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
   have hrestore : 96 + (sp - 96) = sp := by bv_normalize (config := { enums := false })
-  rw [hrestore]
-  iapply twp_globalSet $$ Hframe
+  iapply twp_rustc_epilogue rfl hrestore $$ Hframe
   iintro Hsp
   iapply twp_returnFromCallExplicit
       (module := «module») (returningInstance := ⟨0⟩) $$ Hruntime

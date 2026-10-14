@@ -402,17 +402,12 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
   simp [func8Locals, List.set]
   iapply twp_brIfZero
   iapply twp_br (by rfl)
-  iapply twp_localGet rfl
-  iapply twp_const
-  iapply twp_add
-  iapply twp_globalSet $$ Hglobal
+  have hrestore : (16 : UInt32) + stackPtr = stackPtr + 16 :=
+    UInt32.add_comm 16 stackPtr
+  iapply twp_rustc_epilogue rfl hrestore $$ Hglobal
   iintro Hglobal
-  ihave Hglobal' :
-      globalPointsToAt 0 0 (.i32 (stackPtr + 16)) $$ [Hglobal]
-  · rw [UInt32.add_comm stackPtr 16]
-    iexact Hglobal
   simp [UInt32.add_comm ptr length]
-  iapply Hnext $$ Hruntime Henv Hhost Hglobal' Hbytes Htag Hlength
+  iapply Hnext $$ Hruntime Henv Hhost Hglobal Hbytes Htag Hlength
 
 /-- Caller-side total contract for generated WAT function 11 on a nonempty
 slice.  The function reserves its 16-byte frame, performs the complete write,
@@ -456,14 +451,9 @@ theorem twp_call_func8_nonempty {hlc : HasLC}
   simp [Project.HexStdio.func8Def, Function.toLocals, Function.numParams,
     ValueType.zero]
   rw [func8_eq]
-  iapply twp_globalGet $$ Hglobal
+  iapply twp_rustc_prologue rfl $$ Hglobal
   iintro Hglobal
-  iapply twp_const
-  iapply twp_sub
   rw [show stackPtr + 16 - 16 = stackPtr by bv_normalize (config := { enums := false })]
-  iapply twp_localTee rfl
-  iapply twp_globalSet $$ Hglobal
-  iintro Hglobal
   simp []
   iapply func8_after_prologue_nonempty ptr length stackPtr bytes host oldTag
     oldLength 0 0 0 0 hlen hpos hptr hstack (controls := [])

@@ -84,4 +84,28 @@ theorem UInt32.and_one_eq_zero_iff_toNat_mod_two (n : UInt32) :
     have h2 : (n &&& 1).toNat = (0 : UInt32).toNat := by simpa using h1
     exact UInt32.toNat.inj h2
 
+/-- General stride-4 address step: `base + 4 * UInt32.ofNat i + 4 * UInt32.ofNat j =
+base + 4 * UInt32.ofNat (i + j)`.  Adding one more stride-4 slot to an address
+already expressed as `base + 4 * ofNat i` advances the `ofNat` index by `j`. -/
+theorem UInt32.add_stride4_ofNat (base : UInt32) (i j : Nat) :
+    base + 4 * UInt32.ofNat i + 4 * UInt32.ofNat j =
+      base + 4 * UInt32.ofNat (i + j) := by
+  rw [UInt32.ofNat_add, UInt32.mul_add]
+  ac_rfl
+
+theorem UInt32.add_stride4_add1 (base : UInt32) (i : Nat) :
+    base + 4 * UInt32.ofNat i + 4 = base + 4 * UInt32.ofNat (i + 1) := by
+  simpa only [show 4 * UInt32.ofNat 1 = (4 : UInt32) from by decide]
+    using UInt32.add_stride4_ofNat base i 1
+
+theorem UInt32.add_stride4_add2 (base : UInt32) (i : Nat) :
+    base + 4 * UInt32.ofNat i + 8 = base + 4 * UInt32.ofNat (i + 2) := by
+  simpa only [show 4 * UInt32.ofNat 2 = (8 : UInt32) from by decide]
+    using UInt32.add_stride4_ofNat base i 2
+
+theorem UInt32.add_stride4_add3 (base : UInt32) (i : Nat) :
+    base + 4 * UInt32.ofNat i + 12 = base + 4 * UInt32.ofNat (i + 3) := by
+  simpa only [show 4 * UInt32.ofNat 3 = (12 : UInt32) from by decide]
+    using UInt32.add_stride4_ofNat base i 3
+
 end Wasm

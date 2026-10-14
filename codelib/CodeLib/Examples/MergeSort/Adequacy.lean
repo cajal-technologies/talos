@@ -1,5 +1,6 @@
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.SepLogic.SmallStepAdequacy
+import CodeLib.WasmArith
 
 namespace Wasm.Examples.MergeSort
 
@@ -195,9 +196,9 @@ private theorem mergeSortHeap_agrees
   have hUSize : UInt32.size = 4294967296 := by decide
   rw [mergeSortConfig_storeResolve source temporary input scratch]
   apply mergeSortHeapAux_agrees _ _ temporary scratch
-  · omega
+  · wasm_side
   apply mergeSortHeapAux_agrees _ _ source input
-  · omega
+  · wasm_side
   · exact heapAgreesWithMem_empty _
 
 private theorem mergeSortHeap_inBounds
@@ -228,8 +229,8 @@ private theorem mergeSortHeap_pointsTo [WasmHeapGS Unit]
         pointsTo (GF := WasmHeapGF Unit) (H := WasmHeapMap) address (DFrac.own 1) byte) ⊢
       arrayAt 0 source input ∗ arrayAt 0 temporary scratch := by
   simp only [mergeSortHeap]
-  have hnoWrap_s : source.toNat + 4 * input.length + 4 ≤ 4294967296 := by omega
-  have hnoWrap_t : temporary.toNat + 4 * scratch.length + 4 ≤ 4294967296 := by omega
+  have hnoWrap_s : source.toNat + 4 * input.length + 4 ≤ 4294967296 := by wasm_side
+  have hnoWrap_t : temporary.toNat + 4 * scratch.length + 4 ≤ 4294967296 := by wasm_side
   -- unfold arrayByteRange so omega can reason about the disjunction
   have hvalidDisj : source.toNat + 4 * input.length ≤ temporary.toNat ∨
       temporary.toNat + 4 * input.length ≤ source.toNat := by
