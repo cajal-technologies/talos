@@ -63,8 +63,10 @@ def Instruction.gcTypeRefs : Instruction → List Nat
     | .arrayNewElem t _ | .arrayInitElem t _ => [t]
     | .structGet t _ | .structGetS t _ | .structGetU t _ | .structSet t _ => [t]
     | .arrayCopy a b => [a, b]
-    | .refTest _ (.concrete t) | .refCast _ (.concrete t)
-    | .brOnCast _ _ (.concrete t) | .brOnCastFail _ _ (.concrete t) => [t]
+    | .refTest _ (.concrete t) | .refCast _ (.concrete t) => [t]
+    | .brOnCast _ _ ht source | .brOnCastFail _ _ ht source =>
+        (match ht with | .concrete t => [t] | _ => []) ++
+        (match source with | some (.ref _ (.concrete t)) => [t] | _ => [])
     | _ => []
   | _ => []
 
@@ -138,21 +140,14 @@ def Instruction.checkBulkMemoryRefs
         else .ok ()
       else .ok ()
 
-/-- A typed `select` names exactly one result type, and a concrete reference
-in it names a declared type. Checked for every instruction (like the other
-immediate checks below), so the partial stack checker, which stops at the
-first instruction it does not model, cannot skip it. The index test is the
-two-table lookup of `Module.typeIndexKnown` (#251); once both land, the type
-reference belongs in `Instruction.valueTypeRefs` and only the arity check
-stays here. -/
-def Instruction.checkSelectAnnotation (m : Module) : Instruction → Except String Unit
-  | .select (some [selectType]) =>
-      match selectType with
-      | .ref _ (.concrete index) =>
-          if index ≥ m.types.length && index ≥ m.gcTypes.length then
-            .error "unknown type"
-          else .ok ()
-      | _ => .ok ()
+/-- A typed `select` names exactly one result type. Checked for every
+instruction (like the other immediate checks below), so the partial stack
+checker, which stops at the first instruction it does not model, cannot skip
+it. The type index inside the annotation is checked through
+`Instruction.valueTypeRefs`, like every other value type written in an
+immediate. -/
+def Instruction.checkSelectAnnotation : Instruction → Except String Unit
+  | .select (some [_]) => .ok ()
   | .select (some _) => .error "invalid result arity"
   | _ => .ok ()
 
@@ -703,7 +698,7 @@ def Program.checkBranchDepth
     | .brTable targets defaultTarget =>
         if defaultTarget > labels || targets.any (· > labels) then
           throw "unknown label"
-    | .gc (.brOnCast depth _ _) | .gc (.brOnCastFail depth _ _) =>
+    | .gc (.brOnCast depth _ _ _) | .gc (.brOnCastFail depth _ _ _) =>
         if depth > labels then throw "unknown label"
     | _ => pure ()
 termination_by sizeOf program
@@ -733,14 +728,26 @@ def Module.resolveHeapType (m : Module) : GcHeapType → GcHeapType
       | none => .named name
   | heap => heap
 
+/-- Whether concrete type index `index` is a function type, i.e. lies in the
+func hierarchy. A function type may live only in `types` (not `gcTypes`). -/
+def Module.concreteIsFunc (m : Module) (index : Nat) : Bool :=
+  match m.gcComposite? index with
+  | some (.func _) => true
+  | some _ => false
+  | none => (m.types[index]?).isSome
+
 def Module.heapSubtype (m : Module) (actual expected : GcHeapType) : Bool :=
   let actual := m.resolveHeapType actual
   let expected := m.resolveHeapType expected
   if actual == expected then true else
   match actual, expected with
   | .noFunc, .func | .noExtern, .extern | .noExn, .exn => true
+  -- Bottom types: `nofunc` is below every function type, `none` below every
+  -- struct/array type (each concrete type is in exactly one hierarchy).
+  | .noFunc, .concrete index => m.concreteIsFunc index
+  | .noneT, .concrete index => !m.concreteIsFunc index
   | .noneT, .any | .noneT, .eq | .noneT, .i31
-  | .noneT, .structT | .noneT, .arrayT | .noneT, .concrete _ => true
+  | .noneT, .structT | .noneT, .arrayT => true
   | .i31, .eq | .i31, .any => true
   | .structT, .eq | .structT, .any
   | .arrayT, .eq | .arrayT, .any => true
@@ -1207,6 +1214,83 @@ def Instruction.straightSig (m : Module) (locals : List ValueType)
       (operation.scalarMemorySig addressType).orElse fun _ =>
         operation.simdMemorySig addressType
 
+/-! ### Reference casts
+
+`ref.test`, `ref.cast`, `br_on_cast` and `br_on_cast_fail` (GC proposal). The
+operand must be a reference in the same type hierarchy as the target type
+(`any`, `func`, `extern` or `exn`). `br_on_cast l rt1 rt2` additionally requires
+`rt2 <: rt1`, a label that accepts the branched value, and types the
+fall-through operand as `rt1 \ rt2` (`rt1` without null when `rt2` admits
+null). -/
+
+/-- The top of a heap type's hierarchy. -/
+def Module.heapTop (m : Module) (heap : GcHeapType) : GcHeapType :=
+  match m.resolveHeapType heap with
+  | .func | .noFunc => .func
+  | .extern | .noExtern => .extern
+  | .exn | .noExn => .exn
+  | .concrete index => if m.concreteIsFunc index then .func else .any
+  | _ => .any
+
+/-- Whether a cast operand is a reference in the target type's hierarchy. A
+polymorphic operand after `unreachable` is accepted. -/
+def Module.castOperandMatches (m : Module) (operand : CheckedType)
+    (targetHeap : GcHeapType) : Bool :=
+  match operand with
+  | none => true
+  | some valueType =>
+      match valueType.reference? with
+      | some (_, heap) => m.heapTop heap == m.heapTop targetHeap
+      | none => false
+
+/-- `rt1 \ rt2`: the source type minus the values matched by the target. Only
+nullability can be subtracted statically. -/
+def ValueType.castDifference (source target : ValueType) : ValueType :=
+  match source.reference?, target.reference? with
+  | some (sourceNullable, sourceHeap), some (targetNullable, _) =>
+      .ref (sourceNullable && !targetNullable) sourceHeap
+  | _, _ => source
+
+/-- Type `br_on_cast` (`fail := false`) or `br_on_cast_fail` (`fail := true`).
+The operand stays on the stack in both outcomes: the branch carries the
+matched type (`rt2`, or `rt1 \ rt2` for the fail form) and the fall-through
+keeps the other. -/
+def Module.checkBrOnCast (m : Module) (state : CheckState) (labels : List LabelType)
+    (depth : Nat) (nullable : Bool) (heap : GcHeapType) (source : Option ValueType)
+    (fail : Bool) : Except String CheckState := do
+  let target : ValueType := .ref nullable heap
+  let (operand, afterOperand) ← match source with
+    | some sourceType => do
+        if !m.vtCompat target sourceType then throw "type mismatch"
+        let next ← state.popExpected m sourceType
+        pure (some sourceType, next)
+    | none => do
+        let (operand, next) ← state.popAny
+        if !m.castOperandMatches operand heap then throw "type mismatch"
+        pure (operand, next)
+  let sourceType : ValueType := (operand.getD (.ref true (m.heapTop heap)))
+  let branched : ValueType := if fail then sourceType.castDifference target else target
+  let fallthrough : ValueType := if fail then target else sourceType.castDifference target
+  let some (arity, types?) := labels[depth]?
+    | throw "unknown label"
+  -- The label must receive the reference, so its type `[t* rt']` is never
+  -- empty. Without this, an empty label consumes nothing below and the
+  -- branched reference would stay on the stack under the fall-through one.
+  if arity = 0 then throw "type mismatch"
+  -- The label consumes `[t* rt']`. On fall-through the operands below the
+  -- reference keep only the label's types `t*` (WebAssembly/gc#516), exactly as
+  -- for `br_on_null`.
+  let branchState : CheckState :=
+    { afterOperand with stack := some branched :: afterOperand.stack }
+  let below ← match types? with
+    | some types =>
+        let rest ← branchState.applySig m (types.reverse, [])
+        pure { rest with stack := (types.dropLast.reverse.map some) ++ rest.stack }
+    | none =>
+        let (arguments, rest) ← branchState.popAnyN arity
+        pure { rest with stack := arguments.drop 1 ++ rest.stack }
+  return { below with stack := some fallthrough :: below.stack }
+
 /-- Recursively check a program. `none` means an unsupported instruction was
 encountered, so callers conservatively accept the whole function. -/
 def Program.checkTypes
@@ -1525,6 +1609,18 @@ def Program.checkTypes
               stack := []
               unreachable := true
               transfers := 0 :: next.transfers })
+      | .gc (.refTest _ heap) => do
+          let (operand, next) ← state.popAny
+          if !m.castOperandMatches operand heap then throw "type mismatch"
+          pure (some { next with stack := some .i32 :: next.stack })
+      | .gc (.refCast nullable heap) => do
+          let (operand, next) ← state.popAny
+          if !m.castOperandMatches operand heap then throw "type mismatch"
+          pure (some { next with stack := some (.ref nullable heap) :: next.stack })
+      | .gc (.brOnCast depth nullable heap source) =>
+          some <$> m.checkBrOnCast state labels depth nullable heap source false
+      | .gc (.brOnCastFail depth nullable heap source) =>
+          some <$> m.checkBrOnCast state labels depth nullable heap source true
       | .localGet index => do
           let some localType := locals[index]?
             | pure none
@@ -1580,6 +1676,165 @@ def Module.checkConstProgram
         if (m.funcSig? functionIndex).isNone then throw "unknown function"
     | _ => pure ()
 
+/-! ### Type indices written in value types
+
+`Instruction.gcTypeRefs` covers the type indices in GC instruction immediates.
+A concrete type index can also appear inside a value type: function and tag
+signatures, imports, parameters, locals, results, globals, table element types,
+element segments, block types, and static null-reference types. Each must name
+a declared type. -/
+
+/-- Whether `index` names a declared type. The function-type table and the GC
+type table share one index space; decoded modules fill both, hand-built modules
+may fill either. -/
+def Module.typeIndexKnown (m : Module) (index : Nat) : Bool :=
+  index < m.types.length || index < m.gcTypes.length
+
+/-- The type index a value type refers to, when it is a concrete reference. -/
+def ValueType.concreteTypeRef? : ValueType → Option Nat
+  | .ref _ (.concrete index) => some index
+  | _ => none
+
+def Module.checkValueTypeRef (m : Module) (valueType : ValueType) :
+    Except String Unit :=
+  match valueType.concreteTypeRef? with
+  | some index => if m.typeIndexKnown index then .ok () else .error "unknown type"
+  | none => .ok ()
+
+def Module.checkValueTypeRefs (m : Module) (valueTypes : List ValueType) :
+    Except String Unit := do
+  for valueType in valueTypes do
+    m.checkValueTypeRef valueType
+
+/-- The value types written in a GC instruction's immediates. Exhaustive on
+purpose: a new `GcOp` immediate carrying a `ValueType` must be added here. -/
+def GcOp.valueTypeRefs : GcOp → List ValueType
+  | .refNullAny staticType => [staticType]
+  | .brOnCast _ _ _ source | .brOnCastFail _ _ _ source => source.toList
+  | .refI31 | .i31GetS | .i31GetU | .refEq | .anyConvertExtern
+  | .externConvertAny | .refTest _ _ | .refCast _ _
+  | .structNew _ | .structNewDefault _ | .structGet _ _
+  | .structGetS _ _ | .structGetU _ _ | .structSet _ _ | .arrayNew _
+  | .arrayNewDefault _ | .arrayNewFixed _ _ | .arrayGet _ | .arrayGetS _
+  | .arrayGetU _ | .arraySet _ | .arrayLen | .arrayFill _ | .arrayCopy _ _
+  | .arrayNewData _ _ | .arrayNewElem _ _ | .arrayInitData _ _
+  | .arrayInitElem _ _ => []
+
+/-- The value types written in an instruction's immediates: block types and
+static null-reference types. Exhaustive on purpose (no wildcard): a new
+`ValueType`-carrying immediate must be added here, or its type indices go
+unchecked. -/
+def Instruction.valueTypeRefs : Instruction → List ValueType
+  | .block _ _ _ paramTypes resultTypes
+  | .loop _ _ _ paramTypes resultTypes
+  | .iff _ _ _ _ paramTypes resultTypes
+  | .tryTable _ _ _ _ paramTypes resultTypes => paramTypes ++ resultTypes
+  | .refNull staticType | .refNullExtern staticType | .refNullExn staticType =>
+    [staticType]
+  -- A typed `select t` names `t`; the arity of the annotation is checked by
+  -- `Instruction.checkSelectAnnotation`.
+  | .select resultTypes => resultTypes.getD []
+  | .gc op => op.valueTypeRefs
+  -- `memOp` wraps a memory instruction, which carries no value type.
+  | .memOp _ _ => []
+  | .localGet _ | .localSet _ | .localTee _ | .const _ | .constI64 _
+  | .globalGet _ | .globalSet _ | .add | .sub | .mul | .divU | .divS | .remU
+  | .remS | .eqz | .eq | .ne | .ltU | .ltS | .gtU | .gtS | .leU | .leS | .geU
+  | .geS | .and | .or | .xor | .shl | .shrU | .shrS | .rotl | .rotr | .clz
+  | .ctz | .popcnt | .addI64 | .subI64 | .mulI64 | .divUI64 | .divSI64
+  | .remUI64 | .remSI64 | .eqzI64 | .eqI64 | .neI64 | .ltUI64 | .ltSI64
+  | .gtUI64 | .gtSI64 | .leUI64 | .leSI64 | .geUI64 | .geSI64 | .andI64
+  | .orI64 | .xorI64 | .shlI64 | .shrUI64 | .shrSI64 | .rotlI64 | .rotrI64
+  | .clzI64 | .ctzI64 | .popcntI64 | .wrapI64 | .extendSI32 | .extendUI32
+  | .extend8S | .extend16S | .extend8SI64 | .extend16SI64 | .extend32SI64
+  | .f32Const _ | .f64Const _ | .f32Add | .f32Sub | .f32Mul | .f32Div | .f32Min
+  | .f32Max | .f32Copysign | .f64Add | .f64Sub | .f64Mul | .f64Div | .f64Min
+  | .f64Max | .f64Copysign | .f32Abs | .f32Neg | .f32Sqrt | .f32Ceil
+  | .f32Floor | .f32Trunc | .f32Nearest | .f64Abs | .f64Neg | .f64Sqrt
+  | .f64Ceil | .f64Floor | .f64Trunc | .f64Nearest | .f32Eq | .f32Ne | .f32Lt
+  | .f32Gt | .f32Le | .f32Ge | .f64Eq | .f64Ne | .f64Lt | .f64Gt | .f64Le
+  | .f64Ge | .f32Load _ | .f64Load _ | .f32Store _ | .f64Store _
+  | .f32ConvertI32S | .f32ConvertI32U | .f32ConvertI64S | .f32ConvertI64U
+  | .f64ConvertI32S | .f64ConvertI32U | .f64ConvertI64S | .f64ConvertI64U
+  | .i32TruncF32S | .i32TruncF32U | .i32TruncF64S | .i32TruncF64U
+  | .i64TruncF32S | .i64TruncF32U | .i64TruncF64S | .i64TruncF64U
+  | .i32TruncSatF32S | .i32TruncSatF32U | .i32TruncSatF64S | .i32TruncSatF64U
+  | .i64TruncSatF32S | .i64TruncSatF32U | .i64TruncSatF64S | .i64TruncSatF64U
+  | .f32DemoteF64 | .f64PromoteF32 | .i32ReinterpretF32 | .i64ReinterpretF64
+  | .f32ReinterpretI32 | .f64ReinterpretI64 | .br _ | .br_if _ | .brTable _ _
+  | .ret | .call _ | .returnCall _ | .returnCallIndirect _ _ | .throwI _
+  | .throwRef | .callRef _ | .returnCallRef _ | .refAsNonNull | .brOnNull _
+  | .brOnNonNull _ | .callIndirect _ _ | .refFunc _ | .refIsNull | .tableGet _
+  | .tableSize _ | .tableSet _ | .tableGrow _ | .tableFill _ | .tableCopy _ _
+  | .tableInit _ _ | .elemDrop _ | .load8U _ | .load8S _ | .load16U _
+  | .load16S _ | .load32 _ | .store8 _ | .store16 _ | .store32 _ | .load64 _
+  | .store64 _ | .load8UI64 _ | .load8SI64 _ | .load16UI64 _ | .load16SI64 _
+  | .load32UI64 _ | .load32SI64 _ | .store8I64 _ | .store16I64 _
+  | .store32I64 _ | .memorySize | .memoryGrow | .memoryFill | .memoryCopy
+  | .memoryInit _ | .dataDrop _ | .memoryCopyBetween _ _ | .vConst _ | .vUnOp _
+  | .vBinOp _ | .vBitselect | .vTestOp _ | .vShiftOp _ | .vSplat _
+  | .vExtractLane _ _ _ | .vReplaceLane _ _ | .vShuffle _ | .vFma _ _
+  | .vDotAdd | .v128Load _ | .v128Store _ | .v128LoadExt _ _ _
+  | .v128LoadSplat _ _ | .v128LoadZero _ _ | .v128LoadLane _ _ _
+  | .v128StoreLane _ _ _ | .drop | .nop | .unreachable => []
+
+/-- The value types written in a GC type definition. -/
+def GcTypeDef.valueTypes (td : GcTypeDef) : List ValueType :=
+  match td.comp with
+  | .func signature => signature.params ++ signature.results
+  | .struct fields => fields.map (·.storage.vt)
+  | .array elem => [elem.storage.vt]
+
+/-- One past the last type index a type definition at `index` may refer to:
+the end of its recursion group. A type may name only types in its own `rec`
+group or in earlier ones; a singleton group (`recGroup = none`) ends at the
+type itself. -/
+def Module.recGroupEnd (m : Module) (index : Nat) : Nat :=
+  match m.gcTypes[index]? with
+  | some { recGroup := some group, .. } =>
+    m.gcTypes.zipIdx.foldl
+      (fun groupEnd (td, member) =>
+        if td.recGroup == some group then max groupEnd (member + 1) else groupEnd)
+      (index + 1)
+  | _ => index + 1
+
+/-- Every concrete type index written in a declared value type must name a
+type. Inside a type definition the index must also not reach past the
+definition's recursion group (no forward references across `rec` groups), and
+a declared supertype must precede the type. -/
+def Module.checkValueTypeIndices (m : Module) : Except String Unit := do
+  for signature in m.types ++ m.tags do
+    m.checkValueTypeRefs (signature.params ++ signature.results)
+  for (td, index) in m.gcTypes.zipIdx do
+    m.checkValueTypeRefs td.valueTypes
+    let groupEnd := m.recGroupEnd index
+    for valueType in td.valueTypes do
+      match valueType.concreteTypeRef? with
+      | some referenced => if referenced ≥ groupEnd then throw "unknown type"
+      | none => pure ()
+    match td.super with
+    | some supertype => if supertype ≥ index then throw "unknown type"
+    | none => pure ()
+  for imp in m.imports do
+    m.checkValueTypeRefs (imp.params ++ imp.results)
+  for f in m.funcs do
+    m.checkValueTypeRefs (f.params ++ f.locals ++ f.results)
+  -- Value types in instruction immediates (block types, static null-reference
+  -- types) are checked by `Module.validate`'s existing per-instruction pass.
+  for global in m.globals do
+    m.checkValueTypeRef global.valueType
+    for instruction in (global.sourceInit.getD []).allInstrs do
+      m.checkValueTypeRefs instruction.valueTypeRefs
+  for table in m.tables do
+    m.checkValueTypeRef table.elemType
+  for segment in m.elements do
+    match segment.elemType with
+    | some elemType => m.checkValueTypeRef elemType
+    | none => pure ()
+    for expression in segment.exprs ++ [segment.offsetExpr] do
+      for instruction in expression.allInstrs do
+        m.checkValueTypeRefs instruction.valueTypeRefs
+
 /-- A table's declared limits must be in range for its address type, and its
 minimum size may not exceed its declared maximum. Decoded modules already have
 in-range limits (the parser bounds them); the 32-bit range check guards
@@ -1609,6 +1864,7 @@ def TableDecl.checkDefaultableElement (table : TableDecl) : Except String Unit :
 /-- Run the partial structural validator. `throw` on the first violation. -/
 def Module.validate (m : Module) : Except String Unit := do
   m.checkInterface
+  m.checkValueTypeIndices
   -- Table types (validated before code, in spec order): limits for every
   -- table; a defaultable element type for the module's own tables. Imports
   -- occupy the low indices.
@@ -1658,6 +1914,9 @@ def Module.validate (m : Module) : Except String Unit := do
         | none => pure ()
         if segment.offsetExprPresent then
           m.checkConstProgram segment.offsetExpr addressType
+  -- GC instruction immediates index the GC type table only. Value types use
+  -- `Module.typeIndexKnown`, which also accepts an index into `types`; the two
+  -- agree on decoded modules, which fill both tables in parallel.
   let nTypes := m.gcTypes.length
   -- Hand-built globals without a retained source initializer must agree with
   -- their literal runtime value. Decoded globals are checked from
@@ -1703,13 +1962,14 @@ def Module.validate (m : Module) : Except String Unit := do
     for i in f.body.allInstrs do
       for t in i.gcTypeRefs do
         if t ≥ nTypes then throw "unknown type"
+      m.checkValueTypeRefs i.valueTypeRefs
       i.checkBulkMemoryRefs m
       i.checkTableSegmentRefs m
       i.checkGlobalRefs m
       i.checkLocalRefs (f.params.length + f.locals.length)
       i.checkFunctionRefs m
       i.checkSimdImmediates
-      i.checkSelectAnnotation m
+      i.checkSelectAnnotation
       match i with
       | .gc (.structSet t fld) =>
         match m.structField? t fld with

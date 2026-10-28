@@ -1402,11 +1402,13 @@ private def parseInstr (ctx : Ctx) (toks : List Sexpr)
         .ok ([.gc (.refCast n ht)], rest')
       | _ => .error "ref.cast expects a reference-type immediate"
     | "br_on_cast" | "br_on_cast_fail" => match rest with
-      | .atom lbl :: _t1 :: t2 :: rest' => do
+      | .atom lbl :: t1 :: t2 :: rest' => do
         let label ← resolveLabel ctx lbl
+        let (n1, ht1) ← parseRefTypeImmediate ctx t1
         let (n2, ht2) ← parseRefTypeImmediate ctx t2
-        let instr := if op == "br_on_cast" then Wasm.GcOp.brOnCast label n2 ht2
-                     else Wasm.GcOp.brOnCastFail label n2 ht2
+        let source := some (Wasm.ValueType.ref n1 ht1)
+        let instr := if op == "br_on_cast" then Wasm.GcOp.brOnCast label n2 ht2 source
+                     else Wasm.GcOp.brOnCastFail label n2 ht2 source
         .ok ([.gc instr], rest')
       | _ => .error s!"{op} expects label + 2 type immediates"
     -- Struct / array instructions (GC proposal). Type immediates resolve
