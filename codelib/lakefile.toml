@@ -3,6 +3,10 @@ version = "0.1.0"
 defaultTargets = ["CodeLib"]
 packagesDir = "../.lake/packages"
 
+# Lean 4.35: Mathlib is designed for the module system; Talos files are not
+# (yet) modules. Opt out of the per-import warning instead of migrating here.
+allowNonModules = true
+
 [[require]]
 name = "WasmInterpreterLean"
 path = "../interpreter"
@@ -11,8 +15,8 @@ path = "../interpreter"
 name = "iris"
 git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-# Pin the upstream Lean 4.34.1 migration (iris-lean#702).
-rev = "04b7689c294bb1dd6401e2dd53b337871934ea47"
+# Pin the upstream Lean 4.35 migration (iris-lean 9a4ae0df7ea421267d6cbed9496a3845dd14e1e1).
+rev = "9a4ae0df7ea421267d6cbed9496a3845dd14e1e1"
 
 [[lean_lib]]
 name = "CodeLib"
