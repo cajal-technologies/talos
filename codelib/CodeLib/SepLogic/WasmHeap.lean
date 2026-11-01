@@ -282,41 +282,38 @@ theorem HeapBelow.insert_fresh
     rwa [get?_insert_ne (Ne.symm heq)] at hquery
 
 abbrev WasmHeapGF (α : Type 0) : BundledGFunctors
-  | 0 => ⟨InvMapF, by infer_instance⟩
-  | 1 => ⟨constOF (DisjointLeibnizSet CoPset), by infer_instance⟩
-  | 2 => ⟨constOF (DisjointLeibnizSet PosSet), by infer_instance⟩
-  | 3 => ⟨Auth.AuthURF (constOF Credit), by infer_instance⟩
-  | 4 => ⟨constOF (HeapView MemoryKey (Agree (DiscreteO (Option UInt8))) WasmHeapMap), by infer_instance⟩
-  | 5 => ⟨constOF (HeapView MemoryKey (Agree (DiscreteO GName)) WasmHeapMap), by infer_instance⟩
-  | 6 => ⟨constOF MetaUR, by infer_instance⟩
-  | 7 => ⟨constOF (HeapView GlobalKey (Agree (DiscreteO Value)) WasmGlobalMap),
-      by infer_instance⟩
-  | 8 => ⟨constOF (HeapView Nat (Agree (DiscreteO Module)) WasmRuntimeModuleMap),
-      by infer_instance⟩
+  | 0 => ⟨InvMapF⟩
+  | 1 => ⟨constOF (DisjointLeibnizSet CoPset)⟩
+  | 2 => ⟨constOF (DisjointLeibnizSet PosSet)⟩
+  | 3 => ⟨Auth.AuthURF (constOF Credit)⟩
+  | 4 => ⟨constOF (HeapView MemoryKey (Agree (DiscreteO (Option UInt8))) WasmHeapMap)⟩
+  | 5 => ⟨constOF (HeapView MemoryKey (Agree (DiscreteO GName)) WasmHeapMap)⟩
+  | 6 => ⟨constOF MetaUR⟩
+  | 7 => ⟨constOF (HeapView GlobalKey (Agree (DiscreteO Value)) WasmGlobalMap)⟩
+  | 8 => ⟨constOF (HeapView Nat (Agree (DiscreteO Module)) WasmRuntimeModuleMap)⟩
   | 9 => ⟨constOF
       (HeapView DataSegmentKey (Agree (DiscreteO (Option (List UInt8))))
-        WasmDataSegmentMap), by infer_instance⟩
+        WasmDataSegmentMap)⟩
   | 10 => ⟨constOF
-      (HeapView TableKey (Agree (DiscreteO TableInst)) WasmTableMap),
-      by infer_instance⟩
+      (HeapView TableKey (Agree (DiscreteO TableInst)) WasmTableMap)⟩
   | 11 => ⟨constOF
       (HeapView ElementSegmentKey (Agree (DiscreteO (Option (List (Option Nat)))))
-        WasmElementSegmentMap), by infer_instance⟩
-  | 12 => ⟨constOF (HeapView Nat (Agree (DiscreteO (HostEnv α))) WasmHostEnvMap), by infer_instance⟩
-  | 13 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO α)))), by infer_instance⟩
-  | 14 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))), by infer_instance⟩
-  | 15 => ⟨constOF (Agree (DiscreteO (Array (ModuleInstance α)))), by infer_instance⟩
+        WasmElementSegmentMap)⟩
+  | 12 => ⟨constOF (HeapView Nat (Agree (DiscreteO (HostEnv α))) WasmHostEnvMap)⟩
+  | 13 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO α))))⟩
+  | 14 => ⟨Auth.AuthRF (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat))))⟩
+  | 15 => ⟨constOF (Agree (DiscreteO (Array (ModuleInstance α))))⟩
   | 16 => ⟨constOF
       (HeapView Nat (Agree (DiscreteO (Nat × List Value)))
-        WasmExceptionMap), by infer_instance⟩
-  | 17 => ⟨constOF (Agree (DiscreteO (List Nat))), by infer_instance⟩
+        WasmExceptionMap)⟩
+  | 17 => ⟨constOF (Agree (DiscreteO (List Nat)))⟩
   | 18 => ⟨Auth.AuthRF
-      (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat)))), by infer_instance⟩
+      (OptionOF (Excl.ExclOF (constOF (DiscreteO Nat))))⟩
   | 19 => ⟨constOF
       (HeapView Nat (Agree (DiscreteO AllocationMeta))
-        WasmAllocationMap), by infer_instance⟩
-  | 20 => ⟨MonoNatRF, by infer_instance⟩
-  | _ => ⟨constOF Unit, by infer_instance⟩
+        WasmAllocationMap)⟩
+  | 20 => ⟨MonoNatRF⟩
+  | _ => ⟨constOF Unit⟩
 -- Wire genHeapPreS (following HeapLang's instHeapLangGS_HeapLangS)
 instance instWasmHeapPreS (α : Type) :
     genHeapPreS MemoryKey (Option UInt8) (WasmHeapGF α) WasmHeapMap where
