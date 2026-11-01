@@ -804,6 +804,77 @@ def evalScalarFloat2? : Instruction → Value → Value → Option Value
       some (.i32 (if f64Ge lhs rhs then 1 else 0))
   | _, _, _ => none
 
+/-- Pure unary integer instructions (one operand, no trap). The results are
+exactly those of the former per-instruction `Step` constructors. -/
+def evalScalarInt1? : Instruction → Value → Option Value
+  | .eqz, .i32 value => some (.i32 (if value = 0 then 1 else 0))
+  | .clz, .i32 value => some (.i32 (UInt32.ofNat (clz32 32 value)))
+  | .ctz, .i32 value => some (.i32 (UInt32.ofNat (ctz32 32 value)))
+  | .popcnt, .i32 value => some (.i32 (UInt32.ofNat (popcnt32 32 value 0)))
+  | .eqzI64, .i64 value => some (.i32 (if value = 0 then 1 else 0))
+  | .clzI64, .i64 value => some (.i64 (UInt64.ofNat (clz64 64 value)))
+  | .ctzI64, .i64 value => some (.i64 (UInt64.ofNat (ctz64 64 value)))
+  | .popcntI64, .i64 value => some (.i64 (UInt64.ofNat (popcnt64 64 value 0)))
+  | .wrapI64, .i64 value => some (.i32 (wrap64To32 value))
+  | .extendUI32, .i32 value => some (.i64 (extendUnsigned32To64 value))
+  | .extendSI32, .i32 value => some (.i64 (extendSigned32To64 value))
+  | .extend8S, .i32 value => some (.i32 (extend8To32 value))
+  | .extend16S, .i32 value => some (.i32 (extend16To32 value))
+  | .extend8SI64, .i64 value => some (.i64 (extend8To64 value))
+  | .extend16SI64, .i64 value => some (.i64 (extend16To64 value))
+  | .extend32SI64, .i64 value => some (.i64 (extend32To64 value))
+  | _, _ => none
+
+/-- Pure binary integer instructions; `rhs` is the top of the stack. The
+results (including operand order, e.g. `rhs + lhs` for `i32.add`) are exactly
+those of the former per-instruction `Step` constructors. -/
+def evalScalarInt2? : Instruction → Value → Value → Option Value
+  | .add, .i32 lhs, .i32 rhs => some (.i32 (rhs + lhs))
+  | .sub, .i32 lhs, .i32 rhs => some (.i32 (lhs - rhs))
+  | .mul, .i32 lhs, .i32 rhs => some (.i32 (rhs * lhs))
+  | .and, .i32 lhs, .i32 rhs => some (.i32 (lhs &&& rhs))
+  | .or, .i32 lhs, .i32 rhs => some (.i32 (lhs ||| rhs))
+  | .xor, .i32 lhs, .i32 rhs => some (.i32 (lhs ^^^ rhs))
+  | .shl, .i32 lhs, .i32 rhs => some (.i32 (lhs <<< (rhs % 32)))
+  | .shrU, .i32 lhs, .i32 rhs => some (.i32 (lhs >>> (rhs % 32)))
+  | .shrS, .i32 lhs, .i32 rhs =>
+      some (.i32 (UInt32.ofNat (BitVec.sshiftRight lhs.toBitVec (rhs % 32).toNat).toNat))
+  | .rotl, .i32 lhs, .i32 rhs => some (.i32 (rotateLeft32 lhs rhs))
+  | .rotr, .i32 lhs, .i32 rhs => some (.i32 (rotateRight32 lhs rhs))
+  | .addI64, .i64 lhs, .i64 rhs => some (.i64 (lhs + rhs))
+  | .subI64, .i64 lhs, .i64 rhs => some (.i64 (lhs - rhs))
+  | .mulI64, .i64 lhs, .i64 rhs => some (.i64 (lhs * rhs))
+  | .andI64, .i64 lhs, .i64 rhs => some (.i64 (lhs &&& rhs))
+  | .orI64, .i64 lhs, .i64 rhs => some (.i64 (lhs ||| rhs))
+  | .xorI64, .i64 lhs, .i64 rhs => some (.i64 (lhs ^^^ rhs))
+  | .shlI64, .i64 lhs, .i64 rhs => some (.i64 (lhs <<< (rhs % 64)))
+  | .shrUI64, .i64 lhs, .i64 rhs => some (.i64 (lhs >>> (rhs % 64)))
+  | .shrSI64, .i64 lhs, .i64 rhs =>
+      some (.i64 (UInt64.ofNat (BitVec.sshiftRight lhs.toBitVec (rhs % 64).toNat).toNat))
+  | .rotlI64, .i64 lhs, .i64 rhs => some (.i64 (rotateLeft64 lhs rhs))
+  | .rotrI64, .i64 lhs, .i64 rhs => some (.i64 (rotateRight64 lhs rhs))
+  | .eq, .i32 lhs, .i32 rhs => some (.i32 (if lhs = rhs then 1 else 0))
+  | .ne, .i32 lhs, .i32 rhs => some (.i32 (if lhs ≠ rhs then 1 else 0))
+  | .ltU, .i32 lhs, .i32 rhs => some (.i32 (if lhs < rhs then 1 else 0))
+  | .ltS, .i32 lhs, .i32 rhs => some (.i32 (if lhs.toInt32 < rhs.toInt32 then 1 else 0))
+  | .gtU, .i32 lhs, .i32 rhs => some (.i32 (if lhs > rhs then 1 else 0))
+  | .gtS, .i32 lhs, .i32 rhs => some (.i32 (if lhs.toInt32 > rhs.toInt32 then 1 else 0))
+  | .leU, .i32 lhs, .i32 rhs => some (.i32 (if lhs ≤ rhs then 1 else 0))
+  | .leS, .i32 lhs, .i32 rhs => some (.i32 (if lhs.toInt32 ≤ rhs.toInt32 then 1 else 0))
+  | .geU, .i32 lhs, .i32 rhs => some (.i32 (if lhs ≥ rhs then 1 else 0))
+  | .geS, .i32 lhs, .i32 rhs => some (.i32 (if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0))
+  | .eqI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs = rhs then 1 else 0))
+  | .neI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs ≠ rhs then 1 else 0))
+  | .ltUI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs < rhs then 1 else 0))
+  | .ltSI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs.toInt64 < rhs.toInt64 then 1 else 0))
+  | .gtUI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs > rhs then 1 else 0))
+  | .gtSI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs.toInt64 > rhs.toInt64 then 1 else 0))
+  | .leUI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs ≤ rhs then 1 else 0))
+  | .leSI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs.toInt64 ≤ rhs.toInt64 then 1 else 0))
+  | .geUI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs ≥ rhs then 1 else 0))
+  | .geSI64, .i64 lhs, .i64 rhs => some (.i32 (if lhs.toInt64 ≥ rhs.toInt64 then 1 else 0))
+  | _, _, _ => none
+
 def branchTarget? (functionArity : Nat) : Nat → List ControlFrame → List Value →
     Option (Program × List ControlFrame × List Value)
   | 0, [], values => some ([], [], values.take functionArity)
@@ -3249,6 +3320,38 @@ private theorem scalarFloat2_checked
     simp_all [stepChecked?, evalScalarFloat0?,
       evalScalarFloat1?, evalScalarFloat2?]
 
+private theorem scalarInt1_checked
+    {instruction : Instruction} {operand value : Value}
+    {params localValues values : List Value} {code : Program}
+    {arity : Nat} {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {store : MachineStore α}
+    (heval : evalScalarInt1? instruction operand = some value) :
+    stepChecked?
+      ⟨.running ⟨⟨params, localValues, operand :: values⟩,
+        instruction :: code, arity, remainder, controls, calls⟩, store⟩ =
+      .ok (some (.instruction instruction,
+        ⟨.running ⟨⟨params, localValues, value :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩)) := by
+  cases instruction <;> simp_all [evalScalarInt1?]
+  all_goals cases operand <;> simp_all [stepChecked?]
+
+private theorem scalarInt2_checked
+    {instruction : Instruction} {lhs rhs value : Value}
+    {params localValues values : List Value} {code : Program}
+    {arity : Nat} {remainder : List Value} {controls : List ControlFrame}
+    {calls : List CallFrame} {store : MachineStore α}
+    (hunary : evalScalarInt1? instruction rhs = none)
+    (heval : evalScalarInt2? instruction lhs rhs = some value) :
+    stepChecked?
+      ⟨.running ⟨⟨params, localValues, rhs :: lhs :: values⟩,
+        instruction :: code, arity, remainder, controls, calls⟩, store⟩ =
+      .ok (some (.instruction instruction,
+        ⟨.running ⟨⟨params, localValues, value :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩)) := by
+  cases instruction <;> simp_all [evalScalarInt1?, evalScalarInt2?]
+  all_goals cases lhs <;> cases rhs <;>
+    simp_all [stepChecked?]
+
 /-- Authoritative relational semantics for the migrated instruction slice.
 The executable stepper below is proved to decide exactly these constructors;
 the relation does not mention `stepChecked?`. -/
@@ -4906,193 +5009,20 @@ inductive Step : Config α → StepKind → Config α → Prop where
         (.instruction (.globalSet index))
         ⟨.running ⟨⟨params, localValues, values⟩, code, arity, remainder, controls, calls⟩,
           setGlobal store index value⟩
-  | add :
-      Step ⟨.running ⟨⟨params, localValues, .i32 a :: .i32 b :: values⟩,
-          .add :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .add)
-        ⟨.running ⟨⟨params, localValues, .i32 (a + b) :: values⟩,
+  | scalarInt1
+      (hresult : evalScalarInt1? instruction operand = some value) :
+      Step ⟨.running ⟨⟨params, localValues, operand :: values⟩,
+          instruction :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction instruction)
+        ⟨.running ⟨⟨params, localValues, value :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
-  | sub :
-      Step ⟨.running ⟨⟨params, localValues, .i32 a :: .i32 b :: values⟩,
-          .sub :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .sub)
-        ⟨.running ⟨⟨params, localValues, .i32 (b - a) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | mul :
-      Step ⟨.running ⟨⟨params, localValues, .i32 a :: .i32 b :: values⟩,
-          .mul :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .mul)
-        ⟨.running ⟨⟨params, localValues, .i32 (a * b) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | and :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .and :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .and)
-        ⟨.running ⟨⟨params, localValues, .i32 (lhs &&& rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | or :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .or :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .or)
-        ⟨.running ⟨⟨params, localValues, .i32 (lhs ||| rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | xor :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .xor :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .xor)
-        ⟨.running ⟨⟨params, localValues, .i32 (lhs ^^^ rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | shl :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .shl :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .shl)
-        ⟨.running ⟨⟨params, localValues, .i32 (lhs <<< (rhs % 32)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | shrU :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .shrU :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .shrU)
-        ⟨.running ⟨⟨params, localValues, .i32 (lhs >>> (rhs % 32)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | shrS :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .shrS :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .shrS)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (UInt32.ofNat
-            (BitVec.sshiftRight lhs.toBitVec (rhs % 32).toNat).toNat) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | rotl :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .rotl :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .rotl)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (rotateLeft32 lhs rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | rotr :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .rotr :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .rotr)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (rotateRight32 lhs rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | clz :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .clz :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .clz)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (UInt32.ofNat (clz32 32 value)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ctz :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .ctz :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ctz)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (UInt32.ofNat (ctz32 32 value)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | popcnt :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .popcnt :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .popcnt)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 (UInt32.ofNat (popcnt32 32 value 0)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | addI64 :
-      Step ⟨.running
-          ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-            .addI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .addI64)
-        ⟨.running
-          ⟨⟨params, localValues, .i64 (lhs + rhs) :: values⟩,
-            code, arity, remainder, controls, calls⟩, store⟩
-  | subI64 :
-      Step ⟨.running
-          ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-            .subI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .subI64)
-        ⟨.running
-          ⟨⟨params, localValues, .i64 (lhs - rhs) :: values⟩,
-            code, arity, remainder, controls, calls⟩, store⟩
-  | mulI64 :
-      Step ⟨.running
-          ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-            .mulI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .mulI64)
-        ⟨.running
-          ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
-            code, arity, remainder, controls, calls⟩, store⟩
-  | andI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .andI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .andI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (lhs &&& rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | orI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .orI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .orI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (lhs ||| rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | xorI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .xorI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .xorI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (lhs ^^^ rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | shlI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .shlI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .shlI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (lhs <<< (rhs % 64)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | shrUI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .shrUI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .shrUI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (lhs >>> (rhs % 64)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | shrSI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .shrSI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .shrSI64)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (UInt64.ofNat
-            (BitVec.sshiftRight lhs.toBitVec (rhs % 64).toNat).toNat) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | rotlI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .rotlI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .rotlI64)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (rotateLeft64 lhs rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | rotrI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .rotrI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .rotrI64)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (rotateRight64 lhs rhs) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | clzI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .clzI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .clzI64)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (UInt64.ofNat (clz64 64 value)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ctzI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .ctzI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ctzI64)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (UInt64.ofNat (ctz64 64 value)) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | popcntI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .popcntI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .popcntI64)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (UInt64.ofNat (popcnt64 64 value 0)) :: values⟩,
+  | scalarInt2
+      (hunary : evalScalarInt1? instruction rhs = none)
+      (hresult : evalScalarInt2? instruction lhs rhs = some value) :
+      Step ⟨.running ⟨⟨params, localValues, rhs :: lhs :: values⟩,
+          instruction :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction instruction)
+        ⟨.running ⟨⟨params, localValues, value :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
   | divUZero :
       Step ⟨.running ⟨⟨params, localValues, .i32 0 :: .i32 dividend :: values⟩,
@@ -5193,195 +5123,6 @@ inductive Step : Config α → StepKind → Config α → Prop where
         (.instruction .remSI64)
         ⟨.running ⟨⟨params, localValues,
           .i64 (signedRem64 dividend divisor) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | eqz (h : result = if value = 0 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .eqz :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .eqz)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | eq (h : result = if lhs = rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .eq :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .eq)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ne (h : result = if lhs ≠ rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .ne :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ne)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ltU (h : result = if lhs < rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .ltU :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ltU)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | gtU (h : result = if lhs > rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .gtU :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .gtU)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | leU (h : result = if lhs ≤ rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .leU :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .leU)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | geU (h : result = if lhs ≥ rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .geU :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .geU)
-        ⟨.running ⟨⟨params, localValues,
-          .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ltS (h : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .ltS :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ltS)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | gtS (h : result = if lhs.toInt32 > rhs.toInt32 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .gtS :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .gtS)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | leS (h : result = if lhs.toInt32 ≤ rhs.toInt32 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .leS :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .leS)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | geS (h : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-          .geS :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .geS)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | eqzI64 (h : result = if value = 0 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .eqzI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .eqzI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | eqI64 (h : result = if lhs = rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .eqI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .eqI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | neI64 (h : result = if lhs ≠ rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .neI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .neI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ltUI64 (h : result = if lhs < rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .ltUI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ltUI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | ltSI64 (h : result = if lhs.toInt64 < rhs.toInt64 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .ltSI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .ltSI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | gtUI64 (h : result = if lhs > rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .gtUI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .gtUI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | gtSI64 (h : result = if lhs.toInt64 > rhs.toInt64 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .gtSI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .gtSI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | leUI64 (h : result = if lhs ≤ rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .leUI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .leUI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | leSI64 (h : result = if lhs.toInt64 ≤ rhs.toInt64 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .leSI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .leSI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | geUI64 (h : result = if lhs ≥ rhs then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .geUI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .geUI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | geSI64 (h : result = if lhs.toInt64 ≥ rhs.toInt64 then 1 else 0) :
-      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
-          .geSI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .geSI64)
-        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | wrapI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .wrapI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .wrapI64)
-        ⟨.running ⟨⟨params, localValues, .i32 (wrap64To32 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extendUI32 :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .extendUI32 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extendUI32)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (extendUnsigned32To64 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extendSI32 :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .extendSI32 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extendSI32)
-        ⟨.running ⟨⟨params, localValues,
-          .i64 (extendSigned32To64 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extend8S :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .extend8S :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extend8S)
-        ⟨.running ⟨⟨params, localValues, .i32 (extend8To32 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extend16S :
-      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
-          .extend16S :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extend16S)
-        ⟨.running ⟨⟨params, localValues, .i32 (extend16To32 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extend8SI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .extend8SI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extend8SI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (extend8To64 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extend16SI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .extend16SI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extend16SI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (extend16To64 value) :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩
-  | extend32SI64 :
-      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
-          .extend32SI64 :: code, arity, remainder, controls, calls⟩, store⟩
-        (.instruction .extend32SI64)
-        ⟨.running ⟨⟨params, localValues, .i64 (extend32To64 value) :: values⟩,
           code, arity, remainder, controls, calls⟩, store⟩
   | load8UTrap
       (haddress : memoryAddress? address = some (logicalAddress, physicalAddress))
@@ -6172,6 +5913,683 @@ inductive Step : Config α → StepKind → Config α → Prop where
           store⟩
         (.instruction (.memOp memoryIndex inner))
         (resumeAfterIndexedMemory rest store memoryIndex stepped)
+
+/-! ### Pure integer instructions
+
+The pure (non-trapping) integer instructions are stepped by the two generic
+constructors `scalarInt1`/`scalarInt2`, mirroring `scalarFloat*`, which keeps
+`Step` under the runtime constructor-tag limit (Lean ≥ 4.35 computes runtime
+layouts for every inductive, propositions included). Each former constructor
+is re-established below as a theorem with its original statement, so
+`Step.add`, `.ltS rfl`, … keep working unchanged. -/
+
+theorem Step.add :
+      Step ⟨.running ⟨⟨params, localValues, .i32 a :: .i32 b :: values⟩,
+          .add :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .add)
+        ⟨.running ⟨⟨params, localValues, .i32 (a + b) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.sub :
+      Step ⟨.running ⟨⟨params, localValues, .i32 a :: .i32 b :: values⟩,
+          .sub :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .sub)
+        ⟨.running ⟨⟨params, localValues, .i32 (b - a) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.mul :
+      Step ⟨.running ⟨⟨params, localValues, .i32 a :: .i32 b :: values⟩,
+          .mul :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .mul)
+        ⟨.running ⟨⟨params, localValues, .i32 (a * b) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.and :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .and :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .and)
+        ⟨.running ⟨⟨params, localValues, .i32 (lhs &&& rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.or :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .or :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .or)
+        ⟨.running ⟨⟨params, localValues, .i32 (lhs ||| rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.xor :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .xor :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .xor)
+        ⟨.running ⟨⟨params, localValues, .i32 (lhs ^^^ rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.shl :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .shl :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .shl)
+        ⟨.running ⟨⟨params, localValues, .i32 (lhs <<< (rhs % 32)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.shrU :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .shrU :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .shrU)
+        ⟨.running ⟨⟨params, localValues, .i32 (lhs >>> (rhs % 32)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.shrS :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .shrS :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .shrS)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (UInt32.ofNat
+            (BitVec.sshiftRight lhs.toBitVec (rhs % 32).toNat).toNat) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.rotl :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .rotl :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .rotl)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (rotateLeft32 lhs rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.rotr :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .rotr :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .rotr)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (rotateRight32 lhs rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.clz :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .clz :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .clz)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (UInt32.ofNat (clz32 32 value)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ctz :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .ctz :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ctz)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (UInt32.ofNat (ctz32 32 value)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.popcnt :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .popcnt :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .popcnt)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 (UInt32.ofNat (popcnt32 32 value 0)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.addI64 :
+      Step ⟨.running
+          ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+            .addI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .addI64)
+        ⟨.running
+          ⟨⟨params, localValues, .i64 (lhs + rhs) :: values⟩,
+            code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.subI64 :
+      Step ⟨.running
+          ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+            .subI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .subI64)
+        ⟨.running
+          ⟨⟨params, localValues, .i64 (lhs - rhs) :: values⟩,
+            code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.mulI64 :
+      Step ⟨.running
+          ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+            .mulI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .mulI64)
+        ⟨.running
+          ⟨⟨params, localValues, .i64 (lhs * rhs) :: values⟩,
+            code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.andI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .andI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .andI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (lhs &&& rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.orI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .orI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .orI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (lhs ||| rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.xorI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .xorI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .xorI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (lhs ^^^ rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.shlI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .shlI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .shlI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (lhs <<< (rhs % 64)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.shrUI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .shrUI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .shrUI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (lhs >>> (rhs % 64)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.shrSI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .shrSI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .shrSI64)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (UInt64.ofNat
+            (BitVec.sshiftRight lhs.toBitVec (rhs % 64).toNat).toNat) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.rotlI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .rotlI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .rotlI64)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (rotateLeft64 lhs rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.rotrI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .rotrI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .rotrI64)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (rotateRight64 lhs rhs) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.clzI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .clzI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .clzI64)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (UInt64.ofNat (clz64 64 value)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ctzI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .ctzI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ctzI64)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (UInt64.ofNat (ctz64 64 value)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.popcntI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .popcntI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .popcntI64)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (UInt64.ofNat (popcnt64 64 value 0)) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.eqz (h : result = if value = 0 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .eqz :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .eqz)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.eq (h : result = if lhs = rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .eq :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .eq)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ne (h : result = if lhs ≠ rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .ne :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ne)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ltU (h : result = if lhs < rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .ltU :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ltU)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.gtU (h : result = if lhs > rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .gtU :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .gtU)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.leU (h : result = if lhs ≤ rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .leU :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .leU)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.geU (h : result = if lhs ≥ rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .geU :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .geU)
+        ⟨.running ⟨⟨params, localValues,
+          .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ltS (h : result = if lhs.toInt32 < rhs.toInt32 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .ltS :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ltS)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.gtS (h : result = if lhs.toInt32 > rhs.toInt32 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .gtS :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .gtS)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.leS (h : result = if lhs.toInt32 ≤ rhs.toInt32 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .leS :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .leS)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.geS (h : result = if lhs.toInt32 ≥ rhs.toInt32 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
+          .geS :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .geS)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.eqzI64 (h : result = if value = 0 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .eqzI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .eqzI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.eqI64 (h : result = if lhs = rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .eqI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .eqI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.neI64 (h : result = if lhs ≠ rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .neI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .neI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ltUI64 (h : result = if lhs < rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .ltUI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ltUI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.ltSI64 (h : result = if lhs.toInt64 < rhs.toInt64 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .ltSI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .ltSI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.gtUI64 (h : result = if lhs > rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .gtUI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .gtUI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.gtSI64 (h : result = if lhs.toInt64 > rhs.toInt64 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .gtSI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .gtSI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.leUI64 (h : result = if lhs ≤ rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .leUI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .leUI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.leSI64 (h : result = if lhs.toInt64 ≤ rhs.toInt64 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .leSI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .leSI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.geUI64 (h : result = if lhs ≥ rhs then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .geUI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .geUI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.geSI64 (h : result = if lhs.toInt64 ≥ rhs.toInt64 then 1 else 0) :
+      Step ⟨.running ⟨⟨params, localValues, .i64 rhs :: .i64 lhs :: values⟩,
+          .geSI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .geSI64)
+        ⟨.running ⟨⟨params, localValues, .i32 result :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.wrapI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .wrapI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .wrapI64)
+        ⟨.running ⟨⟨params, localValues, .i32 (wrap64To32 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extendUI32 :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .extendUI32 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extendUI32)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (extendUnsigned32To64 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extendSI32 :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .extendSI32 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extendSI32)
+        ⟨.running ⟨⟨params, localValues,
+          .i64 (extendSigned32To64 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extend8S :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .extend8S :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extend8S)
+        ⟨.running ⟨⟨params, localValues, .i32 (extend8To32 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extend16S :
+      Step ⟨.running ⟨⟨params, localValues, .i32 value :: values⟩,
+          .extend16S :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extend16S)
+        ⟨.running ⟨⟨params, localValues, .i32 (extend16To32 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extend8SI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .extend8SI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extend8SI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (extend8To64 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extend16SI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .extend16SI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extend16SI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (extend16To64 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
+theorem Step.extend32SI64 :
+      Step ⟨.running ⟨⟨params, localValues, .i64 value :: values⟩,
+          .extend32SI64 :: code, arity, remainder, controls, calls⟩, store⟩
+        (.instruction .extend32SI64)
+        ⟨.running ⟨⟨params, localValues, .i64 (extend32To64 value) :: values⟩,
+          code, arity, remainder, controls, calls⟩, store⟩ := by
+  subst_vars
+  first
+    | exact Step.scalarInt1 rfl
+    | exact Step.scalarInt2 rfl rfl
+
 set_option maxHeartbeats 5000000 in
 theorem stepChecked?_sound {config config' : Config α} {kind : StepKind} :
     stepChecked? config = .ok (some (kind, config')) → Step config kind config' :=
@@ -6597,6 +7015,10 @@ by
         | (apply Step.v128StoreLaneTrap <;> first | assumption | omega)
         | (apply Step.v128StoreLane <;> first | assumption | omega)
         | solve
+          | (apply Step.scalarInt1 <;> simp_all [evalScalarInt1?])
+        | solve
+          | (apply Step.scalarInt2 <;> simp_all [evalScalarInt1?, evalScalarInt2?])
+        | solve
           | (apply Step.scalarFloat0 <;> simp_all [evalScalarFloat0?])
         | solve
           | (apply Step.scalarFloat1 <;>
@@ -6670,6 +7092,8 @@ by
   case scalarFloat0 => apply scalarFloat0_checked <;> assumption
   case scalarFloat1 => apply scalarFloat1_checked <;> assumption
   case scalarFloat2 => apply scalarFloat2_checked <;> assumption
+  case scalarInt1 => apply scalarInt1_checked <;> assumption
+  case scalarInt2 => apply scalarInt2_checked <;> assumption
   case scalarTruncSuccess instruction operand value params localValues values
       code arity remainder controls calls store hresult =>
     cases hi : instruction <;> cases ho : operand <;>
