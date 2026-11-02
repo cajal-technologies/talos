@@ -3,10 +3,14 @@ version = "0.1.0"
 defaultTargets = ["Interpreter"]
 packagesDir = "../.lake/packages"
 
+# Lean 4.35: Mathlib is designed for the module system; Talos files are not
+# (yet) modules. Opt out of the per-import warning instead of migrating here.
+allowNonModules = true
+
 [[require]]
 name = "mathlib"
 scope = "leanprover-community"
-rev = "v4.34.1"
+rev = "v4.35.0"
 
 [[lean_lib]]
 name = "Interpreter"
