@@ -84,7 +84,7 @@ theorem func17_body {hlc : HasLC}
           Project.HexStdio.func17, arity, remainder, controls, calls⟩ :
             Expr Universal.State) @ s; E [{ Φ }] := by
   obtain ⟨r4, r5, r6, r7⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 4 (by
+    Wasm.SepLogic.wordAccessFacts result 4 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   iintro ⟨Hruntime, Henv, Hhost, Hbytes, Htag, Hlength, Hnext⟩
@@ -315,7 +315,7 @@ theorem func8_after_prologue_nonempty {hlc : HasLC}
           arity, remainder, controls, calls⟩ : Expr Universal.State)
         @ s; E [{ Φ }] := by
   obtain ⟨p4, p5, p6, p7⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 4 (by
+    Wasm.SepLogic.wordAccessFacts stackPtr 4 (by
       norm_num [UInt32.size] at hstack ⊢
       omega)
   iintro ⟨Hruntime, Henv, Hhost, Hglobal, Hbytes, Htag, Hlength, Hnext⟩

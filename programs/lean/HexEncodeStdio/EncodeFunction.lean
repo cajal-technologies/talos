@@ -59,11 +59,11 @@ theorem func6_finish {hlc : HasLC} {α : Type}
           func6FinishCode, arity, remainder, controls, calls⟩ : Expr α) @ s; E
         {{ Φ }} := by
   obtain ⟨s12, s13, s14, s15⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 12 (by omega)
   obtain ⟨s4, s5, s6, s7⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 4 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 4 (by omega)
   obtain ⟨s8, s9, s10, s11⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 8 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 8 (by omega)
   have s8' : ((stackPtr + 4) + 4).toNat =
       (stackPtr + 4).toNat + 4 := by
     calc
@@ -103,9 +103,9 @@ theorem func6_finish {hlc : HasLC} {α : Type}
         rw [show (stackPtr + 4).toNat = stackPtr.toNat + 4 by
           simpa using s4]
   obtain ⟨r8, r9, r10, r11⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 8 (by omega)
+    Wasm.SepLogic.wordAccessFacts result 8 (by omega)
   obtain ⟨r0, r1, r2, r3⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 0 (by
+    Wasm.SepLogic.wordAccessFacts result 0 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   have r4 : ((result + 0) + 4).toNat = (result + 0).toNat + 4 := by
@@ -238,13 +238,13 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
           Project.HexStdio.func6.drop 16, arity, remainder, controls, calls⟩ :
           Expr α) @ s; E {{ Φ }} := by
   obtain ⟨p16, p17, p18, p19⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 16 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 16 (by omega)
   obtain ⟨p20, p21, p22, p23⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 20 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 20 (by omega)
   obtain ⟨p24, p25, p26, p27⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 24 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 24 (by omega)
   obtain ⟨p28, p29, p30, p31⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 28 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 28 (by omega)
   have hzero : 0 < input.length := by
     simpa only [List.length_pos_iff] using hinput
   iintro ⟨Hruntime, Hglobal, Hcap, HoutputPtr, Hlength, H16, H20, H24, H28,
@@ -335,10 +335,10 @@ theorem func6_after_alloc_nonempty {hlc : HasLC} {α : Type}
   inext
   iapply wp_load32 0
     (show (stackPtr + 12).toNat = stackPtr.toNat + 12 by
-      simpa using (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).1)
-    (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.1
-    (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.2.1
-    (Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 12 (by omega)).2.2.2
+      simpa using (Wasm.SepLogic.wordAccessFacts stackPtr 12 (by omega)).1)
+    (Wasm.SepLogic.wordAccessFacts stackPtr 12 (by omega)).2.1
+    (Wasm.SepLogic.wordAccessFacts stackPtr 12 (by omega)).2.2.1
+    (Wasm.SepLogic.wordAccessFacts stackPtr 12 (by omega)).2.2.2
     $$ Hlength
   inext
   iintro Hlength
@@ -525,13 +525,13 @@ theorem func6_after_empty {hlc : HasLC} {α : Type}
           Project.HexStdio.func6.drop 16, arity, remainder, controls, calls⟩ :
           Expr α) @ s; E {{ Φ }} := by
   obtain ⟨p16, p17, p18, p19⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 16 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 16 (by omega)
   obtain ⟨p20, p21, p22, p23⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 20 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 20 (by omega)
   obtain ⟨p24, p25, p26, p27⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 24 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 24 (by omega)
   obtain ⟨p28, p29, p30, p31⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts stackPtr 28 (by omega)
+    Wasm.SepLogic.wordAccessFacts stackPtr 28 (by omega)
   have hiter : (stackPtr + 16).toNat + 12 < UInt32.size := by
     have hs16 : (stackPtr + UInt32.ofNat 16).toNat =
         stackPtr.toNat + 16 := by

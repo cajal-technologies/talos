@@ -117,34 +117,6 @@ private theorem wp_returnFromCallFallthrough' {hlc : HasLC} {α : Type}
     · iexact HinstanceOwn
   · itrivial
 
-private theorem wordAccessFacts (ptr : UInt32) (offset : Nat)
-    (hfit : ptr.toNat + offset + 4 < UInt32.size) :
-    (ptr + UInt32.ofNat offset).toNat = ptr.toNat + offset ∧
-    ((ptr + UInt32.ofNat offset) + 1).toNat =
-      (ptr + UInt32.ofNat offset).toNat + 1 ∧
-    ((ptr + UInt32.ofNat offset) + 2).toNat =
-      (ptr + UInt32.ofNat offset).toNat + 2 ∧
-    ((ptr + UInt32.ofNat offset) + 3).toNat =
-      (ptr + UInt32.ofNat offset).toNat + 3 := by
-  have hadd (n : Nat) (hn : n ≤ offset + 3) :
-      (ptr + UInt32.ofNat n).toNat = ptr.toNat + n :=
-    Wasm.SepLogic.UInt32.add_ofNat_toNat_noWrap ptr n
-      (by norm_num [UInt32.size] at hfit ⊢; omega)
-      (by norm_num [UInt32.size] at hfit ⊢; omega)
-  refine ⟨hadd offset (by omega), ?_, ?_, ?_⟩
-  · rw [show (1 : UInt32) = UInt32.ofNat 1 by rfl,
-      UInt32.add_assoc, ← UInt32.ofNat_add, hadd (offset + 1) (by omega),
-      hadd offset (by omega)]
-    omega
-  · rw [show (2 : UInt32) = UInt32.ofNat 2 by rfl,
-      UInt32.add_assoc, ← UInt32.ofNat_add, hadd (offset + 2) (by omega),
-      hadd offset (by omega)]
-    omega
-  · rw [show (3 : UInt32) = UInt32.ofNat 3 by rfl,
-      UInt32.add_assoc, ← UInt32.ofNat_add, hadd (offset + 3) (by omega),
-      hadd offset (by omega)]
-    omega
-
 /-- The second half of the iterator's two-state protocol: a saved low nibble
 is returned and the sentinel is restored. -/
 theorem func18_low_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
@@ -257,7 +229,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   ihave Hinput0 : (⟨0, index + 0⟩ ↦w byte) $$ [Hinput]
   · rw [UInt32.add_zero]
     iexact Hinput
-  ihave HlowFocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus
+  ihave HlowFocus := Wasm.SepLogic.pointsToBytes_focus
     (0 : Nat) (1048576 : UInt32) Project.HexEncodeStdio.Hex.asciiTable
     (byte.toNat % 16) (Project.HexEncodeStdio.Hex.nibble_low_lt byte) $$ Htable
   icases HlowFocus with ⟨%lowByte, Hlow, HputLow, %hlowGet⟩
@@ -368,7 +340,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   · rw [UInt32.add_comm 1048576 (UInt32.ofNat (byte.toNat % 16))]
     iexact Hlow
   ihave Htable := HputLow $$ HlowCanonical
-  ihave HhighFocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus
+  ihave HhighFocus := Wasm.SepLogic.pointsToBytes_focus
     (0 : Nat) (1048576 : UInt32) Project.HexEncodeStdio.Hex.asciiTable
     (byte.toNat / 16) (Project.HexEncodeStdio.Hex.nibble_high_lt byte) $$ Htable
   icases HhighFocus with ⟨%highByte, Hhigh, HputHigh, %hhighGet⟩
@@ -737,7 +709,7 @@ theorem wp_call_func18_high_at {hlc : HasLC} {α : Type}
     rw [hl, hiNat, hr]
     omega
   iintro ⟨Hruntime, Hcurrent, Hindex, Hend, HtablePtr, Hsource, Htable, Hcont⟩
-  ihave Hfocus := Project.HexEncodeStdio.Helpers.pointsToBytes_focus
+  ihave Hfocus := Wasm.SepLogic.pointsToBytes_focus
     (0 : Nat) source input i hi $$ Hsource
   icases Hfocus with ⟨%byte, Hbyte, Hput, %hbyte⟩
   have hbyteEq : byte = input[i] := by

@@ -3,7 +3,7 @@ import HexEncodeStdio.Helpers
 import HexEncodeStdio.Outcome
 import HexEncodeStdio.Blueprint
 import HexEncodeStdio.AllocCheck
-#check Project.HexEncodeStdio.Helpers.pointsToBytes_focus
+#check Wasm.SepLogic.pointsToBytes_focus
 
 example : ¬ 21 < Project.HexStdio.«module».imports.length := by decide
 example : Project.HexStdio.«module».funcs[21 - Project.HexStdio.«module».imports.length]? =

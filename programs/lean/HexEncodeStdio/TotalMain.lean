@@ -118,18 +118,18 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   simp only [Project.HexStdio.func10, List.drop_succ_cons, List.drop_zero]
   iapply twp_localGet rfl
   iapply twp_load32 outputPtr
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 24 (by omega)).2.2.2 $$ HoutPtr
+      (Wasm.SepLogic.wordAccessFacts sp 24 (by omega)).1
+      (Wasm.SepLogic.wordAccessFacts sp 24 (by omega)).2.1
+      (Wasm.SepLogic.wordAccessFacts sp 24 (by omega)).2.2.1
+      (Wasm.SepLogic.wordAccessFacts sp 24 (by omega)).2.2.2 $$ HoutPtr
   iintro HoutPtr
   iapply twp_localTee rfl
   iapply twp_localGet rfl
   iapply twp_load32 (UInt32.ofNat encoded.length)
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 28 (by omega)).2.2.2 $$ HoutLen
+      (Wasm.SepLogic.wordAccessFacts sp 28 (by omega)).1
+      (Wasm.SepLogic.wordAccessFacts sp 28 (by omega)).2.1
+      (Wasm.SepLogic.wordAccessFacts sp 28 (by omega)).2.2.1
+      (Wasm.SepLogic.wordAccessFacts sp 28 (by omega)).2.2.2 $$ HoutLen
   iintro HoutLen
   simp [mainLocals, List.set]
   ihave HglobalWrite : globalPointsToAt 0 0 (.i32 ((sp - 16) + 16)) $$ [Hglobal]
@@ -169,10 +169,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_load32 outputCapacity
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 20 (by omega)).2.2.2 $$
+      (Wasm.SepLogic.wordAccessFacts sp 20 (by omega)).1
+      (Wasm.SepLogic.wordAccessFacts sp 20 (by omega)).2.1
+      (Wasm.SepLogic.wordAccessFacts sp 20 (by omega)).2.2.1
+      (Wasm.SepLogic.wordAccessFacts sp 20 (by omega)).2.2.2 $$
       HoutputCapacityMem
   iintro HoutCapLoaded
   iapply twp_localTee rfl
@@ -209,10 +209,10 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_block
   iapply twp_localGet rfl
   iapply twp_load32 inputCapacity
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.1
-      (Project.HexEncodeStdio.Helpers.wordAccessFacts sp 8 (by omega)).2.2.2 $$
+      (Wasm.SepLogic.wordAccessFacts sp 8 (by omega)).1
+      (Wasm.SepLogic.wordAccessFacts sp 8 (by omega)).2.1
+      (Wasm.SepLogic.wordAccessFacts sp 8 (by omega)).2.2.1
+      (Wasm.SepLogic.wordAccessFacts sp 8 (by omega)).2.2.2 $$
       HinputCap
   iintro HinputCapLoaded
   iapply twp_localTee rfl

@@ -144,13 +144,13 @@ theorem func4_alloc_fresh {hlc : HasLC}
     simp [ptr]
     by_cases h : oldBump = 0 <;> simp [h]
   obtain ⟨r0, r1, r2, r3⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 0 (by
+    Wasm.SepLogic.wordAccessFacts result 0 (by
       norm_num [UInt32.size] at hresult ⊢
       omega)
   obtain ⟨r4, r5, r6, r7⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 4 (by omega)
+    Wasm.SepLogic.wordAccessFacts result 4 (by omega)
   obtain ⟨r8, r9, r10, r11⟩ :=
-    Project.HexEncodeStdio.Helpers.wordAccessFacts result 8 (by omega)
+    Wasm.SepLogic.wordAccessFacts result 8 (by omega)
   iintro ⟨HR, Hruntime, Henv, Hhost, Hbump, Harena, H0, H4, H8⟩ Hnext
   iapply twp_call «module» 7 func4Def (by decide) rfl ⟨0⟩ $$ Hruntime
   iintro Hruntime
