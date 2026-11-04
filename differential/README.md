@@ -134,8 +134,9 @@ The baseline was first measured with a freshly built runner at Talos
 `78f9d08d46bcda1e4ddf794a697a18cccc59ba0f` (Lean v4.32.2), and re-recorded after
 merging main at `64690614` (Lean v4.34.1, #262), using the versions and V8 flag
 above. The re-recording observed the same 64 exceptions with identical outcomes.
-After #259 (the runner evaluates GC element-segment items at instantiation),
-the 10 `completeness` exceptions agreed with V8 and were deleted, leaving 54.
+The 10 element-segment `completeness` exceptions were removed once #259 made
+those probes agree with V8, and the Lean v4.35.0 bump was checked against the
+v4.34.1 runner on the same corpus: all 620 records are identical.
 It covers **620 cases**: 194 generated `all` cases, 300 `recgroup` cases, 38
 invalid modules, one Talos seed and its 70 mutations, and 17 upstream seeds.
 

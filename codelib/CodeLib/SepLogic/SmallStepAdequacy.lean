@@ -328,7 +328,7 @@ theorem wasm_smallStep_stronglyNormalizing
       elementSegmentHeapAgrees_empty _,
       fun id m hm => by simp [get?_empty] at hm,
       fun id env hm => by simp [get?_empty] at hm⟩
-  · iintro _
+  · iintro -
     exact htwp
 
 /-- Total-WP strong normalization with authoritative initial memory, globals,
@@ -721,7 +721,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
     toAgree ⟨config.store.runtime.instances⟩
   imod (iOwn_alloc (E := runtimeInstancesElem)
       (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
+        Valid.valid_iff_validN.mp
           (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeInstancesName, HruntimeInstances⟩
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
@@ -820,7 +820,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
     toAgree ⟨config.store.runtime.instances⟩
   imod (iOwn_alloc (E := runtimeInstancesElem)
       (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
+        Valid.valid_iff_validN.mp
           (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeInstancesName, HruntimeInstances⟩
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
@@ -2450,7 +2450,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     toAgree ⟨config.store.runtime.instances⟩
   imod (iOwn_alloc (E := runtimeInstancesElem)
       (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
+        Valid.valid_iff_validN.mp
           (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeInstancesName, HruntimeInstances⟩
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=

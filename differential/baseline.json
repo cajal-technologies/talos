@@ -294,7 +294,7 @@
         "v8": "REJECT",
         "wtools": "REJECT"
       },
-      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: struct.new of $s assigned to a global typed (ref $other) \u2014 unrelated struct types. Talos runs the module; V8 and wasm-tools reject it.",
+      "reason": "Existing invalid-module acceptance, in the validation cluster discussed in #152: const-init: struct.new of $s assigned to a global typed (ref $other) — unrelated struct types. Talos runs the module; V8 and wasm-tools reject it.",
       "verdict": "SOUNDNESS"
     },
     "invalid/invalid:eh-catch-label-arity@aae708d1f082": {
@@ -476,7 +476,7 @@
   },
   "schema": 1,
   "versions": {
-    "lean": "leanprover/lean4:v4.34.1",
+    "lean": "leanprover/lean4:v4.35.0",
     "miscast": "125d25b69b20462fe03505b30eb281851f0be3a8",
     "node": "v24.13.0",
     "node-flags": [
