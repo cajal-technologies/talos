@@ -1551,9 +1551,38 @@ def Program.checkTypes
         Program.checkTypes m locals functionResults labels rest next
 termination_by sizeOf program
 
-/-- Operand-stack type check of one function body. Unsupported instructions
-conservatively make the check succeed. -/
+/-! ### Array default initialization -/
+
+/-- `array.new_default` requires an array type whose elements have a default
+value, independently of operand-stack reachability. -/
+def Instruction.checkArrayDefault (m : Module) : Instruction → Except String Unit
+  | .gc (.arrayNewDefault typeIndex) =>
+      match m.arrayElem? typeIndex with
+      | none => .error "unknown type"
+      | some element =>
+          if element.storage.vt.isDefaultable then .ok ()
+          else .error "type mismatch"
+  | _ => .ok ()
+
+theorem Instruction.checkArrayDefault_arrayNewDefault_ok
+    (m : Module) (typeIndex : Nat)
+    (h : (Instruction.gc (.arrayNewDefault typeIndex)).checkArrayDefault m = .ok ()) :
+    ∃ element, m.arrayElem? typeIndex = some element ∧
+      element.storage.vt.isDefaultable = true := by
+  simp only [Instruction.checkArrayDefault] at h
+  split at h
+  · cases h
+  · split at h
+    · exact ⟨_, by assumption, by assumption⟩
+    · cases h
+
+/-- Check array defaults throughout one function body, including nested
+instructions, then check operand-stack types. Unsupported instructions stop
+only the partial operand-stack check. Also used for constant-expression
+programs. -/
 def Module.checkFuncStraight (m : Module) (f : Function) : Except String Unit := do
+  for instruction in f.body.allInstrs do
+    instruction.checkArrayDefault m
   let locals := f.params ++ f.locals
   let some finalState ←
       Program.checkTypes m locals f.results

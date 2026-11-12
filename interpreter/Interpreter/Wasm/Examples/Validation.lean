@@ -1396,4 +1396,58 @@ theorem validator_accepts_local_set_in_unreachable_code :
     validationSucceeds validLocalSetInUnreachableCodeValidationModule = true := by
   decide +kernel
 
+/-! ### Array default initialization
+
+The element type must have a default value, even in nested or unreachable
+code, or after an instruction unsupported by the partial stack checker. -/
+
+private def arrayNewDefaultValidationModule (body : Program)
+    (storage : StorageType) (isMut : Bool) : Module :=
+  { gcTypes :=
+      [{ comp := .struct [] },
+       { comp := .array { storage, isMut } }]
+    funcs := [{ body }] }
+
+theorem validator_rejects_nondefaultable_array_new_default :
+    ([[.const 1, .gc (.arrayNewDefault 1), .drop],
+      [.block 0 0 [.const 1, .gc (.arrayNewDefault 1), .drop]],
+      [.gc (.structNewDefault 0), .drop, .const 1, .gc (.arrayNewDefault 1), .drop],
+      [.unreachable, .gc (.arrayNewDefault 1), .drop]] : List Program).all
+      (fun body =>
+        validationErrorIs
+          (arrayNewDefaultValidationModule body (.val (.ref false (.concrete 0))) false)
+          "type mismatch") = true := by decide +kernel
+
+theorem validator_rejects_nondefaultable_mutable_array_new_default :
+    validationErrorIs
+      (arrayNewDefaultValidationModule [.const 1, .gc (.arrayNewDefault 1), .drop]
+        (.val (.ref false (.concrete 0))) true)
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_nondefaultable_array_new_default_global :
+    validationErrorIs
+      { gcTypes :=
+          [{ comp := .struct [] },
+           { comp := .array { storage := .val (.ref false (.concrete 0)) } }]
+        funcs := []
+        globals := [{ init := .anyref none, declaredType := some (.ref false (.concrete 1)),
+                      sourceInit := some [.const 1, .gc (.arrayNewDefault 1)] }] }
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_accepts_defaultable_array_new_default :
+    ([.packed 8, .packed 16, .val .i32, .val .i64, .val .f32, .val .f64,
+      .val .v128, .val .funcref, .val .externref, .val .exnref, .val .anyref,
+      .val (.ref true (.concrete 0))] : List StorageType).all
+      (fun storage =>
+        validationSucceeds
+          (arrayNewDefaultValidationModule
+            [.const 1, .gc (.arrayNewDefault 1), .drop] storage false)) = true := by
+  decide +kernel
+
+theorem validator_accepts_defaultable_mutable_array_new_default :
+    validationSucceeds
+      (arrayNewDefaultValidationModule
+        [.const 1, .gc (.arrayNewDefault 1), .drop] (.val .i32) true) = true := by
+  decide +kernel
+
 end Wasm.Examples.SmallStep
