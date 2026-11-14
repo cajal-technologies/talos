@@ -13,6 +13,7 @@ import Project.SwapElementsOpt3.Spec
 import Project.SwapElementsOpt3.Equivalence
 import Project.SwapElementsOpt3.SmallStepEquivalence
 import Project.TotalVariation.Spec
+import Project.TotalVariation.Checks
 import Project.FloatTrunc.Spec
 import Project.FloatRound.Spec
 import Project.FloatReinterpret.Spec
