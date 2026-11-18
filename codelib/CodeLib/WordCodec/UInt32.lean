@@ -6,17 +6,16 @@ import CodeLib.UInt32
 
 The four-byte little-endian `u32` codec, as a `WordCodec UInt32`.
 
-The proof of `decode_encode` closes with `Nat.reassemble32_of_lt` from
-`CodeLib.UInt32`, which uses `Nat.testBit` and `omega` rather than
-bit-blasting, so no theorem stated over this codec depends on a reflection
-axiom.  `CodeLib.Examples.MergeSort.StdIO.codec` and
-`Project.Mergesort.Spec.u32Codec` are the same codec (`encodeWord`,
-`decodeWord`) closed by the same lemma; the first lives under `Examples`,
-which `RustStd` does not import, and codelib cannot import the second.  A
-follow-up can point both at `u32le`.
+Byte `i` of `encodeU32 v` is `(v >>> 8i).toUInt8`, the same projection
+`SepLogic.u32Byte` uses, so an encoded word and its `pointsTo_u32` footprint
+agree by `rfl`. The proof of `decode_encode` closes with
+`Nat.reassemble32_of_lt` from `CodeLib.UInt32`, which uses `Nat.testBit` and
+`omega` rather than bit-blasting, so no theorem stated over this codec depends
+on a reflection axiom.
 
-Consumer: `CodeLib.RustStd.Vec.Codec`, which puts `u32le` in front of a packed
-`Vec` as its element count.
+Consumers: `CodeLib.RustStd.Vec.Codec`, which puts `u32le` in front of a packed
+`Vec` as its element count; `Project.Mergesort.Spec` (its input and output
+streams); and `CodeLib.Examples.MergeSort.StdIO`.
 -/
 
 namespace Wasm.WordCodec

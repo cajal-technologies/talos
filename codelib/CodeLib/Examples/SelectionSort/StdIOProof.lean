@@ -89,12 +89,16 @@ def heap64Aux (heap : WasmHeapMap (Option UInt8)) (base : UInt32) :
 def inputHeap (input : List UInt64) : WasmHeapMap (Option UInt8) :=
   heap64Aux ∅ array input
 
-theorem writeBytes_encodeWord (mem : Mem) (base : UInt32) (value : UInt64) :
-    mem.writeBytes base.toNat (encodeWord value) = mem.write64 base value := by
+theorem writeBytes_encodeU64 (mem : Mem) (base : UInt32) (value : UInt64) :
+    mem.writeBytes base.toNat (WordCodec.encodeU64 value) =
+      mem.write64 base value := by
+  have hmask (x : UInt64) : (x &&& 0xFF).toUInt8 = x.toUInt8 := by
+    simp only [UInt64.toUInt8_and,
+      show (255 : UInt64).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
   cases mem with
   | mk pages bytes =>
-    simp only [Mem.writeBytes, encodeWord, List.length_cons, List.length_nil,
-      Mem.write64]
+    simp only [Mem.writeBytes, WordCodec.encodeU64, List.length_cons,
+      List.length_nil, Mem.write64, hmask]
     congr
     funext i
     by_cases h0 : i = base.toNat
@@ -126,13 +130,13 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       simp [writeWordArray64]
   | cons value values ih =>
       simp only [serialize_cons, writeWordArray64]
-      rw [Mem.writeBytes_append, writeBytes_encodeWord]
+      rw [Mem.writeBytes_append, writeBytes_encodeU64]
       simp only [List.length_cons, Nat.mul_add] at hfit
       have hbase : (base + 8).toNat = base.toNat + 8 :=
         UInt32.add_ofNat_toNat_noWrap base 8 (by decide) (by
           simp only [UInt32.size] at hfit ⊢; omega)
-      rw [show base.toNat + (encodeWord value).length = (base + 8).toNat by
-        simp [encodeWord, hbase]]
+      rw [show base.toNat + (WordCodec.encodeU64 value).length = (base + 8).toNat by
+        simp [WordCodec.encodeU64, hbase]]
       exact ih _ _ (by omega)
 
 theorem heap64Aux_agrees
@@ -785,11 +789,11 @@ theorem deserialize_readBytes64 (mem : Mem) (base : UInt32) (count : Nat)
       have hbase : (base + 8).toNat = base.toNat + 8 := by
         apply UInt32.add_ofNat_toNat_noWrap base 8 (by decide)
         simp only [UInt32.size] at hfit ⊢; omega
-      have hdecode : decodeWord
-          (mem.bytes base.toNat) (mem.bytes (base.toNat + 1))
-          (mem.bytes (base.toNat + 2)) (mem.bytes (base.toNat + 3))
-          (mem.bytes (base.toNat + 4)) (mem.bytes (base.toNat + 5))
-          (mem.bytes (base.toNat + 6)) (mem.bytes (base.toNat + 7)) =
+      have hdecode : WordCodec.decodeU64
+          [mem.bytes base.toNat, mem.bytes (base.toNat + 1),
+            mem.bytes (base.toNat + 2), mem.bytes (base.toNat + 3),
+            mem.bytes (base.toNat + 4), mem.bytes (base.toNat + 5),
+            mem.bytes (base.toNat + 6), mem.bytes (base.toNat + 7)] =
           mem.read64 base := by rfl
       rw [hdecode]
       simp only [readWordArray64]
