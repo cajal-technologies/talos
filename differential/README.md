@@ -137,6 +137,8 @@ above. The re-recording observed the same 64 exceptions with identical outcomes.
 The 10 element-segment `completeness` exceptions were removed once #259 made
 those probes agree with V8, and the Lean v4.35.0 bump was checked against the
 v4.34.1 runner on the same corpus: all 620 records are identical.
+The Lean v4.36.0 runner reproduces the same 566 agreements and the same 54
+exceptions with identical outcomes.
 It covers **620 cases**: 194 generated `all` cases, 300 `recgroup` cases, 38
 invalid modules, one Talos seed and its 70 mutations, and 17 upstream seeds.
 
