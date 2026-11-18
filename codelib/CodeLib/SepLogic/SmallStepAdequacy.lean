@@ -9,8 +9,8 @@ import Iris.ProgramLogic.TotalAdequacy
 # Adequacy for the Wasm small-step Iris language
 
 This is the public bridge from an iris-lean `WP` proof to the operational
-small-step semantics.  Unlike the legacy `wasm_heap_adequacy`, it refers only
-to `Wasm.SmallStep.Step` through the iris-lean `Language` instance.
+small-step semantics.  It refers only to `Wasm.SmallStep.Step`, through the
+iris-lean `Language` instance.
 -/
 
 namespace Wasm.SmallStep

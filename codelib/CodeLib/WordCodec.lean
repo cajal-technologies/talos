@@ -19,8 +19,8 @@ dropped, so a successful decode has consumed every byte it was given.
 
 Consumers: `CodeLib.Examples.MergeSort.StdIO` instantiates it at four-byte
 `UInt32` words, `CodeLib.Examples.SelectionSort.StdIO` at eight-byte `UInt64`
-words. Before this module the two examples each carried their own copy of the
-definitions and both proofs below.
+words, and `CodeLib.WordCodec.UInt32` defines the `u32le` instance used by
+`CodeLib.RustStd.Vec.Codec`.
 -/
 
 namespace Wasm
