@@ -1,5 +1,4 @@
-import CodeLib.RustStd.Array.IsEmpty
-import CodeLib.RustStd.Array.Len
+import CodeLib.RustStd.Array.Basic
 import CodeLib.SepLogic.SmallStepAdequacy
 
 /-! Authoritative small-step ownership for memory-resident Rust slices. -/
