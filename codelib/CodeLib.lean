@@ -13,7 +13,6 @@ import CodeLib.RustStd.MemArray
 import CodeLib.RustStd.MemArray.SmallStep
 import CodeLib.RustStd.MemFillLoop
 import CodeLib.RustStd.MemCopyLoop
-import CodeLib.RustStd.Option
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
 import CodeLib.RustStd.Array.Basic

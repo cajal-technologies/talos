@@ -3,10 +3,10 @@
 
 A pure model of the safe `Vec<T>` surface, as a plain `List W`.
 
-Like `CodeLib.RustStd.Option`, this is a spec-level model rather than a
-wasm-level `_wp` lemma file.  Its consumer is `Project.RustVec.Spec`, which
-states the contract of each `rust_vec` export in these terms.  Lemmas about
-the model arrive with the first proof that needs them.
+This is a spec-level model rather than a wasm-level `_wp` lemma file.  Its
+consumer is `Project.RustVec.Spec`, which states the contract of each
+`rust_vec` export in these terms.  Lemmas about the model arrive with the
+first proof that needs them.
 
 The model carries no capacity field.  Capacity is not observable through the
 safe API: no safe method reads it back, and two vectors that differ only in
