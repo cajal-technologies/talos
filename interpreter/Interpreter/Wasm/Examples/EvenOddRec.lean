@@ -276,7 +276,7 @@ private theorem evenOdd_contextual_steps : ∀ n : UInt32,
         (parityReturn (oddValue n) calls)) := by
   intro n
   induction h : n.toNat using Nat.strong_induction_on generalizing n with
-  | h measure ih =>
+  | ind measure ih =>
     subst measure
     by_cases hn : n = 0
     · subst n

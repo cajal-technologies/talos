@@ -118,7 +118,7 @@ private theorem factorialLoop_steps (x acc : UInt32) :
         ⟨.done [.i32 (UInt32.ofNat (acc.toNat * x.toNat.factorial))],
           (factorialConfig x).store⟩ := by
   induction h : x.toNat using Nat.strong_induction_on generalizing x acc with
-  | h n ih =>
+  | ind n ih =>
     subst n
     by_cases hx : x = 0
     · subst x

@@ -423,7 +423,7 @@ theorem read_to_end_continued_outcome
   induction hmeasure : remaining.length using Nat.strong_induction_on
       generalizing consumed remaining store capacity data length bump chunk
         filled previousCount previousTarget previousBase previousSpare with
-  | h n ih =>
+  | ind n ih =>
       subst hmeasure
       have hdataBound : readToEndStack.toNat + 8 + 4 ≤
           store.wasm.mem.pages * 65536 := by
