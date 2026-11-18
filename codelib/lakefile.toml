@@ -38,6 +38,8 @@ roots = [
   "CodeLib.Examples.Gcd",
   "CodeLib.Examples.MergeSort.StdIO",
   "CodeLib.Examples.Quicksort.TotalProof",
+  "CodeLib.Examples.MemFillLoop",
+  "CodeLib.Examples.MemCopyLoop",
   # Near SmallStep example (not reachable from CodeLib.Near.Proof).
   "CodeLib.Near.Examples.KvSetter",
 ]
