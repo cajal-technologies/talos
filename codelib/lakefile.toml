@@ -7,6 +7,15 @@ packagesDir = "../.lake/packages"
 # (yet) modules. Opt out of the per-import warning instead of migrating here.
 allowNonModules = true
 
+# Mathlib's `linter.concreteInstances` (on by default since Mathlib v4.36.0)
+# asks for a global instance instead of a local `[C T]` assumption with no free
+# variables. That advice does not apply to the iris ghost-state classes
+# (`WasmHeapGS α`, `WasmGlobalGS α`, ...): their instances carry ghost names
+# that only adequacy allocates, so a proof must assume them. `weak.` because the
+# option is only registered in modules that import Mathlib.
+[leanOptions]
+weak.linter.concreteInstances = false
+
 [[require]]
 name = "WasmInterpreterLean"
 path = "../interpreter"
@@ -15,8 +24,8 @@ path = "../interpreter"
 name = "iris"
 git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-# Pin the upstream Lean 4.35 migration (iris-lean 9a4ae0df7ea421267d6cbed9496a3845dd14e1e1).
-rev = "9a4ae0df7ea421267d6cbed9496a3845dd14e1e1"
+# Pin the upstream Lean 4.36 bump (iris-lean 40e6418437a794dcd0429bfbe4d6b60fdafb2ecd).
+rev = "40e6418437a794dcd0429bfbe4d6b60fdafb2ecd"
 
 [[lean_lib]]
 name = "CodeLib"

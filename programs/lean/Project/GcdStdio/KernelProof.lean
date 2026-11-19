@@ -145,7 +145,7 @@ private theorem twp_gcdLoop
       @ s; E [{ Phi }] := by
   induction hmeasure : x.toNat + y.toNat using Nat.strong_induction_on
       generalizing x y with
-  | h n ih =>
+  | ind n ih =>
     subst n
     iintro Hresources
     simp only [Project.NumIntegerOpt3.Spec.loopBody]

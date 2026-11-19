@@ -636,11 +636,6 @@ theorem decode_core_invalid_low_first_reaches
   have hone : ((((0 : UInt32) <<< (1 : UInt32)) ||| 1) &&& 255 |||
       ((0 : UInt32) <<< (1 : UInt32)) &&& 4294967040) = 1 := by
     norm_num
-    apply UInt32.toNat_inj.mp
-    simp only [UInt32.toNat_and, UInt32.toNat_ofNat]
-    norm_num only [Nat.reducePow, Nat.reduceMod]
-    rw [show 255 = 2 ^ 8 - 1 by norm_num,
-      Nat.and_two_pow_sub_one_eq_mod]
   rw [hone] at hpair
   have hpair' : Reaches (decodeFirstPairConfig store data len)
       (decodeAfterFirstPairConfig
@@ -1181,7 +1176,6 @@ theorem decode_core_empty_reaches
     rw [Mem.read32_write64_disjoint _ coreError (coreFrame + 48) _
       (by decide)]
     simp [Mem.read32, Mem.write32]
-    bv_normalize (config := { enums := false })
   have hmarker32 : (decodePairEmptyStore
       (decodeEvenPreparedStore store data 0)).wasm.mem.read32
       (coreFrame + 32) = 1114114 := by simpa using hmarker
