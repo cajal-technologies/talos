@@ -72,19 +72,19 @@ NumIntegerOpt3, RustU64, RustU64Tests, RustArray, RustArrayTests, TotalVariation
 
 | Item | Reason |
 |---|---|
-| `SwapElements/Spec.lean` legacy | `swap_spec_sep` in `SwapSepLogic.lean` has `SwapElementsSpec` as its theorem TYPE — can't remove the Prop without changing the signature. M9 cleanup. |
+| `SwapElements/Spec.lean` legacy | The public `SwapElementsSpec` is still stated with the big-step `TerminatesWith env` and proved there by `swap_elements_correct` through the `Wp` layer; moving it to `SmallStep.TerminatesWith` changes the registered statement. M9 cleanup. |
 | FloatMinmax | Stub (`True`), spec never written. |
 | Near layer (2,996 lines) | Blocked on `wp_callHost` (module-linking). |
 | SwapElementsOpt3 whole-array observation | The small-step `SwapOptEquiv` observes only the two swapped elements; the retired big-step theorem observed the whole caller array (`Mem.words64 ptr len.toNat`). Restoring it needs both builds' store-level adequacy theorems re-derived with a parametric per-element `pointsTo_u64` footprint for the unswapped words plus a `Mem.words64` reconstruction. Documented in `SwapElementsOpt3/Equivalence.lean`. |
-| Program-specific TWP lemmas in codelib | `twp_swapElementsFunc2Prefix` / `…Alias` / `…Func3` (hard-coded addresses) live in `codelib/CodeLib/SepLogic/SmallStepTotalLifting.lean` rather than under `programs/`; pre-existing precedent (the WP counterparts live there too). Candidate M9 relocation. |
 
 ## TWP infrastructure added
 
 - `wasm_smallStep_heap_globals_runtime_store_terminates` in `SmallStepAdequacy.lean` —
   TWP adequacy bridge for programs with heap + globals.
-- 31 TWP lifting rules in `SmallStepTotalLifting.lean`
-  (22 single-instruction, 5 SwapElements compound, 4 i64 state rules).
-- `MergeSort/Adequacy.lean` — merge sort adequacy closure (M7 item 8). The
+- TWP lifting rules in `SmallStepTotalLifting.lean`; the SwapElements
+  compound rules (`twp_swapElementsFunc2Prefix` and its siblings) live in
+  `Project/SwapElements/SwapSepLogic.lean`.
+- `CodeLib/Examples/MergeSort/Adequacy.lean` — merge sort adequacy closure (M7 item 8). The
   `PartiallyMeets` / `TerminatesWith` posts are memory-observing: the terminal
   store's `source` array (`readWordArray store.wasm.mem source input.length`)
   is a sorted permutation of the input.

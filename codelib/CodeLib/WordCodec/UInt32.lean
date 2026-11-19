@@ -51,6 +51,8 @@ def u32le : WordCodec UInt32 where
       UInt32.toNat_shiftRight]
     exact Nat.reassemble32_of_lt value.toNat (UInt32.toNat_lt value)
 
+theorem u32le_width : u32le.width = 4 := rfl
+
 @[simp] theorem u32le_encode_length (value : UInt32) :
     (u32le.encode value).length = 4 := rfl
 

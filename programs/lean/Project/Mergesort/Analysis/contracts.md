@@ -44,8 +44,8 @@ The implementation should have one definition for each of the following.
   Vec/chunk/output composition.  No whole-frame predicate overlaps its slots.
 - `Streams input output oom`: the logical Universal host view.
 
-`SortProof.wordBytes` and example-specific serializers must not remain
-independent implementations of `U32Codec`.  The same applies to duplicate
+Example-specific serializers must not be independent implementations of
+`U32Codec`.  The same applies to duplicate
 sorted-permutation predicates.
 
 ## Terminal algebra

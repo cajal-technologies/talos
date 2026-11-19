@@ -355,29 +355,19 @@ def sortLocals (source scratch length scratchLength : UInt32)
     [.i32 v4, .i32 v5, .i32 v6, .i32 v7, .i32 v8,
       .i32 v9, .i32 v10, .i32 v11, .i32 v12], stack⟩
 
-def wordBytes (value : UInt32) : List UInt8 :=
-  [u32Byte value 0, u32Byte value 1, u32Byte value 2, u32Byte value 3]
-
-def arrayBytes (values : List UInt32) : List UInt8 :=
-  values.flatMap wordBytes
-
-@[simp] theorem wordBytes_length (value : UInt32) :
-    (wordBytes value).length = 4 := by rfl
-
-@[simp] theorem arrayBytes_length (values : List UInt32) :
-    (arrayBytes values).length = 4 * values.length := by simp [arrayBytes, Nat.mul_comm]
-
+/-- An array of words owns exactly the `u32le` serialization of its values. -/
 theorem arrayAt_as_bytes [WasmHeapGS α] (memId : Nat) (ptr : UInt32)
     (values : List UInt32) :
-    arrayAt memId ptr values ⊣⊢ pointsToBytes memId ptr (arrayBytes values) := by
+    arrayAt memId ptr values ⊣⊢
+      pointsToBytes memId ptr (WordCodec.u32le.serialize values) := by
   induction values generalizing ptr with
   | nil => exact .rfl
   | cons value rest ih =>
-      simp only [arrayAt, arrayBytes, List.flatMap_cons]; exact (BI.sep_congr
+      simp only [arrayAt, WordCodec.serialize_cons]; exact (BI.sep_congr
           (pointsTo_u32_as_bytes memId ptr value)
-          (by simpa [wordBytes] using ih (ptr + 4))).trans
-        (pointsToBytes_append memId ptr (wordBytes value)
-          (arrayBytes rest)).symm
+          (by simpa using ih (ptr + 4))).trans
+        (pointsToBytes_append memId ptr (WordCodec.u32le.encode value)
+          (WordCodec.u32le.serialize rest)).symm
 
 private theorem validLayout_prefix
     {source scratch : UInt32} {length mid : Nat}
@@ -2511,18 +2501,18 @@ theorem twp_sort
       iapply twp_eqz (result := 0) (by simp [hbyteLengthNonzero])
       wasm_twp_pures [twp_brIfZero twp_localGet twp_localGet twp_localGet]
       ihave HsourceBytes :
-          pointsToBytes 0 source (arrayBytes combined) $$ [HsourceCombined]
+          pointsToBytes 0 source (WordCodec.u32le.serialize combined) $$ [HsourceCombined]
       · iapply_exact (arrayAt_as_bytes 0 source combined).mp with HsourceCombined
       ihave HscratchBytes :
-          pointsToBytes 0 scratch (arrayBytes output) $$ [HscratchOutput]
+          pointsToBytes 0 scratch (WordCodec.u32le.serialize output) $$ [HscratchOutput]
       · iapply_exact (arrayAt_as_bytes 0 scratch output).mp with HscratchOutput
       ihave Hcopy := (Wasm.SmallStep.twp_memoryCopy32
-        (arrayBytes combined) (arrayBytes output)
+        (WordCodec.u32le.serialize combined) (WordCodec.u32le.serialize output)
         (by
-          simp only [arrayBytes_length]
+          simp only [WordCodec.serialize_length, WordCodec.u32le_width]
           rw [mul4_ofNat_toNat hfourFits])
         (by
-          simp only [arrayBytes_length, houtputLength]
+          simp only [WordCodec.serialize_length, WordCodec.u32le_width, houtputLength]
           rw [mul4_ofNat_toNat hfourFits])
         hbyteLengthPositive
         (by
