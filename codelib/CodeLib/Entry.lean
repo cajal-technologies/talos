@@ -11,9 +11,7 @@ hand.
 
 * `of_wp_entry` — store-parametric (body proof holds for every initial store).
 * `of_wp_entry_for` — store-specific (body proof depends on the concrete store,
-  e.g. memory bounds); the corpus workhorse, reached via `of_returns_wp` below.
-* `TerminatesWith.mono` — weaken the post-condition, e.g. to relift a raw-value
-  spec through an abstraction decoder.
+  e.g. memory bounds).
 -/
 
 namespace Wasm
@@ -77,51 +75,5 @@ theorem TerminatesWith.of_wp_entry_for {env : HostEnv α}
   | OutOfFuel => rw [hexec] at hQ; exact hQ.elim
   | ReturnCall fid st' vs => rw [hexec] at hQ; exact hQ.elim
   | Throwing tag targs st' s' => rw [hexec] at hQ; exact hQ.elim
-
-/-- Weakening the post-condition of a `TerminatesWith`. Lets a corpus
-proof state the natural raw-value spec, then relift it through an
-abstraction (e.g. an `Option` decoder) without re-running `wp`. -/
-theorem TerminatesWith.mono {env : HostEnv α} {m : Module} {id : Nat}
-    {initial : Store α} {args : List Value}
-    {P Q : Store α → List Value → Prop}
-    (h : TerminatesWith env m id initial args P) (hPQ : ∀ st vs, P st vs → Q st vs) :
-    TerminatesWith env m id initial args Q := by
-  obtain ⟨N, hN⟩ := h
-  refine ⟨N, fun fuel hf => ?_⟩
-  obtain ⟨vs, st, hRun, hP⟩ := hN fuel hf
-  exact ⟨vs, st, hRun, hPQ st vs hP⟩
-
-/-! ## wp-style function specs
-
-Per-function CodeLib theorems are stated as weakest-precondition goals about
-the function *body* (no module/host-function hypotheses, no `TerminatesWith`).
-`Returns rs P` reads "the body returns `rs` on the stack in a store satisfying
-`P`"; `of_returns_wp` bridges such a wp lemma to the `TerminatesWith` form the
-call rules consume, so the per-function statements stay clean while still
-composing under `call`. -/
-
-/-- Postcondition reading: the program returns with stack `rs` in a store
-satisfying `P`. -/
-def Returns (rs : List Value) (P : Store α → Prop) : Assertion α :=
-  fun c => ∃ st', c = .Return st' rs ∧ P st'
-
-/-- Bridge a clean `wp`/`Returns` body lemma to `TerminatesWith`. The callee
-runs on an empty value stack (`f.toLocals …`), so the caller's leftover
-operands `args.drop f.numParams` are re-appended to the result here, not
-inside the body lemma. -/
-theorem TerminatesWith.of_returns_wp {α} {env : HostEnv α} {m : Module} {id : Nat}
-    {f : Function} {st : Store α} {args rs : List Value} {P : Store α → Prop}
-    (hf : m.funcs[id - m.imports.length]? = some f)
-    (hres : rs.length = f.results.length)
-    (hwp : wp m f.body (Returns rs P) st
-            (f.toLocals (args.take f.numParams).reverse) env)
-    (hImp : m.imports[id]? = none := by rfl) :
-    TerminatesWith env m id st args
-      (fun st' vs => vs = rs ++ args.drop f.numParams ∧ P st') := by
-  apply TerminatesWith.of_wp_entry_for hf _ hImp
-  refine wp.conseq ?_ hwp
-  rintro c ⟨st', rfl, hP⟩
-  have htake : rs.take f.results.length = rs := by rw [← hres]; simp
-  simp only [htake]; exact ⟨trivial, hP⟩
 
 end Wasm
