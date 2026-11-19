@@ -93,7 +93,7 @@ Not sure where to begin? Here are some directions that tend to produce useful co
 
 **Find an interpreter bug via an example.** Write a small Wasm program that exercises today's supported features and prove something about it. If the proof fails because the interpreter behaves unexpectedly, that's a real bug. Reporting it with a minimal reproducer is a valuable contribution on its own; fixing it is even better.
 
-**Extend the spec testsuite coverage.** Run `just testsuite`, find a failing test, trace why it fails, implement the missing piece, and verify the test passes. This is the fastest feedback loop for interpreter work. For a higher-level view of which Wasm features are missing and roughly how they're prioritized, see [`interpreter/ROADMAP.md`](interpreter/ROADMAP.md).
+**Extend the spec testsuite coverage.** Run `just testsuite` for a quick check, then inspect the non-`pass` rows in [`testsuite_report.txt`](testsuite_report.txt), including `skipped` and `module_unavailable` cases that `just testsuite` hides. Reproduce a case, trace the decoder, interpreter, or validator gap, implement a focused fix, and regenerate the full report with `just testsuite-report`. Open issues may also identify missing functionality.
 
 **Add a Rust crate to `programs/`.** The `programs/` package contains Rust crates compiled to Wasm with Lean proofs of their behavior. Adding a new crate with a spec and at least one proof is welcome. **Open a GitHub issue describing the crate and the property you intend to prove before starting** — this avoids duplicated effort and lets us flag any concerns early.
 
