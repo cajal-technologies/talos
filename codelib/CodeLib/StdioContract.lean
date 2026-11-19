@@ -9,7 +9,7 @@ failure, so no total contract holds for it.  `Project.Mergesort.Spec`
 established the partial shape for that case: a normal return, with the
 allocator's `talos.oom` trap admitted as the alternative.
 The byte-level form below, where a normal return writes exactly the expected
-bytes, is the one `Project.RustVec.Spec` writes out.
+bytes, is the one `Project.RustVec.Spec` and `Project.RustHashMap.Spec` use.
 
 `RunOutcome`, `ReturnsOutput`, and `RanOutOfMemory` name no module, so one
 definition of each serves every module.  `PartiallyRuns` and `WritesOrOOM`
