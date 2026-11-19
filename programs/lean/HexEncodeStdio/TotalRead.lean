@@ -139,7 +139,7 @@ theorem twp_call_func16 {hlc : HasLC}
   isplitl [Hlength]
   · iexact Hlength
   iintro Hruntime Henv Hhost Hbytes Htag Hlength
-  iapply Project.HexEncodeStdio.TotalIterator.twp_returnFromCallFallthrough' $$ Hruntime
+  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   iapply Hnext $$ Hruntime Henv Hhost Hbytes Htag Hlength
