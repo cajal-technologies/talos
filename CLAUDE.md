@@ -36,7 +36,7 @@ cd <package> && lake build
 
 Third-party Lake dependencies (Mathlib and its transitive packages) live in **one** tree at the repo root: `.lake/packages`. Every `lakefile.toml` sets `packagesDir` to that path; per-package `.lake/` holds only `build/` and `config/`.
 
-There is no separate test runner. Example correctness is encoded as Lean theorems and `native_decide` checks inside the examples; a successful `lake build` means every proof and decidable example check passed. To check a single source file in isolation: `lake env lean <path>`.
+There is no separate test runner. Example correctness is encoded as Lean theorems and kernel-checked `decide` / `rfl` checks inside the examples; a successful `lake build` means every proof and decidable example check passed. CI also runs `scripts/axiom-audit.py`, which rejects nonstandard axioms, so `native_decide` and `bv_decide` are not available (see `AGENTS.md`). To check a single source file in isolation: `lake env lean <path>`.
 
 ## Architecture
 
@@ -44,7 +44,7 @@ Three layers, kept deliberately small:
 
 - **Syntax (AST).** Instructions, functions, and modules. Keep the surface area minimal — only add constructs once they are needed by a concrete proof, and prefer the formulation that matches the Wasm spec's terminology so semantics and reasoning lemmas stay legible. Read the current state of `interpreter/Interpreter/Wasm/Syntax.lean` before assuming what is or isn't supported.
 - **Semantics (interpreter).** A fuel-bounded big-step interpreter. Traps (insufficient operands, out-of-bounds access, division by zero, etc.) are observable as a `.Trap` result from `run` (which returns a `Result α`: `.Success` / `.Trap` / `.Invalid` / `.OutOfFuel`), distinct from a successful `.Success`. When changing the semantics, the structure of the state and the shape of `step`/`run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
-- **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use `native_decide` for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
+- **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use kernel-checked `decide` (or `decide +kernel`) for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
 
 ## Public spec API: don't expose fuel
 
@@ -95,7 +95,7 @@ Prefer new host state to be a record of defaulted fields, and never tag `HostFn.
 
 Examples live in `interpreter/Interpreter/Wasm/Examples/`. Each file defines a hand-built (or WAT-decoded) Wasm module plus the `SmallStep.Config` that starts it, and proves theorems against the small-step machine. The WP tactic layer is *not* used here — no example calls `wp_run`. Two idioms carry the directory:
 
-- **Concrete inputs.** Pin `(runSteps n config).result` with `rfl` or `native_decide`. The decoder-oriented examples go through the total projections in `Examples/Harness.lean` (`runValues` / `runTrapMsg` / `runInvalidMsg` / `decodeOrDefault`) so `native_decide` can evaluate them.
+- **Concrete inputs.** Pin `(runSteps n config).result` with `rfl` or `decide`. The decoder-oriented examples go through the total projections in `Examples/Harness.lean` (`runValues` / `runTrapMsg` / `runInvalidMsg` / `decodeOrDefault`) so `decide +kernel` can evaluate them.
 - **Symbolic inputs.** Exhibit the trace explicitly: `apply Steps.cons` once per named `Step` constructor, closing side conditions with `decide` / `simp` / `omega` / domain lemmas. Loops state an invariant at an intermediate `Config` and are closed by `Nat.strong_induction_on` over a decreasing measure (see `Factorial.lean`, `SimpleLoop.lean`, `Gcd.lean`).
 
 The fuel-free statement comes last: lift the run with `runSteps_eq_success_of_steps` / `runSteps_values_terminates` / `runSteps_values_partiallyMeets` / `runSteps_trapped_trapsWith` into `SmallStep.TerminatesWith` / `PartiallyMeets` / `TrapsWith`. New examples should follow this pattern; browse the existing examples directory to find one close to what you are doing and mirror its structure.
