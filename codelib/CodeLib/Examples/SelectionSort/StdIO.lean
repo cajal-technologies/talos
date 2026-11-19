@@ -1,6 +1,6 @@
 import CodeLib.Examples.SelectionSort.TotalProof
 import CodeLib.RustStd.MemArray
-import CodeLib.WordCodec
+import CodeLib.WordCodec.UInt64
 import CodeLib.Host.StdIO
 import Mathlib.Data.List.Sort
 
@@ -28,49 +28,8 @@ def array : UInt32 := 0
 
 /-! ## Little-endian `UInt64` streams -/
 
-/-- The eight little-endian bytes of an unsigned 64-bit word. -/
-def encodeWord (value : UInt64) : List UInt8 :=
-  [ (value &&& 0xff).toUInt8
-  , ((value >>> 8) &&& 0xff).toUInt8
-  , ((value >>> 16) &&& 0xff).toUInt8
-  , ((value >>> 24) &&& 0xff).toUInt8
-  , ((value >>> 32) &&& 0xff).toUInt8
-  , ((value >>> 40) &&& 0xff).toUInt8
-  , ((value >>> 48) &&& 0xff).toUInt8
-  , ((value >>> 56) &&& 0xff).toUInt8 ]
-
-/-- Reassemble an unsigned 64-bit word from its little-endian bytes. -/
-def decodeWord (b₀ b₁ b₂ b₃ b₄ b₅ b₆ b₇ : UInt8) : UInt64 :=
-  b₀.toUInt64 ||| (b₁.toUInt64 <<< 8) |||
-    (b₂.toUInt64 <<< 16) ||| (b₃.toUInt64 <<< 24) |||
-    (b₄.toUInt64 <<< 32) ||| (b₅.toUInt64 <<< 40) |||
-    (b₆.toUInt64 <<< 48) ||| (b₇.toUInt64 <<< 56)
-
-/-- `decodeWord` on the eight-byte chunks `WordCodec.deserialize` hands it. The
-fallback case is unreachable: chunks are always exactly `width` bytes long. -/
-def decodeChunk : List UInt8 → UInt64
-  | b₀ :: b₁ :: b₂ :: b₃ :: b₄ :: b₅ :: b₆ :: b₇ :: _ =>
-      decodeWord b₀ b₁ b₂ b₃ b₄ b₅ b₆ b₇
-  | _ => 0
-
-/-- The packed little-endian codec for unsigned 64-bit words. Everything below
-the word level — `serialize`, `deserialize`, and the round trip between them —
-comes from `Wasm.WordCodec`; only this eight-byte round trip is proved here,
-using the shared kernel-checked byte-reconstruction lemma. -/
-def codec : WordCodec UInt64 where
-  width := 8
-  encode := encodeWord
-  decode := decodeChunk
-  width_pos := by decide
-  encode_length := fun _ => rfl
-  decode_encode := by
-    intro value
-    simp only [encodeWord, decodeChunk, decodeWord, UInt64.toUInt8_and,
-      show (255 : UInt64).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
-    apply UInt64.toNat_inj.mp
-    simp only [UInt64.toNat_or, UInt64.toNat_shiftLeft, UInt8.toNat_toUInt64,
-      UInt64.toNat_toUInt8, UInt64.toNat_shiftRight]
-    exact Nat.reassemble64_of_lt value.toNat (UInt64.toNat_lt value)
+/-- The packed little-endian codec for unsigned 64-bit words. -/
+abbrev codec : WordCodec UInt64 := WordCodec.u64le
 
 abbrev serialize (values : List UInt64) : List UInt8 :=
   codec.serialize values
@@ -79,32 +38,20 @@ abbrev serialize (values : List UInt64) : List UInt8 :=
 def deserialize (bytes : List UInt8) : Option (List UInt64) :=
   codec.deserialize bytes
 
-@[simp] theorem decode_encode (value : UInt64) :
-    decodeWord
-      (value &&& 0xff).toUInt8
-      (((value >>> 8) &&& 0xff).toUInt8)
-      (((value >>> 16) &&& 0xff).toUInt8)
-      (((value >>> 24) &&& 0xff).toUInt8)
-      (((value >>> 32) &&& 0xff).toUInt8)
-      (((value >>> 40) &&& 0xff).toUInt8)
-      (((value >>> 48) &&& 0xff).toUInt8)
-      (((value >>> 56) &&& 0xff).toUInt8) = value :=
-  codec.decode_encode value
-
 theorem serialize_nil : serialize [] = [] := rfl
 
 theorem serialize_cons (value : UInt64) (values : List UInt64) :
-    serialize (value :: values) = encodeWord value ++ serialize values := rfl
+    serialize (value :: values) = WordCodec.encodeU64 value ++ serialize values := rfl
 
 theorem deserialize_nil : deserialize [] = some [] :=
   codec.deserialize_nil
 
-/-- The defining equation this example used to carry for its own `deserialize`,
-recovered from the generic codec at width eight. -/
+/-- Peel one eight-byte word off the front of a stream. -/
 theorem deserialize_cons (b₀ b₁ b₂ b₃ b₄ b₅ b₆ b₇ : UInt8)
     (rest : List UInt8) :
     deserialize (b₀ :: b₁ :: b₂ :: b₃ :: b₄ :: b₅ :: b₆ :: b₇ :: rest) =
-      (deserialize rest).map (decodeWord b₀ b₁ b₂ b₃ b₄ b₅ b₆ b₇ :: ·) :=
+      (deserialize rest).map
+        (WordCodec.decodeU64 [b₀, b₁, b₂, b₃, b₄, b₅, b₆, b₇] :: ·) :=
   codec.deserialize_append [b₀, b₁, b₂, b₃, b₄, b₅, b₆, b₇] rest rfl
 
 @[simp] theorem deserialize_serialize (values : List UInt64) :

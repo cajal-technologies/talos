@@ -3235,7 +3235,7 @@ theorem twp_func3_write_one
     iexact HvalueLoaded
   ihave Hvalues := HcloseValue $$ Hvalue
   wasm_twp_bind twp_store32 (address := driverBase) (offset := 268)
-      (Spec.decodeWord outputBytes) (by decide) (by decide) (by decide)
+      (WordCodec.decodeU32 outputBytes) (by decide) (by decide) (by decide)
       (by decide) with HoldOutput => Houtput
   ihave Houtput := HcloseOutput $$ Houtput
   wasm_twp_pures [twp_localGet twp_const twp_add] rewriting [UInt32.add_comm (268 : UInt32)]
@@ -3255,8 +3255,8 @@ theorem twp_func3_write_one
   isplitl_exacts [Hruntime Hstreams Houtput]
   isplitl_pureexact (by
     constructor
-    · change 4 = (Spec.u32Codec.encode sorted[emitted]).length
-      exact (Spec.u32Codec.encode_length sorted[emitted]).symm
+    · change 4 = (WordCodec.u32le.encode sorted[emitted]).length
+      exact (WordCodec.u32le.encode_length sorted[emitted]).symm
     · decide)
   iintro Hruntime Hstreams Houtput
   ihave Hframe : ExportFrame heapId capacity inputPtr input chunkBytes
@@ -3264,8 +3264,8 @@ theorem twp_func3_write_one
   · unfold ExportFrame
     iframe_pureexact (by
       refine ⟨hframeLengths.1, ?_⟩
-      change (Spec.u32Codec.encode sorted[emitted]).length = 4
-      exact Spec.u32Codec.encode_length sorted[emitted])
+      change (WordCodec.u32le.encode sorted[emitted]).length = 4
+      exact WordCodec.u32le.encode_length sorted[emitted])
   ihave Hresume := Hcont $$ Hruntime Hframe Hvalues Hstreams
   iunfold ResumeWP
   simp only [resumeExpr, List.nil_append]
@@ -5335,7 +5335,7 @@ theorem twp_func3_complete_nonempty
     (func3AppendLocals inputPtr 0 (UInt32.ofNat (4 * original.length)) 4
       inputPtr 0 (UInt32.ofNat (4 * original.length)) 0 0 0 [])
     (by
-      simp [func3AppendLocals, U32Codec, Spec.u32Codec])
+      simp [func3AppendLocals, U32Codec, WordCodec.u32le])
     (stack := [])
     (code := [.localTee 2, .eqz, .br_if 1] ++ func3DecodeSetup ++
       [.block 0 0 func3DecodeOuterBlockBody,

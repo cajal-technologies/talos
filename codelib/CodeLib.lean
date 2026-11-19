@@ -9,6 +9,7 @@ import CodeLib.ByteReassembly
 import CodeLib.MemBytes
 import CodeLib.WordCodec
 import CodeLib.WordCodec.UInt32
+import CodeLib.WordCodec.UInt64
 import CodeLib.RustStd.Frame
 import CodeLib.RustStd.Region
 import CodeLib.RustStd.MemArray
@@ -49,7 +50,7 @@ This module re-exports the reasoning infrastructure only:
 * `Attrs` — the `@[spec_of]` / `@[proves]` attributes read by the verifier;
 * small `UInt32` / `UInt64` / `List` / byte-reassembly lemmas, the
   `Mem.readBytes` / `Mem.writeBytes` simp lemmas (`MemBytes`) and the
-  `WordCodec` little-endian codecs;
+  `WordCodec` little-endian codecs (`u32le`, `u64le`);
 * `RustStd.*` — memory-region and array views (`Frame`, `Region`,
   `MemArray`), Rust ABI layouts (slices, `Vec`, Borsh) and the reusable
   `u64::abs_diff` body proof;

@@ -17,10 +17,8 @@ trailing run of fewer than `width` bytes is rejected rather than silently
 dropped, so a successful decode has consumed every byte it was given.
 `deserialize_serialize_append_eq_none` is that property stated as a theorem.
 
-Consumers: `CodeLib.Examples.MergeSort.StdIO` instantiates it at four-byte
-`UInt32` words, `CodeLib.Examples.SelectionSort.StdIO` at eight-byte `UInt64`
-words, and `CodeLib.WordCodec.UInt32` defines the `u32le` instance used by
-`CodeLib.RustStd.Vec.Codec`.
+Instances: `CodeLib.WordCodec.UInt32` (`u32le`, four-byte `UInt32` words) and
+`CodeLib.WordCodec.UInt64` (`u64le`, eight-byte `UInt64` words).
 -/
 
 namespace Wasm

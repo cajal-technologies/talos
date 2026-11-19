@@ -1,6 +1,5 @@
 import CodeLib
 import Project.HexStdio.Spec
-import HexEncodeStdio.Host
 import HexEncodeStdio.TotalHelpers
 import HexEncodeStdio.TotalIterator
 
@@ -9,42 +8,6 @@ namespace Project.HexEncodeStdio.TotalWrite
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
 open Wasm.SepLogic Wasm.SmallStep
-
-/-- A universal-host write call returns, preserves its owned byte range, and
-appends exactly that range to the observable output. -/
-theorem twp_universal_write {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Universal.State)}
-    (ptr length : UInt32) (bytes : List UInt8) (host : Universal.State)
-    (hlen : length.toNat = bytes.length)
-    (hpos : 0 < bytes.length)
-    (hnowrap : ptr.toNat + bytes.length < UInt32.size)
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (callerId : ModuleInstanceId) :
-    pointsToBytes 0 ptr bytes -∗
-    hostStateOwn host -∗
-    runtimeModuleOwn callerId Project.HexStdio.«module» -∗
-    hostEnvOwn callerId.id
-      (Universal.envFor Project.HexStdio.«module») -∗
-    (pointsToBytes 0 ptr bytes -∗
-      hostStateOwn (afterWrite host bytes) -∗
-      runtimeModuleOwn callerId Project.HexStdio.«module» -∗
-      hostEnvOwn callerId.id
-        (Universal.envFor Project.HexStdio.«module») -∗
-      WP (.running
-        ⟨⟨params, localValues, values⟩, code,
-          arity, remainder, controls, calls⟩ : Expr Universal.State)
-        @ s; E [{ Φ }]) -∗
-    WP (.running
-      ⟨⟨params, localValues, .i32 ptr :: .i32 length :: values⟩,
-        .call 1 :: code, arity, remainder, controls, calls⟩ :
-          Expr Universal.State) @ s; E [{ Φ }] :=
-  Wasm.SmallStep.twp_universal_write Project.HexStdio.«module»
-    Project.HexStdio.Spec.module_imports ptr length bytes host
-    hlen hpos hnowrap callerId
 
 private abbrev func17Locals (result ignored ptr length : UInt32)
     (values : List Value := []) : Locals :=
@@ -91,7 +54,8 @@ theorem func17_body {hlc : HasLC}
   simp only [Project.HexStdio.func17, func17Locals]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  iapply twp_universal_write ptr length bytes host hlen hpos hptr ⟨0⟩
+  iapply Wasm.SmallStep.twp_universal_write Project.HexStdio.«module»
+    Project.HexStdio.Spec.module_imports ptr length bytes host hlen hpos hptr ⟨0⟩
       (params := [.i32 result, .i32 ignored, .i32 ptr, .i32 length])
       (localValues := []) (values := [])
       (code := [.localGet 0, .const 4, .store8 0,

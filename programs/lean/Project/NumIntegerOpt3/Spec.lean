@@ -1,4 +1,5 @@
 import Project.NumIntegerOpt3.Program
+import Project.NumInteger.Stein
 
 namespace Project.NumIntegerOpt3.Spec
 

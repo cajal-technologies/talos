@@ -1,7 +1,7 @@
 import CodeLib.Examples.MergeSort.TotalProof
 import CodeLib.Examples.Quicksort
 import CodeLib.RustStd.MemArray.SmallStep
-import CodeLib.WordCodec
+import CodeLib.WordCodec.UInt32
 import CodeLib.Host.StdIO
 
 /-!
@@ -25,42 +25,8 @@ def bufferBytes : Nat := 32768
 def source : UInt32 := 0
 def scratch : UInt32 := UInt32.ofNat bufferBytes
 
-/-- The four little-endian bytes of a 32-bit word. -/
-def encodeWord (value : UInt32) : List UInt8 :=
-  [ (value &&& 0xff).toUInt8
-  , ((value >>> 8) &&& 0xff).toUInt8
-  , ((value >>> 16) &&& 0xff).toUInt8
-  , ((value >>> 24) &&& 0xff).toUInt8 ]
-
-/-- Reassemble a 32-bit word from its four little-endian bytes. -/
-def decodeWord (b₀ b₁ b₂ b₃ : UInt8) : UInt32 :=
-  b₀.toUInt32 ||| (b₁.toUInt32 <<< 8) |||
-    (b₂.toUInt32 <<< 16) ||| (b₃.toUInt32 <<< 24)
-
-/-- `decodeWord` on the four-byte chunks `WordCodec.deserialize` hands it. The
-fallback case is unreachable: chunks are always exactly `width` bytes long. -/
-def decodeChunk : List UInt8 → UInt32
-  | b₀ :: b₁ :: b₂ :: b₃ :: _ => decodeWord b₀ b₁ b₂ b₃
-  | _ => 0
-
-/-- The packed little-endian codec for 32-bit words. Everything below the word
-level — `serialize`, `deserialize`, and the round trip between them — comes
-from `Wasm.WordCodec`; only this four-byte round trip is proved here, using
-the shared kernel-checked byte-reconstruction lemma. -/
-def codec : WordCodec UInt32 where
-  width := 4
-  encode := encodeWord
-  decode := decodeChunk
-  width_pos := by decide
-  encode_length := fun _ => rfl
-  decode_encode := by
-    intro value
-    simp only [encodeWord, decodeChunk, decodeWord, UInt32.toUInt8_and,
-      show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
-    apply UInt32.toNat_inj.mp
-    simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft, UInt8.toNat_toUInt32,
-      UInt32.toNat_toUInt8, UInt32.toNat_shiftRight]
-    exact Nat.reassemble32_of_lt value.toNat (UInt32.toNat_lt value)
+/-- The packed little-endian codec for 32-bit words. -/
+abbrev codec : WordCodec UInt32 := WordCodec.u32le
 
 /-- Packed little-endian serialization of a list of 32-bit words. -/
 abbrev serialize (values : List UInt32) : List UInt8 :=
@@ -71,27 +37,18 @@ rejected rather than silently ignored. -/
 def deserialize (bytes : List UInt8) : Option (List UInt32) :=
   codec.deserialize bytes
 
-@[simp] theorem decode_encode (value : UInt32) :
-    decodeWord
-      (value &&& 0xff).toUInt8
-      (((value >>> 8) &&& 0xff).toUInt8)
-      (((value >>> 16) &&& 0xff).toUInt8)
-      (((value >>> 24) &&& 0xff).toUInt8) = value :=
-  codec.decode_encode value
-
 theorem serialize_nil : serialize [] = [] := rfl
 
 theorem serialize_cons (value : UInt32) (values : List UInt32) :
-    serialize (value :: values) = encodeWord value ++ serialize values := rfl
+    serialize (value :: values) = WordCodec.encodeU32 value ++ serialize values := rfl
 
 theorem deserialize_nil : deserialize [] = some [] :=
   codec.deserialize_nil
 
-/-- The defining equation this example used to carry for its own `deserialize`,
-recovered from the generic codec at width four. -/
+/-- Peel one four-byte word off the front of a stream. -/
 theorem deserialize_cons (b₀ b₁ b₂ b₃ : UInt8) (rest : List UInt8) :
     deserialize (b₀ :: b₁ :: b₂ :: b₃ :: rest) =
-      (deserialize rest).map (decodeWord b₀ b₁ b₂ b₃ :: ·) :=
+      (deserialize rest).map (WordCodec.decodeU32 [b₀, b₁, b₂, b₃] :: ·) :=
   codec.deserialize_append [b₀, b₁, b₂, b₃] rest rfl
 
 @[simp] theorem deserialize_serialize (values : List UInt32) :
@@ -102,12 +59,16 @@ theorem deserialize_cons (b₀ b₁ b₂ b₃ : UInt8) (rest : List UInt8) :
     (serialize values).length = 4 * values.length :=
   codec.serialize_length values
 
-theorem writeBytes_encodeWord (mem : Mem) (base value : UInt32) :
-    mem.writeBytes base.toNat (encodeWord value) = mem.write32 base value := by
+theorem writeBytes_encodeU32 (mem : Mem) (base value : UInt32) :
+    mem.writeBytes base.toNat (WordCodec.encodeU32 value) =
+      mem.write32 base value := by
+  have hmask (x : UInt32) : (x &&& 0xFF).toUInt8 = x.toUInt8 := by
+    simp only [UInt32.toUInt8_and,
+      show (255 : UInt32).toUInt8 = (-1 : UInt8) from rfl, UInt8.and_neg_one]
   cases mem with
   | mk pages bytes =>
-    simp only [Mem.writeBytes, encodeWord, List.length_cons, List.length_nil,
-      Mem.write32]
+    simp only [Mem.writeBytes, WordCodec.encodeU32, List.length_cons,
+      List.length_nil, Mem.write32, hmask]
     congr
     funext i
     by_cases h0 : i = base.toNat
@@ -133,13 +94,13 @@ theorem writeBytes_serialize (mem : Mem) (base : UInt32)
       simp [writeWordArray, Mem.writeWords32]
   | cons value values ih =>
       simp only [serialize_cons, writeWordArray]
-      rw [Mem.writeBytes_append, writeBytes_encodeWord]
+      rw [Mem.writeBytes_append, writeBytes_encodeU32]
       simp only [List.length_cons, Nat.mul_add] at hfit
       have hbase : (base + 4).toNat = base.toNat + 4 :=
         UInt32.add_ofNat_toNat_noWrap base 4 (by decide) (by
           simp only [UInt32.size] at hfit ⊢; omega)
-      rw [show base.toNat + (encodeWord value).length =
-          (base + 4).toNat by simp [encodeWord, hbase]]
+      rw [show base.toNat + (WordCodec.encodeU32 value).length =
+          (base + 4).toNat by simp [WordCodec.encodeU32, hbase]]
       exact ih _ _ (by rw [hbase]; omega)
 
 private theorem readBytes_four_add (mem : Mem) (offset n : Nat) :

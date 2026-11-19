@@ -1,6 +1,5 @@
 import CodeLib
 import Project.HexStdio.Spec
-import HexEncodeStdio.Host
 import HexEncodeStdio.Helpers
 import HexEncodeStdio.TotalHelpers
 import HexEncodeStdio.TotalIterator
@@ -10,41 +9,6 @@ namespace Project.HexEncodeStdio.TotalRead
 open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
 open Wasm.SepLogic Wasm.SmallStep
-
-/-- A universal-host read call returns the maximal requested prefix, writes it
-into the owned buffer, and consumes precisely that prefix from stdin. -/
-theorem twp_universal_read {hlc : HasLC}
-    [WasmSmallStepGS hlc Universal.State]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF Universal.State)}
-    (ptr length : UInt32) (old : List UInt8) (host : Universal.State)
-    (hlen : length.toNat = old.length) (hpos : 0 < old.length)
-    (hnowrap : ptr.toNat + old.length < UInt32.size)
-    {params localValues values : List Value}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame}
-    (callerId : ModuleInstanceId) :
-    pointsToBytes 0 ptr old -∗
-    hostStateOwn host -∗
-    runtimeModuleOwn callerId Project.HexStdio.«module» -∗
-    hostEnvOwn callerId.id (Universal.envFor Project.HexStdio.«module») -∗
-    (pointsToBytes 0 ptr
-        (bytesRead host length ++ old.drop (bytesRead host length).length) -∗
-      hostStateOwn (afterRead host (bytesRead host length)) -∗
-      runtimeModuleOwn callerId Project.HexStdio.«module» -∗
-      hostEnvOwn callerId.id (Universal.envFor Project.HexStdio.«module») -∗
-      WP (.running
-        ⟨⟨params, localValues,
-            .i32 (UInt32.ofNat (bytesRead host length).length) :: values⟩,
-          code, arity, remainder, controls, calls⟩ : Expr Universal.State)
-        @ s; E [{ Φ }]) -∗
-    WP (.running
-      ⟨⟨params, localValues, .i32 ptr :: .i32 length :: values⟩,
-        .call 0 :: code, arity, remainder, controls, calls⟩ :
-          Expr Universal.State) @ s; E [{ Φ }] :=
-  Wasm.SmallStep.twp_universal_read Project.HexStdio.«module»
-    Project.HexStdio.Spec.module_imports ptr length old host
-    hlen hpos hnowrap callerId
 
 private abbrev func16Locals (result ignored ptr length : UInt32)
     (values : List Value := []) : Locals :=
@@ -93,7 +57,8 @@ theorem func16_body {hlc : HasLC}
   simp only [Project.HexStdio.func16, func16Locals]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
-  iapply twp_universal_read ptr length old host hlen hpos hptr ⟨0⟩
+  iapply Wasm.SmallStep.twp_universal_read Project.HexStdio.«module»
+    Project.HexStdio.Spec.module_imports ptr length old host hlen hpos hptr ⟨0⟩
       (params := [.i32 result, .i32 ignored, .i32 ptr, .i32 length])
       (localValues := []) (values := [])
       (code := [.localSet 2, .localGet 0, .const 4, .store8 0,

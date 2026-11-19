@@ -1,4 +1,5 @@
 import Project.GcdStdio.Contracts
+import Project.NumInteger.Stein
 
 /-!
 # Total call proof for the optimized `num-integer` kernel

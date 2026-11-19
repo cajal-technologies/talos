@@ -5,8 +5,10 @@ import Interpreter.Wasm
 
 Length and page-count rewrites and byte-lookup rules (inside, before and
 after the written range) for the interpreter's byte-list memory accessors,
-plus the little-endian `read32` of four freshly written bytes. They are global `@[simp]` lemmas: every proof that
-imports `CodeLib` has them in its default simp set.
+plus the little-endian `read32` of four freshly written bytes. They are global
+`@[simp]` lemmas: every proof that imports `CodeLib` has them in its default
+simp set. `Mem.readBytes_writeBytes_slice` (reading back a slice of written
+data) is not `@[simp]`.
 -/
 
 namespace Wasm
@@ -33,5 +35,19 @@ namespace Wasm
     (m.writeBytes a.toNat [b0, b1, b2, b3]).read32 a =
       b0.toUInt32 ||| (b1.toUInt32 <<< 8) ||| (b2.toUInt32 <<< 16) ||| (b3.toUInt32 <<< 24) := by
   simp [Mem.read32, Mem.writeBytes]
+
+/-- Reading back a slice of freshly written bytes returns that slice of the
+data. -/
+theorem Mem.readBytes_writeBytes_slice (m : Mem) (off start len : Nat) (data : List UInt8)
+    (h : start + len ≤ data.length) :
+    (m.writeBytes off data).readBytes (off + start) len = (data.drop start).take len := by
+  apply List.ext_getElem
+  · simp [Mem.readBytes]; omega
+  · intro i hi1 _hi2
+    have hi : i < len := by simpa [Mem.readBytes] using hi1
+    have hge : off ≤ off + start + i := by omega
+    have hlt : off + start + i < off + data.length := by omega
+    have hidx : off + start + i - off = start + i := by omega
+    simp [Mem.readBytes, Mem.writeBytes, hge, hlt, hidx]
 
 end Wasm
