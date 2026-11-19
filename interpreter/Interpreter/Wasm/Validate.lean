@@ -1701,6 +1701,16 @@ a declared supertype must precede the type. -/
 def Module.checkValueTypeIndices (m : Module) : Except String Unit := do
   for signature in m.types ++ m.tags do
     m.checkValueTypeRefs (signature.params ++ signature.results)
+  -- A function type with no GC definition at its index (hand-built modules
+  -- may fill only `types`) is a singleton recursion group: it may name itself
+  -- and earlier types, never a later one. Indices covered by `gcTypes` are
+  -- checked against their recursion group below.
+  for (signature, index) in m.types.zipIdx do
+    if index ≥ m.gcTypes.length then
+      for valueType in signature.params ++ signature.results do
+        match valueType.concreteTypeRef? with
+        | some referenced => if referenced > index then throw "unknown type"
+        | none => pure ()
   for (td, index) in m.gcTypes.zipIdx do
     m.checkValueTypeRefs td.valueTypes
     let groupEnd := m.recGroupEnd index
