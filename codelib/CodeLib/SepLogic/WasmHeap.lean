@@ -1257,6 +1257,22 @@ theorem pointsTo_u32_as_bytes (memId : Nat) (addr v : UInt32) :
     (BI.sep_emp (PROP := IProp (WasmHeapGF α))).to_eq]
   exact .rfl
 
+/-- Owning a 64-bit word is the same as owning its eight little-endian bytes. -/
+theorem pointsTo_u64_as_bytes (memId : Nat) (addr : UInt32) (v : UInt64) :
+    pointsTo_u64 (α := α) memId addr v ⊣⊢
+      pointsToBytes memId addr
+        [u64Byte v 0, u64Byte v 1, u64Byte v 2, u64Byte v 3,
+         u64Byte v 4, u64Byte v 5, u64Byte v 6, u64Byte v 7] := by
+  have e2 : addr + 1 + 1 = addr + 2 := by rw [UInt32.add_assoc]; rfl
+  have e3 : addr + 2 + 1 = addr + 3 := by rw [UInt32.add_assoc]; rfl
+  have e4 : addr + 3 + 1 = addr + 4 := by rw [UInt32.add_assoc]; rfl
+  have e5 : addr + 4 + 1 = addr + 5 := by rw [UInt32.add_assoc]; rfl
+  have e6 : addr + 5 + 1 = addr + 6 := by rw [UInt32.add_assoc]; rfl
+  have e7 : addr + 6 + 1 = addr + 7 := by rw [UInt32.add_assoc]; rfl
+  simp only [pointsTo_u64, pointsToBytes, e2, e3, e4, e5, e6, e7,
+    (BI.sep_emp (PROP := IProp (WasmHeapGF α))).to_eq]
+  exact .rfl
+
 -- Array ownership: n consecutive u32 elements at ptr
 -- arrayAt memId ptr [x₀, x₁, ..., xₙ₋₁] =
 --   pointsTo_u32 memId ptr x₀ ∗ pointsTo_u32 memId (ptr+4) x₁ ∗ ...
