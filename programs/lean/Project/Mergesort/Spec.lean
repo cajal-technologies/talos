@@ -1,7 +1,6 @@
 import Project.Mergesort.Program
 import Interpreter.Wasm.Host.Universal
-import CodeLib.UInt32
-import CodeLib.WordCodec
+import CodeLib.WordCodec.UInt32
 import Std.Tactic.BVDecide
 
 /-!
@@ -28,41 +27,9 @@ theorem module_imports : «module».imports = StdIO.imports ++ OOM.imports := by
 /-- Every import of the generated module is implemented by the universal host. -/
 theorem universal_host_covers : Universal.covers «module» = true := by decide +kernel
 
-/-- The four little-endian bytes of a 32-bit word. -/
-def encodeWord (value : UInt32) : List UInt8 :=
-  [ value.toUInt8
-  , (value >>> 8).toUInt8
-  , (value >>> 16).toUInt8
-  , (value >>> 24).toUInt8 ]
-
-/-- Decode one four-byte little-endian word.  The fallback is outside the
-`WordCodec` interface: `deserialize` calls this only on a chunk of width four. -/
-def decodeWord : List UInt8 → UInt32
-  | b₀ :: b₁ :: b₂ :: b₃ :: _ =>
-      b₀.toUInt32 ||| (b₁.toUInt32 <<< 8) |||
-        (b₂.toUInt32 <<< 16) ||| (b₃.toUInt32 <<< 24)
-  | _ => 0
-
-/-- The one canonical codec used by streams and all memory-array views in the
-merge-sort formalization. -/
-def u32Codec : WordCodec UInt32 where
-  width := 4
-  encode := encodeWord
-  decode := decodeWord
-  width_pos := by decide
-  encode_length := fun _ => rfl
-  decode_encode := by
-    intro value
-    simp only [encodeWord, decodeWord]
-    apply UInt32.toNat_inj.mp
-    simp only [UInt32.toNat_or, UInt32.toNat_shiftLeft,
-      UInt8.toNat_toUInt32, UInt32.toNat_toUInt8,
-      UInt32.toNat_shiftRight]
-    exact Nat.reassemble32_of_lt value.toNat (UInt32.toNat_lt value)
-
 /-- The exact packed format consumed and produced by the Rust entry point. -/
 def encodeValues (values : List UInt32) : List UInt8 :=
-  u32Codec.serialize values
+  WordCodec.u32le.serialize values
 
 /-- `output` is sorted in nondecreasing order and contains exactly the input
 values, including multiplicities. -/

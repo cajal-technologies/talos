@@ -471,8 +471,10 @@ wasm_wp_pure_rule wp_drop {value : Value} :
 
 wasm_wp_pure_rule wp_select
     {first second selected : Value} {condition : UInt32}
+    {resultTypes : Option (List ValueType)}
     (h : selected = if condition ≠ 0 then first else second) :
-  .select, .i32 condition :: second :: first :: values => selected :: values := Step.select h
+  .select resultTypes, .i32 condition :: second :: first :: values =>
+    selected :: values := Step.select h
 
 wasm_wp_pure_rule wp_refNull {staticType : ValueType} :
   .refNull staticType, values => .funcref none :: values := Step.refNull

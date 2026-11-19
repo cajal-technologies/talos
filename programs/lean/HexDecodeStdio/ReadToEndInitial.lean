@@ -186,11 +186,11 @@ theorem first_nonempty_read_invariant
   have hentryStatusCapacity :
       entryStore.wasm.mem.read32 decodeStatusVector = 0 := by
     simp [entryStore, decodeFrameStore, decodeConfig, Mem.read32,
-      Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
+      Mem.write64, Mem.write32]
   have hentryStatusPointer :
       entryStore.wasm.mem.read32 (decodeStatusVector + 4) = 1 := by
     simp [entryStore, decodeFrameStore, decodeConfig, Mem.read32,
-      Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
+      Mem.write64, Mem.write32]
   have hentryStatusLength :
       entryStore.wasm.mem.read32 (decodeStatusVector + 8) = 0 := by
     simp [entryStore, decodeFrameStore, decodeConfig, Mem.read32,
@@ -510,10 +510,10 @@ theorem first_empty_read_success
   change ReadToEndSuccess [] (decodeAfterReadConfig finalStore)
   have hframedCapacity : framed.wasm.mem.read32 readToEndVector = 0 := by
     simp [framed, readToEndFrameStore, entryStore, decodeFrameStore,
-      Mem.read32, Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
+      Mem.read32, Mem.write64, Mem.write32]
   have hframedData : framed.wasm.mem.read32 (readToEndVector + 4) = 1 := by
     simp [framed, readToEndFrameStore, entryStore, decodeFrameStore,
-      Mem.read32, Mem.write64, Mem.write32]; bv_normalize (config := { enums := false })
+      Mem.read32, Mem.write64, Mem.write32]
   have hframedBump : framed.wasm.mem.read32 1053960 = 0 := by
     simp only [framed, entryStore, readToEndFrameStore, decodeFrameStore,
       decodeConfig]
@@ -583,7 +583,7 @@ theorem first_empty_read_success
         readAdapterResultStore, universalReadStore, readChunkFrameStore,
         framed, readToEndFrameStore, entryStore, decodeFrameStore,
         decodeConfig, Mem.read32, Mem.write64, Mem.write32, Mem.write8,
-        Mem.writeBytes]; bv_normalize (config := { enums := false })
+        Mem.writeBytes]
     all_goals decide
   · simp only [finalStore, readToEndFinishedStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
@@ -591,7 +591,7 @@ theorem first_empty_read_success
         readAdapterResultStore, universalReadStore, readChunkFrameStore,
         framed, readToEndFrameStore, entryStore, decodeFrameStore,
         decodeConfig, Mem.read32, Mem.write64, Mem.write32, Mem.write8,
-        Mem.writeBytes]; bv_normalize (config := { enums := false })
+        Mem.writeBytes]
     all_goals decide
   · simp only [finalStore, readToEndFinishedStore]
     rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]

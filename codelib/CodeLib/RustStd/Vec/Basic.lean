@@ -3,17 +3,16 @@
 
 A pure model of the safe `Vec<T>` surface, as a plain `List W`.
 
-Like `CodeLib.RustStd.Option`, this is a spec-level model rather than a
-wasm-level `_wp` lemma file.  Its consumer is `Project.RustVec.Spec`, which
-states the contract of each `rust_vec` export in these terms.  Lemmas about
-the model arrive with the first proof that needs them.
+This is a spec-level model rather than a wasm-level `_wp` lemma file.  Its
+consumer is `Project.RustVec.Spec`, which states the contract of each
+`rust_vec` export in these terms.  Lemmas about the model arrive with the
+first proof that needs them.
 
-The model carries no capacity field.  Capacity is not observable through the
-safe API: no safe method reads it back, and two vectors that differ only in
-capacity answer every safe query identically.  The heap-level header, where
-capacity is a real word, has its own model (`VecU8` in the merge-sort
-formalization); this file is the spec-level counterpart and does not overlap
-with it.
+The model carries no capacity field: none of the modeled operations observes
+capacity (`Vec::capacity` is outside the supported surface).  The heap-level
+header, where capacity is a real word, has its own model (`VecU8` in the
+merge-sort formalization); this file is the spec-level counterpart and does
+not overlap with it.
 
 The model omits panic indexing (`v[i]`).  A panic compiles to a wasm trap, so
 it is an outcome of the run rather than an operation of the data structure.

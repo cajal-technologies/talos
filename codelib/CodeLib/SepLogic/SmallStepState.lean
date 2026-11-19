@@ -235,8 +235,8 @@ theorem heapDomain_init (σ : WasmHeapMap (Option UInt8)) :
     exists 18
   imod (iOwn_alloc (E := heapFrontierElem)
       (ExclAuth.auth (⟨UInt32.size⟩ : DiscreteO Nat))
-      (CMRA.valid_iff_validN.mpr (fun n => CMRA.validN_op_l
-        (CMRA.valid_iff_validN.mp
+      (Valid.valid_iff_validN.mpr (fun n => ORA.validN_op_l
+        (Valid.valid_iff_validN.mp
           (ExclAuth.valid
             (a := (⟨UInt32.size⟩ : DiscreteO Nat))) n)))) with
     ⟨%heapFrontierName, HheapFrontierAuth⟩

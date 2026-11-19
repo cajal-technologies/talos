@@ -1,3 +1,4 @@
+import CodeLib.SepLogic.IrisCompat
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepGhostInit
@@ -8,78 +9,9 @@ import Iris.ProgramLogic.TotalAdequacy
 # Adequacy for the Wasm small-step Iris language
 
 This is the public bridge from an iris-lean `WP` proof to the operational
-small-step semantics.  Unlike the legacy `wasm_heap_adequacy`, it refers only
-to `Wasm.SmallStep.Step` through the iris-lean `Language` instance.
+small-step semantics.  It refers only to `Wasm.SmallStep.Step`, through the
+iris-lean `Language` instance.
 -/
-
-/-! ### Compatibility layer for merged iris-lean#554
-
-`StronglyNormalizing` moved upstream to `Relation.StronglyNormalizing`
-(an abbrev for `Acc (flip step)`), and its helpers plus the no-fork
-single-expression adequacy bridge were dropped when the PR merged.
-Ported verbatim below. -/
-
-namespace Relation.StronglyNormalizing
-
-theorem intro {α : Type _} {step : α → α → Prop} {x : α}
-    (H : ∀ y, step x y → Relation.StronglyNormalizing step y) :
-    Relation.StronglyNormalizing step x :=
-  Acc.intro x H
-
-theorem map {α β : Type _} {stepα : α → α → Prop}
-    {stepβ : β → β → Prop} (f : β → α)
-    (Hlift : ∀ x y, stepβ x y → stepα (f x) (f y))
-    {x : β} (H : Relation.StronglyNormalizing stepα (f x)) :
-    Relation.StronglyNormalizing stepβ x := by
-  unfold Relation.StronglyNormalizing at H ⊢
-  generalize hx : f x = z at H
-  induction H generalizing x with
-  | intro z Hz IH =>
-      subst z
-      apply Acc.intro
-      intro y Hy
-      exact IH (f y) (Hlift x y Hy) rfl
-
-end Relation.StronglyNormalizing
-
-namespace Iris.ProgramLogic
-
-export Relation (StronglyNormalizing)
-
-section
-open Iris Language Language.Notation
-
-variable {Expr State Obs Val : Type _} [Λ : Language Expr State Obs Val]
-
-/-- Erased single-expression reduction. -/
-def ExprErasedStep : Expr × State → Expr × State → Prop
-  | (e₁, σ₁), (e₂, σ₂) =>
-      ∃ (κ : List Obs) (efs : List Expr), (e₁, σ₁) -<κ>-> (e₂, σ₂, efs)
-
-/-- A language whose primitive steps do not fork. -/
-class LanguageNoFork (Expr State Obs Val : Type _)
-    [Language Expr State Obs Val] : Prop where
-  no_fork {e₁ e₂ : Expr} {σ₁ σ₂ : State} {κ : List Obs} {efs : List Expr} :
-    (e₁, σ₁) -<κ>-> (e₂, σ₂, efs) → efs = []
-
-/-- Derive single-expression normalization from thread-pool normalization. -/
-theorem stronglyNormalizing_expr_of_threadPool
-    [LanguageNoFork Expr State Obs Val] {e : Expr} {σ : State}
-    (H : StronglyNormalizing
-      (Language.ErasedStep (Expr := Expr) (State := State) (Obs := Obs))
-      ([e], σ)) :
-    StronglyNormalizing
-      (ExprErasedStep (Expr := Expr) (State := State) (Obs := Obs))
-      (e, σ) := by
-  apply Relation.StronglyNormalizing.map (fun ρ : Expr × State => ([ρ.1], ρ.2)) ?_ H
-  rintro ⟨e₁, σ₁⟩ ⟨e₂, σ₂⟩ ⟨κ, efs, Hstep⟩
-  have hefs : efs = [] := LanguageNoFork.no_fork Hstep
-  subst efs
-  exact ⟨κ, .atomic Hstep [] []⟩
-
-end
-
-end Iris.ProgramLogic
 
 namespace Wasm.SmallStep
 
@@ -328,7 +260,7 @@ theorem wasm_smallStep_stronglyNormalizing
       elementSegmentHeapAgrees_empty _,
       fun id m hm => by simp [get?_empty] at hm,
       fun id env hm => by simp [get?_empty] at hm⟩
-  · iintro _
+  · iintro -
     exact htwp
 
 /-- Total-WP strong normalization with authoritative initial memory, globals,
@@ -721,7 +653,7 @@ theorem wasm_smallStep_runtime_instance_adequacy
     toAgree ⟨config.store.runtime.instances⟩
   imod (iOwn_alloc (E := runtimeInstancesElem)
       (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
+        Valid.valid_iff_validN.mp
           (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeInstancesName, HruntimeInstances⟩
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
@@ -820,7 +752,7 @@ theorem wasm_smallStep_instance_host_state_adequacy
     toAgree ⟨config.store.runtime.instances⟩
   imod (iOwn_alloc (E := runtimeInstancesElem)
       (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
+        Valid.valid_iff_validN.mp
           (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeInstancesName, HruntimeInstances⟩
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=
@@ -2450,7 +2382,7 @@ theorem wasm_smallStep_heap_runtime_instances_adequacy
     toAgree ⟨config.store.runtime.instances⟩
   imod (iOwn_alloc (E := runtimeInstancesElem)
       (runtimeInstancesValue • runtimeInstancesValue) (fun n =>
-        CMRA.valid_iff_validN.mp
+        Valid.valid_iff_validN.mp
           (toAgree_op_valid_iff_eq.mpr rfl) n)) with
     ⟨%runtimeInstancesName, HruntimeInstances⟩
   letI runtimeInstancesGS : WasmRuntimeInstancesGS α :=

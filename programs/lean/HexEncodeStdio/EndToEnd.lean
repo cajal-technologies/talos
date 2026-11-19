@@ -320,9 +320,9 @@ theorem encode_reserve_after_read
       exact List.getElem?_set_eq_of_lt (.i32 1048512) hz)
     (by simp [reserveRequired])
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32]; decide)
+      Mem.write32])
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32]; decide)
+      Mem.write32])
     (by
       simp only [encodeStore, encodeAllocFrameStore]
       rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]

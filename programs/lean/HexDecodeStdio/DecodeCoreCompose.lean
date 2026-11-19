@@ -258,12 +258,10 @@ theorem decode_none_of_odd_length (input : List UInt8)
 theorem decodeOddStore_result_tag (store : MachineStore Universal.State) :
     (decodeOddStore store).wasm.mem.read32 decodeResultOut = 2147483648 := by
   simp [decodeOddStore, Mem.read32, Mem.write64]
-  bv_normalize (config := { enums := false })
 
 theorem decodeOddStore_result_payload (store : MachineStore Universal.State) :
     (decodeOddStore store).wasm.mem.read32 (decodeResultOut + 4) = 1114112 := by
   simp [decodeOddStore, Mem.read32, Mem.write64]
-  bv_normalize (config := { enums := false })
 
 theorem decodeOddStore_core_facts
     (store : MachineStore Universal.State) (bump : UInt32)
@@ -414,8 +412,7 @@ theorem decodeEmptyCoreStore_result
   refine ⟨decodeEmptyCoreStore store data, 0, 1, 0, [], rfl, by simp [decode],
     (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]),
     (by
-      simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]
-      bv_normalize (config := { enums := false })),
+      simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]),
     (by simp [decodeEmptyCoreStore, Mem.read32, Mem.write32]), by simp, by simp, by norm_num,
     (by
       have hp := hfacts.pages_lower

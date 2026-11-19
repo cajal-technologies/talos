@@ -3,6 +3,19 @@ version = "0.1.0"
 defaultTargets = ["CodeLib"]
 packagesDir = "../.lake/packages"
 
+# Lean 4.35: Mathlib is designed for the module system; Talos files are not
+# (yet) modules. Opt out of the per-import warning instead of migrating here.
+allowNonModules = true
+
+# Mathlib's `linter.concreteInstances` (on by default since Mathlib v4.36.0)
+# asks for a global instance instead of a local `[C T]` assumption with no free
+# variables. That advice does not apply to the iris ghost-state classes
+# (`WasmHeapGS α`, `WasmGlobalGS α`, ...): their instances carry ghost names
+# that only adequacy allocates, so a proof must assume them. `weak.` because the
+# option is only registered in modules that import Mathlib.
+[leanOptions]
+weak.linter.concreteInstances = false
+
 [[require]]
 name = "WasmInterpreterLean"
 path = "../interpreter"
@@ -11,20 +24,40 @@ path = "../interpreter"
 name = "iris"
 git.url = "https://github.com/leanprover-community/iris-lean.git"
 git.subDir = "Iris"
-# Pin the upstream Lean 4.34.1 migration (iris-lean#702).
-rev = "04b7689c294bb1dd6401e2dd53b337871934ea47"
+# Pin the upstream Lean 4.36 bump (iris-lean 40e6418437a794dcd0429bfbe4d6b60fdafb2ecd).
+rev = "40e6418437a794dcd0429bfbe4d6b60fdafb2ecd"
 
+# One library, so every module has exactly one owner: Lake treats a module as
+# local to each lib whose root is a prefix of its name, and the `CodeLib` root
+# already prefixes every module here. The umbrella `CodeLib` re-exports only
+# infrastructure; the other roots are modules downstream code does not get
+# through `import CodeLib` but the codelib build (and so CI) must still check.
 [[lean_lib]]
 name = "CodeLib"
 roots = [
   "CodeLib",
-  # Not reachable from the `CodeLib` umbrella on purpose: it declares the float
-  # bridge axioms, which should not enter every downstream module's environment.
-  # It is still a root so the codelib build keeps checking it.
+  # Prelude of every generated `Program.lean`; not imported by the umbrella.
+  "CodeLib.Generated",
+  # Float lemmas used only by the float programs, which import it by path.
   "CodeLib.IEEE32.Exec",
+  # --- Examples and regression tests (kept out of the umbrella) ---
   "CodeLib.Examples.Gcd",
+  "CodeLib.Examples.MemFillLoop",
+  "CodeLib.Examples.MemCopyLoop",
+  "CodeLib.Examples.MergeSort.TotalProof",
+  "CodeLib.Examples.MergeSort.Adequacy",
   "CodeLib.Examples.MergeSort.StdIO",
   "CodeLib.Examples.Quicksort.TotalProof",
-  # Near SmallStep example (not reachable from CodeLib.Near.Proof).
+  "CodeLib.Examples.SelectionSort.StdIOProof",
+  "CodeLib.SepLogic.SmallStepOutcomeExample",
+  "CodeLib.SepLogic.SmallStepAdequacyExamples",
+  "CodeLib.SepLogic.HostCallExample",
+  "CodeLib.SepLogic.TwoModuleExample",
+  "CodeLib.SepLogic.CrossInstanceExample",
+  "CodeLib.SepLogic.CounterHostExample",
+  "CodeLib.SepLogic.ImportChainExample",
+  "CodeLib.SepLogic.SharedMemoryExample",
+  # --- NEAR host and its worked example (kept out of the umbrella) ---
+  # KvSetter imports Near.SmallStep, which imports Near.{State,Env,Proof}.
   "CodeLib.Near.Examples.KvSetter",
 ]

@@ -375,3 +375,33 @@ theorem wasm_smallStep_heap_globals_runtime_host_store_terminatesWithOutcome
     iapply_exact htwp .hasLC with Hresources
 
 end Wasm.SmallStep
+
+/-! ## Terminal total WPs under the outcome view
+
+Under the scoped outcome language both `.done` and `.trapped` are values, so
+the postcondition at the corresponding outcome suffices to establish their
+total WP. -/
+
+namespace Wasm.SmallStep
+
+open Iris Iris.ProgramLogic Language.Notation
+open Wasm.SepLogic
+open scoped Outcome
+
+theorem twp_outcome_done [WasmSmallStepGS hlc α]
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → IProp (WasmHeapGF α)}
+    {values : List Value} :
+    Φ (.done values) ⊢
+      WP (Expr.done values : Expr α) @ s; E [{ Φ }] :=
+  twp.value rfl
+
+theorem twp_outcome_trapped [WasmSmallStepGS hlc α]
+    {s : Stuckness} {E : CoPset}
+    {Φ : ObservableOutcome → IProp (WasmHeapGF α)}
+    {reason : TrapReason} :
+    Φ (.trapped reason) ⊢
+      WP (Expr.trapped reason : Expr α) @ s; E [{ Φ }] :=
+  twp.value rfl
+
+end Wasm.SmallStep

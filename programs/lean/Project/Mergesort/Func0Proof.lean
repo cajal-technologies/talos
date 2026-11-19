@@ -97,8 +97,8 @@ private theorem ByteSlice_twelve_storeFocus
   · irw_exact [← hthirdAddress] with Hthird
   ihave ⟨Hthird, HcloseThird⟩ := ByteSlice_storeAnyWordFocus (ptr + 8) third
     hthirdLength hthirdNowrap $$ Hthird'
-  iexists Spec.decodeWord first, Spec.decodeWord second,
-    Spec.decodeWord third
+  iexists WordCodec.decodeU32 first, WordCodec.decodeU32 second,
+    WordCodec.decodeU32 third
   iframe Hfirst Hsecond Hthird
   iintro %tag
   iintro %pointer

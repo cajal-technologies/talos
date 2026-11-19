@@ -7,11 +7,9 @@ Small bridge lemmas connecting `UInt32` bitwise operations to the
 `Nat` view that user-facing specifications prefer.
 
 `and_one_eq_zero_iff_toNat_mod_two` is consumed by the verifier's scaffolded
-starter proof (`verifier/template/project/lean/Project/IsEven/Spec.lean`), so
-the module is live even though nothing in `programs/lean` references it yet. It
-overlaps the width-generic parity bridge in `UInt64.lean`; both are candidates
-to fold into one shared low-bit lemma once that consolidation is done (keep this
-public name as a corollary — the template simp-references it).
+starter proof (`verifier/template/project/lean/Project/IsEven/Spec.lean`),
+which simp-references it by name. It overlaps the width-generic parity bridge
+in `UInt64.lean`; keep this public name if the two are ever folded together.
 -/
 
 namespace UInt32
@@ -53,16 +51,6 @@ theorem Nat.reassemble32_of_lt (n : Nat) (h : n < 2 ^ 32) :
       show ¬i - 16 < 8 by omega, show ¬i - 24 < 8 by omega]
 
 namespace Wasm
-
-/-- The reverse `UInt32` inequality follows when strict comparison fails. -/
-theorem UInt32.le_of_not_lt {a b : UInt32} (h : ¬a < b) : b ≤ a := by
-  change ¬a.toNat < b.toNat at h
-  exact Nat.le_of_not_lt h
-
-/-- The reverse `UInt32` inequality follows when non-strict comparison fails. -/
-theorem UInt32.le_of_not_le {a b : UInt32} (h : ¬a ≤ b) : b ≤ a := by
-  change ¬a.toNat ≤ b.toNat at h
-  exact Nat.le_of_lt (Nat.lt_of_not_le h)
 
 /-- `n &&& 1 = 0` (bitwise low-bit zero) is equivalent to
 `n.toNat % 2 = 0` (semantic evenness). The forward proof factors

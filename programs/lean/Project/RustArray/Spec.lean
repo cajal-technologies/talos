@@ -6,8 +6,8 @@ import Project.RustArray.Program
 Two layers, both proved over the authoritative small-step language:
 
 * the internal raw `(ptr, len)` bodies (`func0` = `len`, `func2` = `is_empty`),
-  using contextual iris-lean instruction rules compatible with the CodeLib
-  `len_chunk` / `isEmpty_chunk` APIs; and
+  using the contextual iris-lean instruction rules, with `is_empty`'s result
+  stated as CodeLib's `isEmptyValue`; and
 * the exported ABI wrappers (`func4` = `len`, `func5` = `is_empty`), which receive
   the slice as a fat pointer in linear memory: they `load32` the `(dataPtr, len)`
   fields back under authoritative byte ownership and then `call` the bodies above (`is_empty`

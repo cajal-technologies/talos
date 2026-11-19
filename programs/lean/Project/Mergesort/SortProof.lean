@@ -93,8 +93,8 @@ theorem sorted_of_mergeLE {left right output}
         (perm_of_mergeLE tail).mem_iff.mpr hz
       simp only [List.cons_append, List.mem_cons, List.mem_append] at hz'
       rcases hz' with rfl | hxs | hys
-      · exact UInt32.le_of_not_le hxy
-      · exact UInt32.le_trans (UInt32.le_of_not_le hxy) (hleft.1 z hxs)
+      · exact UInt32.le_of_lt (UInt32.not_le.mp hxy)
+      · exact UInt32.le_trans (UInt32.le_of_lt (UInt32.not_le.mp hxy)) (hleft.1 z hxs)
       · exact hright.1 z hys
 
 theorem sortedPermutation_of_mergeLE {left right output}

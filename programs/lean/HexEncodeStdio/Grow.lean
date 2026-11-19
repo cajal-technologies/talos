@@ -162,16 +162,4 @@ theorem insertBytes_inBounds
       · apply insert_read_inBounds σ resolve memory addr hresolve hinBounds
         omega
 
-private theorem storeResolve_zero {α : Type} (store : MachineStore α) :
-    storeResolve store 0 = some store.wasm.mem := by
-  simp [storeResolve]
-
-private theorem storeResolve_update_mem0 {α : Type}
-    (store : MachineStore α) (newMem : Mem) :
-    (fun id => if id = 0 then some newMem else storeResolve store id) =
-      storeResolve { store with wasm := { store.wasm with mem := newMem } } := by
-  funext id
-  simp only [storeResolve]
-  by_cases h : id = 0 <;> simp [h]
-
 end Project.HexEncodeStdio.Grow
