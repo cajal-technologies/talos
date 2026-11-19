@@ -35,7 +35,7 @@ jobs:
         with:
           path: .lake/packages
           # Shared with the other workflows' package cache (same key and restore-keys).
-          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('interpreter/lake-manifest.json') }}
+          key: lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-${{ hashFiles('**/lake-manifest.json', '!**/.lake/**') }}
           restore-keys: |
             lake-pkgs-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('lean-toolchain') }}-
       - uses: leanprover/lean-action@v1
