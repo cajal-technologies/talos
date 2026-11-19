@@ -218,14 +218,14 @@ theorem le32_parts_or (n : Nat) :
 @[simp] theorem readBytes_writeBytes_encode_key (m : Mem) (key val : List UInt8) :
     (m.writeBytes 0 (encodeKV key val)).readBytes 4 key.length = key := by
   rw [show 4 = 0 + 4 by norm_num]
-  rw [readBytes_writeBytes_slice]
+  rw [Mem.readBytes_writeBytes_slice]
   · simp [encodeKV, le32]
   · simp [encodeKV, le32]; omega
 
 @[simp] theorem readBytes_writeBytes_encode_val (m : Mem) (key val : List UInt8) :
     (m.writeBytes 0 (encodeKV key val)).readBytes (key.length + 8) val.length = val := by
   rw [show key.length + 8 = 0 + (key.length + 8) by omega]
-  rw [readBytes_writeBytes_slice]
+  rw [Mem.readBytes_writeBytes_slice]
   · simp [encodeKV, le32]
   · simp [encodeKV, le32]; omega
 

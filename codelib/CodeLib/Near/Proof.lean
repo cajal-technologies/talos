@@ -490,18 +490,6 @@ theorem nearEnv_satisfies_canonical (m : Module) (himports : m.imports = nearImp
 
 /-! ## Memory framing -/
 
-theorem readBytes_writeBytes_slice (m : Mem) (off start len : Nat) (data : List UInt8)
-    (h : start + len ≤ data.length) :
-    (m.writeBytes off data).readBytes (off + start) len = (data.drop start).take len := by
-  apply List.ext_getElem
-  · simp [Mem.readBytes]; omega
-  · intro i hi1 _hi2
-    have hi : i < len := by simpa [Mem.readBytes] using hi1
-    have hge : off ≤ off + start + i := by omega
-    have hlt : off + start + i < off + data.length := by omega
-    have hidx : off + start + i - off = start + i := by omega
-    simp [Mem.readBytes, Mem.writeBytes, hge, hlt, hidx]
-
 theorem getMemOrReg_mem (st : Store NearState) (ptr len : UInt64)
     (hLen : len ≠ u64Max) (hBound : ptr.toNat + len.toNat ≤ memBytes st) :
     getMemOrReg st ptr len = some (st.mem.readBytes ptr.toNat len.toNat) := by
