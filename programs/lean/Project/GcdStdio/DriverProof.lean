@@ -87,12 +87,10 @@ def afterAllocExpr : Expr Universal.State := .running
     control := [innerFrame, middleFrame, outerFrame]
     calls := [wrapperFrame] }
 
-private theorem encodeWord_eq_u64Bytes (x : UInt64) :
-    Wasm.Examples.SelectionSort.StdIO.encodeWord x =
+private theorem encodeU64_eq_u64Bytes (x : UInt64) :
+    WordCodec.encodeU64 x =
       [u64Byte x 0, u64Byte x 1, u64Byte x 2, u64Byte x 3,
-       u64Byte x 4, u64Byte x 5, u64Byte x 6, u64Byte x 7] := by
-  have hall (y : UInt8) : y &&& 255 = y := by bv_normalize
-  simp [Wasm.Examples.SelectionSort.StdIO.encodeWord, u64Byte, hall]
+       u64Byte x 4, u64Byte x 5, u64Byte x 6, u64Byte x 7] := rfl
 
 private theorem pointsTo_u64_as_bytes [WasmHeapGS α]
     (memId : Nat) (addr : UInt32) (value : UInt64) :
@@ -119,8 +117,8 @@ private theorem ByteSlice_word [WasmHeapGS Universal.State]
   unfold Project.GcdStdio.Contracts.ByteSlice
     Project.Mergesort.Representations.ByteSlice
   rw [show Project.GcdStdio.Spec.codec.encode value =
-      Wasm.Examples.SelectionSort.StdIO.encodeWord value by rfl,
-    encodeWord_eq_u64Bytes value]
+      WordCodec.encodeU64 value by rfl,
+    encodeU64_eq_u64Bytes value]
   constructor
   · iintro ⟨%_, Hbytes⟩
     iapply (pointsTo_u64_as_bytes 0 ptr value).mpr
@@ -152,10 +150,9 @@ private theorem ByteSlice_input_words [WasmHeapGS Universal.State]
   icases Ha with ⟨%ha, Habytes⟩
   isimp only [Project.Mergesort.Representations.ByteSlice] at Hb
   icases Hb with ⟨%hb, Hbbytes⟩
-  isimp only [Project.GcdStdio.Spec.codec,
-    Wasm.Examples.SelectionSort.StdIO.codec] at Habytes Hbbytes
-  isimp only [encodeWord_eq_u64Bytes a] at Habytes Hbbytes
-  isimp only [encodeWord_eq_u64Bytes b] at Hbbytes
+  isimp only [Project.GcdStdio.Spec.codec, WordCodec.u64le] at Habytes Hbbytes
+  isimp only [encodeU64_eq_u64Bytes a] at Habytes Hbbytes
+  isimp only [encodeU64_eq_u64Bytes b] at Hbbytes
   isplitl [Habytes]
   · iapply (pointsTo_u64_as_bytes 0 heapBase a).mpr
     iexact Habytes
