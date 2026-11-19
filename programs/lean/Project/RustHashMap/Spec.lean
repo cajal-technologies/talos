@@ -21,10 +21,14 @@ scalar.  On the way in, borsh accepts entries in any order and keeps
 the last value of a repeated key, so the header count and what `map_len`
 writes can differ; `HashMap.ofEntries` is that step in the model.
 
-The hasher's `RandomState` seed is a constant of the wasm target: the module
-imports no source of randomness (`module_imports`), so every run of an export
-on the same input is the same execution.  The seed fixes where keys land in
-the table, but only the sort makes the written bytes independent of it.
+The hasher's `RandomState` seed is not a constant.  In this module, built with
+rustc 1.95.0 for `wasm32-unknown-unknown`, the two seed words are addresses of
+the run: the address of a stack byte and the address of a fresh one-byte
+allocation.  The first word then goes up by one at each construction of a
+`RandomState`.  What does hold is determinism: the module imports no source of
+randomness (`module_imports`), so every run of an export on the same input is
+the same execution.  The seed fixes where keys land in the table, and only the
+sort makes the written bytes independent of it.
 
 `borsh::from_slice` rejects trailing bytes, so an input is accepted only when
 it is exactly one encoded value.  Every rejection writes nothing.  A `None`
