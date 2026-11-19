@@ -21,7 +21,7 @@ open Wasm.SepLogic Wasm.SmallStep
 /-! ## Canonical codec -/
 
 /-- The sole word codec used by public streams and internal word arrays. -/
-abbrev U32Codec : WordCodec UInt32 := Spec.u32Codec
+abbrev U32Codec : WordCodec UInt32 := WordCodec.u32le
 
 /-- Canonical packed little-endian serialization. -/
 abbrev serialize (values : List UInt32) : List UInt8 :=
@@ -54,7 +54,7 @@ the corresponding zero-valued word array. -/
       change U32Codec.serialize (0 :: List.replicate count 0) =
         List.replicate (4 * count + 4) 0
       rw [Wasm.WordCodec.serialize_cons]
-      change Spec.encodeWord 0 ++ serialize (List.replicate count 0) =
+      change WordCodec.encodeU32 0 ++ serialize (List.replicate count 0) =
         List.replicate (4 * count + 4) 0
       rw [ih, show 4 * count + 4 = 4 + 4 * count by omega,
         List.replicate_add]
@@ -62,16 +62,16 @@ the corresponding zero-valued word array. -/
 
 /-- The byte footprint used by the separation-logic word primitive is the
 canonical stream encoding, not a second serializer. -/
-theorem encodeWord_eq_u32Bytes (value : UInt32) :
-    Spec.encodeWord value =
+theorem encodeU32_eq_u32Bytes (value : UInt32) :
+    WordCodec.encodeU32 value =
         [u32Byte value 0, u32Byte value 1,
         u32Byte value 2, u32Byte value 3] := by rfl
 
 /-- Every exact four-byte sequence is the canonical encoding of the word
 obtained by the generated little-endian decoder. -/
-theorem encodeWord_decodeWord_of_length
+theorem encodeU32_decodeU32_of_length
     (bytes : List UInt8) (hlength : bytes.length = 4) :
-    Spec.encodeWord (Spec.decodeWord bytes) = bytes := by
+    WordCodec.encodeU32 (WordCodec.decodeU32 bytes) = bytes := by
   rcases bytes with _ | ⟨b0, bytes⟩
   · simp at hlength
   rcases bytes with _ | ⟨b1, bytes⟩
@@ -81,7 +81,7 @@ theorem encodeWord_decodeWord_of_length
   rcases bytes with _ | ⟨b3, bytes⟩
   · simp at hlength
   rcases bytes with _ | ⟨extra, bytes⟩
-  · simp only [Spec.encodeWord, Spec.decodeWord]
+  · simp only [WordCodec.encodeU32, WordCodec.decodeU32]
     rw [UInt32.packBytes_byte0, UInt32.packBytes_byte1,
       UInt32.packBytes_byte2, UInt32.packBytes_byte3]
   · simp at hlength
@@ -91,7 +91,7 @@ Trailing partial chunks are discarded; callers use the exact-length theorem
 below, so that case is never used for a live word allocation. -/
 def decodeWords : List UInt8 → List UInt32
   | b0 :: b1 :: b2 :: b3 :: rest =>
-      Spec.decodeWord [b0, b1, b2, b3] :: decodeWords rest
+      WordCodec.decodeU32 [b0, b1, b2, b3] :: decodeWords rest
   | _ => []
 
 /-- Every concrete `4*n`-byte allocation has a canonical `n`-word view. -/
@@ -118,15 +118,15 @@ theorem serialize_decodeWords_of_length (bytes : List UInt8) (count : Nat)
       have hind := ih rest hrest
       constructor
       · change U32Codec.serialize
-          (Spec.decodeWord [b0, b1, b2, b3] :: decodeWords rest) =
+          (WordCodec.decodeU32 [b0, b1, b2, b3] :: decodeWords rest) =
             b0 :: b1 :: b2 :: b3 :: rest
         rw [Wasm.WordCodec.serialize_cons]
-        change Spec.encodeWord (Spec.decodeWord [b0, b1, b2, b3]) ++
+        change WordCodec.encodeU32 (WordCodec.decodeU32 [b0, b1, b2, b3]) ++
             serialize (decodeWords rest) = _
-        rw [encodeWord_decodeWord_of_length [b0, b1, b2, b3]
+        rw [encodeU32_decodeU32_of_length [b0, b1, b2, b3]
           (by simp), hind.1]
         simp
-      · change (Spec.decodeWord [b0, b1, b2, b3] ::
+      · change (WordCodec.decodeU32 [b0, b1, b2, b3] ::
           decodeWords rest).length = count + 1
         simp [hind.2]
 
@@ -294,12 +294,12 @@ theorem ByteSlice_four_as_word {host : Type} [WasmHeapGS host]
     (hlength : bytes.length = 4)
     (hnowrap : ptr.toNat + 4 < UInt32.size) :
     ByteSlice (host := host) ptr bytes ⊣⊢
-      pointsTo_u32 0 ptr (Spec.decodeWord bytes) := by
-  let word := Spec.decodeWord bytes
+      pointsTo_u32 0 ptr (WordCodec.decodeU32 bytes) := by
+  let word := WordCodec.decodeU32 bytes
   have hencoded :
       [u32Byte word 0, u32Byte word 1, u32Byte word 2, u32Byte word 3] =
         bytes := by
-    rw [← encodeWord_eq_u32Bytes]; exact encodeWord_decodeWord_of_length bytes hlength
+    rw [← encodeU32_eq_u32Bytes]; exact encodeU32_decodeU32_of_length bytes hlength
   constructor
   · iintro Hslice
     isimp only [ByteSlice] at Hslice
@@ -321,7 +321,7 @@ theorem ByteSlice_storeAnyWordFocus {host : Type} [WasmHeapGS host]
     (hlength : oldBytes.length = 4)
     (hnowrap : ptr.toNat + 4 < UInt32.size) :
     ByteSlice (host := host) ptr oldBytes ⊢
-      iprop(pointsTo_u32 0 ptr (Spec.decodeWord oldBytes) ∗
+      iprop(pointsTo_u32 0 ptr (WordCodec.decodeU32 oldBytes) ∗
         (∀ newValue : UInt32, pointsTo_u32 0 ptr newValue -∗
           ByteSlice ptr (serialize [newValue]))) := by
   iintro Hslice
@@ -333,9 +333,9 @@ theorem ByteSlice_storeAnyWordFocus {host : Type} [WasmHeapGS host]
     have hnewLength : (serialize [newValue]).length = 4 := by
       rw [serialize_length]
       norm_num
-    have hdecode : Spec.decodeWord (serialize [newValue]) = newValue := by
-      change Spec.decodeWord (Spec.encodeWord newValue) = newValue
-      exact Spec.u32Codec.decode_encode newValue
+    have hdecode : WordCodec.decodeU32 (serialize [newValue]) = newValue := by
+      change WordCodec.decodeU32 (WordCodec.encodeU32 newValue) = newValue
+      exact WordCodec.u32le.decode_encode newValue
     iapply (ByteSlice_four_as_word ptr (serialize [newValue])
       hnewLength hnowrap).mpr
     irw_exact [hdecode] with Hnew
@@ -347,7 +347,7 @@ theorem ByteSlice_storeWordFocus {host : Type} [WasmHeapGS host]
     (hlength : oldBytes.length = 4)
     (hnowrap : ptr.toNat + 4 < UInt32.size) :
     ByteSlice (host := host) ptr oldBytes ⊢
-      iprop(pointsTo_u32 0 ptr (Spec.decodeWord oldBytes) ∗
+      iprop(pointsTo_u32 0 ptr (WordCodec.decodeU32 oldBytes) ∗
         (pointsTo_u32 0 ptr newValue -∗
           ByteSlice ptr (serialize [newValue]))) := by
   iintro Hslice
@@ -462,8 +462,8 @@ theorem arrayAt_eq_wordCells {host : Type} [WasmHeapGS host]
       simp only [arrayAt, WordCells, serialize, WordCodec.serialize_cons]
       change pointsTo_u32 0 ptr value ∗ arrayAt 0 (ptr + 4) rest ⊣⊢
         pointsToBytes 0 ptr
-          (Spec.encodeWord value ++ U32Codec.serialize rest)
-      rw [encodeWord_eq_u32Bytes]; exact (BI.sep_congr
+          (WordCodec.encodeU32 value ++ U32Codec.serialize rest)
+      rw [encodeU32_eq_u32Bytes]; exact (BI.sep_congr
           (pointsTo_u32_as_bytes 0 ptr value)
           (by simpa using ih (ptr + 4))).trans
         (pointsToBytes_append 0 ptr
