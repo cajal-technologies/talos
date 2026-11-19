@@ -5,8 +5,9 @@ import Interpreter.Wasm
 
 Downstream code (especially the auto-generated `Program.lean` files emitted
 by `lake exe verifier check`) should `import CodeLib`, never the interpreter
-directly. This module forwards the Wasm public surface (typed AST,
-fuel-bounded interpreter, `wp` framework, `TerminatesWith` predicate).
+directly. This module forwards the Wasm public surface (`Interpreter.Wasm`:
+typed AST, small-step semantics, fuel-bounded interpreter, `wp` framework,
+hosts, `TerminatesWith` / `PartiallyMeets` predicates).
 
 The WAT decoder is intentionally **not** re-exported; it exists only as
 internal scaffolding for the verifier's `.wasm → WAT → Lean source` pipeline

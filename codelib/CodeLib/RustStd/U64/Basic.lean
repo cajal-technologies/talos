@@ -1,35 +1,24 @@
-import CodeLib.RustStd.UInt
+import Interpreter.Wasm
 
 /-!
-# `UInt64` as a wasm `i64`
+# `u64` shift-count normalization
 
-The `UIntWasm UInt64` instance: a `u64` is carried as `Value.i64`. The trunk's
-generic chunk/body helpers specialise to this instance; each operator's own
-file (`U64/Add.lean`, …) supplies the concrete `i64.*` fragment. The `u32`
-shift-count encoding (`toV_u32`) that `Shl`/`Shr` use comes from the trunk.
+When a Rust `u64` shift takes a `u32` count (as the `rust_u64` exports do),
+rustc lowers the count to a mask to the low 6 bits followed by
+`i64.extend_i32_u`. `shiftAmount_norm` proves that
+prefix computes `b % 64`, so specs of `shl`/`shr` can rewrite with it.
 -/
 
 namespace Wasm.RustStd
 
 open Wasm
 
-instance instUIntWasmUInt64 : UIntWasm UInt64 where
-  toV a := .i64 a
-
-/-- `toV` on `UInt64` is `Value.i64` — a `@[simp]` rewrite so chunk proofs reduce
-the stack to concrete `i64` and the atomic `wp_*` lemmas fire. -/
-@[simp] theorem toV_u64 (a : UInt64) : (UIntWasm.toV a : Value) = .i64 a := rfl
-
 namespace U64
 
 /-- Wasm masks `u64` shift amounts to the low 6 bits. -/
 abbrev shiftMask : UInt32 := 63
 
-/-- The emitted mask-and-extend prefix shared by `u64` shifts whose count starts
-as a Rust `u32`. -/
-abbrev shiftAmountFrag : Program := [.const shiftMask, .and, .extendUI32]
-
-/-- The mask-and-extend prefix normalises the shift count to `b % 64`.
+/-- The mask-and-extend prefix normalizes the shift count to `b % 64`.
 It speaks of the shift *amount* only (not the shift direction), so the
 kernel-checked mask identity is proved here once and reused by every shift
 (`shl`, `shr`, and any future shift-like op). -/

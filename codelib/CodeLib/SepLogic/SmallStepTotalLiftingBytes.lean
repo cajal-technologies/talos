@@ -3,12 +3,11 @@ import CodeLib.SepLogic.SmallStepTotalLifting
 /-!
 # Byte-granular and supplementary total-WP instruction rules
 
-Total weakest-precondition lifting rules on top of `SmallStepTotalLifting`,
-factored out of the `hex_stdio` worked examples for reuse:
+Total weakest-precondition lifting rules on top of `SmallStepTotalLifting`:
 
 * byte-granular memory access — `twp_load8U`, `twp_load8U_addr`, `twp_store8`,
   `twp_store8_addr`, `twp_store32_addr`, `twp_store64_addr`;
-* the signed comparison `twp_ltS` and `twp_drop`; and
+* `twp_drop`, which the trailing `macro_rules` adds to `wasm_twp_pures`; and
 * `twp_memorySize_framed` / `twp_memoryGrow_framed`, `memory.size` / `memory.grow`
   rules that thread an arbitrary owned resource through the instruction (a
   lighter-weight alternative to the memory-page-tracking variants).
@@ -262,8 +261,6 @@ theorem twp_store32_addr
       (controls := controls) (calls := calls) oldWord (by simp)
       (by simpa using h1) (by simpa using h2) (by simpa using h3))
 
-
--- `twp_ltS` is supplied by the imported generic total lifting layer.
 
 theorem twp_drop
     {params localValues values : List Value}

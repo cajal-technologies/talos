@@ -168,14 +168,9 @@ theorem absDiff_smallStep_wp
 /-! ## Closed operational contract
 
 The definitions below instantiate the reusable body with the same stack
-pointer used by generated Rust modules. They provide a small, independent
-adequacy fixture: one 17-page memory, one mutable stack-pointer global, and
-the eight scratch bytes touched by `absDiffBody`. -/
-
-def absDiffAdequacyModule : Module :=
-  { funcs := [absDiffFunc]
-    memory := some { pagesMin := 17 }
-    globals := [{ init := .i32 1048576 }] }
+pointer used by generated Rust modules, inside an arbitrary runtime module:
+one mutable stack-pointer global and the eight scratch bytes touched by
+`absDiffBody`. -/
 
 def absDiffBodyConfig (runtimeModule : Module) (initial : Store Unit)
     (a b oldScratch : UInt64) : Wasm.SmallStep.Config Unit :=
@@ -187,11 +182,6 @@ def absDiffBodyConfig (runtimeModule : Module) (initial : Store Unit)
         wasm :=
           { initial with
             mem := initial.mem.write64 1048568 oldScratch } } }
-
-def absDiffAdequacyConfig (a b oldScratch : UInt64) :
-    Wasm.SmallStep.Config Unit :=
-  absDiffBodyConfig absDiffAdequacyModule
-    absDiffAdequacyModule.initialStore a b oldScratch
 
 def absDiffHeap (oldScratch : UInt64) :
     WasmHeapMap (Option UInt8) :=
@@ -335,18 +325,5 @@ theorem absDiff_smallStep_partiallyMeets_of_store
       1048576 a b oldScratch (by decide) (by decide)
     simp only [UInt32.reduceSub, UInt32.reduceAdd] at hwp
     iapply_frame hwp
-
-/-- Closed instance of `absDiff_smallStep_partiallyMeets_of_store`. The
-theorem starts from a concrete physical memory/global store and assumes no
-ghost resources. -/
-theorem absDiff_smallStep_partiallyMeets
-    (a b oldScratch : UInt64) :
-    Wasm.SmallStep.PartiallyMeets
-      (absDiffAdequacyConfig a b oldScratch)
-      (fun result _store =>
-        result = [.i64 (if a < b then b - a else a - b)]) := by
-  apply absDiff_smallStep_partiallyMeets_of_store
-  · rfl
-  · decide
 
 end Wasm.RustStd.U64
