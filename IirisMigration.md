@@ -2,11 +2,12 @@
 
 ## Status and scope
 
-This document is the working plan for the small-step and iris-lean migration on
-the `iris` integration branch. Branches implementing this plan must be created
-from `iris` and should target `iris` in their pull requests. Keep PRs small
-enough that the old and new paths can coexist and be compared throughout the
-migration.
+This document is the plan and ledger of the small-step and iris-lean
+migration. The `iris` integration branch was merged into `main` in #162, and
+later migration work landed on `main` directly. The migration is not finished:
+the big-step interpreter (`execOne` / `exec` / `run`) is still in the tree, and
+the big-step `Wasm.TerminatesWith` predicate and the `Wp` layer are still used by
+some specs (for example `SwapElementsSpec`), so M9 remains open.
 
 The final architecture has:
 
@@ -20,12 +21,14 @@ The final architecture has:
 
 The migration may change theorem statements and proof structure. It should
 preserve the intent and coverage of existing examples wherever possible. Iris
-proofs provide partial correctness for now: they describe executions that
-reach completion but do not prove that completion occurs.
+proofs give partial correctness through `wp` and total correctness through the
+total weakest precondition `twp`, whose adequacy theorems in
+`CodeLib.SepLogic.SmallStepAdequacy` conclude `SmallStep.PartiallyMeets` and
+`SmallStep.TerminatesWith` respectively.
 
 ## Implementation status
 
-The current migration branch has crossed the executable cutover boundary:
+The migration has crossed the executable cutover boundary:
 
 - `Wasm.SmallStep.Step` is the relational semantics and `stepChecked?` is its
   proved sound, complete, deterministic executable presentation.
@@ -386,8 +389,7 @@ Open cutover rows:
   `interpreter_error` rows (`extern.wast` reference arguments and
   `instance.wast` named module instances); they are not small-step execution
   fallbacks.
-- `Interpreter/Wasm/SmallStepCoverage.md` records the constructor-family and
-  runtime-error ledger. `stepPlainChecked?` now enumerates every
+- `stepPlainChecked?` enumerates every
   `Instruction` constructor explicitly: there is no generic unsupported
   fallback, and adding new syntax causes an exhaustiveness error until its
   behavior is classified. `memOp` is explicitly owned by the checked indexed
@@ -520,8 +522,8 @@ The migration is complete only when all of the following hold:
 - The handwritten memory corpus, including quicksort and mergesort, has both
   executable tests and Iris proofs.
 - The old big-step implementation and temporary compatibility code are removed.
-- The branch-only warning in `AGENTS.md` is removed or rewritten as permanent
-  architecture documentation before merging `iris` into `main`.
+- `AGENTS.md` describes the permanent architecture (done: its branch-only
+  migration notice was replaced by a description of the current semantics).
 
 ## Cross-cutting invariants
 
@@ -817,7 +819,6 @@ Tasks:
   and temporary differential harness.
 - Check for dead definitions and stale references to the old result/fuel model.
 - Update architecture documentation and public specification guidance.
-- Remove or rewrite the branch-only migration warning in `AGENTS.md`.
 
 Exit checks:
 
