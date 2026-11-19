@@ -1,5 +1,6 @@
 import Project.RustVec.Program
 import CodeLib.RustStd.Borsh
+import CodeLib.StdioContract
 
 /-!
 # Specification for `rust_vec`
@@ -44,36 +45,16 @@ theorem universal_env_satisfies :
     (Universal.envFor «module»).Satisfies «module» (Universal.specFor «module») :=
   Universal.envFor_satisfies «module»
 
-/-! ## Run shape -/
+/-! ## Run shape
 
-/-- Everything publicly observable at the end of a finite execution. -/
-structure RunOutcome where
-  outcome : SmallStep.ObservableOutcome
-  final : Universal.State
-
-/-- The call returned normally and wrote exactly `output`. -/
-def ReturnsOutput (run : RunOutcome) (output : List UInt8) : Prop :=
-  run.outcome = .done [] ∧ run.final.stdio.output = output
-
-/-- The call terminated with the allocator's distinguished OOM outcome. -/
-def RanOutOfMemory (run : RunOutcome) : Prop :=
-  run.outcome = .trapped (.host OOM.trapMessage) ∧ run.final.oom.raised = true
-
-/-- Every finite terminal execution of the export `op` on `input` either
-satisfies `post` or terminates with the allocator's distinguished OOM outcome.
-This does not assert termination. -/
-def PartiallyRuns (op : String) (input : List UInt8)
-    (post : RunOutcome → Prop) : Prop :=
-  PartiallyRunsWithOutcome (Universal.envFor «module») «module» op
-    (Universal.State.ofInput input)
-    (fun outcome final =>
-      let run : RunOutcome := ⟨outcome, final⟩
-      RanOutOfMemory run ∨ post run)
+The shape is not specific to this module, so it lives in
+`CodeLib.StdioContract` rather than here.  The one name below fixes
+the module, which is the only part a contract adds. -/
 
 /-- The shared shape of all six contracts: a normal return writes exactly
 `output`. -/
 def WritesOrOOM (op : String) (input output : List UInt8) : Prop :=
-  PartiallyRuns op input (fun run => ReturnsOutput run output)
+  StdioContract.WritesOrOOM «module» op input output
 
 /-! ## Input readers -/
 
