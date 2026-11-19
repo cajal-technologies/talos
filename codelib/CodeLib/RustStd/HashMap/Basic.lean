@@ -34,8 +34,10 @@ reads it back.  `nodupKeys_insert`, `nodupKeys_ofEntries` and `nodupKeys_remove`
 discharge the key-uniqueness hypothesis those lemmas take, for the map an export
 decodes rather than for an arbitrary list; without them a reader can state the
 round trip but cannot apply it.  The algebra of `insert` and `remove` against
-`get` waits for a proof that needs it.  `pairwise_sortByKey` is the one
-exception to that rule: it has no consumer, and it says what the sort is for.
+`get` waits for a proof that needs it.  `pairwise_sortByKey` says what the sort
+is for, and `sortByKey_eq_of_perm` uses it: the sort of a map with distinct
+keys is the same list for every order of the entries, which is the sense in
+which the encoding in `CodeLib.RustStd.HashMap.Codec` is canonical.
 -/
 
 namespace Wasm.RustStd.HashMap
@@ -116,11 +118,11 @@ theorem nodupKeys_sortByKey [LE K] [DecidableRel (α := K) (· ≤ ·)] {m : Map
 
 /-- The sort puts the entries in key order.
 
-This one pins the definition rather than serving a later proof.  Nothing else
-here observes the order.  `sortByKey` could reorder by anything, or not at all,
-and every other lemma in this file would still hold.  The contracts in
-`Project.RustHashMap.Spec` do observe it.  They name the exact bytes an export
-writes, and `sort_unstable_by_key` in the Rust crate writes them. -/
+This one pins the definition.  The contracts in `Project.RustHashMap.Spec`
+observe the order.  They name the exact bytes an export writes, and
+`sort_unstable_by_key` in the Rust crate writes them.
+
+Consumer: `sortByKey_eq_of_perm` below. -/
 theorem pairwise_sortByKey [LE K] [DecidableRel (α := K) (· ≤ ·)]
     (htrans : ∀ a b c : K, a ≤ b → b ≤ c → a ≤ c)
     (htotal : ∀ a b : K, a ≤ b ∨ b ≤ a) (m : Map K V) :
@@ -290,6 +292,33 @@ theorem get_sortByKey [BEq K] [LawfulBEq K] [LE K] [DecidableRel (α := K) (· �
     {m : Map K V} (h : NodupKeys m) (key : K) :
     get (sortByKey m) key = get m key :=
   get_perm (sortByKey_perm m) h key
+
+/-- Two key-sorted lists with the same entries and distinct keys are equal.
+This is `List.Perm.eq_of_pairwise` at the key order: with distinct keys, two
+entries whose keys are equal are the same entry.
+
+Consumer: `sortByKey_eq_of_perm` below. -/
+theorem eq_of_perm_of_pairwise [LE K] (hanti : ∀ a b : K, a ≤ b → b ≤ a → a = b)
+    (l₁ l₂ : Map K V) (h1 : l₁.Pairwise (fun a b => a.1 ≤ b.1))
+    (h2 : l₂.Pairwise (fun a b => a.1 ≤ b.1)) (hn : NodupKeys l₁)
+    (hp : l₁.Perm l₂) : l₁ = l₂ :=
+  hp.eq_of_pairwise
+    (fun _ _ ha hb hab hba =>
+      eq_of_key_eq_of_nodupKeys hn ha (hp.mem_iff.mpr hb) (hanti _ _ hab hba))
+    h1 h2
+
+/-- The sort of a map with distinct keys does not depend on the order the
+entries arrive in: every permutation sorts to the same list.
+
+Consumer: `Wasm.RustStd.Borsh.hashMap_eq_of_perm`. -/
+theorem sortByKey_eq_of_perm [LE K] [DecidableRel (α := K) (· ≤ ·)]
+    (htrans : ∀ a b c : K, a ≤ b → b ≤ c → a ≤ c)
+    (htotal : ∀ a b : K, a ≤ b ∨ b ≤ a)
+    (hanti : ∀ a b : K, a ≤ b → b ≤ a → a = b) {l m : Map K V}
+    (hn : NodupKeys l) (hp : l.Perm m) : sortByKey l = sortByKey m :=
+  eq_of_perm_of_pairwise hanti _ _ (pairwise_sortByKey htrans htotal l)
+    (pairwise_sortByKey htrans htotal m) (nodupKeys_sortByKey hn)
+    ((sortByKey_perm l).trans (hp.trans (sortByKey_perm m).symm))
 
 /-! ## How an operation changes the entry count
 

@@ -18,13 +18,14 @@ pairs and collects it, so the entries may arrive in any order and a repeated
 key keeps its last value.  The `Borsh` section at the end names those two
 operations, `hashMap` and `hashMap?`, over `HashMap.sortByKey` and
 `HashMap.ofEntries`, the way `Borsh.vec` names `Vec.serialize`.  The sort is
-what makes the encoding canonical, and a canonical encoding is what lets a
-contract say exactly which bytes an export writes.
+what makes the encoding canonical (`hashMap_eq_of_perm`), and a canonical
+encoding is what lets a contract say exactly which bytes an export writes.
 
 Consumer: `Project.RustHashMap.Spec`, whose contracts decode with
 `Borsh.hashMap?` and encode with `Borsh.hashMap`, and are read back on
 well-formed input through `deserializeEntries_serializeEntries` and
-`hashMap?_hashMap`.
+`hashMap?_hashMap`.  `hashMap_bytes_eq_of_perm` there is `hashMap_eq_of_perm`
+at `u32` keys.
 -/
 
 namespace Wasm.RustStd.HashMap
@@ -138,5 +139,21 @@ theorem hashMap?_hashMap [BEq K] [LawfulBEq K] [LE K]
   simp [hashMap?, hashMap,
     HashMap.deserializeEntries_serializeEntries kc vc _ hlen,
     HashMap.ofEntries_eq_self_of_nodup (HashMap.nodupKeys_sortByKey hnodup)]
+
+/-- The encoding does not depend on the order of the entries: two entry lists
+with the same entries and distinct keys encode to the same bytes.  This is the
+sense in which the encoding is canonical.  The key order must be a total
+order, which the three hypotheses say.
+
+Consumer: `Project.RustHashMap.Spec.hashMap_bytes_eq_of_perm`. -/
+theorem hashMap_eq_of_perm [LE K] [DecidableRel (α := K) (· ≤ ·)]
+    (htrans : ∀ a b c : K, a ≤ b → b ≤ c → a ≤ c)
+    (htotal : ∀ a b : K, a ≤ b ∨ b ≤ a)
+    (hanti : ∀ a b : K, a ≤ b → b ≤ a → a = b)
+    (kc : WordCodec K) (vc : WordCodec V) {l m : HashMap.Map K V}
+    (hnodup : HashMap.NodupKeys l) (hperm : l.Perm m) :
+    hashMap kc vc l = hashMap kc vc m := by
+  rw [hashMap, hashMap,
+    HashMap.sortByKey_eq_of_perm htrans htotal hanti hnodup hperm]
 
 end Wasm.RustStd.Borsh

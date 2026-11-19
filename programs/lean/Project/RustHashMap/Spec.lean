@@ -15,11 +15,12 @@ and `CodeLib.RustStd.HashMap.Codec`.
 
 Borsh writes a map as an entry count and then the entries sorted by key, so
 the bytes depend only on the content of the map and not on where the hash
-function put each key.  That makes the encoding canonical, so the two exports
-that write a map back out have exact contracts like the three that write a
-scalar.  On the way in, borsh accepts entries in any order and keeps
-the last value of a repeated key, so the header count and what `map_len`
-writes can differ; `HashMap.ofEntries` is that step in the model.
+function put each key (`hashMap_bytes_eq_of_perm`).  That makes the encoding
+canonical, so the two exports that write a map back out have exact contracts
+like the three that write a scalar.  On the way in, borsh accepts entries in
+any order and keeps the last value of a repeated key, so the header count and
+what `map_len` writes can differ; `HashMap.ofEntries` is that step in the
+model.
 
 The hasher's `RandomState` seed is not a constant.  In this module, built with
 rustc 1.95.0 for `wasm32-unknown-unknown`, the two seed words are addresses of
@@ -199,6 +200,18 @@ theorem insert_output_sorts :
           [2, 0, 0, 0, 20, 0, 0, 0] ++ [1, 0, 0, 0, 10, 0, 0, 0])
       = [0] ++ [3, 0, 0, 0] ++ [1, 0, 0, 0, 10, 0, 0, 0] ++
           [2, 0, 0, 0, 20, 0, 0, 0] ++ [3, 0, 0, 0, 30, 0, 0, 0] := by cbv
+
+/-- The bytes of a map depend only on its entries, not on their order: two
+entry lists with the same entries and distinct keys are written as the same
+bytes.  Whatever order the table holds the entries in, the output is one byte
+string. -/
+theorem hashMap_bytes_eq_of_perm {l m : HashMap.Map UInt32 UInt32}
+    (hnodup : HashMap.NodupKeys l) (hperm : l.Perm m) :
+    Borsh.hashMap WordCodec.u32le WordCodec.u32le l =
+      Borsh.hashMap WordCodec.u32le WordCodec.u32le m :=
+  Borsh.hashMap_eq_of_perm (fun _ _ _ => UInt32.le_trans)
+    (fun a b => UInt32.le_total a b) (fun _ _ => UInt32.le_antisymm)
+    WordCodec.u32le WordCodec.u32le hnodup hperm
 
 /-! ## Contract readers
 
