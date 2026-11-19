@@ -64,7 +64,7 @@ theorem universal_env_satisfies :
 
 /-! ## Run shape
 
-Every Talos stdio program shares this shape, so it lives in
+The shape is not specific to this module, so it lives in
 `CodeLib.StdioContract` rather than here.  The one name below fixes
 the module, which is the only part a contract adds. -/
 
