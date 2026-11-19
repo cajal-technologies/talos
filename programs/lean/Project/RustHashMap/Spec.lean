@@ -191,7 +191,9 @@ without it the three pairs would come back in the order they arrived.
 The mirror of this check is `borsh_layout_matches_the_lean_model` in
 `programs/rust/rust_hash_map/src/lib.rs`, which asserts the same 29 bytes
 against real borsh.  Both sides name the same literal, so the model and the
-crate are pinned to each other and not only to themselves.
+crate are pinned to each other and not only to themselves.  The two halves are
+not checked in the same place: the build checks this theorem, and CI runs the
+build, but no CI job runs `cargo test`, so the Rust half is a local check.
 The proof evaluates by `cbv`: `sortByKey` is `List.mergeSort`, which is
 well-founded recursion, so `decide +kernel` does not reduce it. -/
 theorem insert_output_sorts :
