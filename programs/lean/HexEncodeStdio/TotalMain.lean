@@ -1,5 +1,5 @@
 import HexEncodeStdio.TotalWrite
-import HexEncodeStdio.HDAllocator
+import HexDecodeStdio.Allocator
 import HexEncodeStdio.Helpers
 
 namespace Project.HexEncodeStdio.TotalMain
@@ -190,7 +190,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
         .localGet 2, .localGet 3, .const 1, .call 17]
       continuation := Project.HexStdio.func10.drop 25
       belowStack := [] }
-  have hdealloc := Project.HexEncodeStdio.twp_dealloc_noop
+  have hdealloc := Project.HexDecodeStdio.twp_dealloc_noop
       (s := s) (E := E) (Φ := Φ) outputPtr outputCapacity 1
       (⟨[], [.i32 sp, .i32 inputPtr, .i32 outputPtr, .i32 outputCapacity], []⟩)
       [] [] 0 []
@@ -222,7 +222,7 @@ theorem func10_after_encode_nonempty {hlc : HasLC}
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_const
-  have hdeallocInput := Project.HexEncodeStdio.twp_dealloc_noop
+  have hdeallocInput := Project.HexDecodeStdio.twp_dealloc_noop
       (s := s) (E := E) (Φ := Φ) inputPtr inputCapacity 1
       (⟨[], [.i32 sp, .i32 inputPtr, .i32 inputCapacity, .i32 outputCapacity], []⟩)
       [] [] 0 []

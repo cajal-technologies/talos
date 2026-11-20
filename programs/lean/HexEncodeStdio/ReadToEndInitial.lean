@@ -4,6 +4,7 @@ namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
+open Project.HexDecodeStdio (afterUniversalRead)
 
 theorem first_capacity_toNat (bytes : List UInt8) (hnil : bytes ≠ [])
     (hle : bytes.length ≤ 32) :

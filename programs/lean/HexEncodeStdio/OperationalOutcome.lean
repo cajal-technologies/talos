@@ -1,9 +1,11 @@
-import HexEncodeStdio.HDAllocator
+import Project.HexStdio.Spec
+import HexDecodeStdio.Allocator
 
 namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
+open Project.HexDecodeStdio (universalOOMLens universal_oom_function)
 
 /-- The store produced by the universal host's distinguished OOM call. -/
 def oomFinalStore (store : MachineStore Universal.State) :

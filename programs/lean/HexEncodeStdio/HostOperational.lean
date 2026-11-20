@@ -1,10 +1,13 @@
-import HexEncodeStdio.HDHostIO
+import HexDecodeStdio.HostIO
 import HexEncodeStdio.AllocatorOperational
 
 namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
+open Project.HexDecodeStdio (universalStdIOLens afterUniversalRead afterUniversalWrite
+  universal_read_function universal_read_return universal_write_function
+  universal_write_return)
 
 /-! Exact small-step adapters for the two universal StdIO calls.  The Iris
 lemmas in `HostIO` carry byte ownership; these relational lemmas carry the
