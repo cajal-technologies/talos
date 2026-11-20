@@ -322,6 +322,15 @@ def validBrOnCastFuncToNullFuncValidationModule : Module :=
 
 /-- `none` is the bottom of the any hierarchy only, so it is not a subtype of a
 function type: `br_on_cast l (ref null $f) nullref` is invalid. -/
+def invalidBrOnCastFuncToNullRefValidationModule : Module :=
+  { gcTypes := [{ comp := .func {} }]
+    funcs :=
+      [{ params := [.ref true (.concrete 0)], results := [.ref true (.concrete 0)],
+         body :=
+          [.block 0 1
+            [.localGet 0, .gc (.brOnCast 0 true .noneT (some (.ref true (.concrete 0))))]
+            [] [.ref true (.concrete 0)]] }] }
+
 /-- A function type can appear only in the legacy `types` section. Its
 concrete reference is still a subtype of `funcref`, including on the
 failure branch of `br_on_cast_fail`. Regression for the false rejection
@@ -334,15 +343,6 @@ def validBrOnCastFailTypesOnlyFuncValidationModule : Module :=
            [.localGet 0,
             .gc (.brOnCastFail 0 true .noFunc (some (.ref true (.concrete 0)))),
             .drop, .unreachable] }] }
-
-def invalidBrOnCastFuncToNullRefValidationModule : Module :=
-  { gcTypes := [{ comp := .func {} }]
-    funcs :=
-      [{ params := [.ref true (.concrete 0)], results := [.ref true (.concrete 0)],
-         body :=
-          [.block 0 1
-            [.localGet 0, .gc (.brOnCast 0 true .noneT (some (.ref true (.concrete 0))))]
-            [] [.ref true (.concrete 0)]] }] }
 
 /-- WebAssembly/gc#516: after the fall-through, the operand below the reference
 has the label's type `funcref`, so `call 0` (expecting `(ref null 0)`) mistypes. -/
