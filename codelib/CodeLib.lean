@@ -28,6 +28,7 @@ import CodeLib.SepLogic.IrisCompat
 import CodeLib.SepLogic.Tactics
 import CodeLib.SepLogic.WasmHeap
 import CodeLib.SepLogic.WasmRules
+import CodeLib.SepLogic.CostedSteps
 import CodeLib.SepLogic.SmallStepLanguage
 import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
