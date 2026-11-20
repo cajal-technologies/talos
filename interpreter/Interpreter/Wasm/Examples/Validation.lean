@@ -705,6 +705,17 @@ def invalidForwardTypeRefValidationModule : Module :=
       [{ comp := .func { params := [.ref false (.concrete 1)] } },
        { comp := .func {} }] }
 
+/-- The same forward reference in a module that fills only `types`: each
+entry is then a singleton recursion group. -/
+def invalidForwardFuncTypeRefValidationModule : Module :=
+  { funcs := []
+    types := [{ params := [.ref true (.concrete 1)] }, {}] }
+
+/-- A `types`-only function type may name itself and earlier types. -/
+def validSelfAndBackwardFuncTypeRefValidationModule : Module :=
+  { funcs := []
+    types := [{}, { params := [.ref true (.concrete 1), .ref true (.concrete 0)] }] }
+
 def invalidForwardTypeRefAcrossRecGroupsValidationModule : Module :=
   { funcs := []
     gcTypes :=
@@ -861,6 +872,14 @@ theorem validator_accepts_known_type_refs :
 theorem validator_rejects_forward_type_ref :
     validationErrorIs invalidForwardTypeRefValidationModule
       "unknown type" = true := by decide +kernel
+
+theorem validator_rejects_forward_func_type_ref :
+    validationErrorIs invalidForwardFuncTypeRefValidationModule
+      "unknown type" = true := by decide +kernel
+
+theorem validator_accepts_self_and_backward_func_type_refs :
+    validationSucceeds validSelfAndBackwardFuncTypeRefValidationModule = true := by
+  decide +kernel
 
 theorem validator_rejects_forward_type_ref_across_rec_groups :
     validationErrorIs invalidForwardTypeRefAcrossRecGroupsValidationModule
