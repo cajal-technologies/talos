@@ -2571,19 +2571,24 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
   -- `Module.memoryCap`, which caps growth at that limit, and a module with a
   -- clamped minimum fails `Module.memoriesWithinLimit` and is not
   -- instantiated.
-  -- The spec's memory64 limit (2^48 pages) is checked here, before the
-  -- clamp erases it; the memory32 limit (65536) is `MemDecl.checkLimits`.
-  let parsePages (s : String) : Except Err UInt32 :=
+  -- Check the memory64 limit (2^48 pages) and compare the raw bounds
+  -- before clamping erases their magnitude and ordering. The memory32
+  -- limit (65536 pages) is checked by `MemDecl.checkLimits`.
+  let parsePages (s : String) : Except Err Nat :=
     if is64 then do
       let n ← parseUnsignedNat (stripUnderscores s)
       if n > 2 ^ 48 then throw "memory size"
-      .ok (UInt32.ofNat (Nat.min n 0xFFFFFFFF))
-    else parseU32 s
+      .ok n
+    else return (← parseU32 s).toNat
+  let capPages (n : Nat) : UInt32 := UInt32.ofNat (Nat.min n 0xFFFFFFFF)
   match xs with
   | [.atom min] =>
-    .ok { pagesMin := ← parsePages min, is64 }
-  | [.atom min, .atom max] =>
-    .ok { pagesMin := ← parsePages min, pagesMax := some (← parsePages max), is64 }
+    .ok { pagesMin := capPages (← parsePages min), is64 }
+  | [.atom min, .atom max] => do
+    let min ← parsePages min
+    let max ← parsePages max
+    if min > max then throw "size minimum must not be greater than maximum"
+    .ok { pagesMin := capPages min, pagesMax := some (capPages max), is64 }
   | _ => .error "malformed (memory ...): expected (memory min) or (memory min max)"
 
 /-- Parse a `(data ...)` body. Active segments produce `offset := some n`;
