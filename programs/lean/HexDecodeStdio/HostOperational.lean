@@ -1,9 +1,9 @@
 import HexDecodeStdio.HostIO
-import HexDecodeStdio.AllocatorOperational
+import HexDecodeStdio.AllocatorSteps
 
 namespace Project.HexDecodeStdio
 
-open Wasm Project.HexStdio Project.HexStdio.Spec
+open Wasm Project.HexStdio
 open Wasm.SmallStep
 
 /-! Exact small-step adapters for the two universal StdIO calls.  The Iris

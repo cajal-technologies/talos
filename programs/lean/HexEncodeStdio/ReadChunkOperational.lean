@@ -1,4 +1,4 @@
-import HexEncodeStdio.HostOperational
+import HexDecodeStdio.HostOperational
 import HexEncodeStdio.ReserveOperational
 import HexEncodeStdio.ReachOutcome
 import HexEncodeStdio.ReserveOutcome
@@ -8,6 +8,16 @@ namespace Project.HexEncodeStdio
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
 open Wasm.SepLogic
+
+/-! The host-adapter traces live in `HexDecodeStdio.HostOperational`, shared
+with the decode proofs, and are re-exported under this namespace. -/
+export Project.HexDecodeStdio (universalReadStore readAdapterResultStore
+  universalReadStore_runtime universalReadStore_pages
+  readAdapterResultStore_runtime readAdapterResultStore_pages
+  read_adapter_reaches universalWriteStore writeAdapterResultStore
+  universalWriteStore_runtime universalWriteStore_pages
+  writeAdapterResultStore_runtime writeAdapterResultStore_pages
+  write_adapter_reaches)
 
 def readChunkFrameStore (store : MachineStore Universal.State)
     (frame : UInt32) : MachineStore Universal.State :=

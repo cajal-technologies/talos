@@ -1,8 +1,8 @@
-import HexDecodeStdio.AllocatorOperational
+import HexDecodeStdio.AllocatorSteps
 
 namespace Project.HexDecodeStdio
 
-open Wasm Project.HexStdio Project.HexStdio.Spec
+open Wasm Project.HexStdio
 open Wasm.SmallStep
 
 /-- A finite execution either reaches a state satisfying `post`, or ends in
