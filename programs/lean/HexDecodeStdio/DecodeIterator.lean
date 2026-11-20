@@ -1,5 +1,6 @@
 import HexDecodeStdio.DecodeSpec
 import CodeLib.SepLogic.SmallStepTotalLiftingBytes
+import HexDecodeStdio.OffsetFacts
 
 namespace Project.HexDecodeStdio
 
@@ -8,12 +9,6 @@ open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic Wasm.SmallStep
 
 variable {hlc : outParam HasLC}
-
-structure Offset32Facts (base offset : UInt32) : Prop where
-  noWrap : (base + offset).toNat = base.toNat + offset.toNat
-  one : ((base + offset) + 1).toNat = (base + offset).toNat + 1
-  two : ((base + offset) + 2).toNat = (base + offset).toNat + 2
-  three : ((base + offset) + 3).toNat = (base + offset).toNat + 3
 
 inductive HexRoute where
   | upper
