@@ -1569,11 +1569,17 @@ def Program.checkTypes
         Program.checkTypes m locals functionResults labels rest next
 termination_by sizeOf program
 
-/-! ### Array default initialization -/
+/-! ### GC default initialization -/
 
-/-- `array.new_default` requires an array type whose elements have a default
-value, independently of operand-stack reachability. -/
-def Instruction.checkArrayDefault (m : Module) : Instruction → Except String Unit
+/-- Default constructors require every struct field or array element to have a
+default value, independently of operand-stack reachability. -/
+def Instruction.checkDefaultInit (m : Module) : Instruction → Except String Unit
+  | .gc (.structNewDefault typeIndex) =>
+      match m.structFields? typeIndex with
+      | none => .error "unknown type"
+      | some fields =>
+          if fields.all (fun field => field.storage.vt.isDefaultable) then .ok ()
+          else .error "type mismatch"
   | .gc (.arrayNewDefault typeIndex) =>
       match m.arrayElem? typeIndex with
       | none => .error "unknown type"
@@ -1582,25 +1588,29 @@ def Instruction.checkArrayDefault (m : Module) : Instruction → Except String U
           else .error "type mismatch"
   | _ => .ok ()
 
-theorem Instruction.checkArrayDefault_arrayNewDefault_ok
+theorem Instruction.checkDefaultInit_structNewDefault_ok
     (m : Module) (typeIndex : Nat)
-    (h : (Instruction.gc (.arrayNewDefault typeIndex)).checkArrayDefault m = .ok ()) :
+    (h : (Instruction.gc (.structNewDefault typeIndex)).checkDefaultInit m = .ok ()) :
+    ∃ fields, m.structFields? typeIndex = some fields ∧
+      ∀ field ∈ fields, field.storage.vt.isDefaultable = true := by
+  cases hfields : m.structFields? typeIndex <;>
+    simp_all [Instruction.checkDefaultInit, List.all_eq_true]
+
+theorem Instruction.checkDefaultInit_arrayNewDefault_ok
+    (m : Module) (typeIndex : Nat)
+    (h : (Instruction.gc (.arrayNewDefault typeIndex)).checkDefaultInit m = .ok ()) :
     ∃ element, m.arrayElem? typeIndex = some element ∧
       element.storage.vt.isDefaultable = true := by
-  simp only [Instruction.checkArrayDefault] at h
-  split at h
-  · cases h
-  · split at h
-    · exact ⟨_, by assumption, by assumption⟩
-    · cases h
+  cases helement : m.arrayElem? typeIndex <;>
+    simp_all [Instruction.checkDefaultInit]
 
-/-- Check array defaults throughout one function body, including nested
+/-- Check GC defaults throughout one function body, including nested
 instructions, then check operand-stack types. Unsupported instructions stop
 only the partial operand-stack check. Also used for constant-expression
 programs. -/
 def Module.checkFuncStraight (m : Module) (f : Function) : Except String Unit := do
   for instruction in f.body.allInstrs do
-    instruction.checkArrayDefault m
+    instruction.checkDefaultInit m
   let locals := f.params ++ f.locals
   let some finalState ←
       Program.checkTypes m locals f.results
