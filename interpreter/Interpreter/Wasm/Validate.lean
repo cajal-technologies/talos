@@ -769,6 +769,19 @@ def Module.vtCompat (m : Module) (actual expected : ValueType) : Bool :=
             m.heapSubtype actualHeap expectedHeap
       | _, _ => false
 
+/-- `call_indirect` and `return_call_indirect` select their callee from a
+table, so that table's element type must match `funcref`
+(`table.elemType <: ref null func`). Checked for every instruction, like the
+reference checks above, so the partial stack checker cannot skip it. A missing
+table is reported by `Instruction.checkFunctionRefs`. -/
+def Instruction.checkIndirectCallTable (m : Module) : Instruction → Except String Unit
+  | .callIndirect _ tableIndex | .returnCallIndirect _ tableIndex =>
+      match m.tableDecl? tableIndex with
+      | some table =>
+          if m.vtCompat table.elemType .funcref then .ok () else .error "type mismatch"
+      | none => .ok ()
+  | _ => .ok ()
+
 abbrev CheckedType := Option ValueType
 
 structure CheckState where
@@ -1881,6 +1894,7 @@ def Module.validate (m : Module) : Except String Unit := do
       i.checkGlobalRefs m
       i.checkLocalRefs (f.params.length + f.locals.length)
       i.checkFunctionRefs m
+      i.checkIndirectCallTable m
       i.checkSimdImmediates
       i.checkSelectAnnotation
       match i with
