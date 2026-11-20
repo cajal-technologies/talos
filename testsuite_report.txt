@@ -2766,7 +2766,7 @@ call_indirect.wast:935 assert_invalid pass
 call_indirect.wast:948 assert_invalid pass
 call_indirect.wast:961 assert_invalid pass
 call_indirect.wast:977 assert_invalid pass
-call_indirect.wast:995 assert_invalid skipped:assert_invalid: not rejected
+call_indirect.wast:995 assert_invalid pass
 call_indirect.wast:1006 assert_invalid pass
 call_indirect.wast:1013 assert_invalid pass
 call_indirect.wast:1022 assert_invalid pass
@@ -31825,7 +31825,7 @@ return_call_indirect.wast:510 assert_invalid pass
 return_call_indirect.wast:520 assert_invalid pass
 return_call_indirect.wast:530 assert_invalid pass
 return_call_indirect.wast:540 assert_invalid pass
-return_call_indirect.wast:553 assert_invalid skipped:assert_invalid: not rejected
+return_call_indirect.wast:553 assert_invalid pass
 return_call_indirect.wast:564 assert_invalid pass
 return_call_indirect.wast:571 assert_invalid pass
 return_call_indirect.wast:582 assert_invalid pass

@@ -363,6 +363,45 @@ def invalidIndirectCallTypeModule : Module :=
   { funcs := [{ body := [.const 0, .callIndirect 0 0] }]
     tables := [{ min := 1 }] }
 
+/-- `call_indirect` through an `externref` table (`call_indirect.wast:995`). -/
+def invalidIndirectCallExternrefTableValidationModule : Module :=
+  { funcs := [{ body := [.const 0, .callIndirect 0 0] }]
+    types := [{}]
+    tables := [{ min := 1, elemType := .externref }] }
+
+/-- `return_call_indirect` through an `externref` table
+(`return_call_indirect.wast:553`). -/
+def invalidReturnCallIndirectExternrefTableValidationModule : Module :=
+  { funcs := [{ body := [.const 0, .returnCallIndirect 0 0] }]
+    types := [{}]
+    tables := [{ min := 1, elemType := .externref }] }
+
+/-- A concrete function type declared only in `types` also matches `funcref`,
+for both instructions. -/
+def validIndirectCallTypesOnlyFuncTableValidationModule : Module :=
+  { funcs := [{ body := [.const 0, .callIndirect 0 0] }]
+    types := [{}]
+    tables := [{ min := 1, elemType := .ref true (.concrete 0) }] }
+
+def validReturnCallIndirectTypesOnlyFuncTableValidationModule : Module :=
+  { funcs := [{ body := [.const 0, .returnCallIndirect 0 0] }]
+    types := [{}]
+    tables := [{ min := 1, elemType := .ref true (.concrete 0) }] }
+
+/-- A struct type is not a function type, even as a concrete table type. -/
+def invalidIndirectCallStructTableValidationModule : Module :=
+  { funcs := [{ body := [.const 0, .callIndirect 0 0] }]
+    types := [{}]
+    gcTypes := [{ comp := .struct [] }]
+    tables := [{ min := 1, elemType := .ref true (.concrete 0) }] }
+
+/-- A table of a concrete function type matches `funcref`. -/
+def validIndirectCallConcreteFuncTableValidationModule : Module :=
+  { funcs := [{ body := [.const 0, .callIndirect 0 0] }]
+    types := [{}]
+    gcTypes := [{ comp := .func {} }]
+    tables := [{ min := 1, elemType := .ref true (.concrete 0) }] }
+
 def validTable64IndirectCallValidationModule : Module :=
   { funcs :=
       [{ body := [.constI64 0, .callIndirect 0 0], results := [.i32] }]
@@ -1209,6 +1248,27 @@ theorem validator_rejects_unknown_indirect_call_type :
 
 theorem validator_accepts_typed_table64_indirect_call :
     validationSucceeds validTable64IndirectCallValidationModule = true := by decide +kernel
+
+theorem validator_rejects_indirect_call_through_externref_table :
+    validationErrorIs invalidIndirectCallExternrefTableValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_rejects_return_call_indirect_through_externref_table :
+    validationErrorIs invalidReturnCallIndirectExternrefTableValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_accepts_indirect_calls_through_types_only_func_table :
+    validationSucceeds validIndirectCallTypesOnlyFuncTableValidationModule = true ∧
+      validationSucceeds validReturnCallIndirectTypesOnlyFuncTableValidationModule = true := by
+  decide +kernel
+
+theorem validator_rejects_indirect_call_through_struct_table :
+    validationErrorIs invalidIndirectCallStructTableValidationModule
+      "type mismatch" = true := by decide +kernel
+
+theorem validator_accepts_indirect_call_through_concrete_func_table :
+    validationSucceeds validIndirectCallConcreteFuncTableValidationModule = true := by
+  decide +kernel
 
 theorem validator_rejects_unknown_ref_func :
     validationErrorIs invalidRefFuncIndexModule
