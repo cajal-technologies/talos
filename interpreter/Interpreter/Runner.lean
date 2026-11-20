@@ -234,6 +234,12 @@ def runOnce (a : Args) : IO UInt32 := do
     | .ok m => pure m
     | .error msg => IO.eprintln s!"error: {msg}"; return EXIT_ERR
 
+  -- Instantiation: a memory larger than the implementation limit cannot be
+  -- allocated (see `Module.memoriesWithinLimit`).
+  unless m.memoriesWithinLimit do
+    IO.eprintln s!"error: memory exceeds the implementation limit of {Wasm.Module.memoryHardCap} pages"
+    return EXIT_ERR
+
   -- Resolve method
   let idx ← match resolveMethod m a.method with
     | .ok i => pure i

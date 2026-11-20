@@ -124,4 +124,23 @@ theorem i64Mem_partial :
     h6.toPartiallyMeets, h7.toPartiallyMeets, h8.toPartiallyMeets,
     h9.toPartiallyMeets, h10.toPartiallyMeets⟩
 
+/-! ## Instantiation limit
+
+A 64-bit memory may validly declare more than 65536 pages, but the reference
+memory indexes bytes by the low 32 bits of an address, so such a memory is not
+instantiated (`Module.memoriesWithinLimit`); 65536 pages is still accepted. -/
+
+theorem memory64_above_implementation_limit_not_instantiated :
+    ({ funcs := [], memory := some { pagesMin := 65537, is64 := true } } : Module).memoriesWithinLimit
+      = false := by decide
+
+theorem memory64_at_implementation_limit_instantiated :
+    ({ funcs := [], memory := some { pagesMin := 65536, is64 := true } } : Module).memoriesWithinLimit
+      = true := by decide
+
+theorem extra_memory_above_implementation_limit_not_instantiated :
+    ({ funcs := [], memory := some { pagesMin := 1 },
+       extraMemories := [{ pagesMin := 65537, is64 := true }] } : Module).memoriesWithinLimit
+      = false := by decide
+
 end Wasm

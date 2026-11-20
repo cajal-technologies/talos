@@ -553,8 +553,11 @@ theorem extend32To64_eq (value : UInt64) : extend32To64 value =
     (Int64.ofInt (signExtend (value.toNat % 2 ^ 32) 32)).toUInt64 := rfl
 
 /-- The mathematical address used for bounds checks and the current reference
-memory's physical UInt32 index. Memory64 addresses above the implementation
-limit fail the bounds check before the truncated physical index is observed. -/
+memory's physical UInt32 index. The truncation is sound only for memories of
+at most `Module.memoryHardCap` pages, where every address at or above `2^32`
+fails the bounds check before the physical index is observed. Growth keeps
+that bound, and the runner and testsuite driver refuse to instantiate a module
+whose declared minimum exceeds it (`Module.memoriesWithinLimit`). -/
 private def memoryAddress? : Value → Option (Nat × UInt32)
   | .i32 address => some (address.toNat, address)
   | .i64 address => some (address.toNat, address.toUInt32)
