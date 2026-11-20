@@ -1653,4 +1653,71 @@ theorem validator_accepts_local_set_in_unreachable_code :
     validationSucceeds validLocalSetInUnreachableCodeValidationModule = true := by
   decide +kernel
 
+/-! ### GC default initialization
+
+Every struct field or array element must have a default value, even in nested
+or unreachable code, or after an instruction unsupported by the partial stack
+checker. -/
+
+private def defaultInitValidationModule (body : Program)
+    (storage : StorageType) (isMut : Bool) : Module :=
+  { gcTypes :=
+      [{ comp := .struct [] },
+       { comp := .struct [{ storage := .val .i32 }, { storage, isMut }] },
+       { comp := .array { storage, isMut } }]
+    funcs := [{ body }] }
+
+theorem validator_rejects_nondefaultable_gc_defaults :
+    ([[.gc (.structNewDefault 1), .drop],
+      [.const 1, .gc (.arrayNewDefault 2), .drop]] : List Program).all (fun body =>
+      ([(body, false), (body, true),
+        ([.block 0 0 body], false),
+        ([.gc (.structNewDefault 0), .drop] ++ body, false),
+        ([.unreachable] ++ body, false)] : List (Program × Bool)).all
+        (fun (body, isMut) =>
+          validationErrorIs
+            (defaultInitValidationModule body (.val (.ref false (.concrete 0))) isMut)
+            "type mismatch")) = true := by decide +kernel
+
+theorem validator_rejects_nondefaultable_gc_defaults_global :
+    ([(1, [.gc (.structNewDefault 1)]),
+      (2, [.const 1, .gc (.arrayNewDefault 2)])] : List (Nat × Program)).all
+      (fun (typeIndex, initializer) =>
+        validationErrorIs
+          { (defaultInitValidationModule [] (.val (.ref false (.concrete 0))) false) with
+            funcs := []
+            globals := [{ init := .anyref none,
+                          declaredType := some (.ref false (.concrete typeIndex)),
+                          sourceInit := some initializer }] }
+          "type mismatch") = true := by decide +kernel
+
+theorem validator_rejects_gc_defaults_wrong_composite_type :
+    ([[.gc (.structNewDefault 2), .drop],
+      [.const 1, .gc (.arrayNewDefault 1), .drop]] : List Program).all (fun body =>
+      validationErrorIs (defaultInitValidationModule body (.val .i32) false)
+        "unknown type") = true := by decide +kernel
+
+theorem validator_accepts_defaultable_gc_defaults :
+    ([.packed 8, .packed 16, .val .i32, .val .i64, .val .f32, .val .f64,
+      .val .v128, .val .funcref, .val .externref, .val .exnref, .val .anyref,
+      .val (.ref true (.concrete 0))] : List StorageType).all
+      (fun storage =>
+        ([[.gc (.structNewDefault 1), .drop],
+          [.const 1, .gc (.arrayNewDefault 2), .drop]] : List Program).all (fun body =>
+          validationSucceeds
+            (defaultInitValidationModule body storage false))) = true := by
+  decide +kernel
+
+theorem validator_accepts_defaultable_mutable_gc_defaults :
+    ([[.gc (.structNewDefault 1), .drop],
+      [.const 1, .gc (.arrayNewDefault 2), .drop]] : List Program).all (fun body =>
+      validationSucceeds
+        (defaultInitValidationModule body (.val .i32) true)) = true := by
+  decide +kernel
+
+theorem validator_accepts_empty_struct_new_default :
+    validationSucceeds
+      (defaultInitValidationModule [.gc (.structNewDefault 0), .drop] (.val .i32) false) = true := by
+  decide +kernel
+
 end Wasm.Examples.SmallStep
