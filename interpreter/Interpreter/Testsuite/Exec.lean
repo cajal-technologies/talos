@@ -1119,6 +1119,14 @@ def parseInvokeAction (j : Json) : Except String (Option String × String × Lis
 private def instantiateModule (st : ScriptState) (m : Wasm.Module) (fuel : Nat) :
     ModuleSlot × Array Wasm.Value × Array Unit × Array (Wasm.HostFn Unit) ×
       Array (Wasm.Mem × Nat) × Array (Wasm.TableInst × Nat) :=
+  -- A memory larger than the implementation limit cannot be allocated
+  -- (see `Module.memoriesWithinLimit`); report the module as unavailable.
+  if !m.memoriesWithinLimit then
+    (.unavailable
+        s!"memory exceeds the implementation limit of {Wasm.Module.memoryHardCap} pages",
+      st.sharedGlobals, st.sharedTags, st.sharedFunctions,
+      st.sharedMemories, st.sharedTables)
+  else
   let env := buildEnv st m fuel
   let store0 := applyEntityImports st m m.initialStore
   let (store0, sharedGlobals) := assignGlobalIds st m store0
@@ -1349,6 +1357,11 @@ def runCommand
     | .error error =>
       return (st, mk (.skipped s!"assert_uninstantiable decode: {error}"))
     | .ok m =>
+      -- An oversized memory is an implementation limit, not the expected
+      -- Wasm trap: report it without running the start function.
+      if !m.memoriesWithinLimit then
+        return (st, mk (.interpreterError
+          s!"memory exceeds the implementation limit of {Wasm.Module.memoryHardCap} pages"))
       let env := buildEnv st m fuel
       let imported := applyEntityImports st m m.initialStore
       let (store0, sharedGlobals) := assignGlobalIds st m imported

@@ -944,6 +944,23 @@ def listWriteAt (l : List α) (off : Nat) (vs : List α) : List α :=
 /-- Maximum number of pages an i32-indexed memory can hold (2^16, or 4 GiB). -/
 def Module.memoryHardCap : Nat := 65536
 
+/-- Whether every memory the module defines can be instantiated within the
+implementation limit `memoryHardCap`.
+
+Memory accesses bounds-check the exact address and then index the memory by
+its low 32 bits (`SmallStep.memoryAddress?`), which is sound only while a
+memory has at most `memoryHardCap` pages: on a larger memory two addresses
+`2^32` apart would denote the same byte. `memory.grow` is bounded by the
+store's growth ceiling (`Store.memoryCap`), which `Module.memoryCap` keeps at
+or below `memoryHardCap` for stores built from a module, so instantiation is
+the one place the bound has to be established. A larger
+declared minimum is valid WebAssembly (memory64 allows up to `2^48` pages); the
+spec lets an implementation refuse to instantiate it, and the runner and the
+testsuite driver do so when this is `false`. -/
+def Module.memoriesWithinLimit (m : Module) : Bool :=
+  (m.memory.toList ++ m.extraMemories).all fun decl =>
+    decl.pagesMin.toNat ≤ Module.memoryHardCap
+
 /-- Implementation ceiling for materialized runtime tables. -/
 def Module.tableHardCap : Nat := 1_000_000
 
@@ -956,7 +973,13 @@ after instantiation). Allocate tables sized to each declaration's
 minimum (filled with null refs) and apply every active element segment;
 passive/declarative segments are stashed in `elementSegments` for
 `table.init` to consume later. Modules with no memory get an empty
-0-page memory. -/
+0-page memory.
+
+This does not check `Module.memoriesWithinLimit`: it allocates every declared
+minimum. The runner and the testsuite driver check it before instantiating;
+a proof that starts from `initialStore` of a module declaring more than
+`memoryHardCap` pages reasons about the 32-bit-indexed memory described at
+`SmallStep.memoryAddress?`. -/
 def Module.initialStore [Inhabited α] (m : Module) : Store α :=
   let globals : Globals := { globals := m.globals.map (·.init) }
   -- Apply the active data segments targeting memory `idx` to `m0`.

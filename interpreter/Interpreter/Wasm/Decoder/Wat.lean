@@ -2566,8 +2566,11 @@ private def parseMemDecl (xs : List Sexpr) : Except Err Wasm.MemDecl := do
     | .atom "i32" :: r => (false, r)
     | _ => (false, xs)
   -- 64-bit memories may declare page bounds past 2^32; clamp them into
-  -- the UInt32 fields. The effective grow ceiling (`Module.memoryCap`,
-  -- 65536 pages) sits far below the clamp, so semantics are unaffected.
+  -- the UInt32 fields. Both clamped values lie far above the 65536-page
+  -- implementation limit: a clamped maximum only matters through
+  -- `Module.memoryCap`, which caps growth at that limit, and a module with a
+  -- clamped minimum fails `Module.memoriesWithinLimit` and is not
+  -- instantiated.
   let parsePages (s : String) : Except Err UInt32 :=
     if is64 then do
       let n ← parseUnsignedNat (stripUnderscores s)
