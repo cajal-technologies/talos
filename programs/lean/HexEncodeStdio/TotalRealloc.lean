@@ -240,7 +240,7 @@ theorem func15_realloc_outcome {hlc : HasLC}
     · simp only [hgrow, ↓reduceIte]
       iapply twp_brIf (by decide) rfl
       simp
-      iapply Project.HexEncodeStdio.twp_oom_wrapper_locals host
+      iapply Project.HexDecodeStdio.twp_oom_wrapper_locals host
         (stack := []) (code := [.unreachable])
       iframe
     · simp only [hgrow, ↓reduceIte]

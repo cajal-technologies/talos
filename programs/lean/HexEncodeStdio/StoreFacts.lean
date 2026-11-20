@@ -4,6 +4,7 @@ namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
+open Project.HexDecodeStdio (afterUniversalRead)
 
 theorem Mem.read8_writeBytes_disjoint (m : Mem) (off : Nat)
     (bytes : List UInt8) (addr : UInt32)

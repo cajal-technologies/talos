@@ -1,5 +1,6 @@
-import HexEncodeStdio.HDAllocator
-import HexEncodeStdio.HDGrow
+import Project.HexStdio.Spec
+import HexDecodeStdio.Allocator
+import HexDecodeStdio.Grow
 import HexEncodeStdio.Helpers
 
 namespace Project.HexEncodeStdio.TotalAllocator
@@ -68,7 +69,7 @@ theorem memoryGrow_alloc_outcome {hlc : HasLC} {α : Type}
     WP (.running ⟨⟨params, localValues, .i32 delta :: values⟩,
         .memoryGrow :: code, arity, remainder, controls, calls⟩ : Expr α) @
       s; E [{ Φ }] := by
-  exact Project.HexEncodeStdio.twp_memoryGrow_fresh runtimeModule
+  exact Project.HexDecodeStdio.twp_memoryGrow_fresh runtimeModule
     instanceId R frontier hpages Hfail Hsuccess
 
 /-- Caller-facing total contract for generated function 12 (Wasm index 15).
@@ -105,7 +106,7 @@ theorem func12_alloc_outcome {hlc : HasLC}
         [.call 15] ++ code, arity, remainder, controls, calls⟩ :
         Expr Universal.State) @ Stuckness.MaybeStuck; E [{ Φ }] := by
   iintro ⟨Hruntime, Henv, Hhost, Hbump, Howned⟩ Hnext
-  iapply Project.HexEncodeStdio.twp_allocator size align oldBump host
+  iapply Project.HexDecodeStdio.twp_allocator size align oldBump host
     callerLocals stack code arity remainder controls calls $$
       [$Hruntime $Henv $Hhost $Hbump]
   iintro ⟨Hruntime, Henv, Hhost, Hbump⟩

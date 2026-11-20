@@ -1,10 +1,9 @@
-import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.MemoryBytes
-import HexDecodeStdio.DecodeIterator
+import HexDecodeStdio.OffsetFacts
 
 namespace Project.HexDecodeStdio
 
-open Wasm Project.HexStdio Project.HexStdio.Spec
+open Wasm Project.HexStdio
 open Iris Iris.ProgramLogic Language.Notation Std
 open Wasm.SepLogic Wasm.SmallStep
 
@@ -18,14 +17,14 @@ def universalStdIOLens : HostLens Universal.State StdIO.State :=
 theorem universal_read_function :
     (Universal.envFor «module»).funcs[0]? =
       some (StdIO.readHost.lift universalStdIOLens) := by
-  have hs := universal_env_satisfies.lookup (i := 0) (by decide)
+  have hs := (Universal.envFor_satisfies «module»).lookup (i := 0) (by decide)
   obtain ⟨_hostFn, _contract, _hfn, _hcontract, _hsound⟩ := hs
   rfl
 
 theorem universal_write_function :
     (Universal.envFor «module»).funcs[1]? =
       some (StdIO.writeHost.lift universalStdIOLens) := by
-  have hs := universal_env_satisfies.lookup (i := 1) (by decide)
+  have hs := (Universal.envFor_satisfies «module»).lookup (i := 1) (by decide)
   obtain ⟨_hostFn, _contract, _hfn, _hcontract, _hsound⟩ := hs
   rfl
 

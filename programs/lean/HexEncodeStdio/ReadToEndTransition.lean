@@ -4,6 +4,7 @@ namespace Project.HexEncodeStdio
 
 open Wasm Project.HexStdio Project.HexStdio.Spec
 open Wasm.SmallStep
+open Project.HexDecodeStdio (afterUniversalRead)
 
 theorem ReadToEndInv.spare_toNat
     {input consumed remaining : List UInt8}

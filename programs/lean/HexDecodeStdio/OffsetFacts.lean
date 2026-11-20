@@ -1,8 +1,14 @@
-import HexEncodeStdio.HDMemoryBytes
+/-!
+# Address no-wrap facts
 
-namespace Project.HexEncodeStdio
+`UInt32` address arithmetic facts shared by the decode proofs and, through
+`HexDecodeStdio.HostIO`, by the encode proofs. This module imports nothing
+spec-specific: `HexDecodeStdio.DecodeSpec` and `Project.HexStdio.Spec` both
+declare `Project.HexStdio.Spec.RunsOutOfMemory` and cannot share an
+environment, so modules reused by `HexEncodeStdio` must not depend on either.
+-/
 
-open Wasm
+namespace Project.HexDecodeStdio
 
 structure Offset32Facts (base offset : UInt32) : Prop where
   noWrap : (base + offset).toNat = base.toNat + offset.toNat
@@ -19,4 +25,4 @@ structure Address64Facts (address : UInt32) : Prop where
   six : (address + 6).toNat = address.toNat + 6
   seven : (address + 7).toNat = address.toNat + 7
 
-end Project.HexEncodeStdio
+end Project.HexDecodeStdio

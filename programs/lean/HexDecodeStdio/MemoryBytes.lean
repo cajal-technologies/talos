@@ -1,4 +1,4 @@
-import HexDecodeStdio.DecodeSpec
+import Project.HexStdio.Program
 import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 
 namespace Project.HexDecodeStdio
