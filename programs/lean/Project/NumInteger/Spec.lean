@@ -1,4 +1,5 @@
 import Project.NumInteger.Program
+import Project.NumInteger.Stein
 
 /-!
 # Specification for `gcd_u64`
@@ -15,7 +16,7 @@ operands into its own 48-byte scratch frame and runs Stein's algorithm
 entirely through `i64.load`/`i64.store`. The proof therefore threads the
 running values through the memory model with the read-after-write framing
 lemmas from `CodeLib.RustStd.Frame`, reusing the `UInt64` Stein lemmas
-from `CodeLib` for the arithmetic core.
+from `Project.NumInteger.Stein` for the arithmetic core.
 -/
 
 namespace Project.NumInteger.Spec
@@ -826,7 +827,7 @@ with `& 63`, and widens back with `i64.extend_i32_u` before the shift.
 For a nonzero operand `v` (so `ctz64 64 v < 64`) all of that is the
 identity on the value: the resulting `i32` is exactly `UInt32.ofNat
 (ctz64 64 v)` and the widened+masked shift count matches the form used
-by the `CodeLib` Stein lemmas. -/
+by the Stein lemmas of `Project.NumInteger.Stein`. -/
 
 /-- The masked, narrowed `ctz` of a nonzero `v` is `ctz64 64 v` (in the exact
 `i32`-level `63 &&& _` form the interpreter produces). -/

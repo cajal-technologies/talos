@@ -1,9 +1,9 @@
-import HexDecodeStdio.DecodeSpec
+import Project.HexStdio.Program
 import CodeLib.SepLogic.SmallStepTotalLiftingBytes
 
 namespace Project.HexDecodeStdio
 
-open Wasm Project.HexStdio Project.HexStdio.Spec
+open Wasm Project.HexStdio
 open Iris Iris.ProgramLogic Language.Notation
 open Wasm.SepLogic Wasm.SmallStep
 
@@ -20,7 +20,7 @@ def universalOOMLens : HostLens Universal.State OOM.State :=
 theorem universal_oom_function :
     (Universal.envFor «module»).funcs[2]? =
       some (OOM.oomHost.lift universalOOMLens) := by
-  have hs := universal_env_satisfies.lookup (i := 2) (by decide)
+  have hs := (Universal.envFor_satisfies «module»).lookup (i := 2) (by decide)
   obtain ⟨_hostFn, _contract, _hfn, _hcontract, _hsound⟩ := hs
   rfl
 

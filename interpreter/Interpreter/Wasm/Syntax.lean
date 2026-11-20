@@ -575,7 +575,16 @@ inductive Instruction where
 
   -- Parametric / nullary
   | drop
-  | select
+  /-- `select`, with the optional `(result t)` annotation retained. `none` is
+  the untyped form, which validation restricts to numeric and vector
+  operands; `some [t]` is the typed form, whose operands must both be `t`.
+  Execution ignores the annotation.
+
+  Warning: because the field has a default, a bare `| .select =>` pattern
+  elaborates to `| .select none` and silently misses the typed form. Always
+  match `.select _` (or bind the annotation) unless you mean the untyped form
+  only. -/
+  | select (resultTypes : Option (List ValueType) := none)
   | nop
   | unreachable
 deriving Repr

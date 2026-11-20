@@ -10,15 +10,6 @@ open Wasm.SepLogic Wasm.SmallStep
 
 variable {hlc : outParam HasLC}
 
-structure Address64Facts (address : UInt32) : Prop where
-  one : (address + 1).toNat = address.toNat + 1
-  two : (address + 2).toNat = address.toNat + 2
-  three : (address + 3).toNat = address.toNat + 3
-  four : (address + 4).toNat = address.toNat + 4
-  five : (address + 5).toNat = address.toNat + 5
-  six : (address + 6).toNat = address.toNat + 6
-  seven : (address + 7).toNat = address.toNat + 7
-
 theorem address64Facts (address : UInt32)
     (hroom : address.toNat + 8 ≤ UInt32.size) : Address64Facts address := by
   have hroom' : address.toNat + 8 ≤ 4294967296 := by

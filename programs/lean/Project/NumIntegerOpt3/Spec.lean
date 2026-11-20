@@ -1,4 +1,5 @@
 import Project.NumIntegerOpt3.Program
+import Project.NumInteger.Stein
 
 namespace Project.NumIntegerOpt3.Spec
 
@@ -697,7 +698,7 @@ theorem gcdLoop_terminates
       (fun _ _ => True) := by
   induction hmeasure : x.toNat + y.toNat using Nat.strong_induction_on
       generalizing x y with
-  | h n ih =>
+  | ind n ih =>
     subst n
     by_cases hgt : y < x
     · let x' :=

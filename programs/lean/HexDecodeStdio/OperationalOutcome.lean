@@ -1,3 +1,4 @@
+import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.Allocator
 
 namespace Project.HexDecodeStdio

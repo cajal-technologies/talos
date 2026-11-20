@@ -14,10 +14,10 @@ explicit equations to the i32 arguments at every function boundary.
 ### `U32Codec`
 
 The single canonical codec maps a `UInt32` to its four little-endian bytes.
-Public stream encoding, `WordSlice`, decode-loop facts, output-slot bytes, and
-all array lemmas use this definition.  Earlier `Spec.encodeWord`,
-`SortProof.wordBytes`, and example-specific serializers were replaced by or
-proved definitionally equal to it before the contracts were frozen.
+It is `Wasm.WordCodec.u32le` from `CodeLib.WordCodec.UInt32`.  Public stream
+encoding, `WordSlice`, decode-loop facts, output-slot bytes and the array
+lemma `SortProof.arrayAt_as_bytes` (an `arrayAt` array owns
+`u32le.serialize values`) use this definition.
 
 The completed proofs use the following pure laws:
 

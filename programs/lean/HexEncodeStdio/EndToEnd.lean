@@ -320,9 +320,9 @@ theorem encode_reserve_after_read
       exact List.getElem?_set_eq_of_lt (.i32 1048512) hz)
     (by simp [reserveRequired])
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32]; decide)
+      Mem.write32])
     (by simp [encodeStore, encodeAllocFrameStore, Mem.read32, Mem.write64,
-      Mem.write32]; decide)
+      Mem.write32])
     (by
       simp only [encodeStore, encodeAllocFrameStore]
       rw [Mem.read32_write64_disjoint, Mem.read32_write32_disjoint]
@@ -459,15 +459,15 @@ private theorem main_after_encode_finishes {hlc : HasLC}
     (values := []) (arity := 0) (remainder := [])
   iapply twp.value rfl
   iintro %doneStore %observations Hstate
-  imod Project.HexEncodeStdio.TotalHost.stateInterp_host_set_expected doneStore 0 [] 0
-    (Project.HexEncodeStdio.TotalWrite.afterWrite store.wasm.host (encode input))
-    (Project.HexEncodeStdio.TotalWrite.afterWrite store.wasm.host (encode input)) $$
+  imod stateInterp_host_set_expected doneStore 0 [] 0
+    (afterWrite store.wasm.host (encode input))
+    (afterWrite store.wasm.host (encode input)) $$
     [$Hstate $Hhost] with ⟨%hhostPhysical, Hstate, Hhost⟩
   ipureintro
   constructor
   · rfl
   · rw [hhostPhysical]
-    simp [Project.HexEncodeStdio.TotalWrite.afterWrite, hhostOutput]
+    simp [afterWrite, hhostOutput]
 
 set_option maxHeartbeats 2000000 in
 set_option maxRecDepth 100000000 in
@@ -566,7 +566,7 @@ private theorem encode_function_finishes {hlc : HasLC}
   icases HR with ⟨Henv, Hhost, H7, H8, HinputCap, HinputPtr, HinputLen⟩
   simp only [encodeMainCalls]
   rw [hentry]
-  iapply Project.HexEncodeStdio.TotalIterator.twp_returnFromCallFallthrough' $$ Hruntime
+  iapply Wasm.SmallStep.twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp only [List.take_zero, List.nil_append]
   ihave HsentinelAt : pointsTo_u32 0 ((1048544 : UInt32) - 16)

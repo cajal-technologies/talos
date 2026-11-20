@@ -11,23 +11,6 @@ open Wasm
 open Iris Iris.BI Iris.ProgramLogic Language.Notation Iris.Std
 open Wasm.SepLogic Wasm.SmallStep
 
-private theorem twp_leU {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs ≤ rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .leU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.leU hresult)
-
 /-- The outer block of generated `func6` (WAT function 9). -/
 def encodeOuterBody : Program :=
   match Project.HexStdio.func6[28]? with

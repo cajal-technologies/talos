@@ -15,196 +15,6 @@ abbrev sentinel : UInt32 := 1114112
 private abbrev iterLocals (ptr first second : UInt32) (values : List Value := []) : Locals :=
   ⟨[.i32 ptr], [.i32 first, .i32 second], values⟩
 
-private theorem twp_shrU32 {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {params localValues values : List Value}
-    {lhs rhs : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame} :
-    WP (.running
-      ⟨⟨params, localValues, .i32 (lhs >>> (rhs % 32)) :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .shrU :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.shrU)
-
-theorem twp_eq {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
-    {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {params localValues values : List Value}
-    {lhs rhs result : UInt32} {code : Program} {arity : Nat}
-    {remainder : List Value} {controls : List ControlFrame}
-    {calls : List CallFrame}
-    (hresult : result = if lhs = rhs then 1 else 0) :
-    WP (.running
-      ⟨⟨params, localValues, .i32 result :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }] ⊢
-    WP (.running
-      ⟨⟨params, localValues, .i32 rhs :: .i32 lhs :: values⟩,
-        .eq :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] :=
-  twp_pureStep _ _ _ (fun _ => Step.eq hresult)
-
-theorem twp_load8U {hlc : HasLC} {α : Type}
-    [WasmSmallStepGS hlc α] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {params localValues values : List Value} {address offset : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} (byte : UInt8)
-    (hnowrap : (address + offset).toNat = address.toNat + offset.toNat) :
-    (⟨0, address + offset⟩ ↦w byte) -∗
-    ((⟨0, address + offset⟩ ↦w byte) -∗
-      WP (.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }]) -∗
-    WP (.running ⟨⟨params, localValues, .i32 address :: values⟩,
-      .load8U offset :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] := by
-  iintro Hbyte Hnext
-  iapply twp_lift_step_no_fork rfl
-  iintro %store %ns %obs %nt Hσ
-  ihave %Hfacts :
-      ⌜store.wasm.mem.read8 (address + offset) = byte ∧
-        (address + offset).toNat < store.wasm.mem.pages * 65536⌝ $$ [Hσ Hbyte]
-  · imod stateInterp_pointsTo_facts store ns obs nt (address + offset) byte
-        $$ [$Hσ $Hbyte] with %Hfacts
-    ipureintro
-    exact Hfacts
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    have hbound : address.toNat + offset.toNat + 1 ≤
-        store.wasm.mem.pages * 65536 := by omega
-    exact ⟨.running
-        ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩,
-      store, [], ⟨rfl, .instruction (.load8U offset), rfl,
-        by simpa [Hfacts.1] using (Step.load8U rfl (α := α) (address := .i32 address) hbound)⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  have expectedStep : Step
-      ⟨.running
-        ⟨⟨params, localValues, .i32 address :: values⟩,
-          .load8U offset :: code, arity, remainder, controls, calls⟩, store⟩
-      (.instruction (.load8U offset))
-      ⟨.running
-        ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-          code, arity, remainder, controls, calls⟩, store⟩ := by
-    have hbound : address.toNat + offset.toNat + 1 ≤
-        store.wasm.mem.pages * 65536 := by omega
-    simpa [Hfacts.1] using (Step.load8U rfl (α := α) (address := .i32 address) hbound)
-  obtain ⟨rfl, hconfig⟩ := step_deterministic expectedStep wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  imod Hclose
-  imodintro
-  isplit
-  · ipureintro; rfl
-  isplit
-  · ipureintro; rfl
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Hnext
-    iexact Hbyte
-
-theorem twp_load8U_zero {hlc : HasLC} {α : Type}
-    [WasmSmallStepGS hlc α] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {params localValues values : List Value} {address : UInt32}
-    {code : Program} {arity : Nat} {remainder : List Value}
-    {controls : List ControlFrame} {calls : List CallFrame} (byte : UInt8) :
-    (⟨0, address⟩ ↦w byte) -∗
-    ((⟨0, address⟩ ↦w byte) -∗
-      WP (.running ⟨⟨params, localValues, .i32 byte.toUInt32 :: values⟩,
-        code, arity, remainder, controls, calls⟩ : Expr α) @ s; E [{ Φ }]) -∗
-    WP (.running ⟨⟨params, localValues, .i32 address :: values⟩,
-      .load8U 0 :: code, arity, remainder, controls, calls⟩ : Expr α) @ s; E
-      [{ Φ }] := by
-  simpa only [UInt32.add_zero] using
-    (twp_load8U (α := α) (s := s) (E := E) (Φ := Φ)
-      (address := address) (offset := 0) byte (by simp))
-
-/-- The CodeLib release has the explicit-return lifting rule but not the
-fallthrough twin. This is the same framed rule for a callee whose body reaches
-the empty instruction list. -/
-theorem twp_returnFromCallFallthrough' {hlc : HasLC} {α : Type}
-    [WasmSmallStepGS hlc α] {s : Stuckness} {E : CoPset}
-    {Φ : List Value → IProp (WasmHeapGF α)}
-    {calleeLocals callerLocals : Locals} {callerCode : Program}
-    {calleeArity callerArity : Nat} {calleeRemainder callerRemainder : List Value}
-    {callerControls : List ControlFrame} {returningInstance : ModuleInstanceId}
-    {module : Module} {calls : List CallFrame} :
-    let caller : CallFrame :=
-      { locals := callerLocals, continuation := callerCode,
-        resultArity := callerArity, callerRemainder := callerRemainder,
-        control := callerControls, returningInstance := returningInstance }
-    let current : ThreadState α :=
-      ⟨calleeLocals, [], calleeArity, calleeRemainder, [], caller :: calls⟩
-    let next : ThreadState α :=
-      ⟨{ callerLocals with
-          values := calleeLocals.values.take calleeArity ++ callerLocals.values },
-        callerCode, callerArity, callerRemainder, callerControls, calls⟩
-    runtimeModuleOwn returningInstance module -∗
-    (runtimeModuleOwn returningInstance module -∗
-      WP (Expr.running next : Expr α) @ s; E [{ Φ }]) -∗
-    WP (Expr.running current : Expr α) @ s; E [{ Φ }] := by
-  dsimp only
-  iintro Hruntime Hwp
-  iapply twp_lift_step_no_fork rfl
-  iintro %store %ns %obs %nt Hσ
-  simp only [runtimeModuleOwn]
-  icases Hruntime with ⟨HruntimeElem, HinstanceOwn⟩
-  ihave %Hentry : ⌜store.runtime.entry = returningInstance⌝ $$ [Hσ HinstanceOwn]
-  · imod stateInterp_currentInstance_agree store ns obs nt
-      returningInstance $$ [$Hσ $HinstanceOwn] with %Hentry
-    ipureintro
-    exact Hentry
-  have hsame : returningInstance = store.runtime.entry := Hentry.symm
-  iapply fupd_mask_intro Std.LawfulSet.empty_subset
-  iintro Hclose
-  isplitr
-  · ipureintro
-    cases s <;> simp only [Stuckness.MaybeReducibleNoObs]
-    exact ⟨_, store, [],
-      ⟨rfl, _, rfl, Step.returnFromCallFallthrough hsame⟩⟩
-  iintro %κ %e₂ %store₂ %forks %Hstep
-  rcases Hstep with ⟨hforks, kind, hobs, wasmStep⟩
-  change forks = [] at hforks
-  subst forks
-  subst κ
-  obtain ⟨rfl, hconfig⟩ :=
-    step_deterministic (Step.returnFromCallFallthrough (α := α) hsame) wasmStep
-  have parts := Config.mk.inj hconfig
-  have hexpr := parts.1
-  have hstore := parts.2
-  simp only at hexpr hstore
-  subst e₂
-  subst store₂
-  simp only [resumeCaller]
-  imod Hclose
-  imodintro
-  isplit
-  · itrivial
-  isplit
-  · itrivial
-  isplitl [Hσ]
-  · iexact Hσ
-  · iapply Hwp
-    isplitl [HruntimeElem]
-    · iexact HruntimeElem
-    · iexact HinstanceOwn
-
 private theorem wordAccessFacts (ptr : UInt32) (offset : Nat)
     (hfit : ptr.toNat + offset + 4 < UInt32.size) :
     (ptr + UInt32.ofNat offset).toNat = ptr.toNat + offset ∧
@@ -393,7 +203,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
         hexDigit (byte.toNat % 16)) $$ [Hlow]
   · rw [UInt32.add_comm (UInt32.ofNat (byte.toNat % 16)) 1048576]
     iexact Hlow
-  iapply twp_load8U_zero (address := UInt32.ofNat (byte.toNat % 16) + 1048576)
+  iapply twp_load8U_addr (address := UInt32.ofNat (byte.toNat % 16) + 1048576)
     (hexDigit (byte.toNat % 16)) $$ HlowActual
   iintro Hlow
   ihave HcurrentAt0 : pointsTo_u32 0 (ptr + 0) (1114112 : UInt32) $$ [Hcurrent0]
@@ -420,7 +230,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
   iapply twp_localGet rfl
   iapply twp_localGet rfl
   iapply twp_const
-  iapply twp_shrU32
+  iapply twp_shrU
   rw [show (4 : UInt32) % 32 = 4 by decide]
   rw [Project.HexEncodeStdio.Hex.high_nibble_u32 byte]
   iapply twp_add
@@ -430,7 +240,7 @@ theorem func18_high_body {hlc : HasLC} {α : Type} [WasmSmallStepGS hlc α]
         hexDigit (byte.toNat / 16)) $$ [Hhigh]
   · rw [UInt32.add_comm (UInt32.ofNat (byte.toNat / 16)) 1048576]
     iexact Hhigh
-  iapply twp_load8U_zero (address := UInt32.ofNat (byte.toNat / 16) + 1048576)
+  iapply twp_load8U_addr (address := UInt32.ofNat (byte.toNat / 16) + 1048576)
     (hexDigit (byte.toNat / 16)) $$ HhighActual
   iintro Hhigh
   ihave HhighCanonical :
@@ -535,7 +345,7 @@ theorem twp_call_func18_low {hlc : HasLC} {α : Type}
   isplitl [Hstate]
   · iexact Hstate
   iintro Hstate
-  iapply twp_returnFromCallFallthrough' $$ Hruntime
+  iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp only [List.take_succ_cons, List.take_zero, List.nil_append,
     List.cons_append]
@@ -597,7 +407,7 @@ theorem twp_call_func18_high {hlc : HasLC} {α : Type}
   isplitl [Htable]
   · iexact Htable
   iintro Hcurrent Hindex Hend HtablePtr Hinput Htable
-  iapply twp_returnFromCallFallthrough' $$ Hruntime
+  iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp only [List.take_succ_cons, List.take_zero, List.nil_append,
     List.cons_append]
@@ -643,7 +453,7 @@ theorem twp_call_func18_end {hlc : HasLC} {α : Type}
   isplitl [Hend]
   · iexact Hend
   iintro Hcurrent Hindex Hend
-  iapply twp_returnFromCallFallthrough' $$ Hruntime
+  iapply twp_returnFromCallFallthrough $$ Hruntime
   iintro Hruntime
   simp only [List.take_succ_cons, List.take_zero, List.nil_append,
     List.cons_append]

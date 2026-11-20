@@ -3,12 +3,11 @@ import CodeLib.SepLogic.SmallStepTotalLifting
 /-!
 # Byte-granular and supplementary total-WP instruction rules
 
-Total weakest-precondition lifting rules on top of `SmallStepTotalLifting`,
-factored out of the `hex_stdio` worked examples for reuse:
+Total weakest-precondition lifting rules on top of `SmallStepTotalLifting`:
 
 * byte-granular memory access — `twp_load8U`, `twp_load8U_addr`, `twp_store8`,
   `twp_store8_addr`, `twp_store32_addr`, `twp_store64_addr`;
-* the signed comparison `twp_ltS` and `twp_drop`; and
+* `twp_drop`, which the trailing `macro_rules` adds to `wasm_twp_pures`; and
 * `twp_memorySize_framed` / `twp_memoryGrow_framed`, `memory.size` / `memory.grow`
   rules that thread an arbitrary owned resource through the instruction (a
   lighter-weight alternative to the memory-page-tracking variants).
@@ -263,8 +262,6 @@ theorem twp_store32_addr
       (by simpa using h1) (by simpa using h2) (by simpa using h3))
 
 
--- `twp_ltS` is supplied by the imported generic total lifting layer.
-
 theorem twp_drop
     {params localValues values : List Value}
     {value : Value} {code : Program} {arity : Nat}
@@ -484,5 +481,11 @@ theorem twp_store64_addr
   rw [UInt32.add_zero]
   iexact Hword
 
+
+-- Extend the `wasm_twp_pures` macro (defined in SmallStepTotalLifting) with the
+-- `twp_drop` case here, where `Wasm.SmallStep.twp_drop` is in scope.
+macro_rules
+  | `(tactic| wasm_twp_pures [twp_drop $rest:ident*]) =>
+      `(tactic| iapply twp_drop; wasm_twp_pures [$rest:ident*])
 
 end Wasm.SmallStep

@@ -624,8 +624,8 @@ macro "wp_atomic" : tactic => `(tactic|
      | _ => Q (.Invalid "drop: empty operand stack")) := by
   wp_atomic
 
-@[simp, wp_simp] theorem wp_select_cons :
-    wp m (.select :: rest) Q st s env ↔
+@[simp, wp_simp] theorem wp_select_cons {resultTypes : Option (List ValueType)} :
+    wp m (.select resultTypes :: rest) Q st s env ↔
     (match s.values with
      | .i32 c :: v2 :: v1 :: vs =>
        wp m rest Q st { s with values := (if c ≠ 0 then v1 else v2) :: vs } env

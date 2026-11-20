@@ -124,6 +124,12 @@ testsuite-report:
 differential *args:
     scripts/differential.sh {{ args }}
 
+# Run the fixed CI corpus against V8 and reject new per-case regressions.
+[group("differential")]
+[working-directory(".")]
+differential-ci *args:
+    scripts/differential.sh --ci {{ args }}
+
 # ── verifier workflow ─────────────────────────────────────────────────────────
 # All verifier recipes run from programs/ (project root: rust/ + lean/).
 # Omit crate names to operate on all workspace crates.
@@ -168,13 +174,6 @@ verifier-build *crates:
 [group("verifier")]
 verifier-emit *crates:
     just _verifier emit {{ crates }}
-
-# Scaffold codelib/CodeLib/RustStd/<Type>/<Name>.lean from one function of a crate's
-# module (verbatim body + Function record + wp-form theorem stub to fill in).
-# Example: just verifier-lift rust_std 0 U64 absDiff
-[group("verifier")]
-verifier-lift crate funcidx type name:
-    just _verifier lift {{ crate }} {{ funcidx }} {{ type }} {{ name }}
 
 # Run lake build on selected crates' Lean modules; omit names for all.
 [group("verifier")]

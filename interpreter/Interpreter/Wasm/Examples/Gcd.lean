@@ -134,7 +134,7 @@ private theorem gcdLoop_steps (a b temporary : UInt32) :
           (gcdConfig a b).store⟩ := by
   induction h : b.toNat using Nat.strong_induction_on
       generalizing a b temporary with
-  | h n ih =>
+  | ind n ih =>
     subst n
     by_cases hb : b = 0
     · subst b

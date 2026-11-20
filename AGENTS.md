@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Codex when working with code in this repository.
 
 ## Project
 
@@ -10,155 +10,31 @@ The interpreter is deliberately optimized for **simplicity of reasoning, not exe
 
 Lean toolchain is pinned in `lean-toolchain`.
 
-## Iris migration (`iris` branch only)
+## Semantics and program logic
 
-> **Temporary branch-scoped notice.** This section must exist only on the
-> `iris` integration branch and branches created from `iris` during the
-> migration. It overrides conflicting guidance elsewhere in this file,
-> especially guidance to preserve the current big-step interpreter's shape.
-> Before merging the completed migration into `main`, remove this notice or
-> update it to describe the new permanent architecture.
+The authoritative semantics is the small-step machine in
+`interpreter/Interpreter/Wasm/SmallStep.lean`: the relational
+`Wasm.SmallStep.Step` over a `Config` (an `Expr` holding the per-execution
+thread state, plus the shared store), and its deterministic executable
+presentation `stepChecked?`, proved against `Step` by `stepChecked?_sound` and
+`stepChecked?_complete`. `runSteps` iterates it under fuel; the CLI runner
+(`Interpreter/Runner.lean`) and the testsuite driver execute only this
+iterator. Keep one `Step` per Wasm instruction by default, with small explicit
+administrative transitions for control frames, calls, returns and trap
+propagation, and keep `Step` and `stepChecked?` in agreement whenever a
+transition is added.
 
-The purpose of the `iris` branch is to integrate
-[iris-lean](https://github.com/leanprover-community/iris-lean) and migrate the
-reference Wasm interpreter from its current fuel-bounded big-step semantics to
-small-step semantics suitable for Iris.
+The fuel-bounded big-step interpreter (`execOne` / `exec` / `run` in
+`Interpreter/Wasm/Semantics.lean`) remains as a regression oracle and as the
+semantics behind the big-step `Wasm.TerminatesWith` / `Wasm.PartiallyMeets`
+predicates and the `Wp` tactic layer. Some existing specs still use
+`Wasm.TerminatesWith` and the `Wp` layer.
 
-The migration is complete when:
-
-- The interpreter is fully expressed using small-step semantics in the form
-  expected by iris-lean.
-- Every currently supported Wasm feature and test remains covered, with no
-  semantic regressions.
-- Differential testing remains possible. In particular, there must still be an
-  executable, fuel-bounded way to run Wasm code, built by iterating the
-  executable small-step function rather than by maintaining a second semantics.
-- All required iris-lean language and proof-mode instances are implemented, so
-  downstream proofs can use iris-lean directly.
-- Existing proofs and theorem statements need not retain their exact shape.
-  Nevertheless, preserve the intent and coverage of existing examples whenever
-  possible, rewriting them against the new semantics rather than silently
-  deleting them.
-
-The intended split between an Iris expression and state is approximately:
-
-```lean
-inductive Expr
-  | running : ThreadState → Expr
-  | done : List WasmVal → Expr
-  | trapped : TrapReason → Expr
-  deriving BEq, Repr
-
-structure Store where
-  functions : Array Function
-  memories : Array Memory
-  globals : Array Global
-  tables : Array Table
-  deriving BEq, Repr
-```
-
-Treat this as an architectural guide, not a requirement to preserve these exact
-names. `Expr` contains the whole per-execution `ThreadState`, not merely the
-remaining instruction list. `Store` contains the shared runtime resources.
-Keep that ownership boundary explicit when adding fields: thread-local control
-and operand state belongs in `ThreadState`; resources observed or mutated
-through the runtime store belong in `Store`.
-
-For convenient executable interpretation, package the Iris expression and
-state together, while keeping the relational semantics authoritative:
-
-```lean
-/- Convenient packaging for the executable interpreter. The Iris adapter will
-   split this back into its `Expr` and `State` arguments. -/
-structure Config where
-  expr : Expr
-  store : Store
-  deriving BEq, Repr
-
-inductive Step : Config → Config → Prop where
-  -- Full definition of all valid transitions.
-
-def step? : Config → Option Config
-  | ⟨.running thread, store⟩ => stepRunning? thread store
-  | ⟨.done _, _⟩ => none
-  | ⟨.trapped _, _⟩ => none
-
-theorem step?_sound {config config' : Config} :
-    step? config = some config' → Step config config' := by
-  sorry
-
-theorem step?_complete {config config' : Config} :
-    Step config config' → step? config = some config' := by
-  sorry
-
-theorem step_sound {config config' : Config} :
-    step? config = some config' → Step config config' :=
-  step?_sound
-
-theorem step_complete {config config' : Config} :
-    Step config config' → step? config = some config' :=
-  step?_complete
-
-theorem step_iff {config config' : Config} :
-    step? config = some config' ↔ Step config config' :=
-  ⟨step_sound, step_complete⟩
-```
-
-The exact iris-lean adapter must follow the API of the pinned iris-lean
-dependency. Implement every required instance from this `Expr`/`Store` split
-and prove it against `Step`; do not introduce a parallel Iris-only transition
-relation.
-
-Use instruction-level granularity as the default: one `Step` should normally
-execute one Wasm instruction. Administrative transitions may execute no Wasm
-instruction when they expose or remove control frames, prepare or return from a
-function call, propagate a trap, or otherwise reorganize the machine so the
-next instruction can run. Prefer small, explicit administrative transitions
-over hiding multi-stage control behavior inside a single large step. A
-transition may perform the atomic state effects intrinsic to its instruction;
-do not split an instruction solely to mirror implementation helper functions.
-Document intentional exceptions and keep the granularity consistent across
-related instructions.
-
-For now, assume the Wasm semantics implemented here is deterministic, as
-required by `step? : Config → Option Config` and `step?_complete`. Whenever a
-feature appears nondeterministic—or depends on unspecified host behavior,
-scheduling, external input, or an arbitrary choice—flag it before implementing
-the transition. Record whether the behavior can be made deterministic by an
-explicit input or policy in `Store`. If genuine nondeterminism is required,
-stop and decide how to represent executable successor choices and adapt the
-Iris semantics and correspondence theorem; never choose an outcome silently.
-
-During the migration:
-
-- Pin iris-lean to a known revision. Upgrade it intentionally, recording any
-  adapter or instance changes required by the new API.
-- Treat the instruction and administrative-step policy above as the default
-  Iris atomicity boundary. Review deviations explicitly; do not change
-  granularity merely to make the executable runner more convenient.
-- Make the relational `Step` and executable `step?` correspond in every PR.
-  A new transition is incomplete until both sides and their soundness and
-  completeness proofs agree.
-- State and preserve invariants at transition boundaries, including stack
-  typing, index validity, store-extension/ownership properties, and the
-  distinction between normal completion and traps.
-- Keep `.done` and `.trapped` terminal. Out-of-fuel belongs to the executable
-  runner's result, not to `Expr` or the semantic relation.
-- Add regression or differential tests while porting each instruction family.
-  Where feasible, compare the new runner with the old interpreter until the old
-  implementation is removed.
-- Keep migration PRs reviewable and layered: introduce representation and
-  compatibility lemmas first, then port coherent instruction families and
-  their examples. Do not remove the old path before equivalent coverage exists.
-- Build every affected package in dependency order. A successful build remains
-  the test criterion throughout the transition.
-
-iris-lean does not currently provide total-execution reasoning for this
-integration. Iris proofs therefore establish behavior conditional on reaching
-completion; they do not establish termination. This loss of total-correctness
-claims is accepted during the migration. Keep termination-sensitive theorem
-intent documented so it can be restored if total reasoning becomes available,
-and do not describe a partial-correctness result as a termination proof.
+`codelib/CodeLib/SepLogic/` instantiates iris-lean for the small-step machine:
+the language instance, heap/global ghost state, partial (`wp_*`) and total
+(`twp_*`) lifting rules, and adequacy theorems that lower Iris proofs to
+`SmallStep.PartiallyMeets` / `SmallStep.TerminatesWith`. The iris-lean
+revision is pinned in `codelib/lakefile.toml`.
 
 ## Repository layout
 
@@ -170,11 +46,15 @@ codelib/       ← lifting lemmas and reasoning helpers   (Lake package: CodeLib
 programs/lean/ ← concrete Rust-to-Wasm verification     (Lake package: Project)
 ```
 
-`programs/rust/` holds the Rust source crates; `programs/lean/Project/` holds the
-generated `Program.lean` files and hand-written `Spec.lean` / `Proofs.lean`.
+`programs/rust/` holds the Rust source crates; `programs/lean/Project/<Name>/`
+holds each program's generated `Program.lean`, its hand-written `Spec.lean`,
+and its proof modules. The hex encode/decode proofs are the separate
+`HexEncodeStdio` and `HexDecodeStdio` libraries of the same package.
 
-Dependency direction: `interpreter` → `codelib` → `programs`. Downstream code
-imports `CodeLib`, never the interpreter directly.
+Dependency direction: `interpreter` → `codelib` → `programs`. Proofs reach the
+interpreter through `CodeLib`; `Spec.lean` files import the specific
+interpreter modules their statements name (for example
+`Interpreter.Wasm.Host.Universal`).
 
 ## Build / run / verify
 
@@ -193,7 +73,7 @@ There is no separate test runner. Example correctness is encoded as Lean theorem
 Three layers, kept deliberately small:
 
 - **Syntax (AST).** Instructions, functions, and modules. Keep the surface area minimal — only add constructs once they are needed by a concrete proof, and prefer the formulation that matches the Wasm spec's terminology so semantics and reasoning lemmas stay legible. Read the current state of `interpreter/Interpreter/Wasm/Syntax.lean` before assuming what is or isn't supported.
-- **Semantics (interpreter).** A fuel-bounded big-step interpreter. Traps (insufficient operands, out-of-bounds access, division by zero, etc.) are observable as a `.Trap` result from `run` (which returns a `Result α`: `.Success` / `.Trap` / `.Invalid` / `.OutOfFuel`), distinct from a successful `.Success`. When changing the semantics, the structure of the state and the shape of `step`/`run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
+- **Semantics (interpreter).** The small-step machine described above, with the big-step `run` kept beside it. Traps (out-of-bounds access, division by zero, etc.) are observable: the small-step machine reaches `Expr.trapped` with a `TrapReason`, and `run` returns `.Trap` in its `Result α` (`.Success` / `.Trap` / `.Invalid` / `.OutOfFuel` / `.Thrown`), distinct from success. When changing the semantics, the structure of the state and the shape of `Step` / `stepChecked?` / `run` are load-bearing for every existing proof — extend in place rather than rewriting, and keep new cases consistent with the existing ones. Read the file before editing.
 - **Reasoning (examples and lemmas).** The standard proof style: unfold the interpreter and `simp` to reduce both sides to the same concrete computation; use kernel-checked `decide` or explicit traces for concrete-input sanity checks; compose previously proven theorems as black boxes rather than re-unfolding the interpreter for larger results. New examples should follow this pattern.
 
 ## Kernel-checked proofs

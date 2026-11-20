@@ -147,7 +147,7 @@ theorem terminates
             stateInterp (GF := WasmHeapGF α) store 0 [] 0 -∗
             ⌜post values store⌝ }]) :
     TerminatesWith config post := by
-  apply Wasm.SmallStep.heap_globals_runtime_host_store_terminates
+  apply wasm_smallStep_heap_globals_runtime_host_store_terminates
     config (heap config.store n) globalσ post
   · exact heap_agrees config.store n hn
   · exact heap_inBounds config.store n hn hbound

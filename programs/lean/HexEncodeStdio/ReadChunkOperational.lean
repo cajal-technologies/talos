@@ -1,6 +1,5 @@
 import HexEncodeStdio.HostOperational
 import HexEncodeStdio.ReserveOperational
-import HexEncodeStdio.HDFacts
 import HexEncodeStdio.ReachOutcome
 import HexEncodeStdio.ReserveOutcome
 

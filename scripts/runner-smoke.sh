@@ -35,6 +35,8 @@ check() {
 check "sum_to.wat"        0 stdout "55"                          samples/sum_to.wat sum_to 10
 check "factorial.wat"     0 stdout "120"                         samples/factorial.wat fact 5
 check "trap.wat"          1 stderr "trap: integer divide by zero" samples/trap.wat div_by_zero
+check "gc_elem passive"   0 stdout "3"                           samples/gc_elem.wat passive_len
+check "gc_elem active"    0 stdout "70"                          samples/gc_elem.wat active_i31
 check "out-of-fuel"       2 stderr "out of fuel"                  samples/sum_to.wat sum_to 1000000 --fuel 10
 
 if command -v wasm-tools >/dev/null 2>&1; then

@@ -4,7 +4,7 @@ import CodeLib.RustStd.Frame
 /-!
 # `CodeLib.RustStd.Region`
 
-Region-level memory algebra (issue #68, phase 2a), building on the byte-level
+Region-level memory algebra, building on the byte-level
 framing lemmas in `CodeLib.RustStd.Frame`.
 
 * `MemRegion` — a contiguous byte range of linear memory (`base` + `len`), with
@@ -86,8 +86,7 @@ theorem slot64_disjoint (base k l : UInt32)
   simp only [slot64]; omega
 
 /-- The `k`-th 4-byte slot of a `u32` array based at `base` (wasm address
-`base + 4 * k`). The 32-bit twin of `slot64`, matching the `Mem.words32`
-element stride. -/
+`base + 4 * k`). The 32-bit twin of `slot64`. -/
 def slot32 (base k : UInt32) : MemRegion := ⟨base + 4 * k, 4⟩
 
 /-- `x <<< 2 = 4 * x` on `UInt32`: the `(const 2) shl` address computation LLVM

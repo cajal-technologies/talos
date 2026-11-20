@@ -138,6 +138,17 @@ def Instruction.checkBulkMemoryRefs
         else .ok ()
       else .ok ()
 
+/-- A typed `select` names exactly one result type. Checked for every
+instruction (like the other immediate checks below), so the partial stack
+checker, which stops at the first instruction it does not model, cannot skip
+it. The type index inside the annotation is checked through
+`Instruction.valueTypeRefs`, like every other value type written in an
+immediate. -/
+def Instruction.checkSelectAnnotation : Instruction → Except String Unit
+  | .select (some [_]) => .ok ()
+  | .select (some _) => .error "invalid result arity"
+  | _ => .ok ()
+
 /-! ### SIMD immediate validation -/
 
 def Instruction.checkSimdImmediates : Instruction → Except String Unit
@@ -773,6 +784,14 @@ structure CheckState where
   /-- Branches which leave the current instruction sequence. A surrounding
   structured construct consumes depth zero and decrements the rest. -/
   transfers : List Nat := []
+  /-- Locals known to hold a value on every path reaching this point
+  (function-references proposal, "local initialization"). Parameters are
+  initialized on entry; `local.set`/`local.tee` initialize their target; a
+  structured construct restores the set it started with when it ends. Only
+  consulted for locals whose type has no default value. Deliberately has no
+  default: every fresh state must say which locals it inherits, so a new
+  structured construct cannot silently forget the enclosing set. -/
+  initialized : List Nat
 
 def checkedCompat (m : Module) (actual : CheckedType)
     (expected : ValueType) : Bool :=
@@ -799,6 +818,18 @@ def checkedNonNull : CheckedType → CheckedType
     match valueType.reference? with
     | some (_, heapType) => some (.ref false heapType)
     | none => some valueType
+
+/-- Whether a value type has a default value, so a local of that type may be
+read before it is written. Numeric and vector types default to zero and
+nullable references to null; only a non-nullable reference lacks a default. -/
+def ValueType.isDefaultable : ValueType → Bool
+  | .ref false _ => false
+  | _ => true
+
+/-- Record that `local.set`/`local.tee` has initialized local `index`. -/
+def CheckState.initialize (state : CheckState) (index : Nat) : CheckState :=
+  if state.initialized.contains index then state
+  else { state with initialized := index :: state.initialized }
 
 def CheckState.popExpected
     (m : Module) (state : CheckState)
@@ -1188,18 +1219,36 @@ def Program.checkTypes
       | .drop => do
           let (_, next) ← state.popAny
           pure (some next)
-      | .select => do
+      | .select resultTypes => do
           let afterCondition ← state.popExpected m .i32
-          let (right, afterRight) ← afterCondition.popAny
-          let (left, afterLeft) ← afterRight.popAny
-          match left, right with
-          | some leftType, some rightType =>
-              if !m.vtCompat leftType rightType then throw "type mismatch"
-              pure (some { afterLeft with stack := some leftType :: afterLeft.stack })
-          | some valueType, none | none, some valueType =>
-              pure (some { afterLeft with stack := some valueType :: afterLeft.stack })
-          | none, none =>
-              pure (some { afterLeft with stack := none :: afterLeft.stack })
+          match resultTypes with
+          | some [selectType] =>
+              -- Typed `select t`: both operands and the result are `t`. The
+              -- annotation itself is checked by `checkSelectAnnotation`.
+              let afterOperands ←
+                afterCondition.applySig m ([selectType, selectType], [])
+              pure (some
+                { afterOperands with stack := some selectType :: afterOperands.stack })
+          -- Rejected earlier by `checkSelectAnnotation`; kept so the checker
+          -- stands alone.
+          | some _ => throw "invalid result arity"
+          | none =>
+              -- Untyped `select`: numeric or vector operands only. A reference
+              -- operand needs the typed form.
+              let (right, afterRight) ← afterCondition.popAny
+              let (left, afterLeft) ← afterRight.popAny
+              let isReference : CheckedType → Bool
+                | some valueType => valueType.reference?.isSome
+                | none => false
+              if isReference left || isReference right then throw "type mismatch"
+              match left, right with
+              | some leftType, some rightType =>
+                  if !m.vtCompat leftType rightType then throw "type mismatch"
+                  pure (some { afterLeft with stack := some leftType :: afterLeft.stack })
+              | some valueType, none | none, some valueType =>
+                  pure (some { afterLeft with stack := some valueType :: afterLeft.stack })
+              | none, none =>
+                  pure (some { afterLeft with stack := none :: afterLeft.stack })
       | .refIsNull => do
           let (referenceType, next) ← state.popAny
           if !checkedIsRef referenceType then throw "type mismatch"
@@ -1273,7 +1322,7 @@ def Program.checkTypes
                   throw "type mismatch"
             | none => pure ()
           let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) body inner
@@ -1284,6 +1333,7 @@ def Program.checkTypes
           pure (some
             { stack := fallthrough ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers :=
                 lowerTransfers bodyState.transfers ++ state.transfers })
       | .block paramArity resultArity body paramTypes resultTypes => do
@@ -1295,7 +1345,7 @@ def Program.checkTypes
                 pure (types.reverse.map some, outer)
             | none => state.popAnyN paramArity
           let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) body inner
@@ -1306,6 +1356,7 @@ def Program.checkTypes
           pure (some
             { stack := fallthrough ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers := lowerTransfers bodyState.transfers ++ state.transfers })
       | .loop paramArity resultArity body paramTypes resultTypes => do
           let parameterTypes? := declaredTypes? paramArity paramTypes
@@ -1316,7 +1367,7 @@ def Program.checkTypes
                 pure (types.reverse.map some, outer)
             | none => state.popAnyN paramArity
           let inner : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some bodyState ←
               Program.checkTypes m locals functionResults
                 ((paramArity, parameterTypes?) :: labels) body inner
@@ -1327,6 +1378,7 @@ def Program.checkTypes
           pure (some
             { stack := fallthrough ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers := lowerTransfers bodyState.transfers ++ state.transfers })
       | .iff paramArity resultArity thenBody elseBody
           paramTypes resultTypes => do
@@ -1339,7 +1391,7 @@ def Program.checkTypes
                 pure (types.reverse.map some, outer)
             | none => afterCondition.popAnyN paramArity
           let branchStart : CheckState :=
-            { stack := parameters, unreachable := false }
+            { stack := parameters, unreachable := false, initialized := state.initialized }
           let some thenState ←
               Program.checkTypes m locals functionResults
                 ((resultArity, resultTypes?) :: labels) thenBody branchStart
@@ -1366,6 +1418,7 @@ def Program.checkTypes
           pure (some
             { stack := merged ++ outer.stack
               unreachable := state.unreachable
+              initialized := state.initialized
               transfers :=
                 lowerTransfers thenState.transfers ++
                 lowerTransfers elseState.transfers ++ state.transfers })
@@ -1468,6 +1521,22 @@ def Program.checkTypes
               stack := []
               unreachable := true
               transfers := 0 :: next.transfers })
+      | .localGet index => do
+          let some localType := locals[index]?
+            | pure none
+          if !localType.isDefaultable && !state.initialized.contains index then
+            throw "uninitialized local"
+          some <$> state.applySig m ([], [localType])
+      | .localSet index => do
+          let some localType := locals[index]?
+            | pure none
+          let next ← state.applySig m ([localType], [])
+          pure (some (next.initialize index))
+      | .localTee index => do
+          let some localType := locals[index]?
+            | pure none
+          let next ← state.applySig m ([localType], [localType])
+          pure (some (next.initialize index))
       | _ =>
           match instruction.straightSig m locals with
           | none => pure none
@@ -1485,7 +1554,7 @@ def Module.checkFuncStraight (m : Module) (f : Function) : Except String Unit :=
   let some finalState ←
       Program.checkTypes m locals f.results
         [(f.results.length, some f.results)] f.body
-        { stack := [] }
+        { stack := [], initialized := List.range f.params.length }
     | return ()
   let results ← finalState.requireArity f.results.length
   for (actual, expected) in results.reverse.zip f.results do
@@ -1507,9 +1576,217 @@ def Module.checkConstProgram
         if (m.funcSig? functionIndex).isNone then throw "unknown function"
     | _ => pure ()
 
+/-! ### Type indices written in value types
+
+`Instruction.gcTypeRefs` covers the type indices in GC instruction immediates.
+A concrete type index can also appear inside a value type: function and tag
+signatures, imports, parameters, locals, results, globals, table element types,
+element segments, block types, and static null-reference types. Each must name
+a declared type. -/
+
+/-- Whether `index` names a declared type. The function-type table and the GC
+type table share one index space; decoded modules fill both, hand-built modules
+may fill either. -/
+def Module.typeIndexKnown (m : Module) (index : Nat) : Bool :=
+  index < m.types.length || index < m.gcTypes.length
+
+/-- The type index a value type refers to, when it is a concrete reference. -/
+def ValueType.concreteTypeRef? : ValueType → Option Nat
+  | .ref _ (.concrete index) => some index
+  | _ => none
+
+def Module.checkValueTypeRef (m : Module) (valueType : ValueType) :
+    Except String Unit :=
+  match valueType.concreteTypeRef? with
+  | some index => if m.typeIndexKnown index then .ok () else .error "unknown type"
+  | none => .ok ()
+
+def Module.checkValueTypeRefs (m : Module) (valueTypes : List ValueType) :
+    Except String Unit := do
+  for valueType in valueTypes do
+    m.checkValueTypeRef valueType
+
+/-- The value types written in a GC instruction's immediates. Exhaustive on
+purpose: a new `GcOp` immediate carrying a `ValueType` must be added here. -/
+def GcOp.valueTypeRefs : GcOp → List ValueType
+  | .refNullAny staticType => [staticType]
+  | .refI31 | .i31GetS | .i31GetU | .refEq | .anyConvertExtern
+  | .externConvertAny | .refTest _ _ | .refCast _ _ | .brOnCast _ _ _
+  | .brOnCastFail _ _ _ | .structNew _ | .structNewDefault _ | .structGet _ _
+  | .structGetS _ _ | .structGetU _ _ | .structSet _ _ | .arrayNew _
+  | .arrayNewDefault _ | .arrayNewFixed _ _ | .arrayGet _ | .arrayGetS _
+  | .arrayGetU _ | .arraySet _ | .arrayLen | .arrayFill _ | .arrayCopy _ _
+  | .arrayNewData _ _ | .arrayNewElem _ _ | .arrayInitData _ _
+  | .arrayInitElem _ _ => []
+
+/-- The value types written in an instruction's immediates: block types and
+static null-reference types. Exhaustive on purpose (no wildcard): a new
+`ValueType`-carrying immediate must be added here, or its type indices go
+unchecked. -/
+def Instruction.valueTypeRefs : Instruction → List ValueType
+  | .block _ _ _ paramTypes resultTypes
+  | .loop _ _ _ paramTypes resultTypes
+  | .iff _ _ _ _ paramTypes resultTypes
+  | .tryTable _ _ _ _ paramTypes resultTypes => paramTypes ++ resultTypes
+  | .refNull staticType | .refNullExtern staticType | .refNullExn staticType =>
+    [staticType]
+  -- A typed `select t` names `t`; the arity of the annotation is checked by
+  -- `Instruction.checkSelectAnnotation`.
+  | .select resultTypes => resultTypes.getD []
+  | .gc op => op.valueTypeRefs
+  -- `memOp` wraps a memory instruction, which carries no value type.
+  | .memOp _ _ => []
+  | .localGet _ | .localSet _ | .localTee _ | .const _ | .constI64 _
+  | .globalGet _ | .globalSet _ | .add | .sub | .mul | .divU | .divS | .remU
+  | .remS | .eqz | .eq | .ne | .ltU | .ltS | .gtU | .gtS | .leU | .leS | .geU
+  | .geS | .and | .or | .xor | .shl | .shrU | .shrS | .rotl | .rotr | .clz
+  | .ctz | .popcnt | .addI64 | .subI64 | .mulI64 | .divUI64 | .divSI64
+  | .remUI64 | .remSI64 | .eqzI64 | .eqI64 | .neI64 | .ltUI64 | .ltSI64
+  | .gtUI64 | .gtSI64 | .leUI64 | .leSI64 | .geUI64 | .geSI64 | .andI64
+  | .orI64 | .xorI64 | .shlI64 | .shrUI64 | .shrSI64 | .rotlI64 | .rotrI64
+  | .clzI64 | .ctzI64 | .popcntI64 | .wrapI64 | .extendSI32 | .extendUI32
+  | .extend8S | .extend16S | .extend8SI64 | .extend16SI64 | .extend32SI64
+  | .f32Const _ | .f64Const _ | .f32Add | .f32Sub | .f32Mul | .f32Div | .f32Min
+  | .f32Max | .f32Copysign | .f64Add | .f64Sub | .f64Mul | .f64Div | .f64Min
+  | .f64Max | .f64Copysign | .f32Abs | .f32Neg | .f32Sqrt | .f32Ceil
+  | .f32Floor | .f32Trunc | .f32Nearest | .f64Abs | .f64Neg | .f64Sqrt
+  | .f64Ceil | .f64Floor | .f64Trunc | .f64Nearest | .f32Eq | .f32Ne | .f32Lt
+  | .f32Gt | .f32Le | .f32Ge | .f64Eq | .f64Ne | .f64Lt | .f64Gt | .f64Le
+  | .f64Ge | .f32Load _ | .f64Load _ | .f32Store _ | .f64Store _
+  | .f32ConvertI32S | .f32ConvertI32U | .f32ConvertI64S | .f32ConvertI64U
+  | .f64ConvertI32S | .f64ConvertI32U | .f64ConvertI64S | .f64ConvertI64U
+  | .i32TruncF32S | .i32TruncF32U | .i32TruncF64S | .i32TruncF64U
+  | .i64TruncF32S | .i64TruncF32U | .i64TruncF64S | .i64TruncF64U
+  | .i32TruncSatF32S | .i32TruncSatF32U | .i32TruncSatF64S | .i32TruncSatF64U
+  | .i64TruncSatF32S | .i64TruncSatF32U | .i64TruncSatF64S | .i64TruncSatF64U
+  | .f32DemoteF64 | .f64PromoteF32 | .i32ReinterpretF32 | .i64ReinterpretF64
+  | .f32ReinterpretI32 | .f64ReinterpretI64 | .br _ | .br_if _ | .brTable _ _
+  | .ret | .call _ | .returnCall _ | .returnCallIndirect _ _ | .throwI _
+  | .throwRef | .callRef _ | .returnCallRef _ | .refAsNonNull | .brOnNull _
+  | .brOnNonNull _ | .callIndirect _ _ | .refFunc _ | .refIsNull | .tableGet _
+  | .tableSize _ | .tableSet _ | .tableGrow _ | .tableFill _ | .tableCopy _ _
+  | .tableInit _ _ | .elemDrop _ | .load8U _ | .load8S _ | .load16U _
+  | .load16S _ | .load32 _ | .store8 _ | .store16 _ | .store32 _ | .load64 _
+  | .store64 _ | .load8UI64 _ | .load8SI64 _ | .load16UI64 _ | .load16SI64 _
+  | .load32UI64 _ | .load32SI64 _ | .store8I64 _ | .store16I64 _
+  | .store32I64 _ | .memorySize | .memoryGrow | .memoryFill | .memoryCopy
+  | .memoryInit _ | .dataDrop _ | .memoryCopyBetween _ _ | .vConst _ | .vUnOp _
+  | .vBinOp _ | .vBitselect | .vTestOp _ | .vShiftOp _ | .vSplat _
+  | .vExtractLane _ _ _ | .vReplaceLane _ _ | .vShuffle _ | .vFma _ _
+  | .vDotAdd | .v128Load _ | .v128Store _ | .v128LoadExt _ _ _
+  | .v128LoadSplat _ _ | .v128LoadZero _ _ | .v128LoadLane _ _ _
+  | .v128StoreLane _ _ _ | .drop | .nop | .unreachable => []
+
+/-- The value types written in a GC type definition. -/
+def GcTypeDef.valueTypes (td : GcTypeDef) : List ValueType :=
+  match td.comp with
+  | .func signature => signature.params ++ signature.results
+  | .struct fields => fields.map (·.storage.vt)
+  | .array elem => [elem.storage.vt]
+
+/-- One past the last type index a type definition at `index` may refer to:
+the end of its recursion group. A type may name only types in its own `rec`
+group or in earlier ones; a singleton group (`recGroup = none`) ends at the
+type itself. -/
+def Module.recGroupEnd (m : Module) (index : Nat) : Nat :=
+  match m.gcTypes[index]? with
+  | some { recGroup := some group, .. } =>
+    m.gcTypes.zipIdx.foldl
+      (fun groupEnd (td, member) =>
+        if td.recGroup == some group then max groupEnd (member + 1) else groupEnd)
+      (index + 1)
+  | _ => index + 1
+
+/-- Every concrete type index written in a declared value type must name a
+type. Inside a type definition the index must also not reach past the
+definition's recursion group (no forward references across `rec` groups), and
+a declared supertype must precede the type. -/
+def Module.checkValueTypeIndices (m : Module) : Except String Unit := do
+  for signature in m.types ++ m.tags do
+    m.checkValueTypeRefs (signature.params ++ signature.results)
+  -- A function type with no GC definition at its index (hand-built modules
+  -- may fill only `types`) is a singleton recursion group: it may name itself
+  -- and earlier types, never a later one. Indices covered by `gcTypes` are
+  -- checked against their recursion group below.
+  for (signature, index) in m.types.zipIdx do
+    if index ≥ m.gcTypes.length then
+      for valueType in signature.params ++ signature.results do
+        match valueType.concreteTypeRef? with
+        | some referenced => if referenced > index then throw "unknown type"
+        | none => pure ()
+  for (td, index) in m.gcTypes.zipIdx do
+    m.checkValueTypeRefs td.valueTypes
+    let groupEnd := m.recGroupEnd index
+    for valueType in td.valueTypes do
+      match valueType.concreteTypeRef? with
+      | some referenced => if referenced ≥ groupEnd then throw "unknown type"
+      | none => pure ()
+    match td.super with
+    | some supertype => if supertype ≥ index then throw "unknown type"
+    | none => pure ()
+  for imp in m.imports do
+    m.checkValueTypeRefs (imp.params ++ imp.results)
+  for f in m.funcs do
+    m.checkValueTypeRefs (f.params ++ f.locals ++ f.results)
+  -- Value types in instruction immediates (block types, static null-reference
+  -- types) are checked by `Module.validate`'s existing per-instruction pass.
+  for global in m.globals do
+    m.checkValueTypeRef global.valueType
+    -- Both decoded and legacy initializers can carry reference type immediates.
+    for program in [global.sourceInit.getD [], global.initExpr] do
+      for instruction in program.allInstrs do
+        m.checkValueTypeRefs instruction.valueTypeRefs
+  for table in m.tables do
+    m.checkValueTypeRef table.elemType
+  for segment in m.elements do
+    match segment.elemType with
+    | some elemType => m.checkValueTypeRef elemType
+    | none => pure ()
+    for expression in segment.exprs ++ [segment.offsetExpr] do
+      for instruction in expression.allInstrs do
+        m.checkValueTypeRefs instruction.valueTypeRefs
+  -- Data segments, including multi-memory segments, are stored in memory.data.
+  for memory in m.memory.toList do
+    for segment in memory.data do
+      for instruction in segment.offsetExpr.allInstrs do
+        m.checkValueTypeRefs instruction.valueTypeRefs
+
+/-- A table's declared limits must be in range for its address type, and its
+minimum size may not exceed its declared maximum. Decoded modules already have
+in-range limits (the parser bounds them); the 32-bit range check guards
+hand-built modules, whose `min`/`max` are unbounded `Nat`s. 64-bit limits always
+fit `2^64-1` once decoded, so they are not re-checked here. -/
+def TableDecl.checkLimits (table : TableDecl) : Except String Unit :=
+  if !table.is64 && (table.min > 0xffff_ffff || table.max.any (· > 0xffff_ffff)) then
+    .error "table size"
+  else
+    match table.max with
+    | some maximum =>
+        if table.min > maximum then
+          .error "size minimum must not be greater than maximum"
+        else .ok ()
+    | none => .ok ()
+
+/-- A table the module declares itself must have an element type with a
+default value. A non-nullable element type is only valid together with an
+initializer expression, which `TableDecl` does not model (the decoder rejects
+that syntax), so such a table cannot be instantiated and is rejected here.
+Imported tables are exempt: their contents come from the exporter. -/
+def TableDecl.checkDefaultableElement (table : TableDecl) : Except String Unit :=
+  match table.elemType with
+  | .ref false _ => .error "type mismatch"
+  | _ => .ok ()
+
 /-- Run the partial structural validator. `throw` on the first violation. -/
 def Module.validate (m : Module) : Except String Unit := do
   m.checkInterface
+  m.checkValueTypeIndices
+  -- Table types (validated before code, in spec order): limits for every
+  -- table; a defaultable element type for the module's own tables. Imports
+  -- occupy the low indices.
+  for (table, index) in m.tables.zipIdx do
+    table.checkLimits
+    if index ≥ m.importedTables.length then table.checkDefaultableElement
   if m.dataWithoutMemory then throw "unknown memory"
   match m.memory with
   | none => pure ()
@@ -1553,6 +1830,9 @@ def Module.validate (m : Module) : Except String Unit := do
         | none => pure ()
         if segment.offsetExprPresent then
           m.checkConstProgram segment.offsetExpr addressType
+  -- GC instruction immediates index the GC type table only. Value types use
+  -- `Module.typeIndexKnown`, which also accepts an index into `types`; the two
+  -- agree on decoded modules, which fill both tables in parallel.
   let nTypes := m.gcTypes.length
   -- Hand-built globals without a retained source initializer must agree with
   -- their literal runtime value. Decoded globals are checked from
@@ -1598,12 +1878,14 @@ def Module.validate (m : Module) : Except String Unit := do
     for i in f.body.allInstrs do
       for t in i.gcTypeRefs do
         if t ≥ nTypes then throw "unknown type"
+      m.checkValueTypeRefs i.valueTypeRefs
       i.checkBulkMemoryRefs m
       i.checkTableSegmentRefs m
       i.checkGlobalRefs m
       i.checkLocalRefs (f.params.length + f.locals.length)
       i.checkFunctionRefs m
       i.checkSimdImmediates
+      i.checkSelectAnnotation
       match i with
       | .gc (.structSet t fld) =>
         match m.structField? t fld with

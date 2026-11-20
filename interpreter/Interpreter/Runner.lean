@@ -269,6 +269,12 @@ def runOnce (a : Args) : IO UInt32 := do
   -- imported global is unreachable; the import pre-flight above
   -- rejects any module that would need one.
   let store0 := m.runConstGlobals a.fuel (m.initialStore (α := Unit)) {}
+  -- GC element segment items (`ref.i31`, `struct.new`, `array.new*`) are
+  -- const-exprs too: evaluate passive segments into `elementValues` (read
+  -- by `array.new_elem`) and write literal-offset active ones into their
+  -- tables. After the globals, so items may read them, as in the testsuite
+  -- driver.
+  let store0 := m.runConstElems a.fuel store0 {}
   -- Data/elem segments whose offset is itself a const-expr are deferred
   -- by `initialStore`; write them now that the globals are evaluated.
   let store0 := m.runActiveSegments a.fuel store0 {}
