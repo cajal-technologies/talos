@@ -17,6 +17,7 @@ import CodeLib.RustStd.MemArray
 import CodeLib.RustStd.MemArray.SmallStep
 import CodeLib.RustStd.U64.Basic
 import CodeLib.RustStd.U64.AbsDiff
+import CodeLib.RustStd.U64.AbsDiffTotal
 import CodeLib.RustStd.Array.Basic
 import CodeLib.RustStd.Array.SmallStep
 import CodeLib.RustStd.Vec.Basic
