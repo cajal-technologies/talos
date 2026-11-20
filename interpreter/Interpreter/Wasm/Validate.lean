@@ -773,12 +773,21 @@ def Module.vtCompat (m : Module) (actual expected : ValueType) : Bool :=
 table, so that table's element type must match `funcref`
 (`table.elemType <: ref null func`). Checked for every instruction, like the
 reference checks above, so the partial stack checker cannot skip it. A missing
-table is reported by `Instruction.checkFunctionRefs`. -/
+table is reported by `Instruction.checkFunctionRefs`.
+
+A concrete element type with no GC definition but an entry in `types` is a
+function type (hand-built modules may fill only `types`); `heapSubtype`
+consults only `gcTypes`, so that case is accepted here explicitly. -/
 def Instruction.checkIndirectCallTable (m : Module) : Instruction → Except String Unit
   | .callIndirect _ tableIndex | .returnCallIndirect _ tableIndex =>
       match m.tableDecl? tableIndex with
       | some table =>
-          if m.vtCompat table.elemType .funcref then .ok () else .error "type mismatch"
+          let typesOnlyFunc := match table.elemType.reference? with
+            | some (_, .concrete index) =>
+                (m.gcComposite? index).isNone && (m.types[index]?).isSome
+            | _ => false
+          if typesOnlyFunc || m.vtCompat table.elemType .funcref then .ok ()
+          else .error "type mismatch"
       | none => .ok ()
   | _ => .ok ()
 
