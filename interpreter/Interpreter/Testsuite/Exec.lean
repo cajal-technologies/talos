@@ -1357,6 +1357,11 @@ def runCommand
     | .error error =>
       return (st, mk (.skipped s!"assert_uninstantiable decode: {error}"))
     | .ok m =>
+      -- An oversized memory is an implementation limit, not the expected
+      -- Wasm trap: report it without running the start function.
+      if !m.memoriesWithinLimit then
+        return (st, mk (.interpreterError
+          s!"memory exceeds the implementation limit of {Wasm.Module.memoryHardCap} pages"))
       let env := buildEnv st m fuel
       let imported := applyEntityImports st m m.initialStore
       let (store0, sharedGlobals) := assignGlobalIds st m imported
