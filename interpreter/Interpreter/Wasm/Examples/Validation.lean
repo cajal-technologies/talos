@@ -224,6 +224,26 @@ def validEqualTableLimitsValidationModule : Module :=
 def validUnboundedTableValidationModule : Module :=
   { funcs := [], tables := [{ min := 0xffff_ffff }] }
 
+/-! ### Memory declarations
+
+Reversed page limits and the 65536-page bound of 32-bit memories
+(`memory.wast`, "size minimum must not be greater than maximum" / "memory
+size"). 64-bit memories may declare page counts past that bound. -/
+
+def invalidReversedMemoryLimitsValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 1, pagesMax := some 0 } }
+
+def invalidMemory32MinOverLimitValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 65537 } }
+
+def invalidMemory32MaxOverLimitValidationModule : Module :=
+  { funcs := [], memory := some { pagesMin := 0, pagesMax := some 65537 } }
+
+/-- The 32-bit page limit does not apply to 64-bit memories. -/
+def validMemory64AboveMemory32LimitValidationModule : Module :=
+  { funcs := []
+    memory := some { pagesMin := 65537, pagesMax := some 65538, is64 := true } }
+
 def invalidMemoryFillWithoutMemoryModule : Module :=
   { funcs := [{ body := [.const 0, .const 0, .const 0, .memoryFill] }] }
 
@@ -1141,6 +1161,74 @@ theorem validator_accepts_equal_table_limits :
 
 theorem validator_accepts_unbounded_table :
     validationSucceeds validUnboundedTableValidationModule = true := by decide +kernel
+
+theorem validator_rejects_reversed_memory_limits :
+    validationErrorIs invalidReversedMemoryLimitsValidationModule
+      "size minimum must not be greater than maximum" = true := by decide +kernel
+
+theorem validator_rejects_memory32_minimum_over_limit :
+    validationErrorIs invalidMemory32MinOverLimitValidationModule
+      "memory size" = true := by decide +kernel
+
+theorem validator_rejects_memory32_maximum_over_limit :
+    validationErrorIs invalidMemory32MaxOverLimitValidationModule
+      "memory size" = true := by decide +kernel
+
+theorem validator_accepts_memory64_above_memory32_limit :
+    validationSucceeds validMemory64AboveMemory32LimitValidationModule = true := by decide +kernel
+
+/-! Decoded memory bounds must be checked before `UInt32` clamping loses
+information. Successful cases require both decoding and validation to succeed;
+a decoder failure cannot silently fall back to an empty module. -/
+
+private def validateDecodedModule (wat : String) : Except String Unit := do
+  let m ← Wasm.Decoder.Wat.decode wat
+  m.validate
+
+theorem decoder_rejects_reversed_memory64_limits_before_clamping :
+    decodeErrorOf "(module (memory i64 4294967296 4294967295))" =
+      some "size minimum must not be greater than maximum" := by cbv
+
+theorem decoder_rejects_reversed_memory64_limits_above_clamp :
+    decodeErrorOf "(module (memory i64 4294967297 4294967296))" =
+      some "size minimum must not be greater than maximum" := by cbv
+
+theorem decoder_rejects_reversed_imported_memory64_limits :
+    decodeErrorOf "(module (import \"M\" \"m\" (memory i64 4294967296 4294967295)))" =
+      some "size minimum must not be greater than maximum" := by cbv
+
+theorem decoder_rejects_reversed_extra_memory64_limits :
+    decodeErrorOf "(module (memory 0) (memory i64 4294967296 4294967295))" =
+      some "size minimum must not be greater than maximum" := by cbv
+
+-- 2^48 = 281474976710656 pages is inclusive for both declared bounds.
+theorem validator_accepts_decoded_memory64_minimum_at_limit :
+    validateDecodedModule "(module (memory i64 281474976710656))" = .ok () := by cbv
+
+theorem validator_accepts_decoded_memory64_maximum_at_limit :
+    validateDecodedModule "(module (memory i64 0 281474976710656))" = .ok () := by cbv
+
+theorem validator_accepts_decoded_memory64_equal_limits_at_limit :
+    validateDecodedModule
+      "(module (memory i64 281474976710656 281474976710656))" = .ok () := by cbv
+
+theorem decoder_rejects_memory64_minimum_over_limit :
+    decodeErrorOf "(module (memory i64 281474976710657))" = some "memory size" := by cbv
+
+theorem decoder_rejects_memory64_maximum_over_limit :
+    decodeErrorOf "(module (memory i64 0 281474976710657))" = some "memory size" := by cbv
+
+theorem decoder_rejects_memory64_minimum_over_limit_with_maximum :
+    decodeErrorOf "(module (memory i64 281474976710657 281474976710657))" =
+      some "memory size" := by cbv
+
+theorem validator_rejects_decoded_imported_memory32_over_limit :
+    validateDecodedModule "(module (import \"M\" \"m\" (memory 65537)))" =
+      .error "memory size" := by cbv
+
+theorem validator_rejects_decoded_extra_memory32_over_limit :
+    validateDecodedModule "(module (memory 0) (memory 0 65537))" =
+      .error "memory size" := by cbv
 
 theorem validator_rejects_memory_fill_without_memory :
     validationErrorIs invalidMemoryFillWithoutMemoryModule

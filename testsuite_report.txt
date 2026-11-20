@@ -20055,13 +20055,13 @@ memory.wast:31 assert_invalid pass
 memory.wast:35 assert_invalid pass
 memory.wast:39 assert_invalid pass
 memory.wast:43 assert_invalid pass
-memory.wast:49 assert_invalid skipped:assert_invalid: not rejected
-memory.wast:53 assert_invalid skipped:assert_invalid: not rejected
-memory.wast:57 assert_invalid skipped:assert_invalid: not rejected
-memory.wast:61 assert_invalid skipped:assert_invalid: not rejected
-memory.wast:65 assert_invalid skipped:assert_invalid: not rejected
-memory.wast:69 assert_invalid skipped:assert_invalid: not rejected
-memory.wast:73 assert_invalid skipped:assert_invalid: not rejected
+memory.wast:49 assert_invalid pass
+memory.wast:53 assert_invalid pass
+memory.wast:57 assert_invalid pass
+memory.wast:61 assert_invalid pass
+memory.wast:65 assert_invalid pass
+memory.wast:69 assert_invalid pass
+memory.wast:73 assert_invalid pass
 memory.wast:78 assert_invalid pass
 memory.wast:82 assert_invalid pass
 memory.wast:86 assert_invalid pass
@@ -20222,11 +20222,11 @@ memory64.wast:31 assert_invalid pass
 memory64.wast:35 assert_invalid pass
 memory64.wast:39 assert_invalid pass
 memory64.wast:43 assert_invalid pass
-memory64.wast:49 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:54 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:58 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:63 assert_invalid skipped:assert_invalid: not rejected
-memory64.wast:67 assert_invalid skipped:assert_invalid: not rejected
+memory64.wast:49 assert_invalid pass
+memory64.wast:54 assert_invalid pass
+memory64.wast:58 assert_invalid pass
+memory64.wast:63 assert_invalid pass
+memory64.wast:67 assert_invalid pass
 memory64.wast:71 module pass
 memory64.wast:159 assert_return pass
 memory64.wast:160 assert_return pass
