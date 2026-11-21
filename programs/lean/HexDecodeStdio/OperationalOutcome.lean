@@ -1,9 +1,8 @@
-import HexDecodeStdio.DecodeSpec
 import HexDecodeStdio.Allocator
 
 namespace Project.HexDecodeStdio
 
-open Wasm Project.HexStdio Project.HexStdio.Spec
+open Wasm Project.HexStdio
 open Wasm.SmallStep
 
 /-- The store produced by the universal host's distinguished OOM call. -/
