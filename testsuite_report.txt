@@ -2071,12 +2071,12 @@ br_on_cast.wast:104 module pass
 br_on_cast.wast:205 action pass
 br_on_cast.wast:206 action pass
 br_on_cast.wast:211 module pass
-br_on_cast.wast:226 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast.wast:235 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast.wast:244 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast.wast:253 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast.wast:261 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast.wast:272 assert_invalid skipped:assert_invalid: not rejected
+br_on_cast.wast:226 assert_invalid pass
+br_on_cast.wast:235 assert_invalid pass
+br_on_cast.wast:244 assert_invalid pass
+br_on_cast.wast:253 assert_invalid pass
+br_on_cast.wast:261 assert_invalid pass
+br_on_cast.wast:272 assert_invalid pass
 br_on_cast_fail.wast:3 module pass
 br_on_cast_fail.wast:69 action pass
 br_on_cast_fail.wast:71 assert_return pass
@@ -2108,12 +2108,12 @@ br_on_cast_fail.wast:104 module pass
 br_on_cast_fail.wast:220 action pass
 br_on_cast_fail.wast:221 action pass
 br_on_cast_fail.wast:226 module pass
-br_on_cast_fail.wast:241 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast_fail.wast:250 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast_fail.wast:259 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast_fail.wast:268 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast_fail.wast:276 assert_invalid skipped:assert_invalid: not rejected
-br_on_cast_fail.wast:287 assert_invalid skipped:assert_invalid: not rejected
+br_on_cast_fail.wast:241 assert_invalid pass
+br_on_cast_fail.wast:250 assert_invalid pass
+br_on_cast_fail.wast:259 assert_invalid pass
+br_on_cast_fail.wast:268 assert_invalid pass
+br_on_cast_fail.wast:276 assert_invalid pass
+br_on_cast_fail.wast:287 assert_invalid pass
 br_on_non_null.wast:1 module pass
 br_on_non_null.wast:49 assert_trap pass
 br_on_non_null.wast:51 assert_return pass
