@@ -1797,6 +1797,7 @@ def Module.checkValueTypeIndices (m : Module) : Except String Unit := do
     for program in [global.sourceInit.getD [], global.initExpr] do
       for instruction in program.allInstrs do
         m.checkValueTypeRefs instruction.valueTypeRefs
+        instruction.checkDefaultInit m
   for table in m.tables do
     m.checkValueTypeRef table.elemType
   for segment in m.elements do

@@ -1683,13 +1683,15 @@ theorem validator_rejects_nondefaultable_gc_defaults_global :
     ([(1, [.gc (.structNewDefault 1)]),
       (2, [.const 1, .gc (.arrayNewDefault 2)])] : List (Nat × Program)).all
       (fun (typeIndex, initializer) =>
-        validationErrorIs
-          { (defaultInitValidationModule [] (.val (.ref false (.concrete 0))) false) with
-            funcs := []
-            globals := [{ init := .anyref none,
-                          declaredType := some (.ref false (.concrete typeIndex)),
-                          sourceInit := some initializer }] }
-          "type mismatch") = true := by decide +kernel
+        ([(some initializer, []), (none, initializer)] : List (Option Program × Program)).all
+          (fun (sourceInit, initExpr) =>
+            validationErrorIs
+              { (defaultInitValidationModule [] (.val (.ref false (.concrete 0))) false) with
+                funcs := []
+                globals := [{ init := .anyref none,
+                              declaredType := some (.ref false (.concrete typeIndex)),
+                              sourceInit, initExpr }] }
+              "type mismatch")) = true := by cbv
 
 theorem validator_rejects_gc_defaults_wrong_composite_type :
     ([[.gc (.structNewDefault 2), .drop],
