@@ -1668,8 +1668,9 @@ private def defaultInitValidationModule (body : Program)
     funcs := [{ body }] }
 
 theorem validator_rejects_nondefaultable_gc_defaults :
-    ([[.gc (.structNewDefault 1), .drop],
-      [.const 1, .gc (.arrayNewDefault 2), .drop]] : List Program).all (fun body =>
+    ([([.gc (.structNewDefault 1), .drop], "field type is not defaultable"),
+      ([.const 1, .gc (.arrayNewDefault 2), .drop], "array type is not defaultable")] :
+      List (Program × String)).all (fun (body, expected) =>
       ([(body, false), (body, true),
         ([.block 0 0 body], false),
         ([.gc (.structNewDefault 0), .drop] ++ body, false),
@@ -1677,12 +1678,13 @@ theorem validator_rejects_nondefaultable_gc_defaults :
         (fun (body, isMut) =>
           validationErrorIs
             (defaultInitValidationModule body (.val (.ref false (.concrete 0))) isMut)
-            "type mismatch")) = true := by decide +kernel
+            expected)) = true := by cbv
 
 theorem validator_rejects_nondefaultable_gc_defaults_global :
-    ([(1, [.gc (.structNewDefault 1)]),
-      (2, [.const 1, .gc (.arrayNewDefault 2)])] : List (Nat × Program)).all
-      (fun (typeIndex, initializer) =>
+    ([(1, [.gc (.structNewDefault 1)], "field type is not defaultable"),
+      (2, [.const 1, .gc (.arrayNewDefault 2)], "array type is not defaultable")] :
+      List (Nat × Program × String)).all
+      (fun (typeIndex, initializer, expected) =>
         ([(some initializer, []), (none, initializer)] : List (Option Program × Program)).all
           (fun (sourceInit, initExpr) =>
             validationErrorIs
@@ -1691,13 +1693,16 @@ theorem validator_rejects_nondefaultable_gc_defaults_global :
                 globals := [{ init := .anyref none,
                               declaredType := some (.ref false (.concrete typeIndex)),
                               sourceInit, initExpr }] }
-              "type mismatch")) = true := by cbv
+              expected)) = true := by cbv
 
-theorem validator_rejects_gc_defaults_wrong_composite_type :
-    ([[.gc (.structNewDefault 2), .drop],
-      [.const 1, .gc (.arrayNewDefault 1), .drop]] : List Program).all (fun body =>
+theorem validator_rejects_gc_defaults_invalid_type :
+    ([([.gc (.structNewDefault 2), .drop], "non-structure type"),
+      ([.const 1, .gc (.arrayNewDefault 1), .drop], "non-array type"),
+      ([.gc (.structNewDefault 3), .drop], "unknown type"),
+      ([.const 1, .gc (.arrayNewDefault 3), .drop], "unknown type")] :
+      List (Program × String)).all (fun (body, expected) =>
       validationErrorIs (defaultInitValidationModule body (.val .i32) false)
-        "unknown type") = true := by decide +kernel
+        expected) = true := by cbv
 
 theorem validator_accepts_defaultable_gc_defaults :
     ([.packed 8, .packed 16, .val .i32, .val .i64, .val .f32, .val .f64,

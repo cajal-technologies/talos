@@ -1576,16 +1576,16 @@ default value, independently of operand-stack reachability. -/
 def Instruction.checkDefaultInit (m : Module) : Instruction → Except String Unit
   | .gc (.structNewDefault typeIndex) =>
       match m.structFields? typeIndex with
-      | none => .error "unknown type"
+      | none => .error (if typeIndex < m.gcTypes.length then "non-structure type" else "unknown type")
       | some fields =>
           if fields.all (fun field => field.storage.vt.isDefaultable) then .ok ()
-          else .error "type mismatch"
+          else .error "field type is not defaultable"
   | .gc (.arrayNewDefault typeIndex) =>
       match m.arrayElem? typeIndex with
-      | none => .error "unknown type"
+      | none => .error (if typeIndex < m.gcTypes.length then "non-array type" else "unknown type")
       | some element =>
           if element.storage.vt.isDefaultable then .ok ()
-          else .error "type mismatch"
+          else .error "array type is not defaultable"
   | _ => .ok ()
 
 theorem Instruction.checkDefaultInit_structNewDefault_ok
