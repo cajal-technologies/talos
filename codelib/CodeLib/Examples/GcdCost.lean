@@ -1,5 +1,5 @@
+import CodeLib.CostedSteps
 import CodeLib.Examples.Gcd
-import CodeLib.SepLogic.CostedSteps
 
 /-!
 # Step bound for Euclidean GCD
@@ -107,8 +107,8 @@ theorem zero_case_exact (a : UInt32) :
     CostedSteps.single Step.loop
   exact ⟨_, entry.trans exit⟩
 
-/-- Two nonzero Euclidean iterations exercise both the recursive segment rule
-and the zero exit; all costs belong to the same authoritative execution. -/
+/-- Composing the loop entry, two iteration segments, and the exit segment
+gives exactly 34 steps for GCD(24, 18). -/
 theorem two_iterations_exact :
     ∃ trace, CostedSteps work (gcdConfig 24 18) trace
       ⟨.done [.i32 6], (gcdConfig 24 18).store⟩ 34 := by
