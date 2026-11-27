@@ -119,7 +119,7 @@ theorem importChain_partiallyMeets (v : UInt32) (initial : List UInt32) :
     PartiallyMeets (importChainConfig v initial) (fun values _ => values = []) := by
   apply wasm_smallStep_instance_host_state_partiallyMeets (α := List UInt32)
   · simp only [importChainConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [importChainConfig, RuntimeEnv.currentModule_mk2, RuntimeEnv.currentHost_mk2,
                chainInstA_module, chainInstA_host]
     iintro ⟨Hruntime, Henv, Hhost, HruntimeInstances⟩

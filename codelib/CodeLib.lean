@@ -34,6 +34,8 @@ import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepTotalLiftingBytes
+import CodeLib.SepLogic.SmallStepMemoryCaps
+import CodeLib.SepLogic.SmallStepGrowingPages
 import CodeLib.SepLogic.SmallStepTotalLoop
 import CodeLib.SepLogic.SmallStepGhostInit
 import CodeLib.SepLogic.SmallStepAdequacy

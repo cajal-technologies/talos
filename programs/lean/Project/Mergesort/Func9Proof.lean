@@ -342,7 +342,7 @@ private theorem twp_func9_oom
   iapply Hcont $$ Hbump Hstreams
 
 /-- Generated `__rust_alloc_zeroed` satisfies its frozen contract. -/
-theorem func9_correct [WasmSmallStepGS hlc Universal.State] :
+theorem func9_correct [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State] :
     Func9Spec (hlc := hlc) := by
   unfold Func9Spec CallContract callExpr
   intro size alignment layout heapId storedCursor frontier history input output
