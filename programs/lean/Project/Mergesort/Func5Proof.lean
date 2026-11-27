@@ -255,7 +255,7 @@ private theorem twp_func5_oom
   iframe; iintro Hstreams
   iapply Hcont $$ Hbump Hstreams
 
-theorem func5_correct [WasmSmallStepGS hlc Universal.State] :
+theorem func5_correct [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State] :
     Func5Spec (hlc := hlc) := by
   unfold Func5Spec CallContract callExpr
   intro size alignment layout heapId storedCursor frontier history input output

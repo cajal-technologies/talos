@@ -902,8 +902,8 @@ theorem twp_memorySize
       simp only [Hmodule]
       iapply_exact Hwp store.wasm.mem.pages with Hruntime
 
-/-- Total `memory.size` rule that returns an exact persistent snapshot of the
-observed physical page count while preserving an arbitrary caller frame. -/
+/-- Total `memory.size` rule that returns a persistent lower bound equal to the
+page count at the time of observation while preserving an arbitrary caller frame. -/
 theorem twp_memorySize_tracked
     {params localValues values : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -941,6 +941,7 @@ theorem twp_memorySize_tracked
 /-- Total `memory.grow` rule. The continuation handles both the physical
 success result (the previous page count) and the standard failure sentinel. -/
 theorem twp_memoryGrow
+    [WasmMemoryPagesLegacy α]
     {params localValues values : List Value}
     {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -969,16 +970,17 @@ theorem twp_memoryGrow
         =>
       imod (stateInterp_memoryGrow store ns obs nt delta
           (store.wasm.memoryCap store.runtime.currentModule 0)
-          memory previousPages hg) $$ Hσ with Hσ
+          memory previousPages hg rfl) $$ Hσ with Hσ
       wasm_twp_frame
         iapply_exact Hwp previousPages.toUInt32 with Hruntime
 
 /-- Tracked total `memory.grow` rule.  A snapshot previously issued by
 `memory.size` is threaded through an arbitrary caller frame.  Both outcomes
 relate that measurement to the actual pre-grow count; success additionally
-returns an exact new-page snapshot and the equations established by
+issues a fresh lower bound at the new page count and the equations established by
 `Mem.grow`. -/
 theorem twp_memoryGrow_tracked
+    [WasmMemoryPagesLegacy α]
     {params localValues values : List Value}
     {delta : UInt32}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -1046,7 +1048,7 @@ theorem twp_memoryGrow_tracked
       icombine Hσ HcontNew as Hinput
       imod (stateInterp_memoryGrow_tracked_frame store ns obs nt delta
           (store.wasm.memoryCap store.runtime.currentModule 0)
-          memory previousPages hg) $$ Hinput with Hout
+          memory previousPages hg rfl) $$ Hinput with Hout
       icases Hout with ⟨⟨Hσ, HnewPages, %_⟩, HcontNew⟩
       ispecialize HcontNew $$ HnewPages
       wasm_twp_frame

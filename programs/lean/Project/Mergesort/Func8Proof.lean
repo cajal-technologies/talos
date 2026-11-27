@@ -461,7 +461,7 @@ private theorem twp_func8_oom
   iapply Hcont $$ Hbump Hblock Hstreams
 
 /-- Generated reallocation satisfies its frozen success/OOM contract. -/
-theorem func8_correct [WasmSmallStepGS hlc Universal.State] :
+theorem func8_correct [WasmSmallStepGS hlc Universal.State] [WasmMemoryPagesLegacy Universal.State] :
     Func8Spec (hlc := hlc) := by
   unfold Func8Spec CallContract callExpr
   intro oldPtr oldSize alignment newSize oldLayout newLayout heapId oldId

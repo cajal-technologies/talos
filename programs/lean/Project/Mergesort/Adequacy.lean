@@ -374,7 +374,8 @@ theorem twp_entry_of_func3
 partial adequacy only: it classifies all finite `.done`/`.trapped` traces and
 does not assert strong normalization or exhibit a terminal trace. -/
 theorem entry_partiallyMeets_of_func3
-    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State]
+      [WasmMemoryPagesLegacy Universal.State],
       Func3Spec (hlc := hlc))
     (input : List UInt32) :
     PartiallyMeetsOutcome (entryConfig input) (entryPost input) := by
@@ -387,7 +388,7 @@ theorem entry_partiallyMeets_of_func3
   · exact entryHeap_below_heapBase
   · exact entryGlobals_agree input
   · simp
-  · intro gs
+  · intro gs legacyPages
     iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost, Hfrontier, Hpages⟩
     ihave Hruntime' :
         runtimeModuleOwn ⟨0⟩ Project.Mergesort.module $$ [Hruntime]
@@ -409,7 +410,8 @@ theorem entry_partiallyMeets_of_func3
 /-- Conditional final adequacy.  Once `func3_correct` is available, the final
 public proof is exactly `entry_adequacy_of_func3 func3_correct`. -/
 theorem entry_adequacy_of_func3
-    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State],
+    (hfunc3 : ∀ {hlc : HasLC} [WasmSmallStepGS hlc Universal.State]
+      [WasmMemoryPagesLegacy Universal.State],
       Func3Spec (hlc := hlc)) :
     Project.Mergesort.Spec.PublicEntrySpecification := by
   unfold Project.Mergesort.Spec.PublicEntrySpecification
