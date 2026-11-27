@@ -42,6 +42,7 @@ roots = [
   "CodeLib.IEEE32.Exec",
   # --- Examples and regression tests (kept out of the umbrella) ---
   "CodeLib.Examples.Gcd",
+  "CodeLib.Examples.GcdCost",
   "CodeLib.Examples.MemFillLoop",
   "CodeLib.Examples.MemCopyLoop",
   "CodeLib.Examples.MergeSort.TotalProof",
