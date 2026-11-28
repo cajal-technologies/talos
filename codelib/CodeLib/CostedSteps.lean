@@ -56,6 +56,19 @@ theorem unit_amount (execution : CostedSteps (fun _ _ _ => 1) config trace final
   | refl => rfl
   | cons _ _ ih => simp [ih, Nat.add_comm]
 
+/-- Positive charges bound instruction and administrative progress alike. -/
+theorem length_le
+    (execution : CostedSteps charge config trace final amount)
+    (positive : ∀ before kind after, Step before kind after →
+      1 ≤ charge before kind after) :
+    trace.length ≤ amount := by
+  induction execution with
+  | refl => simp
+  | cons head _ ih =>
+      have := positive _ _ _ head
+      simp only [List.length_cons]
+      omega
+
 end CostedSteps
 
 /-- Every existing finite trace has an annotation; no symbolic execution is
@@ -116,5 +129,21 @@ theorem Steps.with_unit_cost (execution : Steps config trace final) :
     CostedSteps (fun _ _ _ => 1) config trace final trace.length := by
   obtain ⟨_, counted⟩ := execution.with_cost (fun _ _ _ => 1)
   exact counted.unit_amount ▸ counted
+
+/-- Scalar-only semantic segments have cost equal to their trace length.
+This reuses an authoritative trace certificate and proves no new transitions. -/
+theorem Steps.with_cost_eq_length
+    {α : Type} {charge : StepCost α} {initial final : Config α} {trace : List StepKind}
+    (execution : Steps initial trace final)
+    (unit : ∀ before kind after, kind ∈ trace → charge before kind after = 1) :
+    CostedSteps charge initial trace final trace.length := by
+  induction execution with
+  | refl => exact .refl _
+  | @cons config kind next trace final head tail ih =>
+      have tailUnit : ∀ before kind after, kind ∈ trace → charge before kind after = 1 := by
+        intro before label after member
+        exact unit before label after (by simp [member])
+      have prefixUnit := unit config kind next (by simp)
+      simpa [prefixUnit, Nat.add_comm] using CostedSteps.cons head (ih tailUnit)
 
 end Wasm.SmallStep
