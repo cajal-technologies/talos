@@ -1,5 +1,10 @@
 import CodeLib.Attrs
 import CodeLib.Basic
+import CodeLib.CostedSteps
+import CodeLib.ByteWork
+import CodeLib.CostedStepsStdIO
+import CodeLib.CostedTerminalBounds
+import CodeLib.MemoryTrace
 import CodeLib.Entry
 import CodeLib.Equivalence
 import CodeLib.List
@@ -34,6 +39,8 @@ import CodeLib.SepLogic.SmallStepState
 import CodeLib.SepLogic.SmallStepLifting
 import CodeLib.SepLogic.SmallStepTotalLifting
 import CodeLib.SepLogic.SmallStepTotalLiftingBytes
+import CodeLib.SepLogic.SmallStepMemoryCaps
+import CodeLib.SepLogic.SmallStepGrowingPages
 import CodeLib.SepLogic.SmallStepTotalLoop
 import CodeLib.SepLogic.SmallStepGhostInit
 import CodeLib.SepLogic.SmallStepAdequacy

@@ -84,6 +84,9 @@ jobs:
           lake-package-directory: programs/lean
           build-args: "Project --wfail"
           use-mathlib-cache: true
+      - name: Run mergesort with its proved budget
+        working-directory: programs/lean
+        run: lake env lean --run ../../scripts/check-mergesort-budget.lean
       - name: Audit every program proof module
         run: python3 scripts/axiom-audit.py programs/lean --report programs-axioms.json
 

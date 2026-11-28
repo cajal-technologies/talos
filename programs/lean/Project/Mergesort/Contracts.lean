@@ -7,11 +7,13 @@ import CodeLib.SepLogic.SmallStepTotalLifting
 
 This file contains exactly one contract family for each in-scope import and
 each reachable generated function (`func0`--`func11`).  It contains no contract
-for excluded functions 12--55.  These frozen statements have passed the
+for excluded functions 12--55.  Their default statements have passed the
 body-side and call-site audits, including the terminal current-instance
 ownership correction validated by the import-2/`func6` proofs and the distinct
 shim/import operand orders validated by the import-0/1 and `func10`/`func11`
-proofs.  They are interfaces, not body proofs.
+proofs. The optional allocation policy retains a physical coverage witness
+on failure; its default preserves the original contracts. These are interfaces,
+not body proofs.
 -/
 
 namespace Project.Mergesort.Contracts
@@ -26,6 +28,98 @@ open scoped Wasm.SmallStep.Outcome
 set_option backward.isDefEq.respectTransparency false
 
 abbrev HeapIProp := IProp (WasmHeapGF Universal.State)
+
+/-- Persistent physical facts used by the tracked allocator contracts. -/
+def AllocationPolicyOwn [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy) : HeapIProp :=
+  match policy with
+  | .unrestricted => iprop(emp)
+  | .trackCoverage pages =>
+      iprop(memoryCapOwn 0 Module.memoryHardCap ∗ memoryPagesOwn pages)
+  | .frozen pages =>
+      iprop(memoryCapOwn 0 Module.memoryHardCap ∗ memoryPagesFrozen pages)
+
+instance [WasmSmallStepGS hlc Universal.State] (policy : AllocationPolicy) :
+    BI.Persistent (AllocationPolicyOwn policy) := by
+  cases policy <;> simp only [AllocationPolicyOwn] <;> infer_instance
+
+/-- Add the tracked physical assumptions without changing legacy preconditions. -/
+abbrev WithAllocationPolicy [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy) (P : HeapIProp) : HeapIProp :=
+  match policy with
+  | .unrestricted => P
+  | .trackCoverage pages =>
+      iprop(memoryCapOwn 0 Module.memoryHardCap ∗ memoryPagesOwn pages ∗ P)
+  | .frozen pages =>
+      iprop(memoryCapOwn 0 Module.memoryHardCap ∗ memoryPagesFrozen pages ∗ P)
+
+/-- Frozen allocation excludes the OOM alternative. Its impossible callback
+is discharged from the actual request's coverage evidence. -/
+abbrev OOMTarget (policy : AllocationPolicy) (P : HeapIProp) : HeapIProp :=
+  match policy with
+  | .unrestricted => P
+  | .trackCoverage _ => P
+  | .frozen _ => iprop(⌜False⌝)
+
+/-- A tracked OOM continuation receives the failure witness after its resources. -/
+abbrev AllocationFailure (policy : AllocationPolicy) (frontier : Nat)
+    (layout : AllocLayout) (P : HeapIProp) : HeapIProp :=
+  match policy with
+  | .unrestricted => P
+  | .trackCoverage pages => iprop(⌜Uncovered pages frontier layout⌝ -∗ P)
+  | .frozen pages => iprop(⌜Uncovered pages frontier layout⌝ -∗ ⌜False⌝)
+
+/-- Introduce the policy-specific failure callback uniformly in both modes. -/
+theorem allocationFailure_intro (policy : AllocationPolicy) (frontier : Nat)
+    (layout : AllocLayout) (P : HeapIProp) :
+    iprop(⌜AllocationUncovered policy frontier layout⌝ -∗ OOMTarget policy P) ⊢
+      AllocationFailure policy frontier layout P := by
+  cases policy with
+  | unrestricted =>
+      iintro H
+      iapply H $$ %True.intro
+  | trackCoverage pages =>
+      simp only [AllocationUncovered, AllocationFailure]
+      iintro H
+      iexact H
+  | frozen pages =>
+      simp only [AllocationUncovered, AllocationFailure, OOMTarget]
+      iintro H
+      iexact H
+
+theorem withAllocationPolicy_open [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy) (P : HeapIProp) :
+    WithAllocationPolicy policy P ⊢ iprop(AllocationPolicyOwn policy ∗ P) := by
+  cases policy with
+  | unrestricted =>
+      change P ⊢ iprop(emp ∗ P)
+      iintro HP
+      iframe
+  | trackCoverage pages =>
+      simp only [WithAllocationPolicy, AllocationPolicyOwn]
+      iintro ⟨Hcap, Hpages, HP⟩
+      iframe
+  | frozen pages =>
+      simp only [WithAllocationPolicy, AllocationPolicyOwn]
+      iintro ⟨Hcap, Hpages, HP⟩
+      iframe
+
+theorem withAllocationPolicy_close [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy) (P : HeapIProp) :
+    iprop(AllocationPolicyOwn policy ∗ P) ⊢ WithAllocationPolicy policy P := by
+  cases policy with
+  | unrestricted =>
+      change iprop(emp ∗ P) ⊢ P
+      iintro ⟨_, HP⟩
+      iexact HP
+  | trackCoverage pages =>
+      simp only [WithAllocationPolicy, AllocationPolicyOwn]
+      iintro ⟨⟨Hcap, Hpages⟩, HP⟩
+      iframe
+  | frozen pages =>
+      simp only [WithAllocationPolicy, AllocationPolicyOwn]
+      iintro ⟨⟨Hcap, Hpages⟩, HP⟩
+      iframe
 
 /-- A call site with its top-of-stack operands already in machine order. -/
 def callExpr (absoluteIndex : Nat) (operands : List Value)
@@ -236,11 +330,9 @@ theorem reserveSuccessShadow_length (shadow : List UInt8)
   rw [List.length_append, List.length_take, serialize_length]
   simp [hlength]
 
-/-- Even when pure bump arithmetic selects `.success`, the modular WP does not
-own the physical store's instantiated memory-cap metadata.  The additive
-conjunction in that branch therefore requires the caller to accept both the
-normal allocation result and the same exact pre-commit OOM terminal used by
-the `.oom` classification. -/
+/-- The default contract accepts normal return or the exact pre-commit OOM
+terminal even when bump arithmetic succeeds. The tracked policy additionally
+supplies a coverage-failure witness to that OOM handler. -/
 def FinishGrowContinuation [WasmSmallStepGS hlc Universal.State]
     (result oldCapacity oldPtr newCapacity : UInt32)
     (source : GrowSource) (initialized growBefore : List UInt8)
@@ -251,7 +343,8 @@ def FinishGrowContinuation [WasmSmallStepGS hlc Universal.State]
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   let newLayout : AllocLayout :=
     { size := newCapacity.toNat, alignment := 1 }
   match classifyBump frontier newLayout with
@@ -271,17 +364,20 @@ def FinishGrowContinuation [WasmSmallStepGS hlc Universal.State]
           GrowSourceOwn heapId oldCapacity oldPtr initialized source -∗
           BumpHeap heapId storedCursor frontier history -∗
           Streams input output true -∗
-          Φ (.trapped (.host OOM.trapMessage))))
+          AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage)))))
   | .oom => iprop(
       ByteSlice result growBefore -∗
       GrowSourceOwn heapId oldCapacity oldPtr initialized source -∗
       BumpHeap heapId storedCursor frontier history -∗
       Streams input output true -∗
-      Φ (.trapped (.host OOM.trapMessage)))
+      AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage))))
 
 /-- Local `func0`, absolute index 3.  Its valid-input specialization has only
 normal success or the distinguished OOM terminal outcome. -/
-def Func0Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
+def Func0Spec [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy := .unrestricted) : Prop :=
   ∀ (result oldCapacity oldPtr newCapacity alignment elementSize : UInt32)
     (source : GrowSource) (initialized growBefore : List UInt8)
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
@@ -297,7 +393,8 @@ def Func0Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
     CallContract 3
       [.i32 elementSize, .i32 alignment, .i32 newCapacity, .i32 oldPtr,
         .i32 oldCapacity, .i32 result]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
+      callerLocals stack code arity remainder controls calls s E Φ
+      (WithAllocationPolicy policy iprop(
         RuntimeContext ∗
         ByteSlice result growBefore ∗
         GrowSourceOwn heapId oldCapacity oldPtr initialized source ∗
@@ -311,7 +408,7 @@ def Func0Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
         FinishGrowContinuation result oldCapacity oldPtr newCapacity source
           initialized growBefore heapId storedCursor frontier history input
           output raised callerLocals stack code arity remainder controls calls
-          s E Φ)
+          s E Φ policy))
 
 def ReserveContinuation [WasmSmallStepGS hlc Universal.State]
     (totalBytes : Nat) (current : List UInt8)
@@ -323,7 +420,8 @@ def ReserveContinuation [WasmSmallStepGS hlc Universal.State]
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   let newCapacityNat :=
     selectedCapacity initialized.length current.length capacity.toNat
   let newCapacity := UInt32.ofNat newCapacityNat
@@ -350,18 +448,21 @@ def ReserveContinuation [WasmSmallStepGS hlc Universal.State]
           VecU8 heapId driverBase capacity ptr initialized -∗
           BumpHeap heapId storedCursor frontier history -∗
           Streams remaining output true -∗
-          Φ (.trapped (.host OOM.trapMessage))))
+          AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage)))))
   | .oom => iprop(
       StackPointer reserveBase -∗
       StackReserve reserveBase shadow -∗
       VecU8 heapId driverBase capacity ptr initialized -∗
       BumpHeap heapId storedCursor frontier history -∗
       Streams remaining output true -∗
-      Φ (.trapped (.host OOM.trapMessage)))
+      AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage))))
 
 /-- Local `func1`, absolute index 4.  The explicit arithmetic and lineage
 facts are the originating proof obligations for both excluded `func43` edges. -/
-def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
+def Func1Spec [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy := .unrestricted) : Prop :=
   ∀ (header length additional alignment elementSize : UInt32)
     (totalBytes : Nat) (current remaining : List UInt8)
     (capacity ptr : UInt32) (initialized shadow : List UInt8)
@@ -380,7 +481,8 @@ def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
     CallContract 4
       [.i32 elementSize, .i32 alignment, .i32 additional, .i32 length,
         .i32 header]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
+      callerLocals stack code arity remainder controls calls s E Φ
+      (WithAllocationPolicy policy iprop(
         RuntimeContext ∗
         StackPointer driverBase ∗
         StackReserve reserveBase shadow ∗
@@ -401,7 +503,7 @@ def Func1Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           newCapacityNat < UInt32.size ∧ newLayout.Valid⌝ ∗
         ReserveContinuation totalBytes current capacity ptr initialized shadow
           heapId storedCursor frontier history remaining output raised
-          callerLocals stack code arity remainder controls calls s E Φ)
+          callerLocals stack code arity remainder controls calls s E Φ policy))
 
 /-! ## Allocator result continuations -/
 
@@ -416,7 +518,8 @@ def AllocContinuation [WasmSmallStepGS hlc Universal.State]
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   match classifyBump frontier layout with
   | .success base finish => iprop(
       (∀ bytes : List UInt8,
@@ -429,14 +532,17 @@ def AllocContinuation [WasmSmallStepGS hlc Universal.State]
             calls s E Φ) ∧
         (BumpHeap heapId storedCursor frontier history -∗
           Streams input output true -∗
-          Φ (.trapped (.host OOM.trapMessage))))
+          AllocationFailure policy frontier layout
+        (Φ (.trapped (.host OOM.trapMessage)))))
   | .oom => iprop(
       BumpHeap heapId storedCursor frontier history -∗
       Streams input output true -∗
-      Φ (.trapped (.host OOM.trapMessage)))
+      AllocationFailure policy frontier layout
+        (Φ (.trapped (.host OOM.trapMessage))))
 
 /-- Local `func5`, absolute index 8. -/
-def Func5Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
+def Func5Spec [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy := .unrestricted) : Prop :=
   ∀ (size alignment : UInt32) (layout : AllocLayout)
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory)
@@ -447,7 +553,8 @@ def Func5Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp},
     CallContract 8 [.i32 alignment, .i32 size]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
+      callerLocals stack code arity remainder controls calls s E Φ
+      (WithAllocationPolicy policy iprop(
         RuntimeContext ∗
         BumpHeap heapId storedCursor frontier history ∗
         Streams input output raised ∗
@@ -455,7 +562,7 @@ def Func5Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           (layout.alignment = 1 ∨ layout.alignment = 4)⌝ ∗
         AllocContinuation heapId storedCursor frontier history layout
           input output raised callerLocals stack code arity remainder controls
-          calls s E Φ)
+          calls s E Φ policy))
 
 /-- Local `func6`, absolute index 9. -/
 def Func6Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
@@ -481,7 +588,8 @@ def ReallocContinuation [WasmSmallStepGS hlc Universal.State]
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   match classifyBump frontier newLayout with
   | .success newPtr finish => iprop(
       (∀ newBytes : List UInt8,
@@ -497,15 +605,18 @@ def ReallocContinuation [WasmSmallStepGS hlc Universal.State]
         (BumpHeap heapId storedCursor frontier history -∗
           LiveBlock heapId oldId oldPtr oldLayout oldBytes -∗
           Streams input output true -∗
-          Φ (.trapped (.host OOM.trapMessage))))
+          AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage)))))
   | .oom => iprop(
       BumpHeap heapId storedCursor frontier history -∗
       LiveBlock heapId oldId oldPtr oldLayout oldBytes -∗
       Streams input output true -∗
-      Φ (.trapped (.host OOM.trapMessage)))
+      AllocationFailure policy frontier newLayout
+        (Φ (.trapped (.host OOM.trapMessage))))
 
 /-- Local `func8`, absolute index 11. -/
-def Func8Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
+def Func8Spec [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy := .unrestricted) : Prop :=
   ∀ (oldPtr oldSize alignment newSize : UInt32)
     (oldLayout newLayout : AllocLayout)
     (heapId : GName) (oldId : Nat) (oldBytes : List UInt8)
@@ -519,7 +630,8 @@ def Func8Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
     {Φ : ObservableOutcome → HeapIProp},
     CallContract 11
       [.i32 newSize, .i32 alignment, .i32 oldSize, .i32 oldPtr]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
+      callerLocals stack code arity remainder controls calls s E Φ
+      (WithAllocationPolicy policy iprop(
         RuntimeContext ∗
         BumpHeap heapId storedCursor frontier history ∗
         LiveBlock heapId oldId oldPtr oldLayout oldBytes ∗
@@ -531,7 +643,7 @@ def Func8Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           oldLayout.size < newLayout.size⌝ ∗
         ReallocContinuation heapId storedCursor frontier history oldId oldPtr
           oldLayout oldBytes newLayout input output raised callerLocals stack
-          code arity remainder controls calls s E Φ)
+          code arity remainder controls calls s E Φ policy))
 
 def ZeroAllocContinuation [WasmSmallStepGS hlc Universal.State]
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
@@ -541,7 +653,8 @@ def ZeroAllocContinuation [WasmSmallStepGS hlc Universal.State]
     (code : Program) (arity : Nat) (remainder : List Value)
     (controls : List ControlFrame) (calls : List CallFrame)
     (s : Stuckness) (E : CoPset)
-    (Φ : ObservableOutcome → HeapIProp) : HeapIProp :=
+    (Φ : ObservableOutcome → HeapIProp)
+    (policy : AllocationPolicy := .unrestricted) : HeapIProp :=
   match classifyBump frontier layout with
   | .success base finish => iprop(
       (RuntimeContext -∗
@@ -554,14 +667,17 @@ def ZeroAllocContinuation [WasmSmallStepGS hlc Universal.State]
           calls s E Φ) ∧
       (BumpHeap heapId storedCursor frontier history -∗
         Streams input output true -∗
-        Φ (.trapped (.host OOM.trapMessage))))
+        AllocationFailure policy frontier layout
+        (Φ (.trapped (.host OOM.trapMessage)))))
   | .oom => iprop(
       BumpHeap heapId storedCursor frontier history -∗
       Streams input output true -∗
-      Φ (.trapped (.host OOM.trapMessage)))
+      AllocationFailure policy frontier layout
+        (Φ (.trapped (.host OOM.trapMessage))))
 
 /-- Local `func9`, absolute index 12. -/
-def Func9Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
+def Func9Spec [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy := .unrestricted) : Prop :=
   ∀ (size alignment : UInt32) (layout : AllocLayout)
     (heapId : GName) (storedCursor : UInt32) (frontier : Nat)
     (history : AllocationHistory)
@@ -572,7 +688,8 @@ def Func9Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp},
     CallContract 12 [.i32 alignment, .i32 size]
-      callerLocals stack code arity remainder controls calls s E Φ iprop(
+      callerLocals stack code arity remainder controls calls s E Φ
+      (WithAllocationPolicy policy iprop(
         RuntimeContext ∗
         BumpHeap heapId storedCursor frontier history ∗
         Streams input output raised ∗
@@ -580,7 +697,7 @@ def Func9Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           layout.alignment = 4⌝ ∗
         ZeroAllocContinuation heapId storedCursor frontier history layout
           input output raised callerLocals stack code arity remainder controls
-          calls s E Φ)
+          calls s E Φ policy))
 
 /-! ## Success-only reachable functions -/
 
@@ -615,7 +732,8 @@ def Func2Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
 
 /-- Local `func3`, absolute index 6, is the sole public entry contract.  Its
 only terminal alternative is phase-classified `talos.oom`. -/
-def Func3Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
+def Func3Spec [WasmSmallStepGS hlc Universal.State]
+    (policy : AllocationPolicy := .unrestricted) : Prop :=
   ∀ (heapId : GName) (original : List UInt32) (entryBytes : List UInt8)
     {callerLocals : Locals} {stack : List Value}
     {code : Program} {arity : Nat} {remainder : List Value}
@@ -623,7 +741,7 @@ def Func3Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
     {s : Stuckness} {E : CoPset}
     {Φ : ObservableOutcome → HeapIProp},
     CallContract 6 [] callerLocals stack code arity remainder controls calls
-      s E Φ iprop(
+      s E Φ (WithAllocationPolicy policy iprop(
         RuntimeContext ∗
         StackPointer entryStackTop ∗
         StackRegion entryStackLow entryBytes ∗
@@ -634,8 +752,8 @@ def Func3Spec [WasmSmallStepGS hlc Universal.State] : Prop :=
           ResumeWP [] callerLocals stack code arity remainder controls calls
             s E Φ) ∗
         ((∃ phase : DriverOOMPhase,
-            DriverOOMState heapId original phase) -∗
-          Φ (.trapped (.host OOM.trapMessage))))
+            DriverOOMState heapId original phase policy) -∗
+          OOMTarget policy (Φ (.trapped (.host OOM.trapMessage))))))
 
 /-- Local `func4`, absolute index 7, is the allocation marker identity. -/
 def Func4Spec [WasmSmallStepGS hlc Universal.State] : Prop :=

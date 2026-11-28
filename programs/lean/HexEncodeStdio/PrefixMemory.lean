@@ -153,7 +153,7 @@ theorem terminates
   · exact heap_inBounds config.store n hn hbound
   · exact hglobals
   · exact hwf
-  · intro hlc _
+  · intro hlc _ legacyPages
     iintro ⟨Hheap, Hglobals, Hruntime, Henv, Hhost⟩
     ihave Hbytes := heap_pointsTo config.store n hn $$ Hheap
     iapply htwp hlc

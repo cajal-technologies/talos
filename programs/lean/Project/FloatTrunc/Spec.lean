@@ -381,7 +381,7 @@ theorem func0_smallStep (x : UInt32) :
   · simpa [func0Config] using func0Heap_inBounds
   · simpa [func0Config] using func0Globals_agree
   · simp only [func0Config]; decide
-  · intro gs
+  · intro gs legacyPages
     have hreturn : ∀ word : UInt32,
         word = i32TruncSatF32S x →
         iprop(True) ∗ globalPointsToAt 0 0 (.i32 1048576) ∗
@@ -633,7 +633,7 @@ theorem check_terminatesWith (x : UInt32) :
   · simpa [checkConfig, func0Config] using func0Heap_inBounds
   · simpa [checkConfig, func0Config] using func0Globals_agree
   · simp only [checkConfig]; decide
-  · intro _hlc _gs
+  · intro _hlc _gs legacyPages
     simp only [checkConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func0Heap_pointsTo $$ Hbytes
@@ -650,7 +650,7 @@ theorem check_smallStep (x : UInt32) :
   · simpa [checkConfig, func0Config] using func0Heap_inBounds
   · simpa [checkConfig, func0Config] using func0Globals_agree
   · simp only [checkConfig]; decide
-  · intro gs
+  · intro gs legacyPages
     simp only [checkConfig, RuntimeEnv.currentModule_mk1]
     iintro ⟨Hbytes, Hglobals, Hruntime⟩
     ihave Hword := func0Heap_pointsTo $$ Hbytes

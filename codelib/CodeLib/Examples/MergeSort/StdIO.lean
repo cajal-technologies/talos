@@ -773,7 +773,7 @@ theorem sort_partiallyMeets (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
   · simp [sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (sortConfig input).store.runtime.currentModule = module := by
       simp [sortConfig, RuntimeEnv.currentModule_mk1]
@@ -796,7 +796,7 @@ theorem sort_stronglyNormalizing (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
   · simp [sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (sortConfig input).store.runtime.currentModule = module := by
       simp [sortConfig, RuntimeEnv.currentModule_mk1]
@@ -817,7 +817,7 @@ theorem sort_terminatesWith (input : List UInt32) (hfit : Fits input) :
   · exact sortHeap_inBounds input hfit
   · exact globalHeapAgrees_empty _
   · simp [sortConfig]
-  · intro _
+  · intro _ legacyPages
     have hentry : (sortConfig input).store.runtime.entry = ⟨0⟩ := rfl
     have hmod : (sortConfig input).store.runtime.currentModule = module := by
       simp [sortConfig, RuntimeEnv.currentModule_mk1]
